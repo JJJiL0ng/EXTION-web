@@ -22,14 +22,22 @@ const MainSpreadSheet: React.FC = () => {
   // CSV 데이터가 업데이트될 때 스프레드시트 업데이트
   useEffect(() => {
     if (csvData && hotRef.current) {
+      // 디버깅을 위한 로그
+      console.log('MainSpreadSheet에서 받은 데이터:', csvData);
+      console.log('데이터 행 수:', csvData.data.length);
+      console.log('첫 번째 행:', csvData.data[0]);
+      
+      // 빈 행 제거
+      const validData = csvData.data.filter(row => row && row.length > 0);
+      
       // 헤더와 데이터를 합쳐서 전체 데이터 구성
-      const allData = [csvData.headers, ...csvData.data];
+      const allData = [csvData.headers, ...validData];
       
       // 스프레드시트에 데이터 로드
       const hotInstance = hotRef.current.hotInstance;
       if (hotInstance) {
         hotInstance.loadData(allData);
-        setOutput(`${csvData.fileName} 파일이 로드되었습니다. (${csvData.data.length}행)`);
+        setOutput(`${csvData.fileName} 파일이 로드되었습니다. (${validData.length}행)`);
       }
     }
   }, [csvData]);
@@ -49,9 +57,9 @@ const MainSpreadSheet: React.FC = () => {
   return (
     <div className="h-full flex flex-col">
       <div className="example-controls-container bg-white border-b border-gray-200 p-4">
-        <output className="console text-sm text-gray-600" id="output">
+        <div className="console text-sm text-gray-600" id="output">
           {output}
-        </output>
+        </div>
       </div>
       <div className="flex-1 overflow-auto">
         <HotTable
@@ -63,14 +71,20 @@ const MainSpreadSheet: React.FC = () => {
           height="100%"
           autoWrapRow={true}
           autoWrapCol={true}
-          minRows={50}
-          minCols={csvData ? csvData.headers.length : 80}
+          minRows={8}
+          minCols={csvData ? csvData.headers.length : 20}
+          manualColumnResize={true}
+          manualRowResize={true}
           persistentState={true}
           licenseKey="non-commercial-and-evaluation"
           stretchH="all"
+          wordWrap={true}
+          readOnly={false}
           columnSorting={true}
           filters={true}
           contextMenu={true}
+          dropdownMenu={true}
+          data={csvData ? [csvData.headers, ...csvData.data.filter(row => row && row.length > 0)] : []}
           afterChange={function (
             change: Handsontable.CellChange[] | null,
             source: Handsontable.ChangeSource

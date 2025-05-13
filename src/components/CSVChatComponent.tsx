@@ -99,17 +99,52 @@ export default function CSVChatComponent() {
     setIsLoading(true);
     
     try {
+      // 파일 확장자 확인
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      
+      if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+        // XLSX/XLS 파일은 현재 Papa Parse만으로는 처리할 수 없음을 알리는 메시지
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          type: 'assistant',
+          content: `⚠️ 현재 XLSX/XLS 파일은 완전히 지원되지 않습니다. CSV 파일로 변환 후 시도해주세요.`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        setIsLoading(false);
+        return;
+      }
+      
       // UTF-8 검사 및 디코딩
       const fileContent = await detectAndDecode(file);
       
       // Papa Parse를 사용하여 CSV 파싱
       Papa.parse(fileContent, {
         header: false,
+        skipEmptyLines: true, // 빈 행을 건너뛰기
         complete: (results) => {
           if (results.data && results.data.length > 0) {
             const data = results.data as string[][];
+            
+            // 데이터 검증
+            if (data.length <= 1) {
+              const errorMessage: Message = {
+                id: Date.now().toString(),
+                type: 'assistant',
+                content: `⚠️ 파일에 충분한 데이터가 없습니다. 헤더 행과 최소 1개 이상의 데이터 행이 필요합니다.`,
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, errorMessage]);
+              setIsLoading(false);
+              return;
+            }
+            
             const headers = data[0] || [];
-            const rows = data.slice(1);
+            const rows = data.slice(1).filter(row => row.length > 0 && row.some(cell => cell !== '')); // 완전히 빈 행 제거
+            
+            console.log('CSV 헤더:', headers);
+            console.log('CSV 데이터 행 수:', rows.length);
+            console.log('첫 번째 데이터 행:', rows[0]);
             
             setCsvData({
               headers,
