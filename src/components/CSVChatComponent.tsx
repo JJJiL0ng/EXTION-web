@@ -1,7 +1,10 @@
+// components/CSVChatComponent.tsx
 'use client'
 
 import React, { useState, useCallback, useRef } from 'react';
 import { Upload, Send, FileText, X } from 'lucide-react';
+import Papa from 'papaparse';
+import { useCSV } from '../contexts/CSVContext';
 
 interface Message {
   id: string;
@@ -10,12 +13,56 @@ interface Message {
   timestamp: Date;
 }
 
+// UTF-8 검사 함수
+const isValidUTF8 = (text: string): boolean => {
+  try {
+    // UTF-8로 인코딩된 텍스트인지 확인
+    new TextEncoder().encode(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// 다양한 인코딩으로 디코딩 시도
+const detectAndDecode = async (file: File): Promise<string> => {
+  const arrayBuffer = await file.arrayBuffer();
+  
+  // 먼저 UTF-8로 시도
+  try {
+    const decoded = new TextDecoder('utf-8', { fatal: true }).decode(arrayBuffer);
+    if (isValidUTF8(decoded)) {
+      return decoded;
+    }
+  } catch {
+    console.log('UTF-8 디코딩 실패, 다른 인코딩 시도 중...');
+  }
+  
+  // 다른 인코딩들 시도
+  const encodings = ['euc-kr', 'cp949', 'iso-8859-1', 'windows-1252'];
+  
+  for (const encoding of encodings) {
+    try {
+      const decoded = new TextDecoder(encoding).decode(arrayBuffer);
+      if (decoded && decoded.length > 0) {
+        return decoded;
+      }
+    } catch {
+      console.log(`${encoding} 디코딩 실패`);
+    }
+  }
+  
+  // 모든 인코딩이 실패한 경우 기본 디코딩 사용
+  return new TextDecoder('utf-8', { fatal: false }).decode(arrayBuffer);
+};
+
 export default function CSVChatComponent() {
   const [file, setFile] = useState<File | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { setCsvData, setIsLoading } = useCSV();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -34,6 +81,7 @@ export default function CSVChatComponent() {
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile && isValidFile(droppedFile)) {
       setFile(droppedFile);
+      processCSVFile(droppedFile);
     }
   }, []);
 
@@ -47,10 +95,68 @@ export default function CSVChatComponent() {
     return validTypes.includes(file.type) || file.name.endsWith('.csv') || file.name.endsWith('.xlsx');
   };
 
+  const processCSVFile = async (file: File) => {
+    setIsLoading(true);
+    
+    try {
+      // UTF-8 검사 및 디코딩
+      const fileContent = await detectAndDecode(file);
+      
+      // Papa Parse를 사용하여 CSV 파싱
+      Papa.parse(fileContent, {
+        header: false,
+        complete: (results) => {
+          if (results.data && results.data.length > 0) {
+            const data = results.data as string[][];
+            const headers = data[0] || [];
+            const rows = data.slice(1);
+            
+            setCsvData({
+              headers,
+              data: rows,
+              fileName: file.name
+            });
+            
+            // 성공 메시지 추가
+            const successMessage: Message = {
+              id: Date.now().toString(),
+              type: 'assistant',
+              content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다. ${results.data.length}행의 데이터가 스프레드시트에 표시됩니다.`,
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, successMessage]);
+          }
+        },
+        error: (error: Error) => {
+          console.error('CSV 파싱 오류:', error);
+          const errorMessage: Message = {
+            id: Date.now().toString(),
+            type: 'assistant',
+            content: `❌ 파일 처리 중 오류가 발생했습니다: ${error.message}`,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, errorMessage]);
+        }
+      });
+    } catch (error) {
+      console.error('파일 읽기 오류:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: `❌ 파일 읽기 중 오류가 발생했습니다. 파일 형식을 확인해주세요.`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && isValidFile(selectedFile)) {
       setFile(selectedFile);
+      processCSVFile(selectedFile);
     }
   };
 
@@ -61,6 +167,7 @@ export default function CSVChatComponent() {
   const removeFile = () => {
     setFile(null);
     setMessages([]);
+    setCsvData(null);
   };
 
   const sendMessage = () => {
