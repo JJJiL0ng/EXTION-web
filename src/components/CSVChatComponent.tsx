@@ -7,6 +7,8 @@ import Papa from 'papaparse';
 import { useCSV } from '../contexts/CSVContext';
 import { useSpreadsheetStore } from '../stores/useSpreadsheetStore';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
 interface Message {
   id: string;
   type: 'user' | 'assistant';
@@ -231,7 +233,7 @@ export default function CSVChatComponent() {
       language: 'ko'
     };
 
-    const response = await fetch('http://localhost:8080/formula/generate', {
+    const response = await fetch(`${API_BASE_URL}/formula/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -282,7 +284,7 @@ export default function CSVChatComponent() {
 
 **생성된 함수:** \`${result.formula}\`
 **적용 위치:** ${result.cellAddress || 'E1'}
-            
+
 **설명:** ${result.explanation?.korean || '함수가 생성되었습니다.'}
 
 ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.` : ''}`,
