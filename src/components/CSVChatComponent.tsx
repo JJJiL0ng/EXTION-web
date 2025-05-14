@@ -2,21 +2,32 @@
 'use client'
 
 import React, { useState, useCallback, useRef } from 'react';
-import { Send, FileText, X, Paperclip } from 'lucide-react';
+import { Send, FileText, X, Paperclip, FunctionSquare } from 'lucide-react';
 import Papa from 'papaparse';
 import { useCSV } from '../contexts/CSVContext';
+import { useSpreadsheetStore } from '../stores/useSpreadsheetStore';
 
 interface Message {
   id: string;
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  mode?: 'normal' | 'formula'; // 메시지가 포뮬러 모드에서 보낸 것인지 구분
+}
+
+interface FormulaResponse {
+  success: boolean;
+  formula?: string;
+  explanation?: {
+    korean: string;
+  };
+  cellAddress?: string;
+  error?: string;
 }
 
 // UTF-8 검사 함수
 const isValidUTF8 = (text: string): boolean => {
   try {
-    // UTF-8로 인코딩된 텍스트인지 확인
     new TextEncoder().encode(text);
     return true;
   } catch {
@@ -28,7 +39,6 @@ const isValidUTF8 = (text: string): boolean => {
 const detectAndDecode = async (file: File): Promise<string> => {
   const arrayBuffer = await file.arrayBuffer();
   
-  // 먼저 UTF-8로 시도
   try {
     const decoded = new TextDecoder('utf-8', { fatal: true }).decode(arrayBuffer);
     if (isValidUTF8(decoded)) {
@@ -38,7 +48,6 @@ const detectAndDecode = async (file: File): Promise<string> => {
     console.log('UTF-8 디코딩 실패, 다른 인코딩 시도 중...');
   }
   
-  // 다른 인코딩들 시도
   const encodings = ['euc-kr', 'cp949', 'iso-8859-1', 'windows-1252'];
   
   for (const encoding of encodings) {
@@ -52,7 +61,6 @@ const detectAndDecode = async (file: File): Promise<string> => {
     }
   }
   
-  // 모든 인코딩이 실패한 경우 기본 디코딩 사용
   return new TextDecoder('utf-8', { fatal: false }).decode(arrayBuffer);
 };
 
@@ -61,9 +69,12 @@ export default function CSVChatComponent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isComposing, setIsComposing] = useState(false); // IME 조합 상태 추적
+  const [isComposing, setIsComposing] = useState(false);
+  const [isFormulaMode, setIsFormulaMode] = useState(false); // 포뮬러 모드 상태
+  const [isLoading, setIsLoading] = useState(false); // API 호출 중 상태
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { setCsvData, setIsLoading } = useCSV();
+  const { setCsvData, setIsLoading: setCSVLoading } = useCSV();
+  const { sheetContext, updateSheetContext } = useSpreadsheetStore();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -97,14 +108,12 @@ export default function CSVChatComponent() {
   };
 
   const processCSVFile = async (file: File) => {
-    setIsLoading(true);
+    setCSVLoading(true);
     
     try {
-      // 파일 확장자 확인
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
       
       if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-        // XLSX/XLS 파일은 현재 Papa Parse만으로는 처리할 수 없음을 알리는 메시지
         const errorMessage: Message = {
           id: Date.now().toString(),
           type: 'assistant',
@@ -112,22 +121,19 @@ export default function CSVChatComponent() {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, errorMessage]);
-        setIsLoading(false);
+        setCSVLoading(false);
         return;
       }
       
-      // UTF-8 검사 및 디코딩
       const fileContent = await detectAndDecode(file);
       
-      // Papa Parse를 사용하여 CSV 파싱
       Papa.parse(fileContent, {
         header: false,
-        skipEmptyLines: true, // 빈 행을 건너뛰기
+        skipEmptyLines: true,
         complete: (results: Papa.ParseResult<unknown>) => {
           if (results.data && results.data.length > 0) {
             const data = results.data as string[][];
             
-            // 데이터 검증
             if (data.length <= 1) {
               const errorMessage: Message = {
                 id: Date.now().toString(),
@@ -136,24 +142,25 @@ export default function CSVChatComponent() {
                 timestamp: new Date()
               };
               setMessages(prev => [...prev, errorMessage]);
-              setIsLoading(false);
+              setCSVLoading(false);
               return;
             }
             
             const headers = data[0] || [];
-            const rows = data.slice(1).filter(row => row.length > 0 && row.some(cell => cell !== '')); // 완전히 빈 행 제거
+            const rows = data.slice(1).filter(row => row.length > 0 && row.some(cell => cell !== ''));
             
-            console.log('CSV 헤더:', headers);
-            console.log('CSV 데이터 행 수:', rows.length);
-            console.log('첫 번째 데이터 행:', rows[0]);
-            
-            setCsvData({
+            const csvData = {
               headers,
               data: rows,
               fileName: file.name
-            });
+            };
             
-            // 성공 메시지 추가
+            // CSVContext 업데이트
+            setCsvData(csvData);
+            
+            // Zustand 스토어 업데이트
+            updateSheetContext(csvData);
+            
             const successMessage: Message = {
               id: Date.now().toString(),
               type: 'assistant',
@@ -184,7 +191,7 @@ export default function CSVChatComponent() {
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false);
+      setCSVLoading(false);
     }
   };
 
@@ -204,41 +211,133 @@ export default function CSVChatComponent() {
     setFile(null);
     setMessages([]);
     setCsvData(null);
+    updateSheetContext(null);
   };
 
-  const sendMessage = () => {
+  // 포뮬러 모드 토글
+  const toggleFormulaMode = () => {
+    setIsFormulaMode(!isFormulaMode);
+  };
+
+  // 포뮬러 API 호출
+  const callFormulaAPI = async (userInput: string): Promise<FormulaResponse> => {
+    if (!sheetContext) {
+      throw new Error('시트 데이터가 없습니다.');
+    }
+
+    const requestBody = {
+      userInput,
+      sheetContext,
+      language: 'ko'
+    };
+
+    const response = await fetch('/api/formula/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`);
+    }
+
+    return response.json();
+  };
+
+  const sendMessage = async () => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
       content: inputValue,
-      timestamp: new Date()
+      timestamp: new Date(),
+      mode: isFormulaMode ? 'formula' : 'normal'
     };
 
     setMessages(prev => [...prev, userMessage]);
-
-    // 시뮬레이션된 Assistant 응답
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: `${file?.name} 파일에 대한 질문을 받았습니다: "${inputValue}"\n\n이는 시뮬레이션된 응답입니다. 실제 구현에서는 파일을 파싱하고 적절한 분석을 제공할 수 있습니다.`,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-    }, 1000);
-
+    const currentInput = inputValue;
     setInputValue('');
+
+    if (isFormulaMode) {
+      // 포뮬러 모드일 때 API 호출
+      setIsLoading(true);
+      
+      try {
+        // 15초 타임아웃 설정
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('timeout')), 15000);
+        });
+
+        const apiCall = callFormulaAPI(currentInput);
+        const result = await Promise.race([apiCall, timeoutPromise]);
+
+        if (result.success && result.formula) {
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: `✅ 함수가 생성되었습니다!
+
+**생성된 함수:** \`${result.formula}\`
+**적용 위치:** ${result.cellAddress || 'E1'}
+
+**설명:** ${result.explanation?.korean || '함수가 생성되었습니다.'}
+
+${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.` : ''}`,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+
+          // TODO: HyperFormula를 사용하여 실제 스프레드시트에 함수 적용
+          // 구현 예정: result.formula를 result.cellAddress 위치에 적용
+          console.log('TODO: Apply formula to spreadsheet', {
+            formula: result.formula,
+            cellAddress: result.cellAddress
+          });
+        } else {
+          throw new Error(result.error || '함수 생성에 실패했습니다.');
+        }
+      } catch (error) {
+        let errorMessage = '함수 생성 중 오류가 발생했습니다.';
+        
+        if (error instanceof Error && error.message === 'timeout') {
+          errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+        } else if (error instanceof Error) {
+          errorMessage = `❌ ${error.message}`;
+        }
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: errorMessage,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // 일반 모드 (기존 로직 유지)
+      setTimeout(() => {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `${file?.name} 파일에 대한 질문을 받았습니다: "${currentInput}"\n\n이는 시뮬레이션된 응답입니다. 실제 구현에서는 파일을 파싱하고 적절한 분석을 제공할 수 있습니다.`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    // IME 조합 중에는 Enter 키 처리 건너뛰기
     if (isComposing) return;
     
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (inputValue.trim()) {
+      if (inputValue.trim() && !isLoading) {
         sendMessage();
       }
     }
@@ -246,10 +345,8 @@ export default function CSVChatComponent() {
 
   return (
     <div className="flex flex-col h-full w-full bg-white">
-      {/* 메인 컨테이너 - 최대 너비 제한 제거 */}
       <div className="flex flex-col h-full w-full">
         
-        {/* 첨부된 파일이 있을 때 헤더 표시 */}
         {file && (
           <div className="bg-white border-b border-gray-100 p-2">
             <div className="flex items-center justify-between">
@@ -276,7 +373,6 @@ export default function CSVChatComponent() {
           </div>
         )}
 
-        {/* 채팅 메시지 영역 - 높이 조정 */}
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
@@ -299,18 +395,26 @@ export default function CSVChatComponent() {
                   <div
                     className={`${
                       message.type === 'user'
-                        ? 'bg-blue-50 text-blue-900'
-                        : 'bg-gray-50 text-gray-900'
+                        ? message.mode === 'formula'
+                          ? 'bg-blue-100 text-blue-900' // 포뮬러 모드에서 보낸 메시지
+                          : 'bg-blue-50 text-blue-900'   // 일반 모드에서 보낸 메시지
+                        : 'bg-gray-50 text-gray-900'     // 어시스턴트 메시지
                     } rounded-xl p-3`}
                   >
                     <div className="flex items-start space-x-2">
                       <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
                         message.type === 'user' 
-                          ? 'bg-blue-100 text-blue-600' 
-                          : 'bg-gray-100 text-gray-600'
+                          ? message.mode === 'formula'
+                            ? 'bg-blue-200 text-blue-700'  // 포뮬러 모드 아이콘
+                            : 'bg-blue-100 text-blue-600'  // 일반 모드 아이콘
+                          : 'bg-gray-100 text-gray-600'    // 어시스턴트 아이콘
                       }`}>
                         {message.type === 'user' ? (
-                          <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                          message.mode === 'formula' ? (
+                            <FunctionSquare className="w-3 h-3" />
+                          ) : (
+                            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                          )
                         ) : (
                           <div className="w-3 h-3 bg-gray-600 rounded-sm"></div>
                         )}
@@ -318,6 +422,11 @@ export default function CSVChatComponent() {
                       <div className="flex-1">
                         <p className="text-sm font-medium mb-1">
                           {message.type === 'user' ? 'You' : 'Assistant'}
+                          {message.type === 'user' && message.mode === 'formula' && (
+                            <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                              Formula
+                            </span>
+                          )}
                         </p>
                         <div className="prose prose-sm max-w-none">
                           <p className="whitespace-pre-wrap text-sm leading-relaxed">
@@ -332,16 +441,37 @@ export default function CSVChatComponent() {
                   </div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="space-y-2">
+                  <div className="bg-gray-50 text-gray-900 rounded-xl p-3">
+                    <div className="flex items-start space-x-2">
+                      <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-100 text-gray-600">
+                        <div className="w-3 h-3 bg-gray-600 rounded-sm animate-pulse"></div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium mb-1">Assistant</p>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          <span className="text-sm text-gray-500 ml-2">함수를 생성하고 있습니다...</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* 입력 영역 - 높이 줄이기 */}
         <div className="border-t border-gray-100 bg-white p-2">
           <div 
             className={`relative border-2 border-dashed rounded-xl transition-all ${
               isDragOver
                 ? 'border-blue-400 bg-blue-50'
+                : isFormulaMode
+                ? 'border-blue-200 bg-blue-300'  // 포뮬러 모드 배경색
                 : 'border-gray-200 bg-gray-50 hover:border-gray-300'
             }`}
             onDragOver={handleDragOver}
@@ -363,13 +493,31 @@ export default function CSVChatComponent() {
                 onKeyDown={handleKeyPress}
                 onCompositionStart={() => setIsComposing(true)}
                 onCompositionEnd={() => setIsComposing(false)}
-                placeholder="파일을 첨부하거나 질문을 입력하세요..."
+                placeholder={
+                  isFormulaMode 
+                    ? "스프레드시트 함수를 생성할 명령을 입력하세요..." 
+                    : "파일을 첨부하거나 질문을 입력하세요..."
+                }
                 className="flex-1 bg-transparent border-none outline-none text-base text-gray-900 placeholder-gray-500"
+                disabled={isLoading}
               />
+              
+              {/* fx 아이콘 추가 */}
+              <button
+                onClick={toggleFormulaMode}
+                className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+                  isFormulaMode
+                    ? 'bg-[#005DE9] text-white'  // 활성화된 상태
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'  // 비활성화된 상태
+                }`}
+                title={isFormulaMode ? "일반 채팅 모드로 전환" : "포뮬러 모드로 전환"}
+              >
+                <FunctionSquare className="h-4 w-4" />
+              </button>
               
               <button
                 onClick={sendMessage}
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isLoading}
                 className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#005DE9] hover:bg-[#0052d1] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="h-4 w-4 text-white" />
@@ -387,7 +535,10 @@ export default function CSVChatComponent() {
           
           {!file && (
             <p className="text-xs text-gray-500 mt-1 text-center">
-              CSV 또는 XLSX 파일을 드래그하여 업로드하거나 클립 아이콘을 클릭하세요
+              {isFormulaMode 
+                ? "포뮬러 모드: 자연어로 스프레드시트 함수를 생성하세요"
+                : "CSV 또는 XLSX 파일을 드래그하여 업로드하거나 클립 아이콘을 클릭하세요"
+              }
             </p>
           )}
         </div>
