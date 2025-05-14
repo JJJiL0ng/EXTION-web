@@ -1,11 +1,12 @@
 // components/MainSpreadSheet.tsx
 'use client'
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { HotTable, HotTableRef } from '@handsontable/react-wrapper';
 import { registerAllModules } from 'handsontable/registry';
 import Handsontable from 'handsontable';
 import { useCSV } from '../contexts/CSVContext';
+import { useSpreadsheetStore } from '../stores/useSpreadsheetStore';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -16,7 +17,15 @@ registerAllModules();
 const MainSpreadSheet: React.FC = () => {
   const hotRef = useRef<HotTableRef>(null);
   const { csvData, isLoading } = useCSV();
+  const { updateSheetContext } = useSpreadsheetStore();
   const [isAutosave] = useState<boolean>(false);
+
+  // CSV 데이터가 변경될 때마다 Zustand 스토어 업데이트
+  useEffect(() => {
+    if (csvData) {
+      updateSheetContext(csvData);
+    }
+  }, [csvData, updateSheetContext]);
 
   // 로딩 중일 때 표시
   if (isLoading) {
@@ -77,6 +86,7 @@ const MainSpreadSheet: React.FC = () => {
   return (
     <div className="h-full flex flex-col">
       <div className="example-controls-container bg-white border-b border-gray-200 p-4">
+        {/* TODO: 향후 여기에 컨트롤 추가 가능 */}
       </div>
       <div className="flex-1 overflow-auto">
         <HotTable
@@ -106,6 +116,25 @@ const MainSpreadSheet: React.FC = () => {
           ) {
             if (source === 'loadData') {
               return; // don't save this change
+            }
+
+            // TODO: 스프레드시트 변경사항을 Zustand 스토어에 반영
+            // 현재 CSV 데이터를 업데이트하여 포뮬러 생성 시 최신 데이터 사용
+            if (change && csvData) {
+              const updatedData = [...csvData.data];
+              change.forEach(([row, col, , newValue]) => {
+                if (typeof row === 'number' && typeof col === 'number' && updatedData[row]) {
+                  updatedData[row][col] = newValue?.toString() || '';
+                }
+              });
+              
+              const updatedCsvData = {
+                ...csvData,
+                data: updatedData
+              };
+              
+              // Zustand 스토어 업데이트
+              updateSheetContext(updatedCsvData);
             }
 
             if (!isAutosave) {
