@@ -164,6 +164,13 @@ const MainSpreadSheet: React.FC = () => {
   const processedData = csvData?.data.filter(row => row && row.length > 0) || defaultData;
   const headers = csvData?.headers || [];
 
+  // 헤더를 첫번째 행에 추가하기 위한 데이터 준비
+  let displayData = [...processedData];
+  if (headers && headers.length > 0) {
+    // 헤더가 있는 경우 첫 번째 행에 삽입
+    displayData = [headers, ...processedData];
+  }
+
   return (
     <div className="h-full flex flex-col">
       <div className="example-controls-container bg-white border-b border-gray-200 p-4">
@@ -192,7 +199,7 @@ const MainSpreadSheet: React.FC = () => {
         <HotTable
           ref={hotRef}
           rowHeaders={true}
-          colHeaders={headers.length > 0 ? headers : true}
+          colHeaders={true}
           height="100%"
           autoWrapRow={true}
           autoWrapCol={true}
@@ -209,7 +216,7 @@ const MainSpreadSheet: React.FC = () => {
           filters={true}
           contextMenu={true}
           dropdownMenu={true}
-          data={processedData}
+          data={displayData}
           formulas={formulasConfig}
           afterChange={function (
             change: Handsontable.CellChange[] | null,

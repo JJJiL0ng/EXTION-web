@@ -282,7 +282,7 @@ export default function CSVChatComponent() {
 
 **생성된 함수:** \`${result.formula}\`
 **적용 위치:** ${result.cellAddress || 'E1'}
-
+            
 **설명:** ${result.explanation?.korean || '함수가 생성되었습니다.'}
 
 ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.` : ''}`,
