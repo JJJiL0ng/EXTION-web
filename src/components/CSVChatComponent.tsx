@@ -25,9 +25,6 @@ interface FormulaResponse {
   error?: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-
-
 // UTF-8 검사 함수
 const isValidUTF8 = (text: string): boolean => {
   try {
@@ -223,29 +220,29 @@ export default function CSVChatComponent() {
   };
 
   // 포뮬러 API 호출
-const callFormulaAPI = async (userInput: string): Promise<FormulaResponse> => {
+  const callFormulaAPI = async (userInput: string): Promise<FormulaResponse> => {
     if (!sheetContext) {
       throw new Error('시트 데이터가 없습니다.');
     }
-  
+
     const requestBody = {
       userInput,
       sheetContext,
       language: 'ko'
     };
-  
-    const response = await fetch(`${API_BASE_URL}/formula/generate`, {
+
+    const response = await fetch('http://localhost:8080/formula/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
     });
-  
+
     if (!response.ok) {
       throw new Error(`API 오류: ${response.status}`);
     }
-  
+
     return response.json();
   };
 
@@ -293,11 +290,18 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
           };
           setMessages(prev => [...prev, assistantMessage]);
 
-          // TODO: HyperFormula를 사용하여 실제 스프레드시트에 함수 적용
-          // 구현 예정: result.formula를 result.cellAddress 위치에 적용
-          console.log('TODO: Apply formula to spreadsheet', {
+          // HyperFormula를 사용하여 실제 스프레드시트에 함수 적용
+          const { setPendingFormula } = useSpreadsheetStore.getState();
+          setPendingFormula({
             formula: result.formula,
-            cellAddress: result.cellAddress
+            cellAddress: result.cellAddress || 'E1',
+            explanation: result.explanation?.korean || '함수가 생성되었습니다.',
+            timestamp: new Date()
+          });
+          
+          console.log('Formula applied to spreadsheet', {
+            formula: result.formula,
+            cellAddress: result.cellAddress || 'E1'
           });
         } else {
           throw new Error(result.error || '함수 생성에 실패했습니다.');
