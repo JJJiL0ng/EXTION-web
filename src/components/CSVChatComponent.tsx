@@ -512,7 +512,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 onCompositionEnd={() => setIsComposing(false)}
                 placeholder={
                   isFormulaMode 
-                    ? "스프레드시트 함수를 생성할 명령을 입력하세요..." 
+                    ? "스프레드시트 함수에 반영 할 명령을 입력하세요..." 
                     : "파일을 첨부하거나 질문을 입력하세요..."
                 }
                 className="flex-1 bg-transparent border-none outline-none text-base text-gray-900 placeholder-gray-500"
