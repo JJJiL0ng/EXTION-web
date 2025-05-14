@@ -245,17 +245,17 @@ export default function CSVChatComponent() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      {/* 메인 컨테이너 - 최대 너비 제한 */}
-      <div className="flex flex-col h-full max-w-3xl mx-auto w-full">
+    <div className="flex flex-col h-full w-full bg-white">
+      {/* 메인 컨테이너 - 최대 너비 제한 제거 */}
+      <div className="flex flex-col h-full w-full">
         
         {/* 첨부된 파일이 있을 때 헤더 표시 */}
         {file && (
-          <div className="bg-white border-b border-gray-100 p-4">
+          <div className="bg-white border-b border-gray-100 p-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
-                  <FileText className="h-4 w-4 text-green-600" />
+                <div className="w-6 h-6 bg-green-50 rounded-lg flex items-center justify-center">
+                  <FileText className="h-3 w-3 text-green-600" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">
@@ -270,53 +270,53 @@ export default function CSVChatComponent() {
                 onClick={removeFile}
                 className="text-gray-400 hover:text-gray-600 transition-colors p-1"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3 w-3" />
               </button>
             </div>
           </div>
         )}
 
-        {/* 채팅 메시지 영역 */}
-        <div className="flex-1 overflow-y-auto px-6 py-8">
+        {/* 채팅 메시지 영역 - 높이 조정 */}
+        <div className="flex-1 overflow-y-auto px-4 py-2">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-              <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center">
-                <FileText className="h-8 w-8 text-gray-400" />
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
+              <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center">
+                <FileText className="h-6 w-6 text-gray-400" />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <h2 className="text-2xl font-semibold text-gray-900">
                   CSV/XLSX 분석 채팅
                 </h2>
-                <p className="text-gray-600 max-w-md">
+                <p className="text-base text-gray-600 max-w-md">
                   파일을 업로드하여 데이터 분석을 시작하세요. 업로드 후 질문을 입력하여 대화할 수 있습니다.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-4">
               {messages.map((message) => (
-                <div key={message.id} className="space-y-4">
+                <div key={message.id} className="space-y-2">
                   <div
                     className={`${
                       message.type === 'user'
                         ? 'bg-blue-50 text-blue-900'
                         : 'bg-gray-50 text-gray-900'
-                    } rounded-xl p-6`}
+                    } rounded-xl p-3`}
                   >
-                    <div className="flex items-start space-x-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    <div className="flex items-start space-x-2">
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
                         message.type === 'user' 
                           ? 'bg-blue-100 text-blue-600' 
                           : 'bg-gray-100 text-gray-600'
                       }`}>
                         {message.type === 'user' ? (
-                          <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
+                          <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
                         ) : (
-                          <div className="w-4 h-4 bg-gray-600 rounded-sm"></div>
+                          <div className="w-3 h-3 bg-gray-600 rounded-sm"></div>
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium mb-2">
+                        <p className="text-sm font-medium mb-1">
                           {message.type === 'user' ? 'You' : 'Assistant'}
                         </p>
                         <div className="prose prose-sm max-w-none">
@@ -324,7 +324,7 @@ export default function CSVChatComponent() {
                             {message.content}
                           </p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-3">
+                        <p className="text-xs text-gray-500 mt-1">
                           {message.timestamp.toLocaleTimeString()}
                         </p>
                       </div>
@@ -336,8 +336,8 @@ export default function CSVChatComponent() {
           )}
         </div>
 
-        {/* 입력 영역 */}
-        <div className="border-t border-gray-100 bg-white p-6">
+        {/* 입력 영역 - 높이 줄이기 */}
+        <div className="border-t border-gray-100 bg-white p-2">
           <div 
             className={`relative border-2 border-dashed rounded-xl transition-all ${
               isDragOver
@@ -348,12 +348,12 @@ export default function CSVChatComponent() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <div className="flex items-center space-x-3 p-4">
+            <div className="flex items-center space-x-2 p-2">
               <button
                 onClick={handleFileButtonClick}
-                className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-white transition-colors group"
+                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white transition-colors group"
               >
-                <Paperclip className="h-5 w-5 text-gray-500 group-hover:text-gray-700" />
+                <Paperclip className="h-4 w-4 text-gray-500 group-hover:text-gray-700" />
               </button>
               
               <input
@@ -364,15 +364,15 @@ export default function CSVChatComponent() {
                 onCompositionStart={() => setIsComposing(true)}
                 onCompositionEnd={() => setIsComposing(false)}
                 placeholder="파일을 첨부하거나 질문을 입력하세요..."
-                className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-500"
+                className="flex-1 bg-transparent border-none outline-none text-base text-gray-900 placeholder-gray-500"
               />
               
               <button
                 onClick={sendMessage}
                 disabled={!inputValue.trim()}
-                className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#005DE9] hover:bg-[#0052d1] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#005DE9] hover:bg-[#0052d1] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Send className="h-5 w-5 text-white" />
+                <Send className="h-4 w-4 text-white" />
               </button>
             </div>
             
@@ -386,7 +386,7 @@ export default function CSVChatComponent() {
           </div>
           
           {!file && (
-            <p className="text-xs text-gray-500 mt-2 text-center">
+            <p className="text-xs text-gray-500 mt-1 text-center">
               CSV 또는 XLSX 파일을 드래그하여 업로드하거나 클립 아이콘을 클릭하세요
             </p>
           )}
