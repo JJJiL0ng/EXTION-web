@@ -123,7 +123,7 @@ export default function CSVChatComponent() {
       Papa.parse(fileContent, {
         header: false,
         skipEmptyLines: true, // 빈 행을 건너뛰기
-        complete: (results) => {
+        complete: (results: Papa.ParseResult<unknown>) => {
           if (results.data && results.data.length > 0) {
             const data = results.data as string[][];
             

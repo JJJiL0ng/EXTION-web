@@ -1,6 +1,7 @@
-import MainSpreadSheet from "@/components/MainSpreadSheet";
+// import MainSpreadSheet from "@/components/MainSpreadSheet";
 import CSVChatComponent from "@/components/CSVChatComponent";
 import { CSVProvider } from "@/contexts/CSVContext";
+import ArtifactComponent from "@/components/ArtifactComponent";
 
 export default function Home() {
   return (
@@ -13,7 +14,8 @@ export default function Home() {
           overflowX: 'auto',
           maxHeight: '100vh'
         }}>
-          <MainSpreadSheet />
+          {/* <MainSpreadSheet /> */}
+          <ArtifactComponent />
         </div>
         <div style={{
           flex: '1',
