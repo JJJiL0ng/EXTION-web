@@ -20,13 +20,43 @@ interface SheetContext {
   sampleData?: Record<string, string>[];
 }
 
-interface SpreadsheetStore {
-  sheetContext: SheetContext | null;
-  updateSheetContext: (csvData: { headers: string[]; data: string[][] } | null) => void;
+interface FormulaApplication {
+  formula: string;
+  cellAddress: string;
+  explanation: string;
+  timestamp: Date;
 }
 
-export const useSpreadsheetStore = create<SpreadsheetStore>((set) => ({
+interface SpreadsheetStore {
+  sheetContext: SheetContext | null;
+  pendingFormula: FormulaApplication | null;
+  updateSheetContext: (csvData: { headers: string[]; data: string[][] } | null) => void;
+  setPendingFormula: (formula: FormulaApplication | null) => void;
+  applyPendingFormula: () => void;
+}
+
+// 셀 주소를 행과 열 인덱스로 변환하는 함수
+const cellAddressToCoords = (cellAddress: string): { row: number; col: number } => {
+  const match = cellAddress.match(/([A-Z]+)([0-9]+)/);
+  if (!match) throw new Error(`Invalid cell address: ${cellAddress}`);
+  
+  const [, colStr, rowStr] = match;
+  
+  // 컬럼 문자를 숫자로 변환 (A=0, B=1, ...)
+  let col = 0;
+  for (let i = 0; i < colStr.length; i++) {
+    col = col * 26 + (colStr.charCodeAt(i) - 65);
+  }
+  
+  // 행은 0-based index로 변환 (1-based에서 0-based로)
+  const row = parseInt(rowStr) - 1;
+  
+  return { row, col };
+};
+
+export const useSpreadsheetStore = create<SpreadsheetStore>((set, get) => ({
   sheetContext: null,
+  pendingFormula: null,
   
   updateSheetContext: (csvData) => {
     if (!csvData || !csvData.headers || !csvData.data) {
@@ -66,4 +96,19 @@ export const useSpreadsheetStore = create<SpreadsheetStore>((set) => ({
 
     set({ sheetContext });
   },
+
+  setPendingFormula: (formula) => {
+    set({ pendingFormula: formula });
+  },
+
+  applyPendingFormula: () => {
+    const { pendingFormula } = get();
+    if (pendingFormula) {
+      // 실제 적용은 MainSpreadSheet 컴포넌트에서 처리
+      // 여기서는 상태만 관리
+      console.log('Formula application triggered', pendingFormula);
+    }
+  },
 }));
+
+export { cellAddressToCoords };
