@@ -16,7 +16,6 @@ registerAllModules();
 const MainSpreadSheet: React.FC = () => {
   const hotRef = useRef<HotTableRef>(null);
   const { csvData, isLoading } = useCSV();
-  const [output] = useState<string>('CSV 파일을 업로드하면 여기에 표시됩니다.');
   const [isAutosave] = useState<boolean>(false);
 
   // 로딩 중일 때 표시
@@ -40,7 +39,35 @@ const MainSpreadSheet: React.FC = () => {
     ['', '', '', '', '', ''],
     ['', '', '', '', '', ''],
     ['', '', '', '', '', ''],
-    ['', '', '', '', '', '']
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
   ];
 
   // CSV 데이터 처리
@@ -50,9 +77,6 @@ const MainSpreadSheet: React.FC = () => {
   return (
     <div className="h-full flex flex-col">
       <div className="example-controls-container bg-white border-b border-gray-200 p-4">
-        <div className="console text-sm text-gray-600" id="output">
-          {csvData ? `${csvData.fileName} 파일이 로드되었습니다. (${processedData.length}행)` : output}
-        </div>
       </div>
       <div className="flex-1 overflow-auto">
         <HotTable
