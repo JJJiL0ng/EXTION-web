@@ -61,6 +61,7 @@ export default function CSVChatComponent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isComposing, setIsComposing] = useState(false); // IME 조합 상태 추적
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setCsvData, setIsLoading } = useCSV();
 
@@ -232,9 +233,14 @@ export default function CSVChatComponent() {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    // IME 조합 중에는 Enter 키 처리 건너뛰기
+    if (isComposing) return;
+    
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      if (inputValue.trim()) {
+        sendMessage();
+      }
     }
   };
 
@@ -355,6 +361,8 @@ export default function CSVChatComponent() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyPress}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
             placeholder="파일에 대해 질문하세요..."
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none"
           />
