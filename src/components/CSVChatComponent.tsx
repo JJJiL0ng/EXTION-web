@@ -1,7 +1,7 @@
 // components/CSVChatComponent.tsx
 'use client'
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Send, FileText, X, Paperclip, FunctionSquare } from 'lucide-react';
 import Papa from 'papaparse';
 import { useCSV } from '../contexts/CSVContext';
@@ -77,6 +77,7 @@ export default function CSVChatComponent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setCsvData, setIsLoading: setCSVLoading } = useCSV();
   const { sheetContext, updateSheetContext } = useSpreadsheetStore();
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -352,6 +353,13 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
     }
   };
 
+  // 새 메시지가 추가되거나 로딩 상태가 변경될 때 스크롤을 맨 아래로 이동하는 효과
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
   return (
     <div className="flex flex-col h-full w-full bg-white">
       <div className="flex flex-col h-full w-full">
@@ -382,7 +390,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-4 py-2">
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-2">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
               <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center">

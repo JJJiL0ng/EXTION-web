@@ -218,6 +218,7 @@ const MainSpreadSheet: React.FC = () => {
           dropdownMenu={true}
           data={displayData}
           formulas={formulasConfig}
+          language="ko-Kr"
           afterChange={function (
             change: Handsontable.CellChange[] | null,
             source: Handsontable.ChangeSource
