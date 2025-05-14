@@ -398,10 +398,12 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
               </div>
               <div className="space-y-1">
                 <h2 className="text-2xl font-semibold text-gray-900">
-                  CSV/XLSX 분석 채팅
+                  Extion - 파일과의 대화
                 </h2>
                 <p className="text-base text-gray-600 max-w-md">
-                  파일을 업로드하여 데이터 분석을 시작하세요. 업로드 후 질문을 입력하여 대화할 수 있습니다.
+                  파일을 업로드하여 데이터 분석을 시작하세요. <br />
+                  업로드 후 질문을 입력하여 대화할 수 있습니다.<br />
+                  포뮬러 모드로 한글로 셀을 조정할 수 있습니다.
                 </p>
               </div>
             </div>
@@ -419,7 +421,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                     } rounded-xl p-3`}
                   >
                     <div className="flex items-start space-x-2">
-                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                         message.type === 'user' 
                           ? message.mode === 'formula'
                             ? 'bg-blue-200 text-blue-700'  // 포뮬러 모드 아이콘
@@ -428,12 +430,12 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                       }`}>
                         {message.type === 'user' ? (
                           message.mode === 'formula' ? (
-                            <FunctionSquare className="w-3 h-3" />
+                            <FunctionSquare className="w-6 h-6" />
                           ) : (
-                            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                            <div className="w-5 h-5 bg-blue-600 rounded-full"></div>
                           )
                         ) : (
-                          <div className="w-3 h-3 bg-gray-600 rounded-sm"></div>
+                          <div className="w-5 h-5 bg-gray-600 rounded-full"></div>
                         )}
                       </div>
                       <div className="flex-1">
@@ -488,7 +490,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
               isDragOver
                 ? 'border-blue-400 bg-blue-50'
                 : isFormulaMode
-                ? 'border-blue-200 bg-blue-300'  // 포뮬러 모드 배경색
+                ? 'border-blue-200 bg-gray-300'  // 포뮬러 모드 배경색
                 : 'border-gray-200 bg-gray-50 hover:border-gray-300'
             }`}
             onDragOver={handleDragOver}
@@ -529,7 +531,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 }`}
                 title={isFormulaMode ? "일반 채팅 모드로 전환" : "포뮬러 모드로 전환"}
               >
-                <FunctionSquare className="h-4 w-4" />
+                <FunctionSquare className="h-5 w-5" />
               </button>
               
               <button
