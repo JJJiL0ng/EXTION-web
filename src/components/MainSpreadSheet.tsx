@@ -1,14 +1,14 @@
 // components/MainSpreadSheet.tsx
 'use client'
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { HotTable, HotTableRef } from '@handsontable/react-wrapper';
 import { registerAllModules } from 'handsontable/registry';
 import { HyperFormula } from 'hyperformula';
 import { DetailedSettings } from 'handsontable/plugins/formulas';
 import Handsontable from 'handsontable';
-import { useCSV } from '../contexts/CSVContext';
-import { useSpreadsheetStore, cellAddressToCoords } from '../stores/useSpreadsheetStore';
+import { useUnifiedDataStore } from '../stores/useUnifiedDataStore';
+import { cellAddressToCoords } from '../stores/useSpreadsheetStore';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -23,34 +23,84 @@ const hyperformulaInstance = HyperFormula.buildEmpty({
   maxColumns: 1000,
 });
 
+// CSV 데이터가 없을 때의 기본 설정
+const defaultData = [
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+];
+
 const MainSpreadSheet: React.FC = () => {
   const hotRef = useRef<HotTableRef>(null);
-  const { csvData, isLoading } = useCSV();
-  const { updateSheetContext, pendingFormula, setPendingFormula } = useSpreadsheetStore();
+  
+  // Zustand 스토어 사용
+  const {
+    rawCsvData,
+    computedData,
+    sheetContext,
+    loadingStates,
+    isInternalUpdate,
+    pendingFormula,
+    updateCellData,
+    setComputedData,
+    setInternalUpdate,
+    setPendingFormula,
+    getCurrentData
+  } = useUnifiedDataStore();
+
   const [isAutosave] = useState<boolean>(false);
 
   // HyperFormula 설정
   const [formulasConfig] = useState<DetailedSettings>({
     engine: hyperformulaInstance,
     namedExpressions: [],
-    sheetName: 'Sheet1', // 시트 이름 지정
+    sheetName: sheetContext?.sheetName || 'Sheet1', // 시트 이름 지정
   });
 
-  // CSV 데이터가 변경될 때마다 Zustand 스토어 업데이트
-  useEffect(() => {
-    if (csvData) {
-      updateSheetContext(csvData);
-    }
-  }, [csvData, updateSheetContext]);
+  // 표시할 데이터 준비
+  const displayData = useMemo(() => {
+    const data = rawCsvData 
+      ? [rawCsvData.headers, ...(getCurrentData() || rawCsvData.data)]
+      : defaultData;
+    return data;
+  }, [rawCsvData, computedData, getCurrentData]);
 
-  // 포뮬러 적용을 위한 useEffect
+  // 포뮬러 적용
   useEffect(() => {
     if (pendingFormula && hotRef.current?.hotInstance) {
+      setInternalUpdate(true);
       applyFormulaToCell(pendingFormula.formula, pendingFormula.cellAddress);
-      // 적용 후 pending formula 클리어
-      setPendingFormula(null);
+      
+      // 포뮬러 적용 후 계산된 결과를 스토어에 반영
+      setTimeout(() => {
+        const hot = hotRef.current?.hotInstance;
+        if (hot) {
+          const evaluatedData = hot.getData();
+          // 헤더 행 제외하고 데이터만 저장
+          setComputedData(evaluatedData.slice(1));
+        }
+        setPendingFormula(null);
+        setInternalUpdate(false);
+      }, 200);
     }
-  }, [pendingFormula, setPendingFormula]);
+  }, [pendingFormula, setPendingFormula, setInternalUpdate, setComputedData]);
 
   // 셀에 함수를 적용하는 함수
   const applyFormulaToCell = (formula: string, cellAddress: string) => {
@@ -69,8 +119,8 @@ const MainSpreadSheet: React.FC = () => {
       // 수식이 = 로 시작하는지 확인하고, 그렇지 않으면 자동으로 추가
       const formulaValue = formula.startsWith('=') ? formula : `=${formula}`;
       
-      // 직접 셀에 함수 설정
-      hot.setDataAtCell(row, col, formulaValue);
+      // 직접 셀에 함수 설정 (헤더 행 때문에 row + 1)
+      hot.setDataAtCell(row + 1, col, formulaValue);
       
       // 강제 재렌더링 및 계산
       setTimeout(() => {
@@ -102,9 +152,9 @@ const MainSpreadSheet: React.FC = () => {
       // 네임드 익스프레션 추가
       formulasPlugin.engine.addNamedExpression(namedExpName, formula);
       
-      // 셀에 네임드 익스프레션 참조 설정
+      // 셀에 네임드 익스프레션 참조 설정 (헤더 행 때문에 row + 1)
       const { row, col } = cellAddressToCoords(cellAddress);
-      hot?.setDataAtCell(row, col, `=${namedExpName}`);
+      hot?.setDataAtCell(row + 1, col, `=${namedExpName}`);
       
       // 재렌더링
       hot?.render();
@@ -116,7 +166,7 @@ const MainSpreadSheet: React.FC = () => {
   };
 
   // 로딩 중일 때 표시
-  if (isLoading) {
+  if (loadingStates.fileUpload) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -125,60 +175,6 @@ const MainSpreadSheet: React.FC = () => {
         </div>
       </div>
     );
-  }
-
-  // CSV 데이터가 없을 때의 기본 설정
-  const defaultData = [
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-  ];
-
-  // CSV 데이터 처리
-  const processedData = csvData?.data.filter(row => row && row.length > 0) || defaultData;
-  const headers = csvData?.headers || [];
-
-  // 헤더를 첫번째 행에 추가하기 위한 데이터 준비
-  let displayData = [...processedData];
-  if (headers && headers.length > 0) {
-    // 헤더가 있는 경우 첫 번째 행에 삽입
-    displayData = [headers, ...processedData];
   }
 
   return (
@@ -214,7 +210,7 @@ const MainSpreadSheet: React.FC = () => {
           autoWrapRow={true}
           autoWrapCol={true}
           minRows={8}
-          minCols={headers.length > 0 ? headers.length : 6}
+          minCols={rawCsvData?.headers.length || 6}
           minSpareCols={5} // 데이터 끝 이후 추가 열 생성
           minSpareRows={3} // 데이터 끝 이후 추가 행 생성
           manualColumnResize={true}
@@ -232,49 +228,30 @@ const MainSpreadSheet: React.FC = () => {
           formulas={formulasConfig}
           language="ko-Kr"
           afterChange={(
-            change: Handsontable.CellChange[] | null,
+            changes: Handsontable.CellChange[] | null,
             source: Handsontable.ChangeSource
           ) => {
-            if (source === 'loadData') {
-              return; // don't save this change
+            // 내부 업데이트이거나 로드 시점이면 스킵
+            if (isInternalUpdate || source === 'loadData') {
+              return;
             }
 
-            // 스프레드시트 변경사항을 Zustand 스토어에 반영
-            if (change && csvData) {
-              const updatedData = [...csvData.data];
-              change.forEach(([row, col, , newValue]) => {
-                if (typeof row === 'number' && typeof col === 'number' && updatedData[row]) {
-                  updatedData[row][col] = newValue?.toString() || '';
+            // 사용자 변경사항을 스토어에 반영
+            if (changes && rawCsvData) {
+              changes.forEach(([row, col, , newValue]) => {
+                if (typeof row === 'number' && typeof col === 'number') {
+                  // 헤더 행 제외 (헤더가 첫 번째 행에 있으므로)
+                  const dataRow = row - 1;
+                  if (dataRow >= 0) {
+                    updateCellData(dataRow, col, newValue?.toString() || '');
+                  }
                 }
               });
-              
-              const updatedCsvData = {
-                ...csvData,
-                data: updatedData
-              };
-              
-              // Zustand 스토어 업데이트
-              updateSheetContext(updatedCsvData);
             }
 
             if (!isAutosave) {
               return;
             }
-
-            fetch('https://handsontable.com/docs/scripts/json/save.json', {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ data: change }),
-            }).then(() => {
-              if (change) {
-                console.log(
-                  `Autosaved (${change.length} cell${change.length > 1 ? 's' : ''})`
-                );
-              }
-            });
           }}
           // 셀 값 변경 후 포뮬러 업데이트 훅
           afterSetDataAtCell={() => {

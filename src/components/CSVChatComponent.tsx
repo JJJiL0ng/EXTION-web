@@ -4,8 +4,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Send, FileText, X, Paperclip, FunctionSquare } from 'lucide-react';
 import Papa from 'papaparse';
-import { useCSV } from '../contexts/CSVContext';
-import { useSpreadsheetStore } from '../stores/useSpreadsheetStore';
+import { useUnifiedDataStore } from '../stores/useUnifiedDataStore';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -67,7 +66,18 @@ const detectAndDecode = async (file: File): Promise<string> => {
 };
 
 export default function CSVChatComponent() {
-  const [file, setFile] = useState<File | null>(null);
+  // Zustand 스토어 사용
+  const {
+    rawCsvData,
+    sheetContext,
+    loadingStates,
+    setRawCsvData,
+    setLoadingState,
+    setError,
+    setPendingFormula,
+    addToFormulaHistory
+  } = useUnifiedDataStore();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -75,9 +85,10 @@ export default function CSVChatComponent() {
   const [isFormulaMode, setIsFormulaMode] = useState(false); // 포뮬러 모드 상태
   const [isLoading, setIsLoading] = useState(false); // API 호출 중 상태
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { setCsvData, setIsLoading: setCSVLoading } = useCSV();
-  const { sheetContext, updateSheetContext } = useSpreadsheetStore();
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // 파일이 로드되었는지 확인
+  const file = rawCsvData ? new File([], rawCsvData.fileName) : null;
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -95,7 +106,6 @@ export default function CSVChatComponent() {
     
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile && isValidFile(droppedFile)) {
-      setFile(droppedFile);
       processCSVFile(droppedFile);
     }
   }, []);
@@ -111,7 +121,8 @@ export default function CSVChatComponent() {
   };
 
   const processCSVFile = async (file: File) => {
-    setCSVLoading(true);
+    setLoadingState('fileUpload', true);
+    setError('fileError', null);
     
     try {
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
@@ -124,7 +135,7 @@ export default function CSVChatComponent() {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, errorMessage]);
-        setCSVLoading(false);
+        setLoadingState('fileUpload', false);
         return;
       }
       
@@ -145,7 +156,7 @@ export default function CSVChatComponent() {
                 timestamp: new Date()
               };
               setMessages(prev => [...prev, errorMessage]);
-              setCSVLoading(false);
+              setLoadingState('fileUpload', false);
               return;
             }
             
@@ -158,11 +169,8 @@ export default function CSVChatComponent() {
               fileName: file.name
             };
             
-            // CSVContext 업데이트
-            setCsvData(csvData);
-            
-            // Zustand 스토어 업데이트
-            updateSheetContext(csvData);
+            // 통합 스토어에 저장
+            setRawCsvData(csvData);
             
             const successMessage: Message = {
               id: Date.now().toString(),
@@ -175,6 +183,7 @@ export default function CSVChatComponent() {
         },
         error: (error: Error) => {
           console.error('CSV 파싱 오류:', error);
+          setError('fileError', error.message);
           const errorMessage: Message = {
             id: Date.now().toString(),
             type: 'assistant',
@@ -186,6 +195,7 @@ export default function CSVChatComponent() {
       });
     } catch (error) {
       console.error('파일 읽기 오류:', error);
+      setError('fileError', error instanceof Error ? error.message : '알 수 없는 오류');
       const errorMessage: Message = {
         id: Date.now().toString(),
         type: 'assistant',
@@ -194,14 +204,13 @@ export default function CSVChatComponent() {
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setCSVLoading(false);
+      setLoadingState('fileUpload', false);
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && isValidFile(selectedFile)) {
-      setFile(selectedFile);
       processCSVFile(selectedFile);
     }
   };
@@ -211,10 +220,8 @@ export default function CSVChatComponent() {
   };
 
   const removeFile = () => {
-    setFile(null);
     setMessages([]);
-    setCsvData(null);
-    updateSheetContext(null);
+    setRawCsvData(null);
   };
 
   // 포뮬러 모드 토글
@@ -267,6 +274,8 @@ export default function CSVChatComponent() {
     if (isFormulaMode) {
       // 포뮬러 모드일 때 API 호출
       setIsLoading(true);
+      setLoadingState('formulaGeneration', true);
+      setError('formulaError', null);
       
       try {
         // 15초 타임아웃 설정
@@ -293,14 +302,16 @@ export default function CSVChatComponent() {
           };
           setMessages(prev => [...prev, assistantMessage]);
 
-          // HyperFormula를 사용하여 실제 스프레드시트에 함수 적용
-          const { setPendingFormula } = useSpreadsheetStore.getState();
-          setPendingFormula({
+          // 통합 스토어의 Formula 관리 사용
+          const formulaApplication = {
             formula: result.formula,
             cellAddress: result.cellAddress || 'E1',
             explanation: result.explanation?.korean || '함수가 생성되었습니다.',
             timestamp: new Date()
-          });
+          };
+          
+          setPendingFormula(formulaApplication);
+          addToFormulaHistory(formulaApplication);
           
           console.log('Formula applied to spreadsheet', {
             formula: result.formula,
@@ -317,6 +328,8 @@ export default function CSVChatComponent() {
         } else if (error instanceof Error) {
           errorMessage = `❌ ${error.message}`;
         }
+        
+        setError('formulaError', errorMessage);
 
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -327,6 +340,7 @@ export default function CSVChatComponent() {
         setMessages(prev => [...prev, assistantMessage]);
       } finally {
         setIsLoading(false);
+        setLoadingState('formulaGeneration', false);
       }
     } else {
       // 일반 모드 (기존 로직 유지)
@@ -376,7 +390,7 @@ export default function CSVChatComponent() {
                     {file.name}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {(file.size / 1024).toFixed(2)} KB
+                    {rawCsvData ? `${rawCsvData.headers.length} 열 × ${rawCsvData.data.length} 행` : ''}
                   </p>
                 </div>
               </div>
@@ -460,7 +474,7 @@ export default function CSVChatComponent() {
                   </div>
                 </div>
               ))}
-              {isLoading && (
+              {(isLoading || loadingStates.formulaGeneration) && (
                 <div className="space-y-2">
                   <div className="bg-gray-50 text-gray-900 rounded-xl p-3">
                     <div className="flex items-start space-x-2">
@@ -518,7 +532,7 @@ export default function CSVChatComponent() {
                     : "파일을 첨부하거나 질문을 입력하세요..."
                 }
                 className="flex-1 bg-transparent border-none outline-none text-base text-gray-900 placeholder-gray-500"
-                disabled={isLoading}
+                disabled={isLoading || loadingStates.formulaGeneration}
               />
               
               {/* fx 아이콘 추가 */}
@@ -536,7 +550,7 @@ export default function CSVChatComponent() {
               
               <button
                 onClick={sendMessage}
-                disabled={!inputValue.trim() || isLoading}
+                disabled={!inputValue.trim() || isLoading || loadingStates.formulaGeneration}
                 className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#005DE9] hover:bg-[#0052d1] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="h-4 w-4 text-white" />
