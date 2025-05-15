@@ -19,6 +19,8 @@ registerAllModules();
 // 공유 HyperFormula 인스턴스 생성
 const hyperformulaInstance = HyperFormula.buildEmpty({
   licenseKey: 'internal-use-in-handsontable',
+  maxRows: 10000,
+  maxColumns: 1000,
 });
 
 const MainSpreadSheet: React.FC = () => {
@@ -31,6 +33,7 @@ const MainSpreadSheet: React.FC = () => {
   const [formulasConfig] = useState<DetailedSettings>({
     engine: hyperformulaInstance,
     namedExpressions: [],
+    sheetName: 'Sheet1', // 시트 이름 지정
   });
 
   // CSV 데이터가 변경될 때마다 Zustand 스토어 업데이트
@@ -63,13 +66,17 @@ const MainSpreadSheet: React.FC = () => {
       
       console.log(`Applying formula "${formula}" to cell ${cellAddress} (${row}, ${col})`);
       
+      // 수식이 = 로 시작하는지 확인하고, 그렇지 않으면 자동으로 추가
+      const formulaValue = formula.startsWith('=') ? formula : `=${formula}`;
+      
       // 직접 셀에 함수 설정
-      hot.setDataAtCell(row, col, formula);
+      hot.setDataAtCell(row, col, formulaValue);
       
-      // 강제 재렌더링
-      hot.render();
-      
-      console.log('Formula applied successfully');
+      // 강제 재렌더링 및 계산
+      setTimeout(() => {
+        hot.render();
+        console.log('Formula applied successfully');
+      }, 100);
     } catch (error) {
       console.error('Error applying formula:', error);
       
@@ -158,6 +165,9 @@ const MainSpreadSheet: React.FC = () => {
     ['', '', '', '', '', ''],
     ['', '', '', '', '', ''],
     ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    ['', '', '', '', '', ''],
   ];
 
   // CSV 데이터 처리
@@ -205,6 +215,8 @@ const MainSpreadSheet: React.FC = () => {
           autoWrapCol={true}
           minRows={8}
           minCols={headers.length > 0 ? headers.length : 6}
+          minSpareCols={5} // 데이터 끝 이후 추가 열 생성
+          minSpareRows={3} // 데이터 끝 이후 추가 행 생성
           manualColumnResize={true}
           manualRowResize={true}
           persistentState={true}
@@ -212,17 +224,17 @@ const MainSpreadSheet: React.FC = () => {
           stretchH="all"
           wordWrap={true}
           readOnly={false}
-          columnSorting={true}
+          columnSorting={false} // 정렬 기능 비활성화 (오류의 원인이 될 수 있음)
           filters={true}
           contextMenu={true}
           dropdownMenu={true}
           data={displayData}
           formulas={formulasConfig}
           language="ko-Kr"
-          afterChange={function (
+          afterChange={(
             change: Handsontable.CellChange[] | null,
             source: Handsontable.ChangeSource
-          ) {
+          ) => {
             if (source === 'loadData') {
               return; // don't save this change
             }
@@ -263,6 +275,15 @@ const MainSpreadSheet: React.FC = () => {
                 );
               }
             });
+          }}
+          // 셀 값 변경 후 포뮬러 업데이트 훅
+          afterSetDataAtCell={() => {
+            console.log('Data set, recalculating formulas...');
+            
+            // 100ms 후에 재렌더링 (포뮬러가 계산될 시간을 줌)
+            setTimeout(() => {
+              hotRef.current?.hotInstance?.render();
+            }, 100);
           }}
         />
       </div>
