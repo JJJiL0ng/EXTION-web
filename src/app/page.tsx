@@ -1,11 +1,9 @@
 import MainSpreadSheet from "@/components/MainSpreadSheet";
 import CSVChatComponent from "@/components/CSVChatComponent";
-import { CSVProvider } from "@/contexts/CSVContext";
-import ArtifactComponent from "@/components/ArtifactComponent";
+import ArtifactRenderContainer from "@/components/ArtifactRenderContainer";
 
 export default function Home() {
   return (
-    <CSVProvider>
       <div style={{ 
         display: 'flex', 
         width: '100%', 
@@ -48,9 +46,8 @@ export default function Home() {
           overflowY: 'auto', // 컴포넌트 내부 스크롤 유지
           overflowX: 'auto'
         }}>
-          <ArtifactComponent />
+          <ArtifactRenderContainer />
         </div>
       </div>
-    </CSVProvider>
   );
 }

@@ -40,7 +40,7 @@ interface ArtifactCode {
   timestamp: Date;
 }
 
-interface UnifiedDataStore {
+interface UnifiedDataStoreState {
   // === Raw CSV Data ===
   rawCsvData: CSVData | null;
   
@@ -73,7 +73,9 @@ interface UnifiedDataStore {
   
   // === Internal Flags ===
   isInternalUpdate: boolean;
-  
+}
+
+interface UnifiedDataStoreActions {
   // === Actions ===
   // CSV Data Actions
   setRawCsvData: (data: CSVData | null) => void;
@@ -81,10 +83,10 @@ interface UnifiedDataStore {
   setComputedData: (data: string[][] | null) => void;
   
   // Loading Actions
-  setLoadingState: (type: keyof UnifiedDataStore['loadingStates'], loading: boolean) => void;
+  setLoadingState: (type: keyof UnifiedDataStoreState['loadingStates'], loading: boolean) => void;
   
   // Error Actions
-  setError: (type: keyof UnifiedDataStore['errors'], error: string | null) => void;
+  setError: (type: keyof UnifiedDataStoreState['errors'], error: string | null) => void;
   
   // Formula Actions
   setPendingFormula: (formula: FormulaApplication | null) => void;
@@ -101,6 +103,38 @@ interface UnifiedDataStore {
   updateSheetContext: () => void;
   getCurrentData: () => string[][] | null;
 }
+
+type UnifiedDataStore = UnifiedDataStoreState & UnifiedDataStoreActions;
+
+// Helper function: CSV 데이터를 SheetContext로 변환
+const generateSheetContext = (csvData: CSVData): SheetContext => {
+  const headers: HeaderInfo[] = csvData.headers.map((header, index) => ({
+    column: String.fromCharCode(65 + index),
+    name: header
+  }));
+
+  const dataRange: DataRange = {
+    startRow: '2',
+    endRow: (csvData.data.length + 1).toString(),
+    startColumn: 'A',
+    endColumn: String.fromCharCode(64 + csvData.headers.length)
+  };
+
+  const sampleData = csvData.data.slice(0, 3).map(row => {
+    const rowData: Record<string, string> = {};
+    csvData.headers.forEach((header, index) => {
+      rowData[header] = row[index] || '';
+    });
+    return rowData;
+  });
+
+  return {
+    sheetName: csvData.fileName || 'Sheet1',
+    headers,
+    dataRange,
+    sampleData
+  };
+};
 
 export const useUnifiedDataStore = create<UnifiedDataStore>()(
   devtools(
@@ -216,36 +250,10 @@ export const useUnifiedDataStore = create<UnifiedDataStore>()(
         return null;
       },
     }),
-    { name: 'unified-data-store' }
+    { 
+      name: 'unified-data-store',
+      // SSR 환경에서의 hydration 문제를 방지하기 위한 설정
+      skipHydration: true
+    }
   )
 );
-
-// Helper function: CSV 데이터를 SheetContext로 변환
-const generateSheetContext = (csvData: CSVData): SheetContext => {
-  const headers: HeaderInfo[] = csvData.headers.map((header, index) => ({
-    column: String.fromCharCode(65 + index),
-    name: header
-  }));
-
-  const dataRange: DataRange = {
-    startRow: '2',
-    endRow: (csvData.data.length + 1).toString(),
-    startColumn: 'A',
-    endColumn: String.fromCharCode(64 + csvData.headers.length)
-  };
-
-  const sampleData = csvData.data.slice(0, 3).map(row => {
-    const rowData: Record<string, string> = {};
-    csvData.headers.forEach((header, index) => {
-      rowData[header] = row[index] || '';
-    });
-    return rowData;
-  });
-
-  return {
-    sheetName: csvData.fileName || 'Sheet1',
-    headers,
-    dataRange,
-    sampleData
-  };
-};
