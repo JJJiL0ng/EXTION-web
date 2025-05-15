@@ -283,12 +283,12 @@ export default function CSVChatComponent() {
             type: 'assistant',
             content: `✅ 함수가 생성되었습니다!
 
-**생성된 함수:** \`${result.formula}\`
-**적용 위치:** ${result.cellAddress || 'E1'}
+            **생성된 함수:** \`${result.formula}\`
+            **적용 위치:** ${result.cellAddress || 'E1'}
 
-**설명:** ${result.explanation?.korean || '함수가 생성되었습니다.'}
+            **설명:** ${result.explanation?.korean || '함수가 생성되었습니다.'}
 
-${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.` : ''}`,
+            ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.` : ''}`,
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, assistantMessage]);
