@@ -288,6 +288,20 @@ const coordsToSheetReference = (
   return `${sheetName}!${colLetter}${rowNumber}`;
 };
 
+// 셀 주소를 좌표로 변환하는 독립적인 유틸리티 함수
+export const cellAddressToCoords = (cellAddress: string) => {
+  const match = cellAddress.match(/([A-Z]+)([0-9]+)/);
+  if (!match) throw new Error(`유효하지 않은 셀 주소: ${cellAddress}`);
+  
+  const [, colStr, rowStr] = match;
+  let col = 0;
+  for (let i = 0; i < colStr.length; i++) {
+    col = col * 26 + (colStr.charCodeAt(i) - 65);
+  }
+  const row = parseInt(rowStr) - 1;
+  return { row, col };
+};
+
 // Zustand 스토어 생성
 export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
   devtools(
@@ -616,16 +630,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
       
       // 유틸리티 함수
       cellAddressToCoords: (cellAddress: string) => {
-        const match = cellAddress.match(/([A-Z]+)([0-9]+)/);
-        if (!match) throw new Error(`유효하지 않은 셀 주소: ${cellAddress}`);
-        
-        const [, colStr, rowStr] = match;
-        let col = 0;
-        for (let i = 0; i < colStr.length; i++) {
-          col = col * 26 + (colStr.charCodeAt(i) - 65);
-        }
-        const row = parseInt(rowStr) - 1;
-        return { row, col };
+        return cellAddressToCoords(cellAddress);
       },
       
       coordsToSheetReference: (sheetIndex, row, col) => {

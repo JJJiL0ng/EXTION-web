@@ -1,14 +1,15 @@
-// components/MainSpreadSheet.tsx
+//Src/components/MainSpreadSheet.tsx
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { HotTable, HotTableRef } from '@handsontable/react-wrapper';
 import { registerAllModules } from 'handsontable/registry';
 import { HyperFormula } from 'hyperformula';
 import { DetailedSettings } from 'handsontable/plugins/formulas';
 import Handsontable from 'handsontable';
-import { useUnifiedDataStore } from '../stores/useUnifiedDataStore';
-import { cellAddressToCoords } from '../stores/useUnifiedDataStore';
+import { ChevronDown, Layers } from 'lucide-react';
+import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
+import { cellAddressToCoords } from '@/stores/useUnifiedDataStore';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -34,6 +35,39 @@ const HandsontableStyles = createGlobalStyle`
   .modal-open .ht_clone_bottom_left_corner,
   .modal-open .ht_clone_right {
     z-index: 0 !important;
+  }
+
+  /* 시트 선택 드롭다운 스타일 */
+  .sheet-selector {
+    z-index: 1000;
+  }
+
+  .sheet-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .sheet-dropdown-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .sheet-dropdown-item:hover {
+    background-color: #f9fafb;
+  }
+
+  .sheet-dropdown-item.active {
+    background-color: #eff6ff;
+    color: #1d4ed8;
   }
 `;
 
@@ -77,23 +111,40 @@ const defaultData = [
   ['', '', '', '', '', ''],
 ];
 
+// 선택된 셀 정보 인터페이스
+interface SelectedCellInfo {
+  row: number;
+  col: number;
+  cellAddress: string;
+  value: any;
+  formula?: string;
+  sheetIndex: number;
+  timestamp: Date;
+}
+
 const MainSpreadSheet: React.FC = () => {
   const hotRef = useRef<HotTableRef>(null);
+  const [isSheetDropdownOpen, setIsSheetDropdownOpen] = useState(false);
+  const [selectedCellInfo, setSelectedCellInfo] = useState<SelectedCellInfo | null>(null);
   
-  // Zustand 스토어 사용
+  // Zustand 스토어 사용 - 확장된 스토어로 변경
   const {
-    rawCsvData,
-    computedData,
-    sheetContext,
+    xlsxData,
+    activeSheetData,
+    extendedSheetContext,
     loadingStates,
     isInternalUpdate,
     pendingFormula,
-    updateCellData,
-    setComputedData,
+    computedSheetData,
+    updateActiveSheetCell,
+    setComputedDataForSheet,
     setInternalUpdate,
     setPendingFormula,
-    getCurrentData
-  } = useUnifiedDataStore();
+    getCurrentSheetData,
+    switchToSheet,
+    coordsToSheetReference,
+    setLoadingState
+  } = useExtendedUnifiedDataStore();
 
   const [isAutosave] = useState<boolean>(false);
 
@@ -101,36 +152,130 @@ const MainSpreadSheet: React.FC = () => {
   const [formulasConfig] = useState<DetailedSettings>({
     engine: hyperformulaInstance,
     namedExpressions: [],
-    sheetName: sheetContext?.sheetName || 'Sheet1', // 시트 이름 지정
+    sheetName: extendedSheetContext?.sheetName || 'Sheet1',
   });
 
-  // 표시할 데이터 준비
+  // 표시할 데이터 준비 - 활성 시트 데이터 사용
   const displayData = useMemo(() => {
-    const data = rawCsvData 
-      ? [rawCsvData.headers, ...(getCurrentData() || rawCsvData.data)]
-      : defaultData;
+    if (!activeSheetData) return defaultData;
+    
+    const currentData = getCurrentSheetData();
+    const data = [activeSheetData.headers, ...(currentData || activeSheetData.data)];
     return data;
-  }, [rawCsvData, computedData, getCurrentData]);
+  }, [activeSheetData, getCurrentSheetData]);
+
+  // 시트 전환 핸들러
+  const handleSheetChange = useCallback(async (sheetIndex: number) => {
+    setLoadingState('sheetSwitch', true);
+    try {
+      await switchToSheet(sheetIndex);
+      setIsSheetDropdownOpen(false);
+      
+      // 시트 전환 시 선택된 셀 정보 초기화
+      setSelectedCellInfo(null);
+      
+      // Handsontable 인스턴스 재렌더링
+      setTimeout(() => {
+        hotRef.current?.hotInstance?.render();
+      }, 100);
+    } catch (error) {
+      console.error('Sheet switch error:', error);
+    } finally {
+      setLoadingState('sheetSwitch', false);
+    }
+  }, [switchToSheet, setLoadingState]);
+
+  // 셀 선택 핸들러
+  const handleCellSelection = useCallback((row: number, col: number) => {
+    if (!hotRef.current?.hotInstance || !xlsxData || !activeSheetData) return;
+
+    const hot = hotRef.current.hotInstance;
+    
+    // 헤더 행 제외한 실제 데이터 행
+    const dataRow = row - 1;
+    let value = '';
+    let formula = '';
+
+    try {
+      // 셀 값 가져오기
+      value = hot.getDataAtCell(row, col) || '';
+      
+      // 수식 확인 (수식이 있는 경우)
+      const formulasPlugin = hot.getPlugin('formulas');
+      if (formulasPlugin && formulasPlugin.engine) {
+        const cellCoord = { row, col, sheet: 0 };
+        const cellValue = formulasPlugin.engine.getCellValue(cellCoord);
+        const cellFormula = formulasPlugin.engine.getCellFormula(cellCoord);
+        
+        if (cellFormula && cellFormula.startsWith('=')) {
+          formula = cellFormula;
+        }
+      }
+
+      // 셀 주소 계산 (A1, B2 등)
+      const colLetter = String.fromCharCode(65 + col);
+      const cellAddress = `${colLetter}${row + 1}`;
+
+      // 시트 참조 포함된 주소
+      const fullReference = coordsToSheetReference(
+        xlsxData.activeSheetIndex,
+        dataRow >= 0 ? dataRow : 0,
+        col
+      );
+
+      const cellInfo: SelectedCellInfo = {
+        row: dataRow >= 0 ? dataRow : row,
+        col,
+        cellAddress,
+        value,
+        formula: formula || undefined,
+        sheetIndex: xlsxData.activeSheetIndex,
+        timestamp: new Date()
+      };
+
+      setSelectedCellInfo(cellInfo);
+      
+      console.log('Selected cell:', {
+        address: cellAddress,
+        fullReference,
+        value,
+        formula: formula || 'none',
+        sheetName: activeSheetData.sheetName
+      });
+    } catch (error) {
+      console.error('Error getting cell info:', error);
+    }
+  }, [xlsxData, activeSheetData, coordsToSheetReference]);
 
   // 포뮬러 적용
   useEffect(() => {
     if (pendingFormula && hotRef.current?.hotInstance) {
       setInternalUpdate(true);
-      applyFormulaToCell(pendingFormula.formula, pendingFormula.cellAddress);
       
-      // 포뮬러 적용 후 계산된 결과를 스토어에 반영
-      setTimeout(() => {
-        const hot = hotRef.current?.hotInstance;
-        if (hot) {
-          const evaluatedData = hot.getData();
-          // 헤더 행 제외하고 데이터만 저장
-          setComputedData(evaluatedData.slice(1));
-        }
+      // 다중 시트 포뮬러라면 해당 시트의 포뮬러인지 확인
+      const targetSheetIndex = pendingFormula.sheetIndex ?? xlsxData?.activeSheetIndex ?? 0;
+      
+      if (targetSheetIndex === xlsxData?.activeSheetIndex) {
+        applyFormulaToCell(pendingFormula.formula, pendingFormula.cellAddress);
+        
+        // 포뮬러 적용 후 계산된 결과를 스토어에 반영
+        setTimeout(() => {
+          const hot = hotRef.current?.hotInstance;
+          if (hot && xlsxData) {
+            const evaluatedData = hot.getData();
+            // 헤더 행 제외하고 데이터만 저장
+            setComputedDataForSheet(xlsxData.activeSheetIndex, evaluatedData.slice(1));
+          }
+          setPendingFormula(null);
+          setInternalUpdate(false);
+        }, 200);
+      } else {
+        // 다른 시트의 포뮬러는 그 시트로 전환 후 적용
         setPendingFormula(null);
         setInternalUpdate(false);
-      }, 200);
+      }
     }
-  }, [pendingFormula, setPendingFormula, setInternalUpdate, setComputedData]);
+  }, [pendingFormula, setPendingFormula, setInternalUpdate, setComputedDataForSheet, xlsxData]);
 
   // 셀에 함수를 적용하는 함수
   const applyFormulaToCell = (formula: string, cellAddress: string) => {
@@ -211,9 +356,94 @@ const MainSpreadSheet: React.FC = () => {
     <div className="h-full flex flex-col">
       {/* Handsontable z-index 문제 해결을 위한 스타일 */}
       <HandsontableStyles />
+      
+      {/* 상단 컨트롤 패널 */}
       <div className="example-controls-container bg-white border-b border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          {/* 시트 선택 드롭다운 */}
+          {xlsxData && xlsxData.sheets.length > 1 && (
+            <div className="relative sheet-selector">
+              <button
+                onClick={() => setIsSheetDropdownOpen(!isSheetDropdownOpen)}
+                className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loadingStates.sheetSwitch}
+              >
+                <Layers className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">
+                  {xlsxData.sheets[xlsxData.activeSheetIndex]?.sheetName || 'Sheet1'}
+                </span>
+                <ChevronDown 
+                  className={`w-4 h-4 text-gray-500 transition-transform ${
+                    isSheetDropdownOpen ? 'rotate-180' : ''
+                  }`} 
+                />
+              </button>
+              
+              {isSheetDropdownOpen && (
+                <div className="sheet-dropdown">
+                  {xlsxData.sheets.map((sheet, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleSheetChange(index)}
+                      className={`sheet-dropdown-item ${
+                        index === xlsxData.activeSheetIndex ? 'active' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{sheet.sheetName}</span>
+                        <span className="text-xs text-gray-500">
+                          {sheet.headers.length}열 × {sheet.data.length}행
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {loadingStates.sheetSwitch && (
+                <div className="absolute top-full left-0 right-0 mt-1 flex items-center justify-center py-2 bg-white border border-gray-200 rounded-lg shadow">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="ml-2 text-xs text-gray-600">전환 중...</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 선택된 셀 정보 표시 */}
+          {selectedCellInfo && (
+            <div className="flex items-center space-x-4 text-sm text-gray-600">
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">셀:</span>
+                <span className="font-mono bg-gray-100 px-2 py-1 rounded">
+                  {selectedCellInfo.cellAddress}
+                </span>
+              </div>
+              {selectedCellInfo.formula && (
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium">수식:</span>
+                  <span className="font-mono bg-blue-50 px-2 py-1 rounded text-blue-700">
+                    {selectedCellInfo.formula}
+                  </span>
+                </div>
+              )}
+              {!selectedCellInfo.formula && selectedCellInfo.value && (
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium">값:</span>
+                  <span className="bg-gray-100 px-2 py-1 rounded">
+                    {selectedCellInfo.value.toString().length > 30 
+                      ? `${selectedCellInfo.value.toString().substring(0, 30)}...`
+                      : selectedCellInfo.value.toString()
+                    }
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 포뮬러 적용 대기 알림 */}
         {pendingFormula && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-800">
@@ -221,6 +451,9 @@ const MainSpreadSheet: React.FC = () => {
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
                   {pendingFormula.cellAddress}에 {pendingFormula.formula} 적용
+                  {pendingFormula.sheetIndex !== undefined && 
+                    ` (시트 ${xlsxData?.sheets[pendingFormula.sheetIndex]?.sheetName || pendingFormula.sheetIndex})`
+                  }
                 </p>
               </div>
               <button
@@ -233,6 +466,8 @@ const MainSpreadSheet: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* 스프레드시트 영역 */}
       <div className="flex-1 overflow-auto">
         <HotTable
           ref={hotRef}
@@ -242,9 +477,9 @@ const MainSpreadSheet: React.FC = () => {
           autoWrapRow={true}
           autoWrapCol={true}
           minRows={8}
-          minCols={rawCsvData?.headers.length || 6}
-          minSpareCols={5} // 데이터 끝 이후 추가 열 생성
-          minSpareRows={3} // 데이터 끝 이후 추가 행 생성
+          minCols={activeSheetData?.headers.length || 6}
+          minSpareCols={5}
+          minSpareRows={3}
           manualColumnResize={true}
           manualRowResize={true}
           persistentState={true}
@@ -252,7 +487,7 @@ const MainSpreadSheet: React.FC = () => {
           stretchH="all"
           wordWrap={true}
           readOnly={false}
-          columnSorting={false} // 정렬 기능 비활성화 (오류의 원인이 될 수 있음)
+          columnSorting={false}
           filters={true}
           contextMenu={true}
           dropdownMenu={true}
@@ -269,13 +504,13 @@ const MainSpreadSheet: React.FC = () => {
             }
 
             // 사용자 변경사항을 스토어에 반영
-            if (changes && rawCsvData) {
+            if (changes && activeSheetData) {
               changes.forEach(([row, col, , newValue]) => {
                 if (typeof row === 'number' && typeof col === 'number') {
                   // 헤더 행 제외 (헤더가 첫 번째 행에 있으므로)
                   const dataRow = row - 1;
                   if (dataRow >= 0) {
-                    updateCellData(dataRow, col, newValue?.toString() || '');
+                    updateActiveSheetCell(dataRow, col, newValue?.toString() || '');
                   }
                 }
               });
@@ -284,6 +519,13 @@ const MainSpreadSheet: React.FC = () => {
             if (!isAutosave) {
               return;
             }
+          }}
+          // 셀 선택 이벤트 처리
+          afterSelection={(row, col) => {
+            handleCellSelection(row, col);
+          }}
+          afterSelectionEnd={(row, col) => {
+            handleCellSelection(row, col);
           }}
           // 셀 값 변경 후 포뮬러 업데이트 훅
           afterSetDataAtCell={() => {
