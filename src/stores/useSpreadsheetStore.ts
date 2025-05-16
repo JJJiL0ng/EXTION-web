@@ -30,7 +30,7 @@ interface FormulaApplication {
 interface SpreadsheetStore {
   sheetContext: SheetContext | null;
   pendingFormula: FormulaApplication | null;
-  updateSheetContext: (csvData: { headers: string[]; data: string[][] } | null) => void;
+  updateSheetContext: (csvData: { headers: string[]; data: string[][]; fileName?: string } | null) => void;
   setPendingFormula: (formula: FormulaApplication | null) => void;
   applyPendingFormula: () => void;
 }
@@ -88,7 +88,7 @@ export const useSpreadsheetStore = create<SpreadsheetStore>((set, get) => ({
     });
 
     const sheetContext: SheetContext = {
-      sheetName: 'Sheet1', // 기본값
+      sheetName: csvData.fileName || 'Sheet1', // 파일 이름으로 설정, 없으면 기본값
       headers,
       dataRange,
       sampleData
