@@ -354,22 +354,70 @@ export default function CSVChatComponent() {
         setMessages([]);
         setXLSXData(null); // setRawCsvData에서 setXLSXData로 변경
     };
+    // API 호출 전에 데이터 구조 검증
+    const validateExtendedSheetContext = (context: any) => {
+        console.log('Extended Sheet Context 검증:', {
+            sheetName: context?.sheetName,
+            sheetIndex: context?.sheetIndex,
+            headers: context?.headers?.length,
+            dataRange: context?.dataRange,
+            totalSheets: context?.totalSheets,
+            sheetList: context?.sheetList?.length
+        });
 
-    // API 호출 함수들 업데이트
+        // 필수 필드 확인
+        const requiredFields = ['sheetName', 'headers', 'dataRange'];
+        const missingFields = requiredFields.filter(field => !context?.[field]);
+
+        if (missingFields.length > 0) {
+            console.error('누락된 필드:', missingFields);
+            throw new Error(`필수 필드가 누락되었습니다: ${missingFields.join(', ')}`);
+        }
+
+        // headers 구조 확인
+        if (!Array.isArray(context.headers) || context.headers.length === 0) {
+            console.error('잘못된 headers 구조:', context.headers);
+            throw new Error('headers는 비어있지 않은 배열이어야 합니다.');
+        }
+
+        // headers의 각 요소가 올바른 구조인지 확인
+        const invalidHeaders = context.headers.filter((h: any) => !h.column || !h.name);
+        if (invalidHeaders.length > 0) {
+            console.error('잘못된 header 구조:', invalidHeaders);
+            throw new Error('각 header는 column과 name 필드를 가져야 합니다.');
+        }
+    };
+    // callArtifactAPI 함수에 검증 추가
     const callArtifactAPI = async (userInput: string): Promise<ArtifactResponse> => {
-        if (!extendedSheetContext) { // sheetContext에서 extendedSheetContext로 변경
+        if (!extendedSheetContext) {
             throw new Error('시트 데이터가 없습니다.');
+        }
+
+        // 데이터 구조 검증
+        try {
+            validateExtendedSheetContext(extendedSheetContext);
+        } catch (error) {
+            console.error('ExtendedSheetContext 검증 실패:', error);
+            throw error;
         }
 
         // 다중 시트 데이터 포함
         const analysisData = getDataForGPTAnalysis(undefined, true);
 
+        // analysisData 구조도 확인
+        console.log('Analysis Data:', {
+            sheets: analysisData?.sheets?.length,
+            activeSheet: analysisData?.activeSheet
+        });
+
         const requestBody = {
             userInput,
-            sheetContext: extendedSheetContext,
+            extendedSheetContext: extendedSheetContext,
             sheetsData: analysisData,
             language: 'ko'
         };
+
+        console.log('Final Request Body:', JSON.stringify(requestBody, null, 2));
 
         const response = await fetch(`${API_BASE_URL}/artifact/generate`, {
             method: 'POST',
@@ -379,12 +427,25 @@ export default function CSVChatComponent() {
             body: JSON.stringify(requestBody),
         });
 
+        // 응답 상태 자세히 확인
+        console.log('Response Status:', response.status);
+        console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-            throw new Error(`API 오류: ${response.status}`);
+            const errorText = await response.text();
+            console.error('Artifact API Error Details:', {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText
+            });
+            throw new Error(`API 오류: ${response.status} - ${errorText}`);
         }
 
-        return response.json();
+        const result = await response.json();
+        console.log('API Response:', result);
+        return result;
     };
+
 
     const handleArtifactClick = (messageId: string) => {
         openArtifactModal(messageId);
