@@ -1,21 +1,7 @@
-// 통합 데이터 스토어: CSV 데이터, 수식, 아티팩트 관리를 위한 전역 상태 관리
+// XLSX 다중 시트 지원을 위한 확장된 상태 관리
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-
-// CSV 데이터 인터페이스 정의
-interface CSVData {
-  headers: string[]; // 헤더 배열
-  data: string[][]; // 2차원 데이터 배열
-  fileName: string; // 파일 이름
-}
-
-// 시트 컨텍스트 인터페이스 정의
-interface SheetContext {
-  sheetName: string; // 시트 이름
-  headers: HeaderInfo[]; // 헤더 정보 배열
-  dataRange: DataRange; // 데이터 범위
-  sampleData?: Record<string, string>[]; // 샘플 데이터
-}
+import * as XLSX from 'xlsx';
 
 // 헤더 정보 인터페이스
 interface HeaderInfo {
@@ -27,8 +13,8 @@ interface HeaderInfo {
 interface DataRange {
   startRow: string; // 시작 행
   endRow: string; // 끝 행
-  startColumn?: string; // 시작 열
-  endColumn?: string; // 끝 열
+  startColumn: string; // 시작 열
+  endColumn: string; // 끝 열
 }
 
 // 수식 적용 인터페이스
@@ -48,312 +34,579 @@ interface ArtifactCode {
   messageId?: string; // 채팅 메시지와 연결하기 위한 ID
 }
 
-// 통합 데이터 스토어 상태 인터페이스
-interface UnifiedDataStoreState {
-  // === Raw CSV Data ===
-  rawCsvData: CSVData | null; // 원본 CSV 데이터
+// 단일 시트 데이터 인터페이스
+interface SheetData {
+  sheetName: string;
+  headers: string[];
+  data: string[][];
+  metadata?: {
+    rowCount: number;
+    columnCount: number;
+    lastModified?: Date;
+  };
+}
+
+// XLSX 파일 전체 데이터 인터페이스
+interface XLSXData {
+  fileName: string;
+  sheets: SheetData[];
+  activeSheetIndex: number; // 현재 활성 시트
+}
+
+// 확장된 시트 컨텍스트
+interface ExtendedSheetContext {
+  sheetName: string;
+  sheetIndex: number;
+  headers: HeaderInfo[];
+  dataRange: DataRange;
+  sampleData?: Record<string, string>[];
+  totalSheets: number; // 전체 시트 개수
+  sheetList: string[]; // 시트 이름 목록
+}
+
+// 다중 시트 수식 적용 인터페이스
+interface MultiSheetFormulaApplication extends FormulaApplication {
+  sheetIndex: number; // 수식이 적용될 시트 인덱스
+  crossSheetReference?: boolean; // 다른 시트 참조 여부
+}
+
+// 확장된 상태 인터페이스
+interface ExtendedUnifiedDataStoreState {
+  // === Multi-Sheet Data ===
+  xlsxData: XLSXData | null; // XLSX 전체 데이터
   
-  // === Computed Data (포뮬러 결과 포함) ===
-  computedData: string[][] | null; // 계산된 데이터 (수식 적용 후)
+  // === Active Sheet Data ===
+  activeSheetData: SheetData | null; // 현재 활성 시트 데이터
+  computedSheetData: { [sheetIndex: number]: string[][] }; // 시트별 계산된 데이터
   
-  // === Sheet Context (derived from rawCsvData) ===
-  sheetContext: SheetContext | null; // 시트 컨텍스트 (원본 데이터에서 파생)
+  // === Sheet Context ===
+  extendedSheetContext: ExtendedSheetContext | null;
   
   // === Loading States ===
   loadingStates: {
-    fileUpload: boolean; // 파일 업로드 로딩 상태
-    formulaGeneration: boolean; // 수식 생성 로딩 상태
-    artifactGeneration: boolean; // 아티팩트 생성 로딩 상태
+    fileUpload: boolean;
+    sheetSwitch: boolean; // 시트 전환 로딩
+    formulaGeneration: boolean;
+    artifactGeneration: boolean;
   };
   
   // === Error States ===
   errors: {
-    fileError: string | null; // 파일 오류
-    formulaError: string | null; // 수식 오류
-    artifactError: string | null; // 아티팩트 오류
+    fileError: string | null;
+    sheetError: string | null; // 시트 관련 오류
+    formulaError: string | null;
+    artifactError: string | null;
   };
   
-  // === Formula Management ===
-  pendingFormula: FormulaApplication | null; // 대기 중인 수식
-  formulaHistory: FormulaApplication[]; // 수식 기록
+  // === Multi-Sheet Formula Management ===
+  pendingFormula: MultiSheetFormulaApplication | null;
+  formulaHistory: MultiSheetFormulaApplication[];
   
-  // === Artifact Management ===
-  artifactCode: ArtifactCode | null; // 현재 아티팩트 코드
-  artifactHistory: ArtifactCode[]; // 생성된 아티팩트들의 히스토리
+  // === Artifact Management (기존과 동일) ===
+  artifactCode: ArtifactCode | null;
+  artifactHistory: ArtifactCode[];
   
   // === Modal State ===
-  isArtifactModalOpen: boolean; // 아티팩트 모달 열림 상태
-  activeArtifactId: string | null; // 현재 모달에서 보고 있는 아티팩트 ID
+  isArtifactModalOpen: boolean;
+  activeArtifactId: string | null;
+  
+  // === Sheet Selection Modal ===
+  isSheetSelectorOpen: boolean; // 시트 선택 모달
   
   // === Internal Flags ===
-  isInternalUpdate: boolean; // 내부 업데이트 플래그
+  isInternalUpdate: boolean;
 }
 
-// 통합 데이터 스토어 액션 인터페이스
-interface UnifiedDataStoreActions {
-  // === CSV Data Actions ===
-  setRawCsvData: (data: CSVData | null) => void; // 원본 CSV 데이터 설정
-  updateCellData: (row: number, col: number, value: string) => void; // 셀 데이터 업데이트
-  setComputedData: (data: string[][] | null) => void; // 계산된 데이터 설정
+// 확장된 액션 인터페이스
+interface ExtendedUnifiedDataStoreActions {
+  // === XLSX Data Actions ===
+  setXLSXData: (data: XLSXData | null) => void;
+  setActiveSheet: (sheetIndex: number) => void;
+  getSheetByIndex: (index: number) => SheetData | null;
+  getSheetByName: (name: string) => SheetData | null;
+  
+  // === Sheet Management ===
+  switchToSheet: (sheetIndex: number) => void;
+  getAllSheetNames: () => string[];
+  getCurrentSheetData: () => string[][] | null;
+  
+  // === Multi-Sheet Cell Updates ===
+  updateCellDataInSheet: (sheetIndex: number, row: number, col: number, value: string) => void;
+  updateActiveSheetCell: (row: number, col: number, value: string) => void;
+  
+  // === Computed Data Management ===
+  setComputedDataForSheet: (sheetIndex: number, data: string[][]) => void;
+  getComputedDataForSheet: (sheetIndex: number) => string[][] | null;
   
   // === Loading Actions ===
-  setLoadingState: (type: keyof UnifiedDataStoreState['loadingStates'], loading: boolean) => void; // 로딩 상태 설정
+  setLoadingState: (type: keyof ExtendedUnifiedDataStoreState['loadingStates'], loading: boolean) => void;
   
   // === Error Actions ===
-  setError: (type: keyof UnifiedDataStoreState['errors'], error: string | null) => void; // 오류 설정
+  setError: (type: keyof ExtendedUnifiedDataStoreState['errors'], error: string | null) => void;
   
-  // === Formula Actions ===
-  setPendingFormula: (formula: FormulaApplication | null) => void; // 대기 중인 수식 설정
-  addToFormulaHistory: (formula: FormulaApplication) => void; // 수식 기록에 추가
-  clearFormulaHistory: () => void; // 수식 기록 지우기
-  applyPendingFormula: () => void; // 대기 중인 수식 적용
+  // === Multi-Sheet Formula Actions ===
+  setPendingFormula: (formula: MultiSheetFormulaApplication | null) => void;
+  addToFormulaHistory: (formula: MultiSheetFormulaApplication) => void;
+  applyPendingFormulaToSheet: (sheetIndex?: number) => void;
   
-  // === Artifact Actions ===
-  setArtifactCode: (code: ArtifactCode | null) => void; // 아티팩트 코드 설정
-  addToArtifactHistory: (artifact: ArtifactCode) => void; // 아티팩트 기록에 추가
-  clearArtifactHistory: () => void; // 아티팩트 기록 지우기
+  // === Artifact Actions (기존과 동일) ===
+  setArtifactCode: (code: ArtifactCode | null) => void;
+  addToArtifactHistory: (artifact: ArtifactCode) => void;
   
   // === Modal Actions ===
-  openArtifactModal: (artifactId?: string) => void; // 아티팩트 모달 열기
-  closeArtifactModal: () => void; // 아티팩트 모달 닫기
-  setActiveArtifact: (artifactId: string | null) => void; // 활성 아티팩트 설정
+  openSheetSelector: () => void;
+  closeSheetSelector: () => void;
+  openArtifactModal: (artifactId?: string) => void;
+  closeArtifactModal: () => void;
   
-  // === Internal Actions ===
-  setInternalUpdate: (flag: boolean) => void; // 내부 업데이트 플래그 설정
-  
-  // === Computed Actions ===
-  updateSheetContext: () => void; // 시트 컨텍스트 업데이트
-  getCurrentData: () => string[][] | null; // 현재 데이터 가져오기
-  getArtifactById: (id: string) => ArtifactCode | null; // ID로 아티팩트 가져오기
+  // === GPT Analysis Support ===
+  getDataForGPTAnalysis: (sheetIndex?: number, allSheets?: boolean) => {
+    sheets: Array<{
+      name: string;
+      csv: string;
+      metadata: any;
+    }>;
+    activeSheet: string;
+  };
   
   // === Utility Actions ===
-  cellAddressToCoords: (cellAddress: string) => { row: number; col: number }; // 셀 주소를 좌표로 변환
-  resetStore: () => void; // 스토어 초기화
+  cellAddressToCoords: (cellAddress: string) => { row: number; col: number };
+  coordsToSheetReference: (sheetIndex: number, row: number, col: number) => string;
+  resetStore: () => void;
+  
+  // === Internal Actions ===
+  setInternalUpdate: (flag: boolean) => void;
+  updateExtendedSheetContext: () => void;
 }
 
-// 통합 데이터 스토어 타입 정의
-type UnifiedDataStore = UnifiedDataStoreState & UnifiedDataStoreActions;
+// 전체 스토어 타입
+type ExtendedUnifiedDataStore = ExtendedUnifiedDataStoreState & ExtendedUnifiedDataStoreActions;
 
-// 헬퍼 함수: CSV 데이터를 SheetContext로 변환
-const generateSheetContext = (csvData: CSVData): SheetContext => {
-  // 헤더 정보 생성 (A, B, C 등의 열 식별자와 이름 매핑)
-  const headers: HeaderInfo[] = csvData.headers.map((header, index) => ({
-    column: String.fromCharCode(65 + index), // A=65, B=66, ...
+// XLSX 파일을 파싱하는 헬퍼 함수
+const parseXLSXFile = async (file: File): Promise<XLSXData> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        const sheets: SheetData[] = workbook.SheetNames.map((sheetName: string, index: number) => {
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
+          
+          // 빈 배열 처리
+          if (jsonData.length === 0) {
+            return {
+              sheetName,
+              headers: [],
+              data: [],
+              metadata: { rowCount: 0, columnCount: 0 }
+            };
+          }
+          
+          const headers = jsonData[0] || [];
+          const data = jsonData.slice(1);
+          
+          return {
+            sheetName,
+            headers,
+            data,
+            metadata: {
+              rowCount: data.length,
+              columnCount: headers.length,
+              lastModified: new Date()
+            }
+          };
+        });
+        
+        resolve({
+          fileName: file.name,
+          sheets,
+          activeSheetIndex: 0
+        });
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+// 확장된 시트 컨텍스트 생성
+const generateExtendedSheetContext = (xlsxData: XLSXData): ExtendedSheetContext => {
+  const activeSheet = xlsxData.sheets[xlsxData.activeSheetIndex];
+  
+  if (!activeSheet) {
+    throw new Error('활성 시트가 없습니다');
+  }
+  
+  const headers: HeaderInfo[] = activeSheet.headers.map((header, index) => ({
+    column: String.fromCharCode(65 + index),
     name: header
   }));
-
-  // 데이터 범위 정의
+  
   const dataRange: DataRange = {
-    startRow: '2', // 첫 번째 행은 헤더이므로 데이터는 2행부터 시작
-    endRow: (csvData.data.length + 1).toString(), // 데이터 행 수 + 1 (헤더 포함)
-    startColumn: 'A', // 시작 열은 항상 A
-    endColumn: String.fromCharCode(64 + csvData.headers.length) // 끝 열은 헤더 개수에 따라 결정
+    startRow: '2',
+    endRow: (activeSheet.data.length + 1).toString(),
+    startColumn: 'A',
+    endColumn: String.fromCharCode(64 + activeSheet.headers.length)
   };
-
-  // 샘플 데이터 생성 (최대 3개 행)
-  const sampleData = csvData.data.slice(0, 3).map(row => {
+  
+  const sampleData = activeSheet.data.slice(0, 3).map(row => {
     const rowData: Record<string, string> = {};
-    csvData.headers.forEach((header, index) => {
+    activeSheet.headers.forEach((header, index) => {
       rowData[header] = row[index] || '';
     });
     return rowData;
   });
-
-  // 시트 컨텍스트 반환
+  
   return {
-    sheetName: csvData.fileName || 'Sheet1', // 파일 이름 또는 기본값
+    sheetName: activeSheet.sheetName,
+    sheetIndex: xlsxData.activeSheetIndex,
     headers,
     dataRange,
-    sampleData
+    sampleData,
+    totalSheets: xlsxData.sheets.length,
+    sheetList: xlsxData.sheets.map(sheet => sheet.sheetName)
   };
 };
 
-// 셀 주소를 행과 열 인덱스로 변환하는 함수 (예: A1 -> {row: 0, col: 0})
-const cellAddressToCoords = (cellAddress: string): { row: number; col: number } => {
-  // 정규식으로 열 문자와 행 번호 추출 (예: A1 -> A, 1)
-  const match = cellAddress.match(/([A-Z]+)([0-9]+)/);
-  if (!match) throw new Error(`유효하지 않은 셀 주소: ${cellAddress}`);
-  
-  const [, colStr, rowStr] = match;
-  
-  // 컬럼 문자를 숫자로 변환 (A=0, B=1, ...)
-  let col = 0;
-  for (let i = 0; i < colStr.length; i++) {
-    col = col * 26 + (colStr.charCodeAt(i) - 65);
-  }
-  
-  // 행은 0-based index로 변환 (1-based에서 0-based로)
-  const row = parseInt(rowStr) - 1;
-  
-  return { row, col };
+// 시트 참조 문자열 생성 (예: Sheet1!A1)
+const coordsToSheetReference = (
+  sheetIndex: number, 
+  row: number, 
+  col: number,
+  sheetNames: string[]
+): string => {
+  const sheetName = sheetNames[sheetIndex] || `Sheet${sheetIndex + 1}`;
+  const colLetter = String.fromCharCode(65 + col);
+  const rowNumber = row + 1;
+  return `${sheetName}!${colLetter}${rowNumber}`;
 };
 
 // Zustand 스토어 생성
-export const useUnifiedDataStore = create<UnifiedDataStore>()(
+export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
   devtools(
     (set, get) => ({
       // 초기 상태
-      rawCsvData: null,
-      computedData: null,
-      sheetContext: null,
+      xlsxData: null,
+      activeSheetData: null,
+      computedSheetData: {},
+      extendedSheetContext: null,
+      
       loadingStates: {
         fileUpload: false,
+        sheetSwitch: false,
         formulaGeneration: false,
         artifactGeneration: false,
       },
+      
       errors: {
         fileError: null,
+        sheetError: null,
         formulaError: null,
         artifactError: null,
       },
+      
       pendingFormula: null,
       formulaHistory: [],
       artifactCode: null,
       artifactHistory: [],
       isArtifactModalOpen: false,
       activeArtifactId: null,
+      isSheetSelectorOpen: false,
       isInternalUpdate: false,
       
-      // CSV 데이터 액션
-      setRawCsvData: (data) => {
+      // XLSX 데이터 액션
+      setXLSXData: (data) => {
         set((state) => {
-          const newState = { 
-            ...state, 
-            rawCsvData: data,
-            computedData: data ? [...data.data] : null // 원본 데이터로 계산된 데이터 초기화
-          };
-          
-          // SheetContext 자동 업데이트
-          if (data) {
-            newState.sheetContext = generateSheetContext(data);
-          } else {
-            newState.sheetContext = null;
+          if (!data) {
+            return {
+              ...state,
+              xlsxData: null,
+              activeSheetData: null,
+              computedSheetData: {},
+              extendedSheetContext: null
+            };
           }
           
-          return newState;
+          const activeSheet = data.sheets[data.activeSheetIndex];
+          const newComputedData = { ...state.computedSheetData };
+          
+          // 각 시트에 대한 computed data 초기화
+          data.sheets.forEach((sheet, index) => {
+            if (!newComputedData[index]) {
+              newComputedData[index] = [...sheet.data];
+            }
+          });
+          
+          return {
+            ...state,
+            xlsxData: data,
+            activeSheetData: activeSheet,
+            computedSheetData: newComputedData,
+            extendedSheetContext: generateExtendedSheetContext(data)
+          };
         });
       },
       
-      // 셀 데이터 업데이트
-      updateCellData: (row, col, value) => {
+      // 활성 시트 설정
+      setActiveSheet: (sheetIndex) => {
         set((state) => {
-          if (!state.rawCsvData || !state.computedData) return state;
-          
-          // Raw 데이터 업데이트
-          const newRawData = { ...state.rawCsvData };
-          if (newRawData.data[row]) {
-            newRawData.data[row] = [...newRawData.data[row]];
-            newRawData.data[row][col] = value;
+          if (!state.xlsxData || !state.xlsxData.sheets[sheetIndex]) {
+            return state;
           }
           
-          // Computed 데이터 업데이트
-          const newComputedData = [...state.computedData];
-          if (newComputedData[row]) {
-            newComputedData[row] = [...newComputedData[row]];
-            newComputedData[row][col] = value;
+          const newXlsxData = {
+            ...state.xlsxData,
+            activeSheetIndex: sheetIndex
+          };
+          
+          const activeSheet = newXlsxData.sheets[sheetIndex];
+          
+          return {
+            ...state,
+            xlsxData: newXlsxData,
+            activeSheetData: activeSheet,
+            extendedSheetContext: generateExtendedSheetContext(newXlsxData)
+          };
+        });
+      },
+      
+      // 시트 전환
+      switchToSheet: async (sheetIndex) => {
+        const { setLoadingState, setActiveSheet, setError } = get();
+        
+        setLoadingState('sheetSwitch', true);
+        setError('sheetError', null);
+        
+        try {
+          // 약간의 지연을 추가하여 UI 반응성 향상
+          await new Promise(resolve => setTimeout(resolve, 100));
+          setActiveSheet(sheetIndex);
+        } catch (error) {
+          setError('sheetError', error instanceof Error ? error.message : '시트 전환 실패');
+        } finally {
+          setLoadingState('sheetSwitch', false);
+        }
+      },
+      
+      // 인덱스로 시트 가져오기
+      getSheetByIndex: (index) => {
+        const { xlsxData } = get();
+        return xlsxData?.sheets[index] || null;
+      },
+      
+      // 이름으로 시트 가져오기
+      getSheetByName: (name) => {
+        const { xlsxData } = get();
+        if (!xlsxData) return null;
+        return xlsxData.sheets.find(sheet => sheet.sheetName === name) || null;
+      },
+      
+      // 모든 시트 이름 가져오기
+      getAllSheetNames: () => {
+        const { xlsxData } = get();
+        return xlsxData?.sheets.map(sheet => sheet.sheetName) || [];
+      },
+      
+      // 현재 시트 데이터 가져오기
+      getCurrentSheetData: () => {
+        const { xlsxData, computedSheetData } = get();
+        if (!xlsxData) return null;
+        
+        const activeIndex = xlsxData.activeSheetIndex;
+        return computedSheetData[activeIndex] || xlsxData.sheets[activeIndex]?.data || null;
+      },
+      
+      // 특정 시트의 셀 업데이트
+      updateCellDataInSheet: (sheetIndex, row, col, value) => {
+        set((state) => {
+          if (!state.xlsxData || !state.xlsxData.sheets[sheetIndex]) {
+            return state;
+          }
+          
+          // xlsxData 업데이트
+          const newXlsxData = { ...state.xlsxData };
+          const targetSheet = { ...newXlsxData.sheets[sheetIndex] };
+          
+          if (targetSheet.data[row]) {
+            targetSheet.data[row] = [...targetSheet.data[row]];
+            targetSheet.data[row][col] = value;
+          }
+          
+          newXlsxData.sheets = [...newXlsxData.sheets];
+          newXlsxData.sheets[sheetIndex] = targetSheet;
+          
+          // computedSheetData 업데이트
+          const newComputedData = { ...state.computedSheetData };
+          if (newComputedData[sheetIndex]) {
+            newComputedData[sheetIndex] = [...newComputedData[sheetIndex]];
+            if (newComputedData[sheetIndex][row]) {
+              newComputedData[sheetIndex][row] = [...newComputedData[sheetIndex][row]];
+              newComputedData[sheetIndex][row][col] = value;
+            }
           }
           
           return {
             ...state,
-            rawCsvData: newRawData,
-            computedData: newComputedData,
-            sheetContext: generateSheetContext(newRawData) // 시트 컨텍스트 재생성
+            xlsxData: newXlsxData,
+            computedSheetData: newComputedData,
+            activeSheetData: sheetIndex === state.xlsxData.activeSheetIndex ? targetSheet : state.activeSheetData,
+            extendedSheetContext: generateExtendedSheetContext(newXlsxData)
           };
         });
       },
       
-      // 계산된 데이터 설정
-      setComputedData: (data) => set({ computedData: data }),
+      // 활성 시트의 셀 업데이트
+      updateActiveSheetCell: (row, col, value) => {
+        const { xlsxData, updateCellDataInSheet } = get();
+        if (xlsxData) {
+          updateCellDataInSheet(xlsxData.activeSheetIndex, row, col, value);
+        }
+      },
       
-      // 로딩 상태 액션
+      // 특정 시트의 computed data 설정
+      setComputedDataForSheet: (sheetIndex, data) => {
+        set((state) => ({
+          ...state,
+          computedSheetData: {
+            ...state.computedSheetData,
+            [sheetIndex]: data
+          }
+        }));
+      },
+      
+      // 특정 시트의 computed data 가져오기
+      getComputedDataForSheet: (sheetIndex) => {
+        const { computedSheetData } = get();
+        return computedSheetData[sheetIndex] || null;
+      },
+      
+      // GPT 분석용 데이터 가져오기
+      getDataForGPTAnalysis: (sheetIndex, allSheets = false) => {
+        const { xlsxData, computedSheetData } = get();
+        
+        if (!xlsxData) {
+          return { sheets: [], activeSheet: '' };
+        }
+        
+        const sheets = [];
+        const targetSheets = allSheets 
+          ? xlsxData.sheets 
+          : sheetIndex !== undefined 
+            ? [xlsxData.sheets[sheetIndex]] 
+            : [xlsxData.sheets[xlsxData.activeSheetIndex]];
+        
+        for (const sheet of targetSheets) {
+          if (!sheet) continue;
+          
+          const sheetIdx = xlsxData.sheets.indexOf(sheet);
+          const currentData = computedSheetData[sheetIdx] || sheet.data;
+          
+          const csv = [sheet.headers, ...currentData]
+            .map(row => row.join(','))
+            .join('\n');
+          
+          sheets.push({
+            name: sheet.sheetName,
+            csv,
+            metadata: {
+              headers: sheet.headers,
+              rowCount: currentData.length,
+              columnCount: sheet.headers.length,
+              sampleData: currentData.slice(0, 5),
+              sheetIndex: sheetIdx
+            }
+          });
+        }
+        
+        return {
+          sheets,
+          activeSheet: xlsxData.sheets[xlsxData.activeSheetIndex].sheetName
+        };
+      },
+      
+      // 로딩 상태 설정
       setLoadingState: (type, loading) =>
         set((state) => ({
           loadingStates: { ...state.loadingStates, [type]: loading }
         })),
       
-      // 오류 상태 액션
+      // 오류 설정
       setError: (type, error) =>
         set((state) => ({
           errors: { ...state.errors, [type]: error }
         })),
       
-      // 수식 액션
+      // 다중 시트 수식 관리
       setPendingFormula: (formula) => set({ pendingFormula: formula }),
       
-      // 수식 히스토리에 추가
       addToFormulaHistory: (formula) =>
         set((state) => ({
           formulaHistory: [...state.formulaHistory, formula]
         })),
       
-      // 수식 히스토리 초기화
-      clearFormulaHistory: () => set({ formulaHistory: [] }),
-      
-      // 대기 중인 수식 적용
-      applyPendingFormula: () => {
-        const { pendingFormula, computedData, rawCsvData } = get();
-        if (!pendingFormula || !computedData || !rawCsvData) return;
+      applyPendingFormulaToSheet: (sheetIndex) => {
+        const { pendingFormula, xlsxData, computedSheetData, cellAddressToCoords } = get();
+        
+        if (!pendingFormula || !xlsxData) return;
+        
+        const targetSheetIndex = sheetIndex ?? pendingFormula.sheetIndex ?? xlsxData.activeSheetIndex;
+        const targetSheet = xlsxData.sheets[targetSheetIndex];
+        
+        if (!targetSheet) {
+          get().setError('formulaError', `시트 인덱스 ${targetSheetIndex}를 찾을 수 없습니다`);
+          return;
+        }
         
         try {
-          // 셀 주소를 행/열 인덱스로 변환
           const { row, col } = cellAddressToCoords(pendingFormula.cellAddress);
+          const newComputedData = { ...computedSheetData };
           
-          const formulaValue = pendingFormula.formula;
-          
-          // 셀 업데이트
-          const newComputedData = [...computedData];
-          if (!newComputedData[row]) {
-            // 행이 존재하지 않으면 생성
-            newComputedData[row] = new Array(rawCsvData.headers.length).fill('');
+          if (!newComputedData[targetSheetIndex]) {
+            newComputedData[targetSheetIndex] = [...targetSheet.data];
           }
-          newComputedData[row][col] = formulaValue;
+          
+          if (!newComputedData[targetSheetIndex][row]) {
+            newComputedData[targetSheetIndex][row] = new Array(targetSheet.headers.length).fill('');
+          }
+          
+          newComputedData[targetSheetIndex][row][col] = pendingFormula.formula;
           
           set({
-            computedData: newComputedData,
-            pendingFormula: null // 적용 후 대기 수식 초기화
+            computedSheetData: newComputedData,
+            pendingFormula: null
           });
           
-          console.log('수식이 성공적으로 적용되었습니다', {
-            formula: formulaValue,
-            cellAddress: pendingFormula.cellAddress,
-            row,
-            col
-          });
         } catch (error) {
-          console.error('수식 적용 실패:', error);
-          set({
-            errors: { 
-              ...get().errors, 
-              formulaError: error instanceof Error ? error.message : '수식 적용 실패'
-            }
-          });
+          get().setError('formulaError', error instanceof Error ? error.message : '수식 적용 실패');
         }
       },
       
-      // 아티팩트 액션
+      // 아티팩트 관리 (기존과 동일)
       setArtifactCode: (code) => set({ artifactCode: code }),
-      
-      // 아티팩트 히스토리에 추가
       addToArtifactHistory: (artifact) => {
         set((state) => ({
           artifactHistory: [...state.artifactHistory, artifact],
-          artifactCode: artifact, // 현재 아티팩트 코드 설정
+          artifactCode: artifact,
           activeArtifactId: artifact.messageId || null
         }));
       },
       
-      // 아티팩트 히스토리 초기화
-      clearArtifactHistory: () => set({ artifactHistory: [] }),
-      
-      // 모달 액션: 아티팩트 모달 열기
+      // 모달 관리
+      openSheetSelector: () => set({ isSheetSelectorOpen: true }),
+      closeSheetSelector: () => set({ isSheetSelectorOpen: false }),
       openArtifactModal: (artifactId) => {
         set((state) => ({
           isArtifactModalOpen: true,
           activeArtifactId: artifactId || state.activeArtifactId
         }));
       },
-      
-      // 모달 액션: 아티팩트 모달 닫기
       closeArtifactModal: () => {
         set({
           isArtifactModalOpen: false,
@@ -361,56 +614,52 @@ export const useUnifiedDataStore = create<UnifiedDataStore>()(
         });
       },
       
-      // 활성 아티팩트 설정
-      setActiveArtifact: (artifactId) => {
-        const artifact = artifactId ? get().getArtifactById(artifactId) : null;
-        set({
-          activeArtifactId: artifactId,
-          artifactCode: artifact
-        });
+      // 유틸리티 함수
+      cellAddressToCoords: (cellAddress: string) => {
+        const match = cellAddress.match(/([A-Z]+)([0-9]+)/);
+        if (!match) throw new Error(`유효하지 않은 셀 주소: ${cellAddress}`);
+        
+        const [, colStr, rowStr] = match;
+        let col = 0;
+        for (let i = 0; i < colStr.length; i++) {
+          col = col * 26 + (colStr.charCodeAt(i) - 65);
+        }
+        const row = parseInt(rowStr) - 1;
+        return { row, col };
       },
       
-      // 내부 업데이트 플래그 설정
+      coordsToSheetReference: (sheetIndex, row, col) => {
+        const { xlsxData } = get();
+        if (!xlsxData) return '';
+        return coordsToSheetReference(sheetIndex, row, col, xlsxData.sheets.map(s => s.sheetName));
+      },
+      
+      // 내부 상태 관리
       setInternalUpdate: (flag) => set({ isInternalUpdate: flag }),
       
-      // 시트 컨텍스트 업데이트
-      updateSheetContext: () => {
-        const { rawCsvData } = get();
-        if (rawCsvData) {
-          set({ sheetContext: generateSheetContext(rawCsvData) });
+      updateExtendedSheetContext: () => {
+        const { xlsxData } = get();
+        if (xlsxData) {
+          set({ extendedSheetContext: generateExtendedSheetContext(xlsxData) });
         }
       },
       
-      // 현재 데이터 가져오기 (계산 데이터 또는 원시 데이터)
-      getCurrentData: () => {
-        const { computedData, rawCsvData } = get();
-        if (computedData) return computedData;
-        if (rawCsvData) return rawCsvData.data;
-        return null;
-      },
-      
-      // ID로 아티팩트 가져오기
-      getArtifactById: (id) => {
-        const { artifactHistory } = get();
-        return artifactHistory.find(artifact => artifact.messageId === id) || null;
-      },
-      
-      // 유틸리티 함수: 셀 주소를 좌표로 변환
-      cellAddressToCoords,
-      
-      // 스토어 전체 초기화
+      // 스토어 리셋
       resetStore: () => {
         set({
-          rawCsvData: null,
-          computedData: null,
-          sheetContext: null,
+          xlsxData: null,
+          activeSheetData: null,
+          computedSheetData: {},
+          extendedSheetContext: null,
           loadingStates: {
             fileUpload: false,
+            sheetSwitch: false,
             formulaGeneration: false,
             artifactGeneration: false,
           },
           errors: {
             fileError: null,
+            sheetError: null,
             formulaError: null,
             artifactError: null,
           },
@@ -420,26 +669,42 @@ export const useUnifiedDataStore = create<UnifiedDataStore>()(
           artifactHistory: [],
           isArtifactModalOpen: false,
           activeArtifactId: null,
+          isSheetSelectorOpen: false,
           isInternalUpdate: false,
         });
       },
     }),
     { 
-      name: 'unified-data-store', // 개발 도구용 스토어 이름
-      skipHydration: true // 하이드레이션 건너뛰기
+      name: 'extended-unified-data-store',
+      skipHydration: true
     }
   )
 );
 
+// 편의 훅들
+export const useActiveSheet = () => {
+  const activeSheetData = useExtendedUnifiedDataStore(state => state.activeSheetData);
+  const activeSheetIndex = useExtendedUnifiedDataStore(state => state.xlsxData?.activeSheetIndex);
+  return { activeSheetData, activeSheetIndex };
+};
+
+export const useSheetList = () => {
+  return useExtendedUnifiedDataStore(state => 
+    state.xlsxData?.sheets.map((sheet, index) => ({
+      name: sheet.sheetName,
+      index,
+      isActive: index === state.xlsxData?.activeSheetIndex
+    })) || []
+  );
+};
+
 // 타입 export
 export type { 
-  CSVData, 
-  SheetContext, 
-  HeaderInfo, 
-  DataRange, 
-  FormulaApplication, 
-  ArtifactCode 
+  SheetData,
+  XLSXData, 
+  ExtendedSheetContext, 
+  MultiSheetFormulaApplication 
 };
 
 // 유틸리티 함수 export
-export { cellAddressToCoords };
+export { parseXLSXFile, coordsToSheetReference };
