@@ -4,7 +4,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Send, FileText, X, Paperclip, FunctionSquare, BarChart3 } from 'lucide-react';
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
 import { useExtendedUnifiedDataStore } from '../stores/useUnifiedDataStore';
 import { processXLSXFile } from '../utils/fileProcessing';
 
