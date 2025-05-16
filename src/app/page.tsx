@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import MainSpreadSheet from "@/components/MainSpreadSheet";
-import CSVChatComponent from "@/components/CSVChatComponent";
+import ChattingMainContainer from "@/components/ChattingMainContainer";
 
 export default function Home() {
   const [leftWidth, setLeftWidth] = useState(50); // 초기 50%
@@ -142,7 +142,7 @@ export default function Home() {
         overflowX: 'auto',
         transition: isDragging ? 'none' : 'width 0.1s ease'
       }}>
-        <CSVChatComponent />
+        <ChattingMainContainer />
       </div>
     </div>
   );
