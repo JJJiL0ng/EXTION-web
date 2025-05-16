@@ -19,8 +19,29 @@ const createSafeExecutionContext = () => {
   // React 및 필요한 라이브러리들을 안전하게 주입
   return {
     React,
-    ...React, // useState, useEffect, useMemo 등을 전역으로 사용 가능하게
-    ...Recharts, // BarChart, LineChart 등을 전역으로 사용 가능하게
+    useState: React.useState,
+    useEffect: React.useEffect,
+    useMemo: React.useMemo,
+    useCallback: React.useCallback,
+    useRef: React.useRef,
+    Fragment: React.Fragment,
+    
+    // Recharts 컴포넌트들을 개별적으로 추가
+    ...Recharts,
+    BarChart: Recharts.BarChart,
+    LineChart: Recharts.LineChart,
+    PieChart: Recharts.PieChart,
+    ScatterChart: Recharts.ScatterChart,
+    XAxis: Recharts.XAxis,
+    YAxis: Recharts.YAxis,
+    CartesianGrid: Recharts.CartesianGrid,
+    Tooltip: Recharts.Tooltip,
+    Legend: Recharts.Legend,
+    Bar: Recharts.Bar,
+    Line: Recharts.Line,
+    Pie: Recharts.Pie,
+    Cell: Recharts.Cell,
+    
     console: {
       log: (...args: unknown[]) => console.log('[Artifact]', ...args),
       error: (...args: unknown[]) => console.error('[Artifact]', ...args),
@@ -29,7 +50,7 @@ const createSafeExecutionContext = () => {
   };
 };
 
-// 코드 실행 및 컴포넌트 생성
+// 코드 실행 및 컴포넌트 생성 - 완전히 재작성
 const executeArtifactCode = (code: string, csvData: CsvData): React.ComponentType | null => {
   try {
     console.log('Executing artifact code with data:', {
@@ -41,41 +62,45 @@ const executeArtifactCode = (code: string, csvData: CsvData): React.ComponentTyp
     // 실행 컨텍스트 생성
     const context = createSafeExecutionContext();
     
-    // 코드를 함수로 래핑하여 안전한 실행
-    const wrappedCode = `
-      (function(csvData) {
-        ${Object.keys(context).map(key => `const ${key} = arguments[1].${key};`).join('\n')}
-        
-        // ComponentToRender 기본값 설정
-        let ComponentToRender;
-        
-        // 사용자 코드 실행
-        ${code}
-        
-        // ComponentToRender가 정의되어 있지 않으면 가능한 다른 이름의 컴포넌트 찾기
-        if (typeof ComponentToRender === 'undefined') {
-          // 흔히 사용되는 컴포넌트 이름들을 확인
-          const possibleNames = ['App', 'Chart', 'Dashboard', 'DataVisualization', 'Visualization'];
-          
-          for (const name of possibleNames) {
-            if (typeof eval('typeof ' + name) !== 'undefined') {
-              ComponentToRender = eval(name);
-              break;
-            }
-          }
-          
-          // 여전히 찾지 못했다면 오류
-          if (typeof ComponentToRender === 'undefined') {
-            throw new Error('ComponentToRender가 정의되지 않았습니다. 코드에 ComponentToRender 변수를 정의해주세요.');
-          }
-        }
-        
+    // 코드를 함수로 래핑 - 더 안전하고 명확한 방식
+    const functionBody = `
+      // React와 Recharts의 모든 컴포넌트를 전역으로 사용 가능하게 설정
+      const React = arguments[1].React;
+      const { useState, useEffect, useMemo, useCallback, useRef, Fragment } = React;
+      const { 
+        BarChart, LineChart, PieChart, ScatterChart,
+        XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+        Bar, Line, Pie, Cell
+      } = arguments[1];
+      
+      // csvData를 전역에서 사용 가능하게 설정
+      const csvData = arguments[0];
+      
+      // 백엔드 코드 실행
+      ${code}
+      
+      // ComponentToRender가 정의되었는지 확인하고 반환
+      if (typeof ComponentToRender === 'function') {
         return ComponentToRender;
-      })
+      }
+      
+      // 만약 ComponentToRender가 없다면 다른 가능한 이름들을 확인
+      const possibleNames = ['App', 'Chart', 'Dashboard', 'DataVisualization', 'Visualization', 'Component'];
+      for (const name of possibleNames) {
+        try {
+          if (typeof eval(name) === 'function') {
+            return eval(name);
+          }
+        } catch (e) {
+          // 해당 이름이 정의되지 않았으면 계속 진행
+        }
+      }
+      
+      throw new Error('No valid React component found. Please ensure you define ComponentToRender.');
     `;
 
     // 함수 생성 및 실행
-    const componentFactory = eval(wrappedCode);
+    const componentFactory = new Function(functionBody);
     const Component = componentFactory(csvData, context);
     
     // 컴포넌트가 유효한지 확인
@@ -83,6 +108,7 @@ const executeArtifactCode = (code: string, csvData: CsvData): React.ComponentTyp
       throw new Error('Generated component is not a valid React component');
     }
     
+    console.log('Component created successfully:', Component.name || 'Anonymous');
     return Component;
   } catch (error) {
     console.error('Error executing artifact code:', error);
@@ -121,9 +147,17 @@ class ArtifactErrorBoundary extends React.Component<
             <p className="text-red-600 text-sm mb-4">
               {this.state.error?.message || '알 수 없는 오류가 발생했습니다.'}
             </p>
+            <details className="mt-4 text-left">
+              <summary className="text-red-700 cursor-pointer text-sm">
+                에러 스택 보기
+              </summary>
+              <pre className="mt-2 p-3 bg-red-100 rounded text-xs text-red-800 overflow-auto">
+                {this.state.error?.stack}
+              </pre>
+            </details>
             <button
               onClick={() => this.setState({ hasError: false, error: undefined })}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
             >
               다시 시도
             </button>
@@ -272,11 +306,10 @@ function ArtifactRenderer() {
         </p>
         <details className="mt-4">
           <summary className="text-red-700 cursor-pointer text-sm">
-            기술적 세부사항 보기
+            백엔드 코드 보기
           </summary>
-          <pre className="mt-2 p-3 bg-red-100 rounded text-xs text-red-800 overflow-auto">
-            {artifactCode?.code.substring(0, 500)}
-            {artifactCode?.code.length > 500 ? '...' : ''}
+          <pre className="mt-2 p-3 bg-red-100 rounded text-xs text-red-800 overflow-auto max-h-64">
+            {artifactCode?.code}
           </pre>
         </details>
       </div>
@@ -315,7 +348,7 @@ function ArtifactRenderer() {
       <div className="p-6">
         <ArtifactErrorBoundary onError={(error) => setRenderError(error.message)}>
           {RenderedComponent ? (
-            <div key={renderKey}>
+            <div key={renderKey} className="w-full">
               <RenderedComponent />
             </div>
           ) : (
