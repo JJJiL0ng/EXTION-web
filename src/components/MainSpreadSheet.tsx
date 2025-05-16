@@ -8,7 +8,7 @@ import { HyperFormula } from 'hyperformula';
 import { DetailedSettings } from 'handsontable/plugins/formulas';
 import Handsontable from 'handsontable';
 import { useUnifiedDataStore } from '../stores/useUnifiedDataStore';
-import { cellAddressToCoords } from '../stores/useSpreadsheetStore';
+import { cellAddressToCoords } from '../stores/useUnifiedDataStore';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
