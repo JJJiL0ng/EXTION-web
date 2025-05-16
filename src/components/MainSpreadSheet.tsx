@@ -14,6 +14,29 @@ import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
 import 'handsontable/styles/ht-theme-horizon.css';
 
+// Handsontable z-index 문제 해결을 위한 스타일
+import { createGlobalStyle } from 'styled-components';
+
+const HandsontableStyles = createGlobalStyle`
+  /* 모달이 열렸을 때 Handsontable의 z-index 조정 */
+  .modal-open .handsontable {
+    z-index: 0 !important;
+  }
+  
+  .modal-open .ht_master {
+    z-index: 0 !important;
+  }
+  
+  .modal-open .ht_clone_top,
+  .modal-open .ht_clone_left,
+  .modal-open .ht_clone_top_left_corner,
+  .modal-open .ht_clone_bottom,
+  .modal-open .ht_clone_bottom_left_corner,
+  .modal-open .ht_clone_right {
+    z-index: 0 !important;
+  }
+`;
+
 registerAllModules();
 
 // 공유 HyperFormula 인스턴스 생성
@@ -186,6 +209,8 @@ const MainSpreadSheet: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Handsontable z-index 문제 해결을 위한 스타일 */}
+      <HandsontableStyles />
       <div className="example-controls-container bg-white border-b border-gray-200 p-4">
         {pendingFormula && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">

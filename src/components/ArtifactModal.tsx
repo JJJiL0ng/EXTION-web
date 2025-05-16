@@ -26,11 +26,15 @@ export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
       document.addEventListener('keydown', handleKeyDown);
       // 모달이 열렸을 때 body 스크롤 방지
       document.body.style.overflow = 'hidden';
+      // 모달이 열렸을 때 body에 modal-open 클래스 추가 (Handsontable z-index 제어용)
+      document.body.classList.add('modal-open');
     }
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
+      // 모달이 닫힐 때 modal-open 클래스 제거
+      document.body.classList.remove('modal-open');
     };
   }, [isOpen, onClose]);
 
