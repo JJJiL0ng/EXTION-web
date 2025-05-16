@@ -2,8 +2,8 @@
 'use client'
 
 import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
-import { useUnifiedDataStore } from '@/stores/useUnifiedDataStore';
+import { X, Layers, FileText } from 'lucide-react';
+import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import ArtifactRenderContainer from './ArtifactRenderContainer';
 
 interface ArtifactModalProps {
@@ -12,7 +12,13 @@ interface ArtifactModalProps {
 }
 
 export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
-  const { artifactCode } = useUnifiedDataStore();
+  // 확장된 스토어 사용
+  const { 
+    artifactCode, 
+    xlsxData, 
+    activeSheetData,
+    extendedSheetContext 
+  } = useExtendedUnifiedDataStore();
 
   // ESC 키로 모달 닫기
   useEffect(() => {
@@ -52,7 +58,7 @@ export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
       
       {/* 모달 컨텐츠 */}
       <div 
-        className="relative bg-white rounded-lg shadow-xl w-[80%] h-[80%] flex flex-col overflow-hidden"
+        className="relative bg-white rounded-lg shadow-xl w-[90%] h-[90%] flex flex-col overflow-hidden max-w-7xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 모달 헤더 */}
@@ -65,25 +71,99 @@ export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
               <h2 className="text-lg font-semibold text-gray-900">
                 {artifactCode?.title || '데이터 분석 결과'}
               </h2>
-              <p className="text-sm text-gray-500">
-                {artifactCode?.type && `${artifactCode.type.charAt(0).toUpperCase() + artifactCode.type.slice(1)} Analysis`}
-                {artifactCode?.timestamp && ` • ${artifactCode.timestamp.toLocaleString('ko-KR')}`}
-              </p>
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                {artifactCode?.type && (
+                  <>
+                    <span>{artifactCode.type.charAt(0).toUpperCase() + artifactCode.type.slice(1)} Analysis</span>
+                    <span>•</span>
+                  </>
+                )}
+                {artifactCode?.timestamp && (
+                  <>
+                    <span>{artifactCode.timestamp.toLocaleString('ko-KR')}</span>
+                    <span>•</span>
+                  </>
+                )}
+                {xlsxData && (
+                  <div className="flex items-center space-x-1">
+                    <FileText className="w-3 h-3" />
+                    <span>{xlsxData.fileName}</span>
+                  </div>
+                )}
+                {xlsxData && xlsxData.sheets.length > 1 && (
+                  <>
+                    <span>•</span>
+                    <div className="flex items-center space-x-1">
+                      <Layers className="w-3 h-3" />
+                      <span>{xlsxData.sheets.length}개 시트</span>
+                    </div>
+                  </>
+                )}
+                {activeSheetData && xlsxData && xlsxData.sheets.length > 1 && (
+                  <>
+                    <span>•</span>
+                    <span className="font-medium text-indigo-600">
+                      활성: {activeSheetData.sheetName}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {/* 데이터 요약 정보 */}
+            {activeSheetData && (
+              <div className="text-xs text-gray-500 mr-2">
+                {activeSheetData.headers.length}열 × {activeSheetData.data.length}행
+              </div>
+            )}
+            
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         
         {/* 모달 본문 */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden bg-gray-50">
           <ArtifactRenderContainer />
         </div>
+
+        {/* 모달 하단 정보 바 (선택사항) */}
+        {xlsxData && (
+          <div className="bg-white border-t border-gray-200 px-4 py-2">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center space-x-4">
+                <span>파일: {xlsxData.fileName}</span>
+                {extendedSheetContext && (
+                  <>
+                    <span>•</span>
+                    <span>시트: {extendedSheetContext.sheetName}</span>
+                    <span>•</span>
+                    <span>
+                      헤더 범위: {extendedSheetContext.dataRange.startColumn}1 ~ {extendedSheetContext.dataRange.endColumn}1
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <span>총 {xlsxData.sheets.length}개 시트</span>
+                {xlsxData.sheets.length > 1 && (
+                  <>
+                    <span>•</span>
+                    <span>
+                      ({xlsxData.sheets.map(s => s.sheetName).join(', ')})
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

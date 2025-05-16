@@ -1,7 +1,7 @@
-// utils/fileProcessing.ts
+// utils/fileProcessing.ts - 수정된 버전
 import * as XLSX from 'xlsx';
 
-// 첫 번째 비어있지 않은 셀을 찾는 함수
+// 첫 번째 비어있지 않은 셀을 찾는 함수 (변경 없음)
 export const findFirstNonEmptyCell = (data: string[][]): { row: number; col: number } => {
   for (let row = 0; row < data.length; row++) {
     for (let col = 0; col < data[row].length; col++) {
@@ -13,7 +13,7 @@ export const findFirstNonEmptyCell = (data: string[][]): { row: number; col: num
   return { row: 0, col: 0 };
 };
 
-// 헤더 행을 찾는 함수 (첫 번째 비어있지 않은 연속된 셀들이 있는 행)
+// 헤더 행을 찾는 함수 (변경 없음)
 export const findHeaderRow = (data: string[][], startRow: number = 0): number => {
   for (let row = startRow; row < data.length; row++) {
     let consecutiveNonEmpty = 0;
@@ -36,57 +36,69 @@ export const findHeaderRow = (data: string[][], startRow: number = 0): number =>
   return startRow;
 };
 
-// 유효한 데이터 범위 찾기
-export const findDataRange = (data: string[][], headerRow: number): {
-  startRow: number;
-  endRow: number;
-  startCol: number;
-  endCol: number;
+// 전체 시트 크기를 찾는 함수 (새로 추가)
+export const findSheetBounds = (data: string[][]): {
+  maxRow: number;
+  maxCol: number;
 } => {
-  const headers = data[headerRow] || [];
-  let startCol = 0;
-  let endCol = headers.length - 1;
+  let maxRow = 0;
+  let maxCol = 0;
   
-  // 시작 열 찾기 (첫 번째 비어있지 않은 헤더)
-  for (let col = 0; col < headers.length; col++) {
-    if (headers[col] && headers[col].toString().trim() !== '') {
-      startCol = col;
-      break;
-    }
-  }
-  
-  // 끝 열 찾기 (마지막 비어있지 않은 헤더)
-  for (let col = headers.length - 1; col >= 0; col--) {
-    if (headers[col] && headers[col].toString().trim() !== '') {
-      endCol = col;
-      break;
-    }
-  }
-  
-  // 마지막 데이터 행 찾기
-  let endRow = headerRow;
-  for (let row = headerRow + 1; row < data.length; row++) {
-    let hasData = false;
-    for (let col = startCol; col <= endCol; col++) {
+  for (let row = 0; row < data.length; row++) {
+    for (let col = 0; col < data[row].length; col++) {
       if (data[row][col] && data[row][col].toString().trim() !== '') {
-        hasData = true;
-        break;
+        maxRow = Math.max(maxRow, row);
+        maxCol = Math.max(maxCol, col);
       }
     }
-    if (hasData) {
-      endRow = row;
-    }
   }
   
+  return { maxRow, maxCol };
+};
+
+// 헤더 정보만 추출하는 함수 (새로 추가)
+export const extractValidHeaders = (headerRow: string[]): {
+  headers: string[];
+  headerMap: { [index: number]: number }; // 원본 인덱스 -> 헤더 인덱스 매핑
+} => {
+  const headers: string[] = [];
+  const headerMap: { [index: number]: number } = {};
+  
+  headerRow.forEach((header, originalIndex) => {
+    const trimmedHeader = header?.toString().trim();
+    if (trimmedHeader && trimmedHeader !== '') {
+      headerMap[originalIndex] = headers.length;
+      headers.push(trimmedHeader);
+    }
+  });
+  
+  return { headers, headerMap };
+};
+
+// 유효한 데이터 범위 찾기 - 수정된 버전
+export const findDataRange = (data: string[][], headerRow: number): {
+  headerRowData: string[];
+  validHeaders: string[];
+  headerMap: { [index: number]: number };
+  maxRow: number;
+  maxCol: number;
+  preserveOriginalStructure: boolean;
+} => {
+  const headerRowData = data[headerRow] || [];
+  const { headers: validHeaders, headerMap } = extractValidHeaders(headerRowData);
+  const { maxRow, maxCol } = findSheetBounds(data);
+  
   return {
-    startRow: headerRow,
-    endRow,
-    startCol,
-    endCol
+    headerRowData, // 원본 헤더 행 (공백 포함)
+    validHeaders, // 유효한 헤더만 (공백 제외)
+    headerMap, // 원본 인덱스 -> 헤더 인덱스 매핑
+    maxRow: Math.max(maxRow, headerRow + 1), // 최소한 헤더 다음 행까지
+    maxCol: Math.max(maxCol, headerRowData.length - 1),
+    preserveOriginalStructure: true
   };
 };
 
-// 열 인덱스를 엑셀 열 이름으로 변환 (0 -> A, 1 -> B, ...)
+// 열 인덱스를 엑셀 열 이름으로 변환 (변경 없음)
 export const columnIndexToLetter = (index: number): string => {
   let result = '';
   while (index >= 0) {
@@ -96,22 +108,24 @@ export const columnIndexToLetter = (index: number): string => {
   return result;
 };
 
-// XLSX 파일 처리 함수
+// XLSX 파일 처리 함수 - 완전히 수정된 버전
 export const processXLSXFile = async (file: File): Promise<{
   sheets: Array<{
     sheetName: string;
-    headers: string[];
-    data: string[][];
+    rawData: string[][]; // 원본 데이터 (공백 포함)
+    headers: string[]; // 유효한 헤더만
+    data: string[][]; // 헤더에 맞춰 정리된 데이터
     metadata: {
       headerRow: number;
+      headerRowData: string[]; // 원본 헤더 행
+      headerMap: { [index: number]: number }; // 매핑 정보
       dataRange: {
-        startRow: number;
-        endRow: number;
-        startCol: number;
-        endCol: number;
+        maxRow: number;
+        maxCol: number;
         startColLetter: string;
         endColLetter: string;
       };
+      preserveOriginalStructure: boolean;
     };
   }>;
   fileName: string;
@@ -126,40 +140,61 @@ export const processXLSXFile = async (file: File): Promise<{
         
         const sheets = workbook.SheetNames.map(sheetName => {
           const worksheet = workbook.Sheets[sheetName];
+          
+          // 전체 시트를 2차원 배열로 변환 (빈 셀 유지)
           const rawData = XLSX.utils.sheet_to_json(worksheet, { 
             header: 1,
             defval: '', // 빈 셀을 빈 문자열로 처리
-            raw: false // 값을 문자열로 변환
+            raw: false, // 값을 문자열로 변환
+            blankrows: true // 빈 행도 유지
           }) as string[][];
           
           // 헤더 행 찾기
           const headerRow = findHeaderRow(rawData);
           
-          // 데이터 범위 찾기
-          const dataRange = findDataRange(rawData, headerRow);
+          // 데이터 범위 및 헤더 정보 추출
+          const {
+            headerRowData,
+            validHeaders,
+            headerMap,
+            maxRow,
+            maxCol
+          } = findDataRange(rawData, headerRow);
           
-          // 헤더 추출 (시작열부터 끝열까지)
-          const headers = rawData[headerRow]
-            ?.slice(dataRange.startCol, dataRange.endCol + 1)
-            .map(header => header?.toString().trim() || '') || [];
+          // 원본 구조를 유지하면서 데이터만 헤더에 맞춰 정리
+          const data: string[][] = [];
           
-          // 데이터 추출 (헤더 다음 행부터)
-          const data = rawData
-            .slice(headerRow + 1, dataRange.endRow + 1)
-            .map(row => row.slice(dataRange.startCol, dataRange.endCol + 1)
-              .map(cell => cell?.toString() || ''));
+          // 헤더 다음 행부터 데이터 처리
+          for (let row = headerRow + 1; row <= maxRow; row++) {
+            const dataRow: string[] = [];
+            const originalRow = rawData[row] || [];
+            
+            // 유효한 헤더에 해당하는 열만 추출하되, 순서는 원본 순서 유지
+            Object.keys(headerMap).forEach(originalIndexStr => {
+              const originalIndex = parseInt(originalIndexStr);
+              const cellValue = originalRow[originalIndex] || '';
+              dataRow.push(cellValue);
+            });
+            
+            data.push(dataRow);
+          }
           
           return {
             sheetName,
-            headers,
-            data,
+            rawData, // 원본 데이터 보존
+            headers: validHeaders, // 상태관리에는 유효한 헤더만
+            data, // 헤더에 맞춰 정리된 데이터
             metadata: {
               headerRow,
+              headerRowData, // 원본 헤더 행 보존
+              headerMap, // 매핑 정보 보존
               dataRange: {
-                ...dataRange,
-                startColLetter: columnIndexToLetter(dataRange.startCol),
-                endColLetter: columnIndexToLetter(dataRange.endCol)
-              }
+                maxRow,
+                maxCol,
+                startColLetter: columnIndexToLetter(0),
+                endColLetter: columnIndexToLetter(maxCol)
+              },
+              preserveOriginalStructure: true
             }
           };
         });

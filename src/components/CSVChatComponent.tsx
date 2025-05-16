@@ -156,6 +156,8 @@ export default function CSVChatComponent() {
     };
 
     // 파일 처리 함수 - 완전히 새로운 구현
+    // CSVChatComponent.tsx의 CSV 처리 부분 - 수정된 버전
+
     const processFile = async (file: File) => {
         setLoadingState('fileUpload', true);
         setError('fileError', null);
@@ -164,20 +166,31 @@ export default function CSVChatComponent() {
             const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
             if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-                // XLSX 파일 처리
+                // XLSX 파일 처리 (위의 수정된 유틸리티 함수 사용)
                 const result = await processXLSXFile(file);
 
                 const xlsxData = {
                     fileName: result.fileName,
                     sheets: result.sheets.map(sheet => ({
                         sheetName: sheet.sheetName,
-                        headers: sheet.headers,
-                        data: sheet.data,
+                        rawData: sheet.rawData, // 원본 데이터 보존
+                        headers: sheet.headers, // 유효한 헤더만
+                        data: sheet.data, // 헤더에 맞춰 정리된 데이터
                         metadata: {
                             rowCount: sheet.data.length,
                             columnCount: sheet.headers.length,
                             headerRow: sheet.metadata.headerRow,
-                            dataRange: sheet.metadata.dataRange,
+                            dataRange: {
+                                startRow: sheet.metadata.headerRow + 1,
+                                endRow: sheet.metadata.headerRow + sheet.data.length,
+                                startCol: 0,
+                                endCol: sheet.headers.length - 1,
+                                startColLetter: 'A',
+                                endColLetter: String.fromCharCode(65 + sheet.headers.length - 1)
+                            },
+                            headerRowData: sheet.metadata.headerRowData, // 원본 헤더 행
+                            headerMap: sheet.metadata.headerMap, // 매핑 정보
+                            preserveOriginalStructure: sheet.metadata.preserveOriginalStructure,
                             lastModified: new Date()
                         }
                     })),
@@ -195,23 +208,23 @@ export default function CSVChatComponent() {
                             `• ${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행`
                         ).join('\n') + '\n\n' +
                         `🎯 **활성 시트:** ${xlsxData.sheets[0].sheetName}\n` +
-                        `📍 **헤더 위치:** ${xlsxData.sheets[0].metadata?.dataRange.startColLetter}${xlsxData.sheets[0].metadata?.headerRow + 1} ~ ${xlsxData.sheets[0].metadata?.dataRange.endColLetter}${xlsxData.sheets[0].metadata?.headerRow + 1}`,
+                        `📍 **헤더 위치:** 원본 구조 유지됨`,
                     timestamp: new Date()
                 };
                 setMessages(prev => [...prev, successMessage]);
 
             } else if (fileExtension === 'csv') {
-                // CSV 파일 처리 (기존 로직 유지하되 동적 헤더 감지 추가)
+                // CSV 파일 처리도 원본 구조 유지하도록 수정
                 const fileContent = await detectAndDecode(file);
 
                 Papa.parse(fileContent, {
                     header: false,
-                    skipEmptyLines: true,
+                    skipEmptyLines: false, // 빈 행도 유지
                     complete: (results: Papa.ParseResult<unknown>) => {
                         if (results.data && results.data.length > 0) {
-                            const data = results.data as string[][];
+                            const rawData = results.data as string[][];
 
-                            if (data.length <= 1) {
+                            if (rawData.length <= 1) {
                                 const errorMessage: Message = {
                                     id: Date.now().toString(),
                                     type: 'assistant',
@@ -224,35 +237,59 @@ export default function CSVChatComponent() {
                             }
 
                             // CSV에도 동적 헤더 감지 적용
-                            const { findHeaderRow, findDataRange, columnIndexToLetter } = require('../utils/fileProcessing');
-                            const headerRow = findHeaderRow(data);
-                            const dataRange = findDataRange(data, headerRow);
+                            const {
+                                findHeaderRow,
+                                findDataRange,
+                                columnIndexToLetter
+                            } = require('../utils/fileProcessing');
 
-                            const headers = data[headerRow]
-                                ?.slice(dataRange.startCol, dataRange.endCol + 1)
-                                .map(header => header?.toString().trim() || '') || [];
+                            const headerRow = findHeaderRow(rawData);
+                            const {
+                                headerRowData,
+                                validHeaders,
+                                headerMap,
+                                maxRow,
+                                maxCol
+                            } = findDataRange(rawData, headerRow);
 
-                            const rows = data
-                                .slice(headerRow + 1, dataRange.endRow + 1)
-                                .map(row => row.slice(dataRange.startCol, dataRange.endCol + 1)
-                                    .map(cell => cell?.toString() || ''));
+                            // CSV 데이터도 헤더에 맞춰 정리
+                            const data: string[][] = [];
+                            for (let row = headerRow + 1; row <= maxRow; row++) {
+                                const dataRow: string[] = [];
+                                const originalRow = rawData[row] || [];
+
+                                Object.keys(headerMap).forEach(originalIndexStr => {
+                                    const originalIndex = parseInt(originalIndexStr);
+                                    const cellValue = originalRow[originalIndex] || '';
+                                    dataRow.push(cellValue);
+                                });
+
+                                data.push(dataRow);
+                            }
 
                             // CSV 데이터를 XLSX 형식으로 변환하여 통합 관리
                             const xlsxData = {
                                 fileName: file.name,
                                 sheets: [{
                                     sheetName: 'Sheet1',
-                                    headers,
-                                    data: rows,
+                                    rawData, // 원본 데이터 보존
+                                    headers: validHeaders, // 유효한 헤더만
+                                    data, // 헤더에 맞춰 정리된 데이터
                                     metadata: {
-                                        rowCount: rows.length,
-                                        columnCount: headers.length,
+                                        rowCount: data.length,
+                                        columnCount: validHeaders.length,
                                         headerRow,
                                         dataRange: {
-                                            ...dataRange,
-                                            startColLetter: columnIndexToLetter(dataRange.startCol),
-                                            endColLetter: columnIndexToLetter(dataRange.endCol)
+                                            startRow: headerRow + 1,
+                                            endRow: maxRow,
+                                            startCol: 0,
+                                            endCol: maxCol,
+                                            startColLetter: columnIndexToLetter(0),
+                                            endColLetter: columnIndexToLetter(maxCol)
                                         },
+                                        headerRowData, // 원본 헤더 행
+                                        headerMap, // 매핑 정보
+                                        preserveOriginalStructure: true,
                                         lastModified: new Date()
                                     }
                                 }],
@@ -265,8 +302,8 @@ export default function CSVChatComponent() {
                                 id: Date.now().toString(),
                                 type: 'assistant',
                                 content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다.\n` +
-                                    `📊 ${headers.length}열 × ${rows.length}행의 데이터가 스프레드시트에 표시됩니다.\n` +
-                                    `📍 **헤더 위치:** ${xlsxData.sheets[0].metadata.dataRange.startColLetter}${headerRow + 1} ~ ${xlsxData.sheets[0].metadata.dataRange.endColLetter}${headerRow + 1}`,
+                                    `📊 ${validHeaders.length}열 × ${data.length}행의 데이터가 스프레드시트에 표시됩니다.\n` +
+                                    `📍 **구조:** 원본 위치 유지, 유효한 헤더 ${validHeaders.length}개 추출`,
                                 timestamp: new Date()
                             };
                             setMessages(prev => [...prev, successMessage]);

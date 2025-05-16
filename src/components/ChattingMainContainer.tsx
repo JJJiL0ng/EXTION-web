@@ -4,13 +4,16 @@
 import React from 'react';
 import CSVChatComponent from './CSVChatComponent';
 import ArtifactModal from './ArtifactModal';
-import { useUnifiedDataStore } from '@/stores/useUnifiedDataStore';
+import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 
 export default function MainContainer() {
+  // 확장된 스토어 사용
   const { 
     isArtifactModalOpen, 
-    closeArtifactModal 
-  } = useUnifiedDataStore();
+    closeArtifactModal,
+    xlsxData,
+    activeSheetData
+  } = useExtendedUnifiedDataStore();
 
   return (
     <div className="h-screen w-full bg-gray-50">
@@ -19,7 +22,7 @@ export default function MainContainer() {
         <CSVChatComponent />
       </div>
 
-      {/* 아티팩트 모달 */}
+      {/* 아티팩트 모달 - XLSX 데이터 지원 */}
       <ArtifactModal 
         isOpen={isArtifactModalOpen}
         onClose={closeArtifactModal}
