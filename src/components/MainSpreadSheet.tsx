@@ -7,9 +7,10 @@ import { registerAllModules } from 'handsontable/registry';
 import { HyperFormula } from 'hyperformula';
 import { DetailedSettings } from 'handsontable/plugins/formulas';
 import Handsontable from 'handsontable';
-import { ChevronDown, Layers } from 'lucide-react';
+import { ChevronDown, Layers, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import { cellAddressToCoords } from '@/stores/useUnifiedDataStore';
+import { XLSXData } from '@/stores/useUnifiedDataStore';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -24,7 +25,7 @@ const HandsontableStyles = createGlobalStyle`
     z-index: 0 !important;
   }
   
-  .modal-open .ht_master {
+  .modal-open .ht_master {  
     z-index: 0 !important;
   }
   
@@ -49,25 +50,254 @@ const HandsontableStyles = createGlobalStyle`
     right: 0;
     background: white;
     border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    max-height: 200px;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    max-height: 240px;
     overflow-y: auto;
+    margin-top: 0.5rem;
   }
 
   .sheet-dropdown-item {
-    padding: 0.75rem 1rem;
+    padding: 0.85rem 1.2rem;
     cursor: pointer;
     border-bottom: 1px solid #f3f4f6;
+    transition: all 0.2s ease;
   }
 
   .sheet-dropdown-item:hover {
-    background-color: #f9fafb;
+    background-color: #F9F9F7;
   }
 
   .sheet-dropdown-item.active {
-    background-color: #eff6ff;
-    color: #1d4ed8;
+    background-color: rgba(0, 93, 233, 0.08);
+    color: #005DE9;
+    font-weight: 500;
+  }
+
+  /* 핸즈온테이블 테마 커스터마이징 */
+  .handsontable {
+    font-family: 'Inter', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+  }
+
+  /* 헤더 스타일 */
+  .handsontable th {
+    background-color: #F9F9F7 !important;
+    color: #333 !important;
+    font-weight: 600 !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    padding: 8px !important;
+  }
+
+  /* 활성 헤더 스타일 */
+  .handsontable th.ht__active_highlight {
+    background-color: rgba(0, 93, 233, 0.08) !important;
+    color: #005DE9 !important;
+  }
+
+  /* 셀 스타일 */
+  .handsontable td {
+    border-color: rgba(0, 0, 0, 0.05) !important;
+    padding: 8px !important;
+    transition: background-color 0.2s ease;
+  }
+
+  /* 선택된 셀 스타일 */
+  .handsontable .ht__selection {
+    background-color: rgba(0, 93, 233, 0.16) !important;
+  }
+
+  /* 선택된 셀 테두리 */
+  .handsontable .ht__selection--highlight {
+    border: 2px solid #005DE9 !important;
+  }
+
+  /* 행/열 헤더 하이라이트 */
+  .handsontable th.ht__highlight {
+    background-color: rgba(0, 93, 233, 0.08) !important;
+  }
+
+  /* 컨텍스트 메뉴 */
+  .handsontable .htContextMenu {
+    border-radius: 0.75rem !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+    padding: 0.5rem 0 !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .handsontable .htContextMenu .ht_master .wtHolder {
+    background-color: white !important;
+  }
+
+  .handsontable .htContextMenu table tbody tr td {
+    padding: 0.75rem 1.2rem !important;
+    border: none !important;
+  }
+
+  .handsontable .htContextMenu table tbody tr td:hover {
+    background-color: #F9F9F7 !important;
+  }
+
+  .handsontable .htContextMenu table tbody tr td.htDisabled:hover {
+    background-color: #f8f8f8 !important;
+  }
+
+  .handsontable .htContextMenu table tbody tr td.htSeparator {
+    height: 1px !important;
+    background-color: rgba(0, 0, 0, 0.08) !important;
+  }
+
+  /* 포뮬러가 있는 셀 스타일 */
+  .handsontable td.formula {
+    background-color: rgba(0, 93, 233, 0.05) !important;
+  }
+
+  /* 시트 탭 바 스타일 */
+  .sheet-tabs-container {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    position: relative;
+    background-color: #F9F9F7;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 0 0.5rem;
+    flex-grow: 1;
+  }
+
+  .sheet-tabs-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sheet-tab {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 0.5rem 0.5rem 0 0;
+    margin-right: 0.25rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    position: relative;
+    top: 1px;
+  }
+
+  .sheet-tab:hover {
+    background-color: rgba(0, 93, 233, 0.04);
+  }
+
+  .sheet-tab.active {
+    background-color: white;
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #005DE9;
+    font-weight: 500;
+  }
+
+  .sheet-tab .sheet-info {
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.7rem;
+    border-radius: 1rem;
+    background-color: rgba(0, 0, 0, 0.05);
+    color: rgba(0, 0, 0, 0.5);
+  }
+
+  .sheet-tab.active .sheet-info {
+    background-color: rgba(0, 93, 233, 0.08);
+    color: rgba(0, 93, 233, 0.7);
+  }
+
+  .sheet-add-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    border-radius: 0.5rem 0.5rem 0 0;
+    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border-bottom: none;
+    background-color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    top: 1px;
+  }
+
+  .sheet-add-button:hover {
+    background-color: rgba(0, 93, 233, 0.08);
+    border-color: rgba(0, 93, 233, 0.3);
+    color: #005DE9;
+  }
+
+  /* 시트 생성 모달 */
+  .sheet-create-modal {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 1rem;
+    width: 300px;
+    z-index: 1000;
+  }
+
+  .sheet-create-modal input {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .sheet-create-modal input:focus {
+    outline: none;
+    border-color: #005DE9;
+    box-shadow: 0 0 0 2px rgba(0, 93, 233, 0.2);
+  }
+
+  .sheet-create-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .sheet-create-modal button {
+    padding: 0.6rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .sheet-create-modal .cancel-button {
+    background-color: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.7);
+  }
+
+  .sheet-create-modal .cancel-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .sheet-create-modal .create-button {
+    background-color: #005DE9;
+    border: 1px solid #005DE9;
+    color: white;
+  }
+
+  .sheet-create-modal .create-button:hover {
+    background-color: #004ab8;
+  }
+
+  .sheet-create-modal .create-button:disabled {
+    background-color: rgba(0, 93, 233, 0.5);
+    cursor: not-allowed;
   }
 `;
 
@@ -82,6 +312,18 @@ const hyperformulaInstance = HyperFormula.buildEmpty({
 
 // CSV 데이터가 없을 때의 기본 설정
 const defaultData = [
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
@@ -126,6 +368,9 @@ const MainSpreadSheet: React.FC = () => {
   const hotRef = useRef<HotTableRef>(null);
   const [isSheetDropdownOpen, setIsSheetDropdownOpen] = useState(false);
   const [selectedCellInfo, setSelectedCellInfo] = useState<SelectedCellInfo | null>(null);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [isCreateSheetModalOpen, setIsCreateSheetModalOpen] = useState(false);
+  const [newSheetName, setNewSheetName] = useState('');
   
   // Zustand 스토어 사용 - 확장된 스토어로 변경
   const {
@@ -143,7 +388,8 @@ const MainSpreadSheet: React.FC = () => {
     getCurrentSheetData,
     switchToSheet,
     coordsToSheetReference,
-    setLoadingState
+    setLoadingState,
+    setXLSXData
   } = useExtendedUnifiedDataStore();
 
   const [isAutosave] = useState<boolean>(false);
@@ -340,6 +586,119 @@ const MainSpreadSheet: React.FC = () => {
     }
   };
 
+  // 새 시트 생성 핸들러
+  const handleCreateSheet = () => {
+    if (!newSheetName.trim()) return;
+    
+    // 기본 빈 데이터로 새 시트 생성
+    const emptyData = Array(20).fill(Array(6).fill(''));
+    const emptyHeaders = Array(6).fill('');
+    
+    if (xlsxData) {
+      // 기존 xlsxData가 있는 경우 새 시트 추가
+      // 중복되는 시트명 확인
+      const existingNames = xlsxData.sheets.map(s => s.sheetName);
+      let uniqueName = newSheetName;
+      let counter = 1;
+      
+      while (existingNames.includes(uniqueName)) {
+        uniqueName = `${newSheetName} ${counter}`;
+        counter++;
+      }
+      
+      // 새 시트 데이터 생성
+      const newSheet = {
+        sheetName: uniqueName,
+        headers: emptyHeaders,
+        data: emptyData,
+        metadata: {
+          rowCount: emptyData.length,
+          columnCount: emptyHeaders.length,
+          headerRow: 0,
+          dataRange: {
+            startRow: 0,
+            endRow: emptyData.length - 1,
+            startCol: 0,
+            endCol: emptyHeaders.length - 1,
+            startColLetter: 'A',
+            endColLetter: String.fromCharCode(65 + emptyHeaders.length - 1)
+          },
+          lastModified: new Date()
+        }
+      };
+      
+      // 새 xlsxData 생성하여 적용
+      const newXlsxData = { ...xlsxData };
+      newXlsxData.sheets = [...newXlsxData.sheets, newSheet];
+      const newSheetIndex = newXlsxData.sheets.length - 1;
+      
+      // 상태 업데이트
+      setXLSXData(newXlsxData);
+      
+      // 새 시트로 전환
+      setTimeout(() => {
+        switchToSheet(newSheetIndex);
+      }, 100);
+    } else {
+      // xlsxData가 없는 경우 새로 생성
+      const newXlsxData: XLSXData = {
+        fileName: 'new_spreadsheet.xlsx',
+        sheets: [
+          {
+            sheetName: newSheetName,
+            headers: emptyHeaders,
+            data: emptyData,
+            metadata: {
+              rowCount: emptyData.length,
+              columnCount: emptyHeaders.length,
+              headerRow: 0,
+              dataRange: {
+                startRow: 0,
+                endRow: emptyData.length - 1,
+                startCol: 0,
+                endCol: emptyHeaders.length - 1,
+                startColLetter: 'A',
+                endColLetter: 'F'
+              }
+            }
+          }
+        ],
+        activeSheetIndex: 0
+      };
+      
+      setXLSXData(newXlsxData);
+    }
+    
+    // 모달 상태 초기화
+    setNewSheetName('');
+    setIsCreateSheetModalOpen(false);
+  };
+
+  // 모달 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const modalElement = document.querySelector('.sheet-create-modal');
+      const addButton = document.querySelector('.sheet-add-button');
+      
+      if (
+        isCreateSheetModalOpen && 
+        modalElement && 
+        !modalElement.contains(target) && 
+        addButton && 
+        !addButton.contains(target)
+      ) {
+        setIsCreateSheetModalOpen(false);
+        setNewSheetName('');
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCreateSheetModalOpen]);
+
   // 로딩 중일 때 표시
   if (loadingStates.fileUpload) {
     return (
@@ -358,70 +717,21 @@ const MainSpreadSheet: React.FC = () => {
       <HandsontableStyles />
       
       {/* 상단 컨트롤 패널 */}
-      <div className="example-controls-container bg-white border-b border-gray-200 p-4">
+      <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-5 shadow-sm">
         <div className="flex items-center justify-between">
-          {/* 시트 선택 드롭다운 */}
-          {xlsxData && xlsxData.sheets.length > 1 && (
-            <div className="relative sheet-selector">
-              <button
-                onClick={() => setIsSheetDropdownOpen(!isSheetDropdownOpen)}
-                className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={loadingStates.sheetSwitch}
-              >
-                <Layers className="w-4 h-4 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">
-                  {xlsxData.sheets[xlsxData.activeSheetIndex]?.sheetName || 'Sheet1'}
-                </span>
-                <ChevronDown 
-                  className={`w-4 h-4 text-gray-500 transition-transform ${
-                    isSheetDropdownOpen ? 'rotate-180' : ''
-                  }`} 
-                />
-              </button>
-              
-              {isSheetDropdownOpen && (
-                <div className="sheet-dropdown">
-                  {xlsxData.sheets.map((sheet, index) => (
-                    <div
-                      key={index}
-                      onClick={() => handleSheetChange(index)}
-                      className={`sheet-dropdown-item ${
-                        index === xlsxData.activeSheetIndex ? 'active' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{sheet.sheetName}</span>
-                        <span className="text-xs text-gray-500">
-                          {sheet.headers.length}열 × {sheet.data.length}행
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {loadingStates.sheetSwitch && (
-                <div className="absolute top-full left-0 right-0 mt-1 flex items-center justify-center py-2 bg-white border border-gray-200 rounded-lg shadow">
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="ml-2 text-xs text-gray-600">전환 중...</span>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* 선택된 셀 정보 표시 */}
           {selectedCellInfo && (
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
+            <div className="flex items-center space-x-4 text-sm text-gray-700">
               <div className="flex items-center space-x-2">
-                <span className="font-medium">셀:</span>
-                <span className="font-mono bg-gray-100 px-2 py-1 rounded">
+                {/* <span className="font-medium">셀:</span> */}
+                <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
                   {selectedCellInfo.cellAddress}
                 </span>
               </div>
               {selectedCellInfo.formula && (
                 <div className="flex items-center space-x-2">
                   <span className="font-medium">수식:</span>
-                  <span className="font-mono bg-blue-50 px-2 py-1 rounded text-blue-700">
+                  <span className="font-mono bg-[rgba(0,93,233,0.08)] px-2.5 py-1.5 rounded-lg text-[#005DE9] border border-[rgba(0,93,233,0.2)]">
                     {selectedCellInfo.formula}
                   </span>
                 </div>
@@ -429,7 +739,7 @@ const MainSpreadSheet: React.FC = () => {
               {!selectedCellInfo.formula && selectedCellInfo.value && (
                 <div className="flex items-center space-x-2">
                   <span className="font-medium">값:</span>
-                  <span className="bg-gray-100 px-2 py-1 rounded">
+                  <span className="bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
                     {selectedCellInfo.value.toString().length > 30 
                       ? `${selectedCellInfo.value.toString().substring(0, 30)}...`
                       : selectedCellInfo.value.toString()
@@ -443,13 +753,13 @@ const MainSpreadSheet: React.FC = () => {
 
         {/* 포뮬러 적용 대기 알림 */}
         {pendingFormula && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+          <div className="bg-[rgba(0,93,233,0.08)] border border-[rgba(0,93,233,0.2)] rounded-xl p-4 mt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-800">
+                <p className="text-sm font-medium text-[#005DE9]">
                   포뮬러 적용 대기 중
                 </p>
-                <p className="text-xs text-blue-600 mt-1">
+                <p className="text-xs text-[rgba(0,93,233,0.8)] mt-1.5">
                   {pendingFormula.cellAddress}에 {pendingFormula.formula} 적용
                   {pendingFormula.sheetIndex !== undefined && 
                     ` (시트 ${xlsxData?.sheets[pendingFormula.sheetIndex]?.sheetName || pendingFormula.sheetIndex})`
@@ -458,7 +768,7 @@ const MainSpreadSheet: React.FC = () => {
               </div>
               <button
                 onClick={() => setPendingFormula(null)}
-                className="text-blue-600 hover:text-blue-800 text-sm"
+                className="text-[#005DE9] hover:text-[#004ab8] text-sm bg-white px-3 py-1.5 rounded-lg border border-[rgba(0,93,233,0.2)] transition-colors duration-200"
               >
                 취소
               </button>
@@ -467,8 +777,84 @@ const MainSpreadSheet: React.FC = () => {
         )}
       </div>
 
+      {/* 시트 탭 바 */}
+      <div className="relative">
+        <div className="flex items-center bg-[#F9F9F7] border-b border-gray-200">
+          {xlsxData && xlsxData.sheets.length > 0 && (
+            <div ref={tabsContainerRef} className="sheet-tabs-container">
+              {xlsxData.sheets.map((sheet, index) => (
+                <div
+                  key={index}
+                  onClick={() => handleSheetChange(index)}
+                  className={`sheet-tab ${index === xlsxData.activeSheetIndex ? 'active' : ''}`}
+                >
+                  <span>{sheet.sheetName}</span>
+                  <span className="sheet-info">
+                    {sheet.headers.length}×{sheet.data.length}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {!xlsxData || xlsxData.sheets.length === 0 ? (
+            <div className="flex items-center justify-center p-2 text-gray-500 text-sm">
+              <span>시트가 없습니다. 새 시트를 추가하세요.</span>
+            </div>
+          ) : null}
+          
+          <div className="relative">
+            <button 
+              className="sheet-add-button" 
+              onClick={() => setIsCreateSheetModalOpen(true)}
+              aria-label="새 시트 추가"
+            >
+              <Plus size={18} />
+            </button>
+            
+            {isCreateSheetModalOpen && (
+              <div className="sheet-create-modal">
+                <h3 className="text-base font-medium mb-3">새 시트 만들기</h3>
+                <input
+                  type="text"
+                  placeholder="시트 이름"
+                  value={newSheetName}
+                  onChange={(e) => setNewSheetName(e.target.value)}
+                  autoFocus
+                />
+                <div className="sheet-create-modal-buttons">
+                  <button
+                    className="cancel-button"
+                    onClick={() => {
+                      setIsCreateSheetModalOpen(false);
+                      setNewSheetName('');
+                    }}
+                  >
+                    취소
+                  </button>
+                  <button
+                    className="create-button"
+                    onClick={handleCreateSheet}
+                    disabled={!newSheetName.trim()}
+                  >
+                    만들기
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {loadingStates.sheetSwitch && (
+          <div className="absolute top-full left-0 right-0 mt-1 flex items-center justify-center py-2 bg-white shadow-sm z-10">
+            <div className="w-4 h-4 border-2 border-[#005DE9] border-t-transparent rounded-full animate-spin"></div>
+            <span className="ml-2 text-xs text-gray-600">시트 전환 중...</span>
+          </div>
+        )}
+      </div>
+
       {/* 스프레드시트 영역 */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto bg-white shadow-inner">
         <HotTable
           ref={hotRef}
           rowHeaders={true}
