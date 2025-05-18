@@ -50,7 +50,8 @@ export default function MainChatComponent() {
         addToArtifactHistory,
         openArtifactModal,
         switchToSheet,
-        getDataForGPTAnalysis
+        getDataForGPTAnalysis,
+        applyGeneratedData
     } = useExtendedUnifiedDataStore();
 
     // 파일이 로드되었는지 확인
@@ -440,8 +441,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 if (result.success && result.editedData) {
                     // 생성된 데이터 적용
-                    const store = useExtendedUnifiedDataStore.getState();
-                    store.applyGeneratedData({
+                    applyGeneratedData({
                         sheetName: result.editedData.sheetName,
                         headers: result.editedData.headers,
                         data: result.editedData.data,

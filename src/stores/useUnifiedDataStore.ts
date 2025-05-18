@@ -1,4 +1,3 @@
-//src/stores/useUnifiedDataStore.ts
 // XLSX 다중 시트 지원을 위한 확장된 상태 관리
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
@@ -872,7 +871,10 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                                 endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
                             },
                             headerRowData: generatedData.headers,
-                            headerMap: {},
+                            headerMap: generatedData.headers.reduce((acc: Record<number, number>, header, idx) => {
+                                acc[idx] = idx;
+                                return acc;
+                            }, {}),
                             preserveOriginalStructure: true,
                             lastModified: new Date()
                         };
@@ -881,10 +883,15 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             ...targetSheet.metadata,
                             rowCount: generatedData.data.length,
                             columnCount: generatedData.headers.length,
+                            headerRow: 0,
                             headerRowData: generatedData.headers,
+                            headerMap: generatedData.headers.reduce((acc: Record<number, number>, header, idx) => {
+                                acc[idx] = idx;
+                                return acc;
+                            }, {}),
                             dataRange: {
                                 ...targetSheet.metadata.dataRange,
-                                endRow: targetSheet.metadata.headerRow + generatedData.data.length,
+                                endRow: generatedData.data.length,
                                 endCol: generatedData.headers.length - 1,
                                 endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
                             },
