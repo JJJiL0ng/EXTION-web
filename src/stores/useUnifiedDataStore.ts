@@ -101,6 +101,7 @@ interface ExtendedUnifiedDataStoreState {
         sheetSwitch: boolean; // 시트 전환 로딩
         formulaGeneration: boolean;
         artifactGeneration: boolean;
+        dataGeneration: boolean;
     };
 
     // === Error States ===
@@ -109,6 +110,7 @@ interface ExtendedUnifiedDataStoreState {
         sheetError: string | null; // 시트 관련 오류
         formulaError: string | null;
         artifactError: string | null;
+        dataGenerationError: string | null;
     };
 
     // === Multi-Sheet Formula Management ===
@@ -190,6 +192,9 @@ interface ExtendedUnifiedDataStoreActions {
     // === Internal Actions ===
     setInternalUpdate: (flag: boolean) => void;
     updateExtendedSheetContext: () => void;
+
+    // 데이터 생성 결과 적용
+    applyGeneratedData: (generatedData: { sheetName: string; headers: string[]; data: string[][]; sheetIndex?: number }) => void;
 }
 
 // 전체 스토어 타입
@@ -409,6 +414,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 sheetSwitch: false,
                 formulaGeneration: false,
                 artifactGeneration: false,
+                dataGeneration: false,
             },
 
             errors: {
@@ -416,6 +422,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 sheetError: null,
                 formulaError: null,
                 artifactError: null,
+                dataGenerationError: null,
             },
 
             pendingFormula: null,
@@ -764,12 +771,14 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         sheetSwitch: false,
                         formulaGeneration: false,
                         artifactGeneration: false,
+                        dataGeneration: false,
                     },
                     errors: {
                         fileError: null,
                         sheetError: null,
                         formulaError: null,
                         artifactError: null,
+                        dataGenerationError: null,
                     },
                     pendingFormula: null,
                     formulaHistory: [],
@@ -780,6 +789,170 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     isSheetSelectorOpen: false,
                     isInternalUpdate: false,
                 });
+            },
+
+            // 데이터 생성 결과 적용
+            applyGeneratedData: (generatedData) => {
+                const { xlsxData } = get();
+                
+                // 파일이 없는 경우 새 파일 생성
+                if (!xlsxData) {
+                    const newXlsxData = {
+                        fileName: 'generated_data.xlsx',
+                        sheets: [{
+                            sheetName: generatedData.sheetName || 'Sheet1',
+                            headers: generatedData.headers,
+                            data: generatedData.data,
+                            rawData: [generatedData.headers, ...generatedData.data],
+                            metadata: {
+                                rowCount: generatedData.data.length,
+                                columnCount: generatedData.headers.length,
+                                headerRow: 0,
+                                dataRange: {
+                                    startRow: 1,
+                                    endRow: generatedData.data.length,
+                                    startCol: 0,
+                                    endCol: generatedData.headers.length - 1,
+                                    startColLetter: 'A',
+                                    endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
+                                },
+                                headerRowData: generatedData.headers,
+                                headerMap: generatedData.headers.reduce((acc: Record<number, number>, header, idx) => {
+                                    acc[idx] = idx;
+                                    return acc;
+                                }, {}),
+                                preserveOriginalStructure: true,
+                                lastModified: new Date()
+                            }
+                        }],
+                        activeSheetIndex: 0
+                    };
+                    
+                    set((state) => {
+                        return {
+                            ...state,
+                            xlsxData: newXlsxData,
+                            activeSheetData: newXlsxData.sheets[0],
+                            computedSheetData: { 0: [...generatedData.data] },
+                            extendedSheetContext: generateExtendedSheetContext(newXlsxData)
+                        };
+                    });
+                    
+                    return;
+                }
+                
+                // 기존 파일에 데이터 업데이트 또는 새 시트 추가
+                const sheetIndex = generatedData.sheetIndex !== undefined 
+                    ? generatedData.sheetIndex 
+                    : xlsxData.activeSheetIndex;
+                
+                // 기존 시트가 있는지 확인
+                if (sheetIndex < xlsxData.sheets.length) {
+                    // 기존 시트 업데이트
+                    const newXlsxData = { ...xlsxData };
+                    const targetSheet = { ...newXlsxData.sheets[sheetIndex] };
+                    
+                    targetSheet.headers = generatedData.headers;
+                    targetSheet.data = generatedData.data;
+                    targetSheet.rawData = [generatedData.headers, ...generatedData.data];
+                    
+                    // metadata가 확실히 존재하도록 설정
+                    if (!targetSheet.metadata) {
+                        targetSheet.metadata = {
+                            rowCount: generatedData.data.length,
+                            columnCount: generatedData.headers.length,
+                            headerRow: 0,
+                            dataRange: {
+                                startRow: 1,
+                                endRow: generatedData.data.length,
+                                startCol: 0,
+                                endCol: generatedData.headers.length - 1,
+                                startColLetter: 'A',
+                                endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
+                            },
+                            headerRowData: generatedData.headers,
+                            headerMap: {},
+                            preserveOriginalStructure: true,
+                            lastModified: new Date()
+                        };
+                    } else {
+                        targetSheet.metadata = {
+                            ...targetSheet.metadata,
+                            rowCount: generatedData.data.length,
+                            columnCount: generatedData.headers.length,
+                            headerRowData: generatedData.headers,
+                            dataRange: {
+                                ...targetSheet.metadata.dataRange,
+                                endRow: targetSheet.metadata.headerRow + generatedData.data.length,
+                                endCol: generatedData.headers.length - 1,
+                                endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
+                            },
+                            lastModified: new Date()
+                        };
+                    }
+                    
+                    newXlsxData.sheets[sheetIndex] = targetSheet;
+                    
+                    set((state) => {
+                        return {
+                            ...state,
+                            xlsxData: newXlsxData,
+                            activeSheetData: sheetIndex === newXlsxData.activeSheetIndex ? targetSheet : state.activeSheetData,
+                            computedSheetData: {
+                                ...state.computedSheetData,
+                                [sheetIndex]: [...generatedData.data]
+                            },
+                            extendedSheetContext: generateExtendedSheetContext(newXlsxData)
+                        };
+                    });
+                } else {
+                    // 새 시트 추가
+                    const newSheet = {
+                        sheetName: generatedData.sheetName || `Sheet${xlsxData.sheets.length + 1}`,
+                        headers: generatedData.headers,
+                        data: generatedData.data,
+                        rawData: [generatedData.headers, ...generatedData.data],
+                        metadata: {
+                            rowCount: generatedData.data.length,
+                            columnCount: generatedData.headers.length,
+                            headerRow: 0,
+                            dataRange: {
+                                startRow: 1,
+                                endRow: generatedData.data.length,
+                                startCol: 0,
+                                endCol: generatedData.headers.length - 1,
+                                startColLetter: 'A',
+                                endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
+                            },
+                            headerRowData: generatedData.headers,
+                            headerMap: generatedData.headers.reduce((acc: Record<number, number>, header, idx) => {
+                                acc[idx] = idx;
+                                return acc;
+                            }, {}),
+                            preserveOriginalStructure: true,
+                            lastModified: new Date()
+                        }
+                    };
+                    
+                    const newXlsxData = {
+                        ...xlsxData,
+                        sheets: [...xlsxData.sheets, newSheet],
+                        activeSheetIndex: xlsxData.sheets.length
+                    };
+                    
+                    set((state) => {
+                        return {
+                            ...state,
+                            xlsxData: newXlsxData,
+                            activeSheetData: newSheet,
+                            computedSheetData: {
+                                ...state.computedSheetData,
+                                [xlsxData.sheets.length]: [...generatedData.data]
+                            },
+                            extendedSheetContext: generateExtendedSheetContext(newXlsxData)
+                        };
+                    });
+                }
             },
         }),
         {

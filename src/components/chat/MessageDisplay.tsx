@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { FunctionSquare, BarChart3 } from 'lucide-react';
+import { FunctionSquare, BarChart3, Hammer } from 'lucide-react';
 
 interface MessageProps {
     messages: Message[];
@@ -89,7 +89,9 @@ export default function MessageDisplay({ messages, onArtifactClick }: MessagePro
                                     ? 'bg-blue-100 text-blue-900'
                                     : message.mode === 'artifact'
                                         ? 'bg-indigo-100 text-indigo-900'
-                                        : 'bg-blue-50 text-blue-900'
+                                        : message.mode === 'datageneration'
+                                            ? 'bg-sky-100 text-sky-900'
+                                            : 'bg-blue-50 text-blue-900'
                                 : 'bg-gray-50 text-gray-900'
                                 } rounded-xl p-3`}
                         >
@@ -99,7 +101,9 @@ export default function MessageDisplay({ messages, onArtifactClick }: MessagePro
                                         ? 'bg-blue-200 text-blue-700'
                                         : message.mode === 'artifact'
                                             ? 'bg-indigo-200 text-indigo-700'
-                                            : 'bg-blue-100 text-blue-600'
+                                            : message.mode === 'datageneration'
+                                                ? 'bg-sky-200 text-sky-700'
+                                                : 'bg-blue-100 text-blue-600'
                                     : 'bg-gray-100 text-gray-600'
                                     }`}>
                                     {message.type === 'user' ? (
@@ -107,6 +111,8 @@ export default function MessageDisplay({ messages, onArtifactClick }: MessagePro
                                             <FunctionSquare className="w-6 h-6" />
                                         ) : message.mode === 'artifact' ? (
                                             <BarChart3 className="w-6 h-6" />
+                                        ) : message.mode === 'datageneration' ? (
+                                            <Hammer className="w-6 h-6" />
                                         ) : (
                                             <div className="w-5 h-5 bg-blue-600 rounded-full"></div>
                                         )
@@ -125,6 +131,11 @@ export default function MessageDisplay({ messages, onArtifactClick }: MessagePro
                                         {message.type === 'user' && message.mode === 'artifact' && (
                                             <span className="ml-2 text-xs text-indigo-600 bg-indigo-100 px-2 py-1 rounded">
                                                 Artifact
+                                            </span>
+                                        )}
+                                        {message.type === 'user' && message.mode === 'datageneration' && (
+                                            <span className="ml-2 text-xs text-sky-600 bg-sky-100 px-2 py-1 rounded">
+                                                Data Generation
                                             </span>
                                         )}
                                     </p>

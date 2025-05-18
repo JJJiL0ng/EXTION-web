@@ -5,7 +5,7 @@ import Papa from 'papaparse';
 import { useExtendedUnifiedDataStore } from '../../stores/useUnifiedDataStore';
 import { processXLSXFile } from '../../utils/fileProcessing';
 import { detectAndDecode, isValidSpreadsheetFile } from '../../utils/chatUtils';
-import { callArtifactAPI, callFormulaAPI } from '../../services/api/dataServices';
+import { callArtifactAPI, callFormulaAPI, callDataGenerationAPI } from '../../services/api/dataServices';
 import { Message } from './MessageDisplay';
 
 // 컴포넌트 가져오기
@@ -30,6 +30,10 @@ export default function MainChatComponent() {
 
     const toggleArtifactMode = () => {
         setCurrentMode(currentMode === 'artifact' ? 'normal' : 'artifact');
+    };
+
+    const toggleDataGenerationMode = () => {
+        setCurrentMode(currentMode === 'datageneration' ? 'normal' : 'datageneration');
     };
 
     // Zustand 스토어 사용
@@ -420,6 +424,67 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 setIsLoading(false);
                 setLoadingState('artifactGeneration', false);
             }
+        } else if (currentMode === 'datageneration') {
+            // 데이터 생성 모드 로직
+            setIsLoading(true);
+            setLoadingState('dataGeneration', true);
+            setError('dataGenerationError', null);
+
+            try {
+                const timeoutPromise = new Promise<never>((_, reject) => {
+                    setTimeout(() => reject(new Error('timeout')), 30000);
+                });
+
+                const apiCall = callDataGenerationAPI(currentInput, extendedSheetContext, getDataForGPTAnalysis);
+                const result = await Promise.race([apiCall, timeoutPromise]);
+
+                if (result.success && result.editedData) {
+                    // 생성된 데이터 적용
+                    const store = useExtendedUnifiedDataStore.getState();
+                    store.applyGeneratedData({
+                        sheetName: result.editedData.sheetName,
+                        headers: result.editedData.headers,
+                        data: result.editedData.data,
+                        sheetIndex: result.sheetIndex
+                    });
+
+                    // 성공 메시지 표시
+                    const assistantMessage: Message = {
+                        id: (Date.now() + 1).toString(),
+                        type: 'assistant',
+                        content: `✅ 데이터가 성공적으로 ${xlsxData ? '업데이트' : '생성'}되었습니다.\n\n` +
+                            `**시트 이름:** ${result.editedData.sheetName}\n` +
+                            `**데이터 크기:** ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
+                            `${result.explanation || ''}`,
+                        timestamp: new Date(),
+                        mode: 'datageneration'
+                    };
+                    setMessages(prev => [...prev, assistantMessage]);
+                } else {
+                    throw new Error(result.error || '데이터 생성에 실패했습니다.');
+                }
+            } catch (error) {
+                let errorMessage = '데이터 생성 중 오류가 발생했습니다.';
+
+                if (error instanceof Error && error.message === 'timeout') {
+                    errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+                } else if (error instanceof Error) {
+                    errorMessage = `❌ ${error.message}`;
+                }
+
+                setError('dataGenerationError', errorMessage);
+
+                const assistantMessage: Message = {
+                    id: (Date.now() + 1).toString(),
+                    type: 'assistant',
+                    content: errorMessage,
+                    timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, assistantMessage]);
+            } finally {
+                setIsLoading(false);
+                setLoadingState('dataGeneration', false);
+            }
         } else {
             // 일반 모드
             setTimeout(() => {
@@ -494,6 +559,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                     onDrop={handleDrop}
                     toggleFormulaMode={toggleFormulaMode}
                     toggleArtifactMode={toggleArtifactMode}
+                    toggleDataGenerationMode={toggleDataGenerationMode}
                     handleFileInputChange={handleFileInputChange}
                 />
             </div>
