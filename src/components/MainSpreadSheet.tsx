@@ -163,6 +163,8 @@ const HandsontableStyles = createGlobalStyle`
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     padding: 0 0.5rem;
     flex-grow: 1;
+    min-height: 3rem;
+    scroll-behavior: smooth;
   }
 
   .sheet-tabs-container::-webkit-scrollbar {
@@ -223,12 +225,27 @@ const HandsontableStyles = createGlobalStyle`
     transition: all 0.15s ease;
     position: relative;
     top: 1px;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
   }
 
   .sheet-add-button:hover {
     background-color: rgba(0, 93, 233, 0.08);
     border-color: rgba(0, 93, 233, 0.3);
     color: #005DE9;
+  }
+
+  .empty-sheet-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 0.875rem;
+  }
+
+  .empty-sheet-text {
+    margin-right: 0.75rem;
   }
 
   /* 시트 생성 모달 */
@@ -299,6 +316,36 @@ const HandsontableStyles = createGlobalStyle`
     background-color: rgba(0, 93, 233, 0.5);
     cursor: not-allowed;
   }
+
+  /* 가상 스크롤바 */
+  .tab-scrollbar-container {
+    position: relative;
+    height: 8px;
+    background-color: #f1f1f1;
+    border-radius: 4px;
+    margin: 4px 8px 4px 8px;
+    cursor: pointer;
+    transition: opacity 0.3s;
+    opacity: 0.7;
+  }
+
+  .tab-scrollbar-container:hover {
+    opacity: 1;
+  }
+
+  .tab-scrollbar-thumb {
+    position: absolute;
+    height: 100%;
+    background-color: #c1c1c1;
+    border-radius: 4px;
+    min-width: 30px;
+    transition: background-color 0.2s;
+  }
+
+  .tab-scrollbar-thumb:hover,
+  .tab-scrollbar-thumb.dragging {
+    background-color: #a1a1a1;
+  }
 `;
 
 registerAllModules();
@@ -312,6 +359,9 @@ const hyperformulaInstance = HyperFormula.buildEmpty({
 
 // CSV 데이터가 없을 때의 기본 설정
 const defaultData = [
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
@@ -371,6 +421,14 @@ const MainSpreadSheet: React.FC = () => {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [isCreateSheetModalOpen, setIsCreateSheetModalOpen] = useState(false);
   const [newSheetName, setNewSheetName] = useState('');
+  
+  // 스크롤바 관련 상태
+  const [scrollThumbPosition, setScrollThumbPosition] = useState(0);
+  const [scrollThumbWidth, setScrollThumbWidth] = useState(30);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragStartScroll, setDragStartScroll] = useState(0);
+  const [showScrollbar, setShowScrollbar] = useState(false);
   
   // Zustand 스토어 사용 - 확장된 스토어로 변경
   const {
@@ -699,6 +757,114 @@ const MainSpreadSheet: React.FC = () => {
     };
   }, [isCreateSheetModalOpen]);
 
+  // 스크롤바 관련 이벤트 핸들러
+  useEffect(() => {
+    const checkScroll = () => {
+      const container = tabsContainerRef.current;
+      if (!container) return;
+      
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      const hasHorizontalScroll = scrollWidth > clientWidth;
+      
+      // 스크롤바 표시 여부 설정
+      setShowScrollbar(hasHorizontalScroll);
+      
+      // 스크롤바 thumb 위치와 너비 계산
+      if (hasHorizontalScroll) {
+        const thumbWidth = Math.max(30, (clientWidth / scrollWidth) * clientWidth);
+        setScrollThumbWidth(thumbWidth);
+        
+        const maxScrollPosition = scrollWidth - clientWidth;
+        const scrollPercentage = maxScrollPosition > 0 ? scrollLeft / maxScrollPosition : 0;
+        const maxThumbPosition = clientWidth - thumbWidth;
+        const thumbPosition = scrollPercentage * maxThumbPosition;
+        
+        setScrollThumbPosition(thumbPosition);
+      }
+    };
+    
+    // 초기 체크
+    checkScroll();
+    
+    const container = tabsContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScroll);
+      window.addEventListener('resize', checkScroll);
+      
+      return () => {
+        container.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      };
+    }
+  }, [xlsxData?.sheets.length]);
+  
+  // 가상 스크롤바 클릭 핸들러
+  const handleScrollbarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
+    
+    const scrollbarElement = e.currentTarget;
+    const rect = scrollbarElement.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    
+    // 클릭한 위치로 thumb 이동
+    const scrollPercentage = clickX / rect.width;
+    const scrollPosition = scrollPercentage * (container.scrollWidth - container.clientWidth);
+    
+    container.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+  };
+  
+  // 드래그 시작 핸들러
+  const handleThumbDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+    
+    const container = tabsContainerRef.current;
+    if (container) {
+      setDragStartScroll(container.scrollLeft);
+    }
+    
+    // 글로벌 이벤트 리스너 추가
+    document.addEventListener('mousemove', handleThumbDrag);
+    document.addEventListener('mouseup', handleThumbDragEnd);
+  };
+  
+  // 드래그 중 핸들러
+  const handleThumbDrag = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+    
+    const container = tabsContainerRef.current;
+    if (!container) return;
+    
+    const deltaX = e.clientX - dragStartX;
+    const containerWidth = container.clientWidth;
+    const scrollWidth = container.scrollWidth;
+    
+    const maxScrollPosition = scrollWidth - containerWidth;
+    const dragRatio = containerWidth / scrollWidth;
+    const scrollDelta = deltaX / dragRatio;
+    
+    container.scrollLeft = Math.max(0, Math.min(maxScrollPosition, dragStartScroll + scrollDelta));
+  }, [isDragging, dragStartX, dragStartScroll]);
+  
+  // 드래그 종료 핸들러
+  const handleThumbDragEnd = useCallback(() => {
+    setIsDragging(false);
+    
+    // 글로벌 이벤트 리스너 제거
+    document.removeEventListener('mousemove', handleThumbDrag);
+    document.removeEventListener('mouseup', handleThumbDragEnd);
+  }, [handleThumbDrag]);
+  
+  // 스크롤 이벤트 핸들러 등록 및 해제
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleThumbDrag);
+      document.removeEventListener('mouseup', handleThumbDragEnd);
+    };
+  }, [handleThumbDrag, handleThumbDragEnd]);
+
   // 로딩 중일 때 표시
   if (loadingStates.fileUpload) {
     return (
@@ -777,74 +943,96 @@ const MainSpreadSheet: React.FC = () => {
         )}
       </div>
 
-      {/* 시트 탭 바 */}
+      {/* 시트 탭 바 - 항상 표시 */}
       <div className="relative">
-        <div className="flex items-center bg-[#F9F9F7] border-b border-gray-200">
-          {xlsxData && xlsxData.sheets.length > 0 && (
+        <div className="flex flex-col bg-[#F9F9F7]">
+          <div className="flex items-center border-b border-gray-200">
+            {/* 시트 탭 컨테이너 - 시트 있을 때와 없을 때 모두 표시 */}
             <div ref={tabsContainerRef} className="sheet-tabs-container">
-              {xlsxData.sheets.map((sheet, index) => (
-                <div
-                  key={index}
-                  onClick={() => handleSheetChange(index)}
-                  className={`sheet-tab ${index === xlsxData.activeSheetIndex ? 'active' : ''}`}
-                >
-                  <span>{sheet.sheetName}</span>
-                  <span className="sheet-info">
-                    {sheet.headers.length}×{sheet.data.length}
-                  </span>
+              {xlsxData && xlsxData.sheets.length > 0 ? (
+                /* 시트가 있는 경우 시트 탭 표시 */
+                xlsxData.sheets.map((sheet, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleSheetChange(index)}
+                    className={`sheet-tab ${index === xlsxData.activeSheetIndex ? 'active' : ''}`}
+                  >
+                    <span>{sheet.sheetName}</span>
+                    <span className="sheet-info">
+                      {sheet.headers.length}×{sheet.data.length}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                /* 시트가 없는 경우 안내 메시지 표시 */
+                <div className="empty-sheet-container">
+                  <span className="empty-sheet-text">시트가 없습니다. 새 시트를 추가하세요</span>
                 </div>
-              ))}
+              )}
+            </div>
+            
+            {/* 시트 추가 버튼 - 항상 같은 위치에 표시 */}
+            <div className="relative">
+              <button 
+                className="sheet-add-button" 
+                onClick={() => setIsCreateSheetModalOpen(true)}
+                aria-label="새 시트 추가"
+              >
+                <Plus size={18} />
+              </button>
+              
+              {isCreateSheetModalOpen && (
+                <div className="sheet-create-modal">
+                  <h3 className="text-base font-medium mb-3">새 시트 만들기</h3>
+                  <input
+                    type="text"
+                    placeholder="시트 이름"
+                    value={newSheetName}
+                    onChange={(e) => setNewSheetName(e.target.value)}
+                    autoFocus
+                  />
+                  <div className="sheet-create-modal-buttons">
+                    <button
+                      className="cancel-button"
+                      onClick={() => {
+                        setIsCreateSheetModalOpen(false);
+                        setNewSheetName('');
+                      }}
+                    >
+                      취소
+                    </button>
+                    <button
+                      className="create-button"
+                      onClick={handleCreateSheet}
+                      disabled={!newSheetName.trim()}
+                    >
+                      만들기
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* 간단한 브라우저 스타일 스크롤바 */}
+          {showScrollbar && (
+            <div 
+              className="tab-scrollbar-container"
+              onClick={handleScrollbarClick}
+            >
+              <div 
+                className={`tab-scrollbar-thumb ${isDragging ? 'dragging' : ''}`}
+                style={{ 
+                  width: `${scrollThumbWidth}px`,
+                  left: `${scrollThumbPosition}px`
+                }}
+                onMouseDown={handleThumbDragStart}
+              />
             </div>
           )}
-          
-          {!xlsxData || xlsxData.sheets.length === 0 ? (
-            <div className="flex items-center justify-center p-2 text-gray-500 text-sm">
-              <span>시트가 없습니다. 새 시트를 추가하세요.</span>
-            </div>
-          ) : null}
-          
-          <div className="relative">
-            <button 
-              className="sheet-add-button" 
-              onClick={() => setIsCreateSheetModalOpen(true)}
-              aria-label="새 시트 추가"
-            >
-              <Plus size={18} />
-            </button>
-            
-            {isCreateSheetModalOpen && (
-              <div className="sheet-create-modal">
-                <h3 className="text-base font-medium mb-3">새 시트 만들기</h3>
-                <input
-                  type="text"
-                  placeholder="시트 이름"
-                  value={newSheetName}
-                  onChange={(e) => setNewSheetName(e.target.value)}
-                  autoFocus
-                />
-                <div className="sheet-create-modal-buttons">
-                  <button
-                    className="cancel-button"
-                    onClick={() => {
-                      setIsCreateSheetModalOpen(false);
-                      setNewSheetName('');
-                    }}
-                  >
-                    취소
-                  </button>
-                  <button
-                    className="create-button"
-                    onClick={handleCreateSheet}
-                    disabled={!newSheetName.trim()}
-                  >
-                    만들기
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
         
+        {/* 로딩 상태 표시 */}
         {loadingStates.sheetSwitch && (
           <div className="absolute top-full left-0 right-0 mt-1 flex items-center justify-center py-2 bg-white shadow-sm z-10">
             <div className="w-4 h-4 border-2 border-[#005DE9] border-t-transparent rounded-full animate-spin"></div>
