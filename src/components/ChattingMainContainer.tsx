@@ -2,7 +2,7 @@
 'use client'
 
 import React from 'react';
-import ArtifactModal from './ArtifactModal';
+import ArtifactModal from './artifact/ArtifactModal';
 import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import MainChatComponent from './chat/MainChatComponent';
 
