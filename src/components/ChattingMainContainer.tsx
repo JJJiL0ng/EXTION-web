@@ -2,9 +2,9 @@
 'use client'
 
 import React from 'react';
-import CSVChatComponent from './CSVChatComponent';
 import ArtifactModal from './ArtifactModal';
 import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
+import MainChatComponent from './chat/MainChatComponent';
 
 export default function MainContainer() {
   // 확장된 스토어 사용
@@ -19,7 +19,7 @@ export default function MainContainer() {
     <div className="h-screen w-full bg-gray-50">
       {/* 메인 채팅 영역 */}
       <div className="h-full w-full">
-        <CSVChatComponent />
+        <MainChatComponent />
       </div>
 
       {/* 아티팩트 모달 - XLSX 데이터 지원 */}
