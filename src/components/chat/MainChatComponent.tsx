@@ -15,7 +15,7 @@ import ChatInput from './ChatInput';
 
 export default function MainChatComponent() {
     // 상태들 선언
-    const [currentMode, setCurrentMode] = useState<'normal' | 'formula' | 'artifact'>('normal');
+    const [currentMode, setCurrentMode] = useState<'normal' | 'formula' | 'datageneration' | 'artifact'>('normal');
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);

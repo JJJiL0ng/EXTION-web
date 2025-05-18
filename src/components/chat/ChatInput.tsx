@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { Send, FunctionSquare, BarChart3, Paperclip } from 'lucide-react';
 
 interface ChatInputProps {
-    currentMode: 'normal' | 'formula' | 'artifact';
+    currentMode: 'normal' | 'formula' | 'artifact' | 'datageneration';
     inputValue: string;
     isDragOver: boolean;
     isLoading: boolean;

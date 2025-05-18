@@ -13,7 +13,7 @@ export interface Message {
     type: 'user' | 'assistant';
     content: string;
     timestamp: Date;
-    mode?: 'normal' | 'formula' | 'artifact';
+    mode?: 'normal' | 'formula' | 'artifact' | 'datageneration';
     artifactData?: {
         type: 'chart' | 'table' | 'analysis';
         title: string;
