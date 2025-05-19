@@ -2,10 +2,11 @@
 
 import React from 'react';
 import { FileText, X } from 'lucide-react';
+import { XLSXData } from '@/stores/useUnifiedDataStore';
 
 interface FileUploadHandlerProps {
     isDragOver: boolean;
-    xlsxData: any;
+    xlsxData: XLSXData ;
     handleDragOver: (e: React.DragEvent) => void;
     handleDragLeave: (e: React.DragEvent) => void;
     handleDrop: (e: React.DragEvent) => void;

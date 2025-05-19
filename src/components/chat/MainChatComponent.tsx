@@ -90,13 +90,14 @@ export default function MainChatComponent() {
                 // XLSX 파일 처리
                 const result = await processXLSXFile(file);
 
-                const xlsxData = {
-                    fileName: result.fileName,
-                    sheets: result.sheets.map(sheet => ({
+                // 기존 xlsxData가 있는 경우 새 시트로 추가
+                if (xlsxData) {
+                    const newXlsxData = { ...xlsxData };
+                    const newSheets = result.sheets.map(sheet => ({
                         sheetName: sheet.sheetName,
-                        rawData: sheet.rawData, // 원본 데이터 보존
-                        headers: sheet.headers, // 유효한 헤더만
-                        data: sheet.data, // 헤더에 맞춰 정리된 데이터
+                        rawData: sheet.rawData,
+                        headers: sheet.headers,
+                        data: sheet.data,
                         metadata: {
                             rowCount: sheet.data.length,
                             columnCount: sheet.headers.length,
@@ -109,38 +110,81 @@ export default function MainChatComponent() {
                                 startColLetter: 'A',
                                 endColLetter: String.fromCharCode(65 + sheet.headers.length - 1)
                             },
-                            headerRowData: sheet.metadata.headerRowData, // 원본 헤더 행
-                            headerMap: sheet.metadata.headerMap, // 매핑 정보
+                            headerRowData: sheet.metadata.headerRowData,
+                            headerMap: sheet.metadata.headerMap,
                             preserveOriginalStructure: sheet.metadata.preserveOriginalStructure,
                             lastModified: new Date()
                         }
-                    })),
-                    activeSheetIndex: 0
-                };
+                    }));
 
-                setXLSXData(xlsxData);
+                    // 새 시트들을 기존 시트 목록에 추가
+                    newXlsxData.sheets = [...newXlsxData.sheets, ...newSheets];
+                    setXLSXData(newXlsxData);
 
-                const successMessage: Message = {
-                    id: Date.now().toString(),
-                    type: 'Extion ai',
-                    content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다.\n\n` +
-                        `📊 **시트 정보:**\n` +
-                        xlsxData.sheets.map((sheet, index) =>
-                            `• ${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행`
-                        ).join('\n') + '\n\n' +
-                        `🎯 **활성 시트:** ${xlsxData.sheets[0].sheetName}\n` +
-                        `📍 **헤더 위치:** 원본 구조 유지됨`,
-                    timestamp: new Date()
-                };
-                setMessages(prev => [...prev, successMessage]);
+                    const successMessage: Message = {
+                        id: Date.now().toString(),
+                        type: 'Extion ai',
+                        content: `✅ ${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
+                            `📊 **추가된 시트 정보:**\n` +
+                            newSheets.map((sheet, index) =>
+                                `• ${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행`
+                            ).join('\n'),
+                        timestamp: new Date()
+                    };
+                    setMessages(prev => [...prev, successMessage]);
+                } else {
+                    // xlsxData가 없는 경우 새로 생성
+                    const xlsxData = {
+                        fileName: result.fileName,
+                        sheets: result.sheets.map(sheet => ({
+                            sheetName: sheet.sheetName,
+                            rawData: sheet.rawData,
+                            headers: sheet.headers,
+                            data: sheet.data,
+                            metadata: {
+                                rowCount: sheet.data.length,
+                                columnCount: sheet.headers.length,
+                                headerRow: sheet.metadata.headerRow,
+                                dataRange: {
+                                    startRow: sheet.metadata.headerRow + 1,
+                                    endRow: sheet.metadata.headerRow + sheet.data.length,
+                                    startCol: 0,
+                                    endCol: sheet.headers.length - 1,
+                                    startColLetter: 'A',
+                                    endColLetter: String.fromCharCode(65 + sheet.headers.length - 1)
+                                },
+                                headerRowData: sheet.metadata.headerRowData,
+                                headerMap: sheet.metadata.headerMap,
+                                preserveOriginalStructure: sheet.metadata.preserveOriginalStructure,
+                                lastModified: new Date()
+                            }
+                        })),
+                        activeSheetIndex: 0
+                    };
 
+                    setXLSXData(xlsxData);
+
+                    const successMessage: Message = {
+                        id: Date.now().toString(),
+                        type: 'Extion ai',
+                        content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다.\n\n` +
+                            `📊 **시트 정보:**\n` +
+                            xlsxData.sheets.map((sheet, index) =>
+                                `• ${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행`
+                            ).join('\n') + '\n\n' +
+                            `🎯 **활성 시트:** ${xlsxData.sheets[0].sheetName}\n` +
+                            `📍 **헤더 위치:** 원본 구조 유지됨`,
+                        timestamp: new Date()
+                    };
+                    setMessages(prev => [...prev, successMessage]);
+                }
             } else if (fileExtension === 'csv') {
                 // CSV 파일 처리
                 const fileContent = await detectAndDecode(file);
 
                 Papa.parse(fileContent, {
                     header: false,
-                    skipEmptyLines: false, // 빈 행도 유지
+                    skipEmptyLines: false,
                     complete: (results: Papa.ParseResult<unknown>) => {
                         if (results.data && results.data.length > 0) {
                             const rawData = results.data as string[][];
@@ -157,7 +201,6 @@ export default function MainChatComponent() {
                                 return;
                             }
 
-                            // CSV에도 동적 헤더 감지 적용
                             const {
                                 findHeaderRow,
                                 findDataRange,
@@ -173,7 +216,6 @@ export default function MainChatComponent() {
                                 maxCol
                             } = findDataRange(rawData, headerRow);
 
-                            // CSV 데이터도 헤더에 맞춰 정리
                             const data: string[][] = [];
                             for (let row = headerRow + 1; row <= maxRow; row++) {
                                 const dataRow: string[] = [];
@@ -188,14 +230,14 @@ export default function MainChatComponent() {
                                 data.push(dataRow);
                             }
 
-                            // CSV 데이터를 XLSX 형식으로 변환하여 통합 관리
-                            const xlsxData = {
-                                fileName: file.name,
-                                sheets: [{
-                                    sheetName: 'Sheet1',
-                                    rawData, // 원본 데이터 보존
-                                    headers: validHeaders, // 유효한 헤더만
-                                    data, // 헤더에 맞춰 정리된 데이터
+                            // 기존 xlsxData가 있는 경우 새 시트로 추가
+                            if (xlsxData) {
+                                const newXlsxData = { ...xlsxData };
+                                const newSheet = {
+                                    sheetName: file.name.replace('.csv', ''),
+                                    headers: validHeaders,
+                                    data: data,
+                                    rawData: rawData,
                                     metadata: {
                                         rowCount: data.length,
                                         columnCount: validHeaders.length,
@@ -208,26 +250,67 @@ export default function MainChatComponent() {
                                             startColLetter: columnIndexToLetter(0),
                                             endColLetter: columnIndexToLetter(maxCol)
                                         },
-                                        headerRowData, // 원본 헤더 행
-                                        headerMap, // 매핑 정보
+                                        headerRowData,
+                                        headerMap,
                                         preserveOriginalStructure: true,
                                         lastModified: new Date()
                                     }
-                                }],
-                                activeSheetIndex: 0
-                            };
+                                };
 
-                            setXLSXData(xlsxData);
+                                newXlsxData.sheets = [...newXlsxData.sheets, newSheet];
+                                setXLSXData(newXlsxData);
 
-                            const successMessage: Message = {
-                                id: Date.now().toString(),
-                                type: 'Extion ai',
-                                content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다.\n` +
-                                    `📊 ${validHeaders.length}열 × ${data.length}행의 데이터가 스프레드시트에 표시됩니다.\n` +
-                                    `📍 **구조:** 원본 위치 유지, 유효한 헤더 ${validHeaders.length}개 추출`,
-                                timestamp: new Date()
-                            };
-                            setMessages(prev => [...prev, successMessage]);
+                                const successMessage: Message = {
+                                    id: Date.now().toString(),
+                                    type: 'Extion ai',
+                                    content: `✅ ${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
+                                        `📊 **추가된 시트 정보:**\n` +
+                                        `• ${newSheet.sheetName}: ${validHeaders.length}열 × ${data.length}행`,
+                                    timestamp: new Date()
+                                };
+                                setMessages(prev => [...prev, successMessage]);
+                            } else {
+                                // xlsxData가 없는 경우 새로 생성
+                                const xlsxData = {
+                                    fileName: file.name,
+                                    sheets: [{
+                                        sheetName: file.name.replace('.csv', ''),
+                                        headers: validHeaders,
+                                        data: data,
+                                        rawData: rawData,
+                                        metadata: {
+                                            rowCount: data.length,
+                                            columnCount: validHeaders.length,
+                                            headerRow,
+                                            dataRange: {
+                                                startRow: headerRow + 1,
+                                                endRow: maxRow,
+                                                startCol: 0,
+                                                endCol: maxCol,
+                                                startColLetter: columnIndexToLetter(0),
+                                                endColLetter: columnIndexToLetter(maxCol)
+                                            },
+                                            headerRowData,
+                                            headerMap,
+                                            preserveOriginalStructure: true,
+                                            lastModified: new Date()
+                                        }
+                                    }],
+                                    activeSheetIndex: 0
+                                };
+
+                                setXLSXData(xlsxData);
+
+                                const successMessage: Message = {
+                                    id: Date.now().toString(),
+                                    type: 'Extion ai',
+                                    content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다.\n` +
+                                        `📊 ${validHeaders.length}열 × ${data.length}행의 데이터가 스프레드시트에 표시됩니다.\n` +
+                                        `📍 **구조:** 원본 위치 유지, 유효한 헤더 ${validHeaders.length}개 추출`,
+                                    timestamp: new Date()
+                                };
+                                setMessages(prev => [...prev, successMessage]);
+                            }
                         }
                     },
                     error: (error: Error) => {
