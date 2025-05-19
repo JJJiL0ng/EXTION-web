@@ -122,7 +122,7 @@ export default function MainChatComponent() {
 
                 const successMessage: Message = {
                     id: Date.now().toString(),
-                    type: 'assistant',
+                    type: 'Extion ai',
                     content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다.\n\n` +
                         `📊 **시트 정보:**\n` +
                         xlsxData.sheets.map((sheet, index) =>
@@ -148,7 +148,7 @@ export default function MainChatComponent() {
                             if (rawData.length <= 1) {
                                 const errorMessage: Message = {
                                     id: Date.now().toString(),
-                                    type: 'assistant',
+                                    type: 'Extion ai',
                                     content: `⚠️ 파일에 충분한 데이터가 없습니다. 헤더 행과 최소 1개 이상의 데이터 행이 필요합니다.`,
                                     timestamp: new Date()
                                 };
@@ -221,7 +221,7 @@ export default function MainChatComponent() {
 
                             const successMessage: Message = {
                                 id: Date.now().toString(),
-                                type: 'assistant',
+                                type: 'Extion ai',
                                 content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다.\n` +
                                     `📊 ${validHeaders.length}열 × ${data.length}행의 데이터가 스프레드시트에 표시됩니다.\n` +
                                     `📍 **구조:** 원본 위치 유지, 유효한 헤더 ${validHeaders.length}개 추출`,
@@ -235,7 +235,7 @@ export default function MainChatComponent() {
                         setError('fileError', error.message);
                         const errorMessage: Message = {
                             id: Date.now().toString(),
-                            type: 'assistant',
+                            type: 'Extion ai',
                             content: `❌ 파일 처리 중 오류가 발생했습니다: ${error.message}`,
                             timestamp: new Date()
                         };
@@ -250,7 +250,7 @@ export default function MainChatComponent() {
             setError('fileError', error instanceof Error ? error.message : '알 수 없는 오류');
             const errorMessage: Message = {
                 id: Date.now().toString(),
-                type: 'assistant',
+                type: 'Extion ai',
                 content: `❌ 파일 읽기 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
                 timestamp: new Date()
             };
@@ -309,7 +309,7 @@ export default function MainChatComponent() {
                 if (result.success && result.formula) {
                     const assistantMessage: Message = {
                         id: (Date.now() + 1).toString(),
-                        type: 'assistant',
+                        type: 'Extion ai',
                         content: `✅ 함수가 생성되었습니다!
 
 **생성된 함수:** \`${result.formula}\`
@@ -353,7 +353,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
-                    type: 'assistant',
+                    type: 'Extion ai',
                     content: errorMessage,
                     timestamp: new Date(),
                 };
@@ -389,7 +389,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                     const assistantMessage: Message = {
                         id: (Date.now() + 1).toString(),
-                        type: 'assistant',
+                        type: 'Extion ai',
                         content: '',
                         timestamp: new Date(),
                         mode: 'artifact',
@@ -416,7 +416,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
-                    type: 'assistant',
+                    type: 'Extion ai',
                     content: errorMessage,
                     timestamp: new Date(),
                 };
@@ -451,7 +451,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                     // 성공 메시지 표시
                     const assistantMessage: Message = {
                         id: (Date.now() + 1).toString(),
-                        type: 'assistant',
+                        type: 'Extion ai',
                         content: `✅ 데이터가 성공적으로 ${xlsxData ? '업데이트' : '생성'}되었습니다.\n\n` +
                             `**시트 이름:** ${result.editedData.sheetName}\n` +
                             `**데이터 크기:** ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
@@ -476,7 +476,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
-                    type: 'assistant',
+                    type: 'Extion ai',
                     content: errorMessage,
                     timestamp: new Date(),
                 };
@@ -490,7 +490,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             setTimeout(() => {
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
-                    type: 'assistant',
+                    type: 'Extion ai',
                     content: `${file?.name} 파일에 대한 질문을 받았습니다: "${currentInput}"\n\n이는 시뮬레이션된 응답입니다. 실제 구현에서는 파일을 파싱하고 적절한 분석을 제공할 수 있습니다.`,
                     timestamp: new Date()
                 };

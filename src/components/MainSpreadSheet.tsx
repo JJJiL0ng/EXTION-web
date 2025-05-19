@@ -883,7 +883,7 @@ const MainSpreadSheet: React.FC = () => {
       <HandsontableStyles />
       
       {/* 상단 컨트롤 패널 */}
-      <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-5 shadow-sm">
+      <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm">
         <div className="flex items-center justify-between">
           {/* 선택된 셀 정보 표시 */}
           {selectedCellInfo && (

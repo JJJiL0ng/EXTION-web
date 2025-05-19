@@ -10,7 +10,7 @@ interface MessageProps {
 
 export interface Message {
     id: string;
-    type: 'user' | 'assistant';
+    type: 'user' | 'Extion ai';
     content: string;
     timestamp: Date;
     mode?: 'normal' | 'formula' | 'artifact' | 'datageneration';
@@ -48,7 +48,7 @@ export default function MessageDisplay({ messages, onArtifactClick }: MessagePro
         <div className="space-y-4">
             {messages.map((message) => (
                 <div key={message.id} className="space-y-2">
-                    {message.type === 'assistant' && message.mode === 'artifact' && message.artifactData ? (
+                    {message.type === 'Extion ai' && message.mode === 'artifact' && message.artifactData ? (
                         // 아티팩트 결과 박스
                         <div
                             onClick={() => onArtifactClick(message.id)}
@@ -122,7 +122,7 @@ export default function MessageDisplay({ messages, onArtifactClick }: MessagePro
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-sm font-medium mb-1">
-                                        {message.type === 'user' ? 'You' : 'Assistant'}
+                                        {message.type === 'user' ? 'You' : 'Extion AI'}
                                         {message.type === 'user' && message.mode === 'formula' && (
                                             <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
                                                 Formula
