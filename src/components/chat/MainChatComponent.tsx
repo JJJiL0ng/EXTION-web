@@ -5,7 +5,7 @@ import Papa from 'papaparse';
 import { useExtendedUnifiedDataStore } from '../../stores/useUnifiedDataStore';
 import { processXLSXFile } from '../../utils/fileProcessing';
 import { detectAndDecode, isValidSpreadsheetFile } from '../../utils/chatUtils';
-import { callArtifactAPI, callFormulaAPI, callDataGenerationAPI } from '../../services/api/dataServices';
+import { callArtifactAPI, callFormulaAPI, callDataGenerationAPI, callNormalChatAPI } from '../../services/api/dataServices';
 import { Message } from './MessageDisplay';
 
 // 컴포넌트 가져오기
@@ -570,15 +570,49 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             }
         } else {
             // 일반 모드
-            setTimeout(() => {
+            setIsLoading(true);
+            setError('fileError', null);
+
+            try {
+                const timeoutPromise = new Promise<never>((_, reject) => {
+                    setTimeout(() => reject(new Error('timeout')), 30000);
+                });
+
+                const apiCall = callNormalChatAPI(currentInput, extendedSheetContext, getDataForGPTAnalysis);
+                const result = await Promise.race([apiCall, timeoutPromise]);
+
+                if (result.success) {
+                    const assistantMessage: Message = {
+                        id: (Date.now() + 1).toString(),
+                        type: 'Extion ai',
+                        content: result.message,
+                        timestamp: new Date()
+                    };
+                    setMessages(prev => [...prev, assistantMessage]);
+                } else {
+                    throw new Error(result.error || '응답 생성에 실패했습니다.');
+                }
+            } catch (error) {
+                let errorMessage = '응답 생성 중 오류가 발생했습니다.';
+
+                if (error instanceof Error && error.message === 'timeout') {
+                    errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+                } else if (error instanceof Error) {
+                    errorMessage = `❌ ${error.message}`;
+                }
+
+                setError('fileError', errorMessage);
+
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: `${file?.name} 파일에 대한 질문을 받았습니다: "${currentInput}"\n\n이는 시뮬레이션된 응답입니다. 실제 구현에서는 파일을 파싱하고 적절한 분석을 제공할 수 있습니다.`,
-                    timestamp: new Date()
+                    content: errorMessage,
+                    timestamp: new Date(),
                 };
                 setMessages(prev => [...prev, assistantMessage]);
-            }, 1000);
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 

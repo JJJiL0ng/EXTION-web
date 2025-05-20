@@ -6,7 +6,7 @@ import { XLSXData } from '@/stores/useUnifiedDataStore';
 
 interface FileUploadHandlerProps {
     isDragOver: boolean;
-    xlsxData: XLSXData ;
+    xlsxData: XLSXData | null;
     handleDragOver: (e: React.DragEvent) => void;
     handleDragLeave: (e: React.DragEvent) => void;
     handleDrop: (e: React.DragEvent) => void;

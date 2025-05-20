@@ -40,6 +40,13 @@ export interface DataGenerationResponse {
     error?: string;
 }
 
+// 일반 채팅 응답 인터페이스
+export interface NormalChatResponse {
+    success: boolean;
+    message: string;
+    error?: string;
+}
+
 // 아티팩트 생성 API 호출
 export const callArtifactAPI = async (
     userInput: string,
@@ -176,5 +183,48 @@ export const callDataGenerationAPI = async (
 
     const result = await response.json();
     console.log('Data Generation API Response:', result);
+    return result;
+};
+
+// 일반 채팅 API 호출
+export const callNormalChatAPI = async (
+    userInput: string,
+    extendedSheetContext: any | null,
+    getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any
+): Promise<NormalChatResponse> => {
+    // 현재 데이터 컨텍스트 (있는 경우)
+    let currentData = null;
+    if (extendedSheetContext && getDataForGPTAnalysis) {
+        currentData = getDataForGPTAnalysis(undefined, true);
+    }
+
+    const requestBody = {
+        userInput,
+        currentData,
+        language: 'ko'
+    };
+
+    console.log('Normal Chat Request Body:', JSON.stringify(requestBody, null, 2));
+
+    const response = await fetch(`${API_BASE_URL}/normal/chat`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Normal Chat API Error Details:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText
+        });
+        throw new Error(`API 오류: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('Normal Chat API Response:', result);
     return result;
 }; 
