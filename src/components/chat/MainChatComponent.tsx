@@ -7,6 +7,7 @@ import { processXLSXFile } from '../../utils/fileProcessing';
 import { detectAndDecode, isValidSpreadsheetFile } from '../../utils/chatUtils';
 import { callArtifactAPI, callFormulaAPI, callDataGenerationAPI, callNormalChatAPI } from '../../services/api/dataServices';
 import { Message } from './MessageDisplay';
+import { determineChatMode, ChatMode } from '../../app/actions/chatActions'; // 서버 액션 import
 
 // 컴포넌트 가져오기
 import MessageDisplay from './MessageDisplay';
@@ -15,26 +16,13 @@ import ChatInput from './ChatInput';
 
 export default function MainChatComponent() {
     // 상태들 선언
-    const [currentMode, setCurrentMode] = useState<'normal' | 'formula' | 'datageneration' | 'artifact'>('normal');
+    const [currentMode, setCurrentMode] = useState<ChatMode>('normal');
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);
     const [isComposing, setIsComposing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const chatContainerRef = useRef<HTMLDivElement>(null);
-
-    // 모드 변경 함수들
-    const toggleFormulaMode = () => {
-        setCurrentMode(currentMode === 'formula' ? 'normal' : 'formula');
-    };
-
-    const toggleArtifactMode = () => {
-        setCurrentMode(currentMode === 'artifact' ? 'normal' : 'artifact');
-    };
-
-    const toggleDataGenerationMode = () => {
-        setCurrentMode(currentMode === 'datageneration' ? 'normal' : 'datageneration');
-    };
 
     // Zustand 스토어 사용
     const {
@@ -359,41 +347,72 @@ export default function MainChatComponent() {
         openArtifactModal(messageId);
     };
 
-    // 메시지 전송 함수
+    // 메시지 전송 함수 - 서버 액션을 사용하여 채팅 모드 결정
     const sendMessage = async () => {
         if (!inputValue.trim()) return;
 
+        setIsLoading(true);
+        
+        // 먼저 사용자 메시지 추가
         const userMessage: Message = {
             id: Date.now().toString(),
             type: 'user',
             content: inputValue,
-            timestamp: new Date(),
-            mode: currentMode
+            timestamp: new Date()
         };
-
         setMessages(prev => [...prev, userMessage]);
-        const currentInput = inputValue;
-        setInputValue('');
+        
+        try {
+            // 서버 액션을 호출하여 채팅 모드 결정
+            const { mode } = await determineChatMode(inputValue);
+            const currentInput = inputValue;
+            setInputValue('');
+            
+            // 채팅 모드 설정
+            setCurrentMode(mode);
+            
+            // 해당 모드에 맞는 API 호출
+            if (mode === 'formula') {
+                await handleFormulaChat(currentInput);
+            } else if (mode === 'artifact') {
+                await handleArtifactChat(currentInput);
+            } else if (mode === 'datageneration') {
+                await handleDataGenerationChat(currentInput);
+            } else {
+                await handleNormalChat(currentInput);
+            }
+        } catch (error) {
+            console.error('메시지 처리 중 오류 발생:', error);
+            const errorMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: `❌ 메시지 처리 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-        if (currentMode === 'formula') {
-            // 포뮬러 모드 로직
-            setIsLoading(true);
-            setLoadingState('formulaGeneration', true);
-            setError('formulaError', null);
+    // 각 채팅 모드별 핸들러 함수
+    const handleFormulaChat = async (userInput: string) => {
+        setLoadingState('formulaGeneration', true);
+        setError('formulaError', null);
 
-            try {
-                const timeoutPromise = new Promise<never>((_, reject) => {
-                    setTimeout(() => reject(new Error('timeout')), 15000);
-                });
+        try {
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error('timeout')), 15000);
+            });
 
-                const apiCall = callFormulaAPI(currentInput, extendedSheetContext);
-                const result = await Promise.race([apiCall, timeoutPromise]);
+            const apiCall = callFormulaAPI(userInput, extendedSheetContext);
+            const result = await Promise.race([apiCall, timeoutPromise]);
 
-                if (result.success && result.formula) {
-                    const assistantMessage: Message = {
-                        id: (Date.now() + 1).toString(),
-                        type: 'Extion ai',
-                        content: `✅ 함수가 생성되었습니다!
+            if (result.success && result.formula) {
+                const assistantMessage: Message = {
+                    id: (Date.now() + 1).toString(),
+                    type: 'Extion ai',
+                    content: `✅ 함수가 생성되었습니다!
 
 **생성된 함수:** \`${result.formula}\`
 **적용 위치:** ${result.cellAddress || 'E1'}
@@ -401,218 +420,212 @@ export default function MainChatComponent() {
 **설명:** ${result.explanation?.korean || '함수가 생성되었습니다.'}
 
 ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.` : ''}`,
-                        timestamp: new Date(),
-                    };
-                    setMessages(prev => [...prev, assistantMessage]);
+                    timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, assistantMessage]);
 
-                    const formulaApplication = {
-                        formula: result.formula,
-                        cellAddress: result.cellAddress || 'E1',
-                        explanation: result.explanation?.korean || '함수가 생성되었습니다.',
-                        timestamp: new Date()
-                    };
+                const formulaApplication = {
+                    formula: result.formula,
+                    cellAddress: result.cellAddress || 'E1',
+                    explanation: result.explanation?.korean || '함수가 생성되었습니다.',
+                    timestamp: new Date()
+                };
 
-                    setPendingFormula({
-                        ...formulaApplication,
-                        sheetIndex: 0 // 현재 활성화된 시트 인덱스 추가
-                    });
-                    addToFormulaHistory({
-                        ...formulaApplication,
-                        sheetIndex: 0 // 현재 활성화된 시트 인덱스 추가
-                    });
-                } else {
-                    throw new Error(result.error || '함수 생성에 실패했습니다.');
-                }
-            } catch (error) {
-                let errorMessage = '함수 생성 중 오류가 발생했습니다.';
+                setPendingFormula({
+                    ...formulaApplication,
+                    sheetIndex: 0 // 현재 활성화된 시트 인덱스 추가
+                });
+                addToFormulaHistory({
+                    ...formulaApplication,
+                    sheetIndex: 0 // 현재 활성화된 시트 인덱스 추가
+                });
+            } else {
+                throw new Error(result.error || '함수 생성에 실패했습니다.');
+            }
+        } catch (error) {
+            let errorMessage = '함수 생성 중 오류가 발생했습니다.';
 
-                if (error instanceof Error && error.message === 'timeout') {
-                    errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
-                } else if (error instanceof Error) {
-                    errorMessage = `❌ ${error.message}`;
-                }
+            if (error instanceof Error && error.message === 'timeout') {
+                errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+            } else if (error instanceof Error) {
+                errorMessage = `❌ ${error.message}`;
+            }
 
-                setError('formulaError', errorMessage);
+            setError('formulaError', errorMessage);
+
+            const assistantMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: errorMessage,
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+        } finally {
+            setLoadingState('formulaGeneration', false);
+        }
+    };
+
+    const handleArtifactChat = async (userInput: string) => {
+        setLoadingState('artifactGeneration', true);
+        setError('artifactError', null);
+
+        try {
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error('timeout')), 30000);
+            });
+
+            const apiCall = callArtifactAPI(userInput, extendedSheetContext, getDataForGPTAnalysis);
+            const result = await Promise.race([apiCall, timeoutPromise]);
+
+            if (result.success && result.code) {
+                const artifactData = {
+                    code: result.code,
+                    type: result.type || 'analysis',
+                    timestamp: result.timestamp || new Date(),
+                    title: result.title || `${result.type} 분석`,
+                    messageId: (Date.now() + 1).toString()
+                };
+
+                addToArtifactHistory(artifactData);
 
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: errorMessage,
+                    content: '',
                     timestamp: new Date(),
-                };
-                setMessages(prev => [...prev, assistantMessage]);
-            } finally {
-                setIsLoading(false);
-                setLoadingState('formulaGeneration', false);
-            }
-        } else if (currentMode === 'artifact') {
-            // 아티팩트 모드 로직
-            setIsLoading(true);
-            setLoadingState('artifactGeneration', true);
-            setError('artifactError', null);
-
-            try {
-                const timeoutPromise = new Promise<never>((_, reject) => {
-                    setTimeout(() => reject(new Error('timeout')), 30000);
-                });
-
-                const apiCall = callArtifactAPI(currentInput, extendedSheetContext, getDataForGPTAnalysis);
-                const result = await Promise.race([apiCall, timeoutPromise]);
-
-                if (result.success && result.code) {
-                    const artifactData = {
-                        code: result.code,
+                    mode: 'artifact',
+                    artifactData: {
                         type: result.type || 'analysis',
-                        timestamp: result.timestamp || new Date(),
                         title: result.title || `${result.type} 분석`,
-                        messageId: (Date.now() + 1).toString()
-                    };
-
-                    addToArtifactHistory(artifactData);
-
-                    const assistantMessage: Message = {
-                        id: (Date.now() + 1).toString(),
-                        type: 'Extion ai',
-                        content: '',
-                        timestamp: new Date(),
-                        mode: 'artifact',
-                        artifactData: {
-                            type: result.type || 'analysis',
-                            title: result.title || `${result.type} 분석`,
-                            timestamp: result.timestamp || new Date()
-                        }
-                    };
-                    setMessages(prev => [...prev, assistantMessage]);
-                } else {
-                    throw new Error(result.error || '아티팩트 생성에 실패했습니다.');
-                }
-            } catch (error) {
-                let errorMessage = '아티팩트 생성 중 오류가 발생했습니다.';
-
-                if (error instanceof Error && error.message === 'timeout') {
-                    errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
-                } else if (error instanceof Error) {
-                    errorMessage = `❌ ${error.message}`;
-                }
-
-                setError('artifactError', errorMessage);
-
-                const assistantMessage: Message = {
-                    id: (Date.now() + 1).toString(),
-                    type: 'Extion ai',
-                    content: errorMessage,
-                    timestamp: new Date(),
+                        timestamp: result.timestamp || new Date()
+                    }
                 };
                 setMessages(prev => [...prev, assistantMessage]);
-            } finally {
-                setIsLoading(false);
-                setLoadingState('artifactGeneration', false);
+            } else {
+                throw new Error(result.error || '아티팩트 생성에 실패했습니다.');
             }
-        } else if (currentMode === 'datageneration') {
-            // 데이터 생성 모드 로직
-            setIsLoading(true);
-            setLoadingState('dataGeneration', true);
-            setError('dataGenerationError', null);
+        } catch (error) {
+            let errorMessage = '아티팩트 생성 중 오류가 발생했습니다.';
 
-            try {
-                const timeoutPromise = new Promise<never>((_, reject) => {
-                    setTimeout(() => reject(new Error('timeout')), 30000);
+            if (error instanceof Error && error.message === 'timeout') {
+                errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+            } else if (error instanceof Error) {
+                errorMessage = `❌ ${error.message}`;
+            }
+
+            setError('artifactError', errorMessage);
+
+            const assistantMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: errorMessage,
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+        } finally {
+            setLoadingState('artifactGeneration', false);
+        }
+    };
+
+    const handleDataGenerationChat = async (userInput: string) => {
+        setLoadingState('dataGeneration', true);
+        setError('dataGenerationError', null);
+
+        try {
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error('timeout')), 30000);
+            });
+
+            const apiCall = callDataGenerationAPI(userInput, extendedSheetContext, getDataForGPTAnalysis);
+            const result = await Promise.race([apiCall, timeoutPromise]);
+
+            if (result.success && result.editedData) {
+                // 생성된 데이터 적용
+                applyGeneratedData({
+                    sheetName: result.editedData.sheetName,
+                    headers: result.editedData.headers,
+                    data: result.editedData.data,
+                    sheetIndex: result.sheetIndex
                 });
 
-                const apiCall = callDataGenerationAPI(currentInput, extendedSheetContext, getDataForGPTAnalysis);
-                const result = await Promise.race([apiCall, timeoutPromise]);
-
-                if (result.success && result.editedData) {
-                    // 생성된 데이터 적용
-                    applyGeneratedData({
-                        sheetName: result.editedData.sheetName,
-                        headers: result.editedData.headers,
-                        data: result.editedData.data,
-                        sheetIndex: result.sheetIndex
-                    });
-
-                    // 성공 메시지 표시
-                    const assistantMessage: Message = {
-                        id: (Date.now() + 1).toString(),
-                        type: 'Extion ai',
-                        content: `✅ 데이터가 성공적으로 ${xlsxData ? '업데이트' : '생성'}되었습니다.\n\n` +
-                            `**시트 이름:** ${result.editedData.sheetName}\n` +
-                            `**데이터 크기:** ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
-                            `${result.explanation || ''}`,
-                        timestamp: new Date(),
-                        mode: 'datageneration'
-                    };
-                    setMessages(prev => [...prev, assistantMessage]);
-                } else {
-                    throw new Error(result.error || '데이터 생성에 실패했습니다.');
-                }
-            } catch (error) {
-                let errorMessage = '데이터 생성 중 오류가 발생했습니다.';
-
-                if (error instanceof Error && error.message === 'timeout') {
-                    errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
-                } else if (error instanceof Error) {
-                    errorMessage = `❌ ${error.message}`;
-                }
-
-                setError('dataGenerationError', errorMessage);
-
+                // 성공 메시지 표시
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: errorMessage,
+                    content: `✅ 데이터가 성공적으로 ${xlsxData ? '업데이트' : '생성'}되었습니다.\n\n` +
+                        `**시트 이름:** ${result.editedData.sheetName}\n` +
+                        `**데이터 크기:** ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
+                        `${result.explanation || ''}`,
                     timestamp: new Date(),
+                    mode: 'datageneration'
                 };
                 setMessages(prev => [...prev, assistantMessage]);
-            } finally {
-                setIsLoading(false);
-                setLoadingState('dataGeneration', false);
+            } else {
+                throw new Error(result.error || '데이터 생성에 실패했습니다.');
             }
-        } else {
-            // 일반 모드
-            setIsLoading(true);
-            setError('fileError', null);
+        } catch (error) {
+            let errorMessage = '데이터 생성 중 오류가 발생했습니다.';
 
-            try {
-                const timeoutPromise = new Promise<never>((_, reject) => {
-                    setTimeout(() => reject(new Error('timeout')), 30000);
-                });
+            if (error instanceof Error && error.message === 'timeout') {
+                errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+            } else if (error instanceof Error) {
+                errorMessage = `❌ ${error.message}`;
+            }
 
-                const apiCall = callNormalChatAPI(currentInput, extendedSheetContext, getDataForGPTAnalysis);
-                const result = await Promise.race([apiCall, timeoutPromise]);
+            setError('dataGenerationError', errorMessage);
 
-                if (result.success) {
-                    const assistantMessage: Message = {
-                        id: (Date.now() + 1).toString(),
-                        type: 'Extion ai',
-                        content: result.message,
-                        timestamp: new Date()
-                    };
-                    setMessages(prev => [...prev, assistantMessage]);
-                } else {
-                    throw new Error(result.error || '응답 생성에 실패했습니다.');
-                }
-            } catch (error) {
-                let errorMessage = '응답 생성 중 오류가 발생했습니다.';
+            const assistantMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: errorMessage,
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+        } finally {
+            setLoadingState('dataGeneration', false);
+        }
+    };
 
-                if (error instanceof Error && error.message === 'timeout') {
-                    errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
-                } else if (error instanceof Error) {
-                    errorMessage = `❌ ${error.message}`;
-                }
+    const handleNormalChat = async (userInput: string) => {
+        setError('fileError', null);
 
-                setError('fileError', errorMessage);
+        try {
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error('timeout')), 30000);
+            });
 
+            const apiCall = callNormalChatAPI(userInput, extendedSheetContext, getDataForGPTAnalysis);
+            const result = await Promise.race([apiCall, timeoutPromise]);
+
+            if (result.success) {
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: errorMessage,
-                    timestamp: new Date(),
+                    content: result.message,
+                    timestamp: new Date()
                 };
                 setMessages(prev => [...prev, assistantMessage]);
-            } finally {
-                setIsLoading(false);
+            } else {
+                throw new Error(result.error || '응답 생성에 실패했습니다.');
             }
+        } catch (error) {
+            let errorMessage = '응답 생성 중 오류가 발생했습니다.';
+
+            if (error instanceof Error && error.message === 'timeout') {
+                errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+            } else if (error instanceof Error) {
+                errorMessage = `❌ ${error.message}`;
+            }
+
+            setError('fileError', errorMessage);
+
+            const assistantMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: errorMessage,
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, assistantMessage]);
         }
     };
 
@@ -674,9 +687,6 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    toggleFormulaMode={toggleFormulaMode}
-                    toggleArtifactMode={toggleArtifactMode}
-                    toggleDataGenerationMode={toggleDataGenerationMode}
                     handleFileInputChange={handleFileInputChange}
                 />
             </div>

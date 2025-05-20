@@ -48,6 +48,14 @@ export const isValidSpreadsheetFile = (file: File): boolean => {
     return validTypes.includes(file.type) || file.name.endsWith('.csv') || file.name.endsWith('.xlsx');
 };
 
+// 메시지 날짜 포맷팅 함수
+export const formatMessageDate = (date: Date): string => {
+    return date.toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
 // 확장된 시트 데이터 구조 검증
 export const validateExtendedSheetContext = (context: any) => {
     console.log('Extended Sheet Context 검증:', {

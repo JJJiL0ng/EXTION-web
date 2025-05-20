@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef } from 'react';
-import { Send, FunctionSquare, BarChart3, Paperclip, Hammer } from 'lucide-react';
+import { Send, Paperclip } from 'lucide-react';
 
 interface ChatInputProps {
     currentMode: 'normal' | 'formula' | 'artifact' | 'datageneration';
@@ -19,9 +19,6 @@ interface ChatInputProps {
     onDragOver: (e: React.DragEvent) => void;
     onDragLeave: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent) => void;
-    toggleFormulaMode: () => void;
-    toggleArtifactMode: () => void;
-    toggleDataGenerationMode: () => void;
     handleFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -41,9 +38,6 @@ export default function ChatInput({
     onDragOver,
     onDragLeave,
     onDrop,
-    toggleFormulaMode,
-    toggleArtifactMode,
-    toggleDataGenerationMode,
     handleFileInputChange
 }: ChatInputProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,19 +46,32 @@ export default function ChatInput({
         fileInputRef.current?.click();
     };
     
+    // 현재 모드에 따른 배경색과 테두리 색상 
+    const getModeStyling = () => {
+        if (isDragOver) return 'border-blue-400 bg-blue-50';
+        
+        switch (currentMode) {
+            case 'formula': return 'border-blue-200 bg-blue-50';
+            case 'artifact': return 'border-indigo-200 bg-indigo-50';
+            case 'datageneration': return 'border-sky-200 bg-sky-50';
+            default: return 'border-gray-200 bg-gray-50 hover:border-gray-300';
+        }
+    };
+    
+    // 현재 모드에 따른 플레이스홀더 텍스트
+    const getPlaceholderText = () => {
+        switch (currentMode) {
+            case 'formula': return "스프레드시트 함수에 반영 할 명령을 입력하세요...";
+            case 'artifact': return "데이터 분석을 위한 요청을 입력하세요...";
+            case 'datageneration': return "데이터 생성 또는 수정을 위한 요청을 입력하세요...";
+            default: return "파일을 첨부하거나 질문을 입력하세요...";
+        }
+    };
+    
     return (
         <div className="border-t border-gray-100 bg-white p-2">
             <div
-                className={`relative border-2 border-dashed rounded-xl transition-all ${isDragOver
-                    ? 'border-blue-400 bg-blue-50'
-                    : currentMode === 'formula'
-                        ? 'border-blue-200 bg-blue-50'
-                        : currentMode === 'artifact'
-                            ? 'border-indigo-200 bg-indigo-50'
-                            : currentMode === 'datageneration'
-                                ? 'border-sky-200 bg-sky-50'
-                                : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-                    }`}
+                className={`relative border-2 border-dashed rounded-xl transition-all ${getModeStyling()}`}
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
@@ -86,54 +93,10 @@ export default function ChatInput({
                         onKeyDown={onKeyPress}
                         onCompositionStart={onCompositionStart}
                         onCompositionEnd={onCompositionEnd}
-                        placeholder={
-                            currentMode === 'formula'
-                                ? "스프레드시트 함수에 반영 할 명령을 입력하세요..."
-                                : currentMode === 'artifact'
-                                    ? "데이터 분석을 위한 요청을 입력하세요..."
-                                    : currentMode === 'datageneration'
-                                        ? "데이터 생성 또는 수정을 위한 요청을 입력하세요..."
-                                        : "파일을 첨부하거나 질문을 입력하세요..."
-                        }
+                        placeholder={getPlaceholderText()}
                         className="flex-1 bg-transparent border-none outline-none text-base text-gray-900 placeholder-gray-500"
                         disabled={isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || isArtifactModalOpen}
                     />
-
-                    {/* 데이터 생성 버튼 */}
-                    <button
-                        onClick={toggleDataGenerationMode}
-                        className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${currentMode === 'datageneration'
-                            ? 'bg-sky-500 text-white'
-                            : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                            }`}
-                        title={currentMode === 'datageneration' ? "일반 채팅 모드로 전환" : "데이터 생성 모드로 전환"}
-                    >
-                        <Hammer className="h-5 w-5" />
-                    </button>
-
-                    {/* 아티팩트 버튼 */}
-                    <button
-                        onClick={toggleArtifactMode}
-                        className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${currentMode === 'artifact'
-                            ? 'bg-indigo-600 text-white'
-                            : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                            }`}
-                        title={currentMode === 'artifact' ? "일반 채팅 모드로 전환" : "아티팩트 모드로 전환"}
-                    >
-                        <BarChart3 className="h-5 w-5" />
-                    </button>
-
-                    {/* 포뮬러 버튼 */}
-                    <button
-                        onClick={toggleFormulaMode}
-                        className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${currentMode === 'formula'
-                            ? 'bg-[#005DE9] text-white'
-                            : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                            }`}
-                        title={currentMode === 'formula' ? "일반 채팅 모드로 전환" : "포뮬러 모드로 전환"}
-                    >
-                        <FunctionSquare className="h-5 w-5" />
-                    </button>
 
                     <button
                         onClick={onSendMessage}
@@ -155,13 +118,12 @@ export default function ChatInput({
 
             {!fileExists && (
                 <p className="text-xs text-gray-500 mt-1 text-center">
-                    {currentMode === 'formula'
-                        ? "포뮬러 모드: 자연어로 스프레드시트 함수를 생성하세요"
-                        : currentMode === 'artifact'
-                            ? "아티팩트 모드: 데이터 분석 결과를 시각화하세요"
-                            : currentMode === 'datageneration'
-                                ? "데이터 생성 모드: 새로운 데이터를 생성하거나 기존 데이터를 수정하세요"
-                                : "CSV 또는 XLSX 파일을 드래그하여 업로드하거나 클립 아이콘을 클릭하세요"
+                    {currentMode === 'normal' 
+                        ? "CSV 또는 XLSX 파일을 드래그하여 업로드하거나 클립 아이콘을 클릭하세요" 
+                        : `현재 ${
+                            currentMode === 'formula' ? '포뮬러' : 
+                            currentMode === 'artifact' ? '아티팩트' : '데이터 생성'
+                          } 모드입니다`
                     }
                 </p>
             )}
