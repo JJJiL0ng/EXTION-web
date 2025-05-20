@@ -155,7 +155,7 @@ export default function MainChatComponent() {
                     const successMessage: Message = {
                         id: Date.now().toString(),
                         type: 'Extion ai',
-                        content: `${file.name} 파일이 성공적으로 로드되었습니다.\n\n` +
+                        content: `${file.name} 파일이 성공적으로 업로드되었습니다.\n\n` +
                             `시트 정보:\n` +
                             xlsxData.sheets.map((sheet, index) =>
                                 `${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행`
@@ -650,28 +650,30 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
     return (
         <div className="flex flex-col h-full w-full bg-white">
             <div className="flex flex-col h-full w-full">
+                {/* 파일 정보를 채팅 맨 위에 표시 */}
+                {xlsxData && (
+                    <div className="w-full border-b border-gray-200 bg-gray-50 shadow-sm">
+                        <div className="w-full max-w-3xl mx-auto">
+                            <FileUploadHandler
+                                isDragOver={isDragOver}
+                                xlsxData={xlsxData}
+                                handleDragOver={handleDragOver}
+                                handleDragLeave={handleDragLeave}
+                                handleDrop={handleDrop}
+                                handleFileInputChange={handleFileInputChange}
+                                removeFile={removeFile}
+                                switchToSheet={switchToSheet}
+                            />
+                        </div>
+                    </div>
+                )}
+
                 <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6">
                     <MessageDisplay
                         messages={messages}
                         onArtifactClick={handleArtifactClick}
                     />
                 </div>
-
-                {/* 파일이 있을 때만 FileUploadHandler 표시 */}
-                {xlsxData && (
-                    <div className="w-full max-w-3xl mx-auto">
-                        <FileUploadHandler
-                            isDragOver={isDragOver}
-                            xlsxData={xlsxData}
-                            handleDragOver={handleDragOver}
-                            handleDragLeave={handleDragLeave}
-                            handleDrop={handleDrop}
-                            handleFileInputChange={handleFileInputChange}
-                            removeFile={removeFile}
-                            switchToSheet={switchToSheet}
-                        />
-                    </div>
-                )}
 
                 <div className="w-full max-w-3xl mx-auto">
                     <ChatInput

@@ -54,11 +54,11 @@ export default function ChatInput({
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
             >
-                <div className="flex items-center space-x-2 p-3">
+                <div className="flex items-center space-x-2 p-2">
                     {/* 파일 첨부 버튼 */}
                     <button
                         onClick={handleFileButtonClick}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors group"
+                        className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-gray-100 transition-colors group"
                         aria-label="파일 첨부"
                     >
                         <Paperclip className="h-4 w-4 text-gray-500 group-hover:text-gray-700" />
@@ -72,16 +72,16 @@ export default function ChatInput({
                         onCompositionStart={onCompositionStart}
                         onCompositionEnd={onCompositionEnd}
                         placeholder="데이터와 대화해보세요"
-                        className="flex-1 bg-transparent border-none outline-none text-base text-gray-900 placeholder-gray-500"
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 placeholder-gray-500"
                         disabled={isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || isArtifactModalOpen}
                     />
 
                     <button
                         onClick={onSendMessage}
                         disabled={!inputValue.trim() || isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || isArtifactModalOpen}
-                        className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#005DE9] hover:bg-[#0052d1] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#005DE9] hover:bg-[#0052d1] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                        <Send className="h-5 w-5 text-white" />
+                        <Send className="h-4 w-4 text-white" />
                     </button>
                 </div>
             </div>
