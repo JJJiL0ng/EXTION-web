@@ -112,8 +112,8 @@ export default function MainChatComponent() {
                     const successMessage: Message = {
                         id: Date.now().toString(),
                         type: 'Extion ai',
-                        content: `✅ ${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
-                            `📊 **추가된 시트 정보:**\n` +
+                        content: `${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
+                            `추가된 시트 정보:\n` +
                             newSheets.map((sheet, index) =>
                                 `• ${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행`
                             ).join('\n'),
@@ -155,13 +155,13 @@ export default function MainChatComponent() {
                     const successMessage: Message = {
                         id: Date.now().toString(),
                         type: 'Extion ai',
-                        content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다.\n\n` +
-                            `📊 **시트 정보:**\n` +
+                        content: `${file.name} 파일이 성공적으로 로드되었습니다.\n\n` +
+                            `시트 정보:\n` +
                             xlsxData.sheets.map((sheet, index) =>
-                                `• ${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행`
+                                `${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행`
                             ).join('\n') + '\n\n' +
-                            `🎯 **활성 시트:** ${xlsxData.sheets[0].sheetName}\n` +
-                            `📍 **헤더 위치:** 원본 구조 유지됨`,
+                            `활성 시트: ${xlsxData.sheets[0].sheetName}\n` +
+                            `헤더 위치: 원본 구조 유지됨`,
                         timestamp: new Date()
                     };
                     setMessages(prev => [...prev, successMessage]);
@@ -251,8 +251,8 @@ export default function MainChatComponent() {
                                 const successMessage: Message = {
                                     id: Date.now().toString(),
                                     type: 'Extion ai',
-                                    content: `✅ ${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
-                                        `📊 **추가된 시트 정보:**\n` +
+                                    content: `${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
+                                        `추가된 시트 정보:\n` +
                                         `• ${newSheet.sheetName}: ${validHeaders.length}열 × ${data.length}행`,
                                     timestamp: new Date()
                                 };
@@ -292,9 +292,9 @@ export default function MainChatComponent() {
                                 const successMessage: Message = {
                                     id: Date.now().toString(),
                                     type: 'Extion ai',
-                                    content: `✅ ${file.name} 파일이 성공적으로 로드되었습니다.\n` +
-                                        `📊 ${validHeaders.length}열 × ${data.length}행의 데이터가 스프레드시트에 표시됩니다.\n` +
-                                        `📍 **구조:** 원본 위치 유지, 유효한 헤더 ${validHeaders.length}개 추출`,
+                                    content: `${file.name} 파일이 성공적으로 로드되었습니다.\n` +
+                                        `${validHeaders.length}열 × ${data.length}행의 데이터가 스프레드시트에 표시됩니다.\n` +
+                                        `구조: 원본 위치 유지, 유효한 헤더 ${validHeaders.length}개 추출`,
                                     timestamp: new Date()
                                 };
                                 setMessages(prev => [...prev, successMessage]);
@@ -307,7 +307,7 @@ export default function MainChatComponent() {
                         const errorMessage: Message = {
                             id: Date.now().toString(),
                             type: 'Extion ai',
-                            content: `❌ 파일 처리 중 오류가 발생했습니다: ${error.message}`,
+                            content: `파일 처리 중 오류가 발생했습니다: ${error.message}`,
                             timestamp: new Date()
                         };
                         setMessages(prev => [...prev, errorMessage]);
@@ -322,7 +322,7 @@ export default function MainChatComponent() {
             const errorMessage: Message = {
                 id: Date.now().toString(),
                 type: 'Extion ai',
-                content: `❌ 파일 읽기 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+                content: `파일 읽기 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMessage]);
@@ -386,7 +386,7 @@ export default function MainChatComponent() {
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
-                content: `❌ 메시지 처리 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+                content: `메시지 처리 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMessage]);
@@ -412,12 +412,12 @@ export default function MainChatComponent() {
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: `✅ 함수가 생성되었습니다!
+                    content: `함수가 생성되었습니다!
 
-**생성된 함수:** \`${result.formula}\`
-**적용 위치:** ${result.cellAddress || 'E1'}
+생성된 함수: ${result.formula}
+적용 위치: ${result.cellAddress || 'E1'}
 
-**설명:** ${result.explanation?.korean || '함수가 생성되었습니다.'}
+설명: ${result.explanation?.korean || '함수가 생성되었습니다.'}
 
 ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.` : ''}`,
                     timestamp: new Date(),
@@ -446,9 +446,9 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             let errorMessage = '함수 생성 중 오류가 발생했습니다.';
 
             if (error instanceof Error && error.message === 'timeout') {
-                errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
             } else if (error instanceof Error) {
-                errorMessage = `❌ ${error.message}`;
+                errorMessage = `${error.message}`;
             }
 
             setError('formulaError', errorMessage);
@@ -508,9 +508,9 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             let errorMessage = '아티팩트 생성 중 오류가 발생했습니다.';
 
             if (error instanceof Error && error.message === 'timeout') {
-                errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
             } else if (error instanceof Error) {
-                errorMessage = `❌ ${error.message}`;
+                errorMessage = `${error.message}`;
             }
 
             setError('artifactError', errorMessage);
@@ -552,9 +552,9 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 const assistantMessage: Message = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: `✅ 데이터가 성공적으로 ${xlsxData ? '업데이트' : '생성'}되었습니다.\n\n` +
-                        `**시트 이름:** ${result.editedData.sheetName}\n` +
-                        `**데이터 크기:** ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
+                    content: `데이터가 성공적으로 ${xlsxData ? '업데이트' : '생성'}되었습니다.\n\n` +
+                        `시트 이름: ${result.editedData.sheetName}\n` +
+                        `데이터 크기: ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
                         `${result.explanation || ''}`,
                     timestamp: new Date(),
                     mode: 'datageneration'
@@ -567,9 +567,9 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             let errorMessage = '데이터 생성 중 오류가 발생했습니다.';
 
             if (error instanceof Error && error.message === 'timeout') {
-                errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
             } else if (error instanceof Error) {
-                errorMessage = `❌ ${error.message}`;
+                errorMessage = `${error.message}`;
             }
 
             setError('dataGenerationError', errorMessage);
@@ -612,9 +612,9 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             let errorMessage = '응답 생성 중 오류가 발생했습니다.';
 
             if (error instanceof Error && error.message === 'timeout') {
-                errorMessage = '⏰ 요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
             } else if (error instanceof Error) {
-                errorMessage = `❌ ${error.message}`;
+                errorMessage = `${error.message}`;
             }
 
             setError('fileError', errorMessage);
@@ -650,7 +650,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
     return (
         <div className="flex flex-col h-full w-full bg-white">
             <div className="flex flex-col h-full w-full">
-                <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-2">
+                <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6">
                     <MessageDisplay
                         messages={messages}
                         onArtifactClick={handleArtifactClick}
@@ -659,36 +659,40 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 {/* 파일이 있을 때만 FileUploadHandler 표시 */}
                 {xlsxData && (
-                    <FileUploadHandler
-                        isDragOver={isDragOver}
-                        xlsxData={xlsxData}
-                        handleDragOver={handleDragOver}
-                        handleDragLeave={handleDragLeave}
-                        handleDrop={handleDrop}
-                        handleFileInputChange={handleFileInputChange}
-                        removeFile={removeFile}
-                        switchToSheet={switchToSheet}
-                    />
+                    <div className="w-full max-w-3xl mx-auto">
+                        <FileUploadHandler
+                            isDragOver={isDragOver}
+                            xlsxData={xlsxData}
+                            handleDragOver={handleDragOver}
+                            handleDragLeave={handleDragLeave}
+                            handleDrop={handleDrop}
+                            handleFileInputChange={handleFileInputChange}
+                            removeFile={removeFile}
+                            switchToSheet={switchToSheet}
+                        />
+                    </div>
                 )}
 
-                <ChatInput
-                    currentMode={currentMode}
-                    inputValue={inputValue}
-                    isDragOver={isDragOver}
-                    isLoading={isLoading}
-                    loadingStates={loadingStates}
-                    isArtifactModalOpen={isArtifactModalOpen}
-                    fileExists={!!file}
-                    onInputChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    onCompositionStart={() => setIsComposing(true)}
-                    onCompositionEnd={() => setIsComposing(false)}
-                    onSendMessage={sendMessage}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    handleFileInputChange={handleFileInputChange}
-                />
+                <div className="w-full max-w-3xl mx-auto">
+                    <ChatInput
+                        currentMode={currentMode}
+                        inputValue={inputValue}
+                        isDragOver={isDragOver}
+                        isLoading={isLoading}
+                        loadingStates={loadingStates}
+                        isArtifactModalOpen={isArtifactModalOpen}
+                        fileExists={!!file}
+                        onInputChange={(e) => setInputValue(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        onCompositionStart={() => setIsComposing(true)}
+                        onCompositionEnd={() => setIsComposing(false)}
+                        onSendMessage={sendMessage}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        handleFileInputChange={handleFileInputChange}
+                    />
+                </div>
             </div>
         </div>
     );

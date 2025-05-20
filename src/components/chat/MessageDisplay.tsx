@@ -39,48 +39,48 @@ export default function MessageDisplay({ messages, onArtifactClick }: MessageDis
     };
 
     return (
-        <div className="space-y-4">
-            {messages.map((message) => {
+        <div className="w-full max-w-3xl mx-auto">
+            {messages.map((message, index) => {
                 const isUser = message.type === 'user';
-                const userClass = isUser
-                    ? 'bg-blue-50 text-blue-900'
-                    : 'bg-white text-gray-900 border border-gray-200';
-                    
-                const alignClass = isUser ? 'ml-auto' : 'mr-auto';
                 
                 return (
-                    <div key={message.id} className="flex flex-col">
-                        <div className={`max-w-[85%] rounded-lg p-3 ${userClass} ${alignClass}`}>
-                            <div className="flex items-center text-sm mb-1 text-gray-600">
-                                <div className="flex items-center">
+                    <div key={message.id} className={`py-6 ${index !== 0 ? 'border-t border-gray-100' : ''}`}>
+                        <div className="flex items-start">
+                            <div className="flex-1">
+                                <div className="flex items-center mb-1">
                                     {!isUser && getModeIcon(message.mode)}
-                                    <span className="font-medium">{message.type}</span>
                                 </div>
-                                <span className="mx-1.5">•</span>
-                                <span className="text-xs">{formatMessageDate(message.timestamp)}</span>
-                            </div>
-                            
-                            {message.content ? (
-                                <div
-                                    className="prose prose-sm max-w-none"
-                                    dangerouslySetInnerHTML={{
-                                        __html: message.content.replace(/\n/g, '<br>')
-                                    }}
-                                />
-                            ) : message.artifactData ? (
-                                <div 
-                                    onClick={() => onArtifactClick(message.id)}
-                                    className="cursor-pointer bg-indigo-50 p-2 rounded-md hover:bg-indigo-100 transition-colors"
-                                >
-                                    <div className="flex items-center">
-                                        <div className="mr-2 bg-indigo-100 p-1 rounded">📊</div>
-                                        <div>
-                                            <p className="font-medium">{message.artifactData.title}</p>
-                                            <p className="text-xs text-gray-500">클릭하여 살펴보기</p>
+                                
+                                {message.content ? (
+                                    <div
+                                        className={`prose prose-sm max-w-none ${isUser ? 'bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center' : ''}`}
+                                    >
+                                        {isUser && (
+                                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                                                <span className="text-white text-xs font-medium">U</span>
+                                            </div>
+                                        )}
+                                        <div className="flex-1"
+                                            dangerouslySetInnerHTML={{
+                                                __html: message.content.replace(/\n/g, '<br>')
+                                            }}
+                                        />
+                                    </div>
+                                ) : message.artifactData ? (
+                                    <div 
+                                        onClick={() => onArtifactClick(message.id)}
+                                        className="cursor-pointer bg-indigo-50 p-3 rounded-md hover:bg-indigo-100 transition-colors border border-indigo-100"
+                                    >
+                                        <div className="flex items-center">
+                                            <div className="mr-2 bg-indigo-100 p-1 rounded">📊</div>
+                                            <div>
+                                                <p className="font-medium">{message.artifactData.title}</p>
+                                                <p className="text-xs text-gray-500">클릭하여 살펴보기</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ) : null}
+                                ) : null}
+                            </div>
                         </div>
                     </div>
                 );

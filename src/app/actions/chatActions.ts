@@ -20,10 +20,10 @@ export async function determineChatMode(
       
       주어진 메시지의 의도를 다음 4가지 모드 중 하나로 분류하세요:
       
-      1. normal: 일반적인 대화나 질문
-      2. formula: 스프레드시트 함수 생성이나 수식 관련 요청
-      3. datageneration: 데이터 생성이나 수정 요청
-      4. artifact: 데이터 분석이나 시각화 관련 요청
+      1. normal: 일반적인 대화나 질문(ex: 안녕, 데이터 분석 어떻게 해야 할지 모르겠어요)
+      2. formula: 스프레드시트 함수가 필요한 작업 요청(ex: 합계, 평균, 최대, 최소 등)
+      3. datageneration: 데이터 생성이나 수정 요청(ex: 목업 데이터 생성, 데이터 수정)
+      4. artifact: 데이터 분석이나 시각화 관련 요청(ex: 시트 데이터 시각화, 데이터 트렌드 시각화 자료)
       
       반드시 위의 4가지 모드 중 하나만 단어로 응답하세요.
     `;
@@ -41,6 +41,8 @@ export async function determineChatMode(
     // GPT 응답에서 모드 추출
     const gptResponse = response.choices[0].message.content?.trim().toLowerCase() ?? 'normal';
     
+    console.log('GPT 응답:', gptResponse);
+
     // 유효한 모드로 변환
     let mode: ChatMode = 'normal';
     

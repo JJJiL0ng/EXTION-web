@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { FileText, X } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import { XLSXData } from '@/stores/useUnifiedDataStore';
 
 interface FileUploadHandlerProps {
@@ -15,7 +15,7 @@ interface FileUploadHandlerProps {
     switchToSheet: (index: number) => void;
 }
 
-export default function FileUploadHandler({
+const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
     isDragOver,
     xlsxData,
     handleDragOver,
@@ -24,55 +24,49 @@ export default function FileUploadHandler({
     handleFileInputChange,
     removeFile,
     switchToSheet
-}: FileUploadHandlerProps) {
-    // 파일이 로드되었는지 확인 - xlsxData로 변경
-    const file = xlsxData ? { name: xlsxData.fileName } : null;
-
+}) => {
     return (
-        <div className="bg-white border-b border-gray-100 p-2">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-green-50 rounded-lg flex items-center justify-center">
-                        <FileText className="h-3 w-3 text-green-600" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-gray-900">
-                            {file?.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                            {xlsxData ? (
-                                xlsxData.sheets.length > 1
-                                    ? `${xlsxData.sheets.length}개 시트 | 활성: ${xlsxData.sheets[xlsxData.activeSheetIndex].sheetName}`
-                                    : `${xlsxData.sheets[0].headers.length} 열 × ${xlsxData.sheets[0].data.length} 행`
-                            ) : ''}
-                        </p>
-                    </div>
+        <div className="border-t border-gray-100 py-3">
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center">
+                    <span className="text-sm font-medium mr-2">
+                        현재 파일:
+                    </span>
+                    <span className="text-sm text-blue-600">
+                        {xlsxData?.fileName}
+                    </span>
                 </div>
                 <button
                     onClick={removeFile}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                    className="p-1 rounded-md hover:bg-gray-100"
+                    aria-label="파일 제거"
                 >
-                    <X className="h-3 w-3" />
+                    <XIcon className="h-4 w-4 text-gray-500" />
                 </button>
             </div>
-
-            {/* 다중 시트 선택 UI 추가 */}
-            {xlsxData && xlsxData.sheets.length > 1 && (
-                <div className="mt-2 flex items-center space-x-2">
-                    <span className="text-xs text-gray-600">시트:</span>
-                    <select
-                        value={xlsxData.activeSheetIndex}
-                        onChange={(e) => switchToSheet(parseInt(e.target.value))}
-                        className="text-xs border border-gray-200 rounded px-2 py-1"
-                    >
-                        {xlsxData.sheets.map((sheet: any, index: number) => (
-                            <option key={index} value={index}>
+            
+            {xlsxData && xlsxData.sheets && xlsxData.sheets.length > 1 && (
+                <div className="mt-2">
+                    <div className="text-xs font-medium text-gray-500 mb-1">시트 선택:</div>
+                    <div className="flex flex-wrap gap-2">
+                        {xlsxData.sheets.map((sheet, index) => (
+                            <button
+                                key={index}
+                                onClick={() => switchToSheet(index)}
+                                className={`text-xs px-2 py-1 rounded-md transition-colors ${
+                                    index === xlsxData.activeSheetIndex
+                                        ? 'bg-blue-100 text-blue-700'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
                                 {sheet.sheetName}
-                            </option>
+                            </button>
                         ))}
-                    </select>
+                    </div>
                 </div>
             )}
         </div>
     );
-} 
+};
+
+export default FileUploadHandler; 
