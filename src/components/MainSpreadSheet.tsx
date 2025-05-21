@@ -357,6 +357,7 @@ const hyperformulaInstance = HyperFormula.buildEmpty({
   maxColumns: 1000,
   useArrayArithmetic: true,  // 배열 연산 활성화
   useColumnIndex: true,       // 열 인덱스 사용 활성화
+
 });
 
 // CSV 데이터가 없을 때의 기본 설정
