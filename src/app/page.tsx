@@ -5,7 +5,7 @@ import MainSpreadSheet from "@/components/MainSpreadSheet";
 import ChattingMainContainer from "@/components/ChattingMainContainer";
 
 export default function Home() {
-  const [leftWidth, setLeftWidth] = useState(50); // 초기 50%
+  const [leftWidth, setLeftWidth] = useState(65); // 초기 50%
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isMouseDownRef = useRef(false);
