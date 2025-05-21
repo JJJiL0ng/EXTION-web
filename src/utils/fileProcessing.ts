@@ -108,7 +108,7 @@ export const columnIndexToLetter = (index: number): string => {
   return result;
 };
 
-// XLSX 파일 처리 함수 - 완전히 수정된 버전
+// XLSX 파일 처리 함수 - 문제 해결 버전
 export const processXLSXFile = async (file: File): Promise<{
   sheets: Array<{
     sheetName: string;
@@ -138,7 +138,9 @@ export const processXLSXFile = async (file: File): Promise<{
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         
-        const sheets = workbook.SheetNames.map(sheetName => {
+        // 모든 시트를 처리
+        const processedSheets = workbook.SheetNames.map(sheetName => {
+          console.log(`Processing sheet: ${sheetName}`); // 디버깅을 위한 로그
           const worksheet = workbook.Sheets[sheetName];
           
           // 전체 시트를 2차원 배열로 변환 (빈 셀 유지)
@@ -149,8 +151,57 @@ export const processXLSXFile = async (file: File): Promise<{
             blankrows: true // 빈 행도 유지
           }) as string[][];
           
+          console.log(`Raw data rows for ${sheetName}: ${rawData.length}`); // 시트 데이터 확인
+          
+          // 빈 시트 체크
+          if (rawData.length === 0) {
+            console.log(`Empty sheet: ${sheetName}`);
+            return {
+              sheetName,
+              rawData: [[]],
+              headers: [],
+              data: [],
+              metadata: {
+                headerRow: 0,
+                headerRowData: [],
+                headerMap: {},
+                dataRange: {
+                  maxRow: 0,
+                  maxCol: 0,
+                  startColLetter: 'A',
+                  endColLetter: 'A'
+                },
+                preserveOriginalStructure: true
+              }
+            };
+          }
+          
           // 헤더 행 찾기
           const headerRow = findHeaderRow(rawData);
+          console.log(`Header row for ${sheetName}: ${headerRow}`);
+          
+          // 헤더 행이 존재하는지 확인
+          if (!rawData[headerRow]) {
+            console.error(`Invalid header row for ${sheetName}:`, headerRow);
+            return {
+              sheetName,
+              rawData,
+              headers: [],
+              data: [],
+              metadata: {
+                headerRow: 0,
+                headerRowData: [],
+                headerMap: {},
+                dataRange: {
+                  maxRow: rawData.length - 1,
+                  maxCol: 0,
+                  startColLetter: 'A',
+                  endColLetter: 'A'
+                },
+                preserveOriginalStructure: true
+              }
+            };
+          }
           
           // 데이터 범위 및 헤더 정보 추출
           const {
@@ -161,23 +212,30 @@ export const processXLSXFile = async (file: File): Promise<{
             maxCol
           } = findDataRange(rawData, headerRow);
           
-          // 원본 구조를 유지하면서 데이터만 헤더에 맞춰 정리
+          console.log(`Valid headers for ${sheetName}:`, validHeaders);
+          console.log(`Header map for ${sheetName}:`, headerMap);
+          
+          // 원본 구조를 유지하면서, 데이터만 헤더에 맞춰 정리
           const data: string[][] = [];
           
           // 헤더 다음 행부터 데이터 처리
           for (let row = headerRow + 1; row <= maxRow; row++) {
+            if (!rawData[row]) continue; // 존재하지 않는 행은 건너뛰기
+            
             const dataRow: string[] = [];
-            const originalRow = rawData[row] || [];
+            const originalRow = rawData[row];
             
             // 유효한 헤더에 해당하는 열만 추출하되, 순서는 원본 순서 유지
             Object.keys(headerMap).forEach(originalIndexStr => {
               const originalIndex = parseInt(originalIndexStr);
               const cellValue = originalRow[originalIndex] || '';
-              dataRow.push(cellValue);
+              dataRow.push(String(cellValue)); // 명시적으로 문자열로 변환
             });
             
             data.push(dataRow);
           }
+          
+          console.log(`Data rows for ${sheetName}: ${data.length}`);
           
           return {
             sheetName,
@@ -199,16 +257,22 @@ export const processXLSXFile = async (file: File): Promise<{
           };
         });
         
+        console.log(`Total sheets processed: ${processedSheets.length}`);
+        
         resolve({
-          sheets,
+          sheets: processedSheets,
           fileName: file.name
         });
       } catch (error) {
+        console.error('XLSX 파일 처리 오류:', error);
         reject(error);
       }
     };
     
-    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.onerror = () => {
+      console.error('파일 읽기 오류');
+      reject(new Error('파일 읽기 실패'));
+    };
     reader.readAsArrayBuffer(file);
   });
 };

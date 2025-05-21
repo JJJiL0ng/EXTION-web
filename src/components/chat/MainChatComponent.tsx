@@ -84,32 +84,62 @@ export default function MainChatComponent() {
                 // XLSX 파일 처리
                 const result = await processXLSXFile(file);
 
+                console.log('processXLSXFile 결과:', {
+                    sheetsCount: result.sheets.length,
+                    sheetsInfo: result.sheets.map(s => ({
+                        name: s.sheetName,
+                        headers: s.headers.length,
+                        data: s.data.length,
+                        rawData: s.rawData?.length || 0
+                    }))
+                });
+
                 // 기존 xlsxData가 있는 경우 새 시트로 추가
                 if (xlsxData) {
                     const newXlsxData = { ...xlsxData };
-                    const newSheets = result.sheets.map(sheet => ({
-                        sheetName: sheet.sheetName,
-                        rawData: sheet.rawData,
-                        headers: sheet.headers,
-                        data: sheet.data,
-                        metadata: {
-                            rowCount: sheet.data.length,
-                            columnCount: sheet.headers.length,
-                            headerRow: sheet.metadata.headerRow,
-                            dataRange: {
-                                startRow: sheet.metadata.headerRow + 1,
-                                endRow: sheet.metadata.headerRow + sheet.data.length,
-                                startCol: 0,
-                                endCol: sheet.headers.length - 1,
-                                startColLetter: 'A',
-                                endColLetter: String.fromCharCode(65 + sheet.headers.length - 1)
-                            },
-                            headerRowData: sheet.metadata.headerRowData,
-                            headerMap: sheet.metadata.headerMap,
-                            preserveOriginalStructure: sheet.metadata.preserveOriginalStructure,
-                            lastModified: new Date()
-                        }
-                    }));
+                    
+                    // 각 시트의 데이터 확인 및 빈 시트 필터링
+                    const newSheets = result.sheets
+                        .filter(sheet => sheet.headers.length > 0) // 유효한 헤더가 있는 시트만 처리
+                        .map(sheet => {
+                            console.log(`시트 처리: ${sheet.sheetName}, 헤더: ${sheet.headers.length}, 데이터 행: ${sheet.data.length}`);
+                            
+                            return {
+                                sheetName: sheet.sheetName,
+                                rawData: sheet.rawData,
+                                headers: sheet.headers,
+                                data: sheet.data,
+                                metadata: {
+                                    rowCount: sheet.data.length,
+                                    columnCount: sheet.headers.length,
+                                    headerRow: sheet.metadata.headerRow,
+                                    dataRange: {
+                                        startRow: sheet.metadata.headerRow + 1,
+                                        endRow: sheet.metadata.headerRow + sheet.data.length,
+                                        startCol: 0,
+                                        endCol: sheet.headers.length - 1,
+                                        startColLetter: 'A',
+                                        endColLetter: String.fromCharCode(65 + sheet.headers.length - 1)
+                                    },
+                                    headerRowData: sheet.metadata.headerRowData,
+                                    headerMap: sheet.metadata.headerMap,
+                                    preserveOriginalStructure: sheet.metadata.preserveOriginalStructure,
+                                    lastModified: new Date()
+                                }
+                            };
+                        });
+
+                    if (newSheets.length === 0) {
+                        const errorMessage: ChatMessage = {
+                            id: Date.now().toString(),
+                            type: 'Extion ai',
+                            content: `${file.name} 파일에서 유효한 데이터를 가진 시트를 찾을 수 없습니다.`,
+                            timestamp: new Date()
+                        };
+                        addMessageToSheet(activeSheetIndex, errorMessage);
+                        setLoadingState('fileUpload', false);
+                        return;
+                    }
 
                     // 새 시트들을 기존 시트 목록에 추가
                     newXlsxData.sheets = [...newXlsxData.sheets, ...newSheets];
@@ -129,10 +159,25 @@ export default function MainChatComponent() {
                     // 현재 활성 시트에 메시지 추가
                     addMessageToSheet(activeSheetIndex, successMessage);
                 } else {
+                    // 유효한 시트만 필터링
+                    const validSheets = result.sheets.filter(sheet => sheet.headers.length > 0);
+                    
+                    if (validSheets.length === 0) {
+                        const errorMessage: ChatMessage = {
+                            id: Date.now().toString(),
+                            type: 'Extion ai',
+                            content: `${file.name} 파일에서 유효한 데이터를 가진 시트를 찾을 수 없습니다.`,
+                            timestamp: new Date()
+                        };
+                        addMessageToSheet(0, errorMessage);
+                        setLoadingState('fileUpload', false);
+                        return;
+                    }
+                    
                     // xlsxData가 없는 경우 새로 생성
                     const xlsxData = {
                         fileName: result.fileName,
-                        sheets: result.sheets.map(sheet => ({
+                        sheets: validSheets.map(sheet => ({
                             sheetName: sheet.sheetName,
                             rawData: sheet.rawData,
                             headers: sheet.headers,
