@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { Send, Paperclip } from 'lucide-react';
 
 interface ChatInputProps {
-    currentMode: 'normal' | 'formula' | 'artifact' | 'datageneration';
+    currentMode: 'normal' | 'formula' | 'artifact' | 'datageneration' | 'datafix';
     inputValue: string;
     isDragOver: boolean;
     isLoading: boolean;
@@ -73,12 +73,12 @@ export default function ChatInput({
                         onCompositionEnd={onCompositionEnd}
                         placeholder="데이터와 대화해보세요"
                         className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 placeholder-gray-500"
-                        disabled={isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || isArtifactModalOpen}
+                        disabled={isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || loadingStates.dataFix || isArtifactModalOpen}
                     />
 
                     <button
                         onClick={onSendMessage}
-                        disabled={!inputValue.trim() || isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || isArtifactModalOpen}
+                        disabled={!inputValue.trim() || isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || loadingStates.dataFix || isArtifactModalOpen}
                         className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#005DE9] hover:bg-[#0052d1] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         <Send className="h-4 w-4 text-white" />

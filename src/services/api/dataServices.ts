@@ -40,6 +40,23 @@ export interface DataGenerationResponse {
     error?: string;
 }
 
+// 데이터 수정 응답 인터페이스
+export interface DataFixResponse {
+    success: boolean;
+    editedData?: {
+        sheetName: string;
+        data: string[][];   // 수정된 2차원 배열 데이터
+        headers: string[];  // 헤더 (변경될 수 있음)
+    };
+    sheetIndex?: number;    // 수정된 시트 인덱스
+    explanation?: string;   // 변경 설명
+    changes?: {             // 변경 내역 상세 설명
+        type: 'sort' | 'filter' | 'modify' | 'transform';
+        details: string;
+    };
+    error?: string;
+}
+
 // 일반 채팅 응답 인터페이스
 export interface NormalChatResponse {
     success: boolean;
@@ -138,6 +155,52 @@ export const callFormulaAPI = async (
     }
 
     return response.json();
+};
+
+// 데이터 수정 API 호출
+export const callDataFixAPI = async (
+    userInput: string,
+    extendedSheetContext: any | null,
+    getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any
+): Promise<DataFixResponse> => {
+    // 현재 데이터 컨텍스트 (있는 경우)
+    let currentData = null;
+    if (extendedSheetContext && getDataForGPTAnalysis) {
+        currentData = getDataForGPTAnalysis(undefined, true);
+    }
+
+    const requestBody = {
+        userInput,
+        currentData,
+        language: 'ko'
+    };
+
+    console.log('Data Fix Request Body:', JSON.stringify(requestBody, null, 2));
+
+    const response = await fetch(`${API_BASE_URL}/datafix/process`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    // 응답 상태 확인
+    console.log('Response Status:', response.status);
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Data Fix API Error Details:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText
+        });
+        throw new Error(`API 오류: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('Data Fix API Response:', result);
+    return result;
 };
 
 // 데이터 생성 API 호출

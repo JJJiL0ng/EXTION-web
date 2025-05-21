@@ -9,7 +9,7 @@ export interface ChatMessage {
     type: 'user' | 'Extion ai';
     content: string;
     timestamp: Date;
-    mode?: 'normal' | 'formula' | 'artifact' | 'datageneration';
+    mode?: 'normal' | 'formula' | 'artifact' | 'datageneration' | 'datafix';
     artifactData?: {
         type: string;
         title: string;
@@ -119,6 +119,7 @@ interface ExtendedUnifiedDataStoreState {
         formulaGeneration: boolean;
         artifactGeneration: boolean;
         dataGeneration: boolean;
+        dataFix: boolean;
     };
 
     // === Error States ===
@@ -128,6 +129,7 @@ interface ExtendedUnifiedDataStoreState {
         formulaError: string | null;
         artifactError: string | null;
         dataGenerationError: string | null;
+        dataFixError: string | null;
     };
 
     // === Multi-Sheet Formula Management ===
@@ -443,6 +445,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 formulaGeneration: false,
                 artifactGeneration: false,
                 dataGeneration: false,
+                dataFix: false,
             },
 
             errors: {
@@ -451,6 +454,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 formulaError: null,
                 artifactError: null,
                 dataGenerationError: null,
+                dataFixError: null,
             },
 
             pendingFormula: null,
@@ -811,6 +815,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         formulaGeneration: false,
                         artifactGeneration: false,
                         dataGeneration: false,
+                        dataFix: false,
                     },
                     errors: {
                         fileError: null,
@@ -818,6 +823,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         formulaError: null,
                         artifactError: null,
                         dataGenerationError: null,
+                        dataFixError: null,
                     },
                     pendingFormula: null,
                     formulaHistory: [],

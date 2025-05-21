@@ -5,7 +5,7 @@ import Papa from 'papaparse';
 import { useExtendedUnifiedDataStore, ChatMessage } from '../../stores/useUnifiedDataStore';
 import { processXLSXFile } from '../../utils/fileProcessing';
 import { detectAndDecode, isValidSpreadsheetFile } from '../../utils/chatUtils';
-import { callArtifactAPI, callFormulaAPI, callDataGenerationAPI, callNormalChatAPI } from '../../services/api/dataServices';
+import { callArtifactAPI, callFormulaAPI, callDataGenerationAPI, callNormalChatAPI, callDataFixAPI } from '../../services/api/dataServices';
 import { Message } from './MessageDisplay';
 import { determineChatMode, ChatMode } from '../../app/actions/chatActions'; // 서버 액션 import
 
@@ -445,6 +445,8 @@ export default function MainChatComponent() {
                 await handleArtifactChat(currentInput);
             } else if (mode === 'datageneration') {
                 await handleDataGenerationChat(currentInput);
+            } else if (mode === 'datafix') {
+                await handleDataFixChat(currentInput);
             } else {
                 await handleNormalChat(currentInput);
             }
@@ -668,6 +670,85 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             addMessageToSheet(activeSheetIndex, assistantMessage);
         } finally {
             setLoadingState('dataGeneration', false);
+        }
+    };
+
+    const handleDataFixChat = async (userInput: string) => {
+        setLoadingState('dataFix', true);
+        setError('dataFixError', null);
+
+        try {
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error('timeout')), 30000);
+            });
+
+            const apiCall = callDataFixAPI(userInput, extendedSheetContext, getDataForGPTAnalysis);
+            const result = await Promise.race([apiCall, timeoutPromise]);
+
+            if (result.success && result.editedData) {
+                // 수정된 데이터 적용
+                applyGeneratedData({
+                    sheetName: result.editedData.sheetName,
+                    headers: result.editedData.headers,
+                    data: result.editedData.data,
+                    sheetIndex: result.sheetIndex
+                });
+
+                // 변경 내역 설명 생성
+                let changeDescription = '';
+                if (result.changes) {
+                    const typeMap = {
+                        'sort': '정렬',
+                        'filter': '필터링',
+                        'modify': '값 수정',
+                        'transform': '데이터 변환'
+                    };
+                    
+                    changeDescription = `변경 유형: ${typeMap[result.changes.type] || result.changes.type}\n`;
+                    changeDescription += `세부 내용: ${result.changes.details}\n\n`;
+                }
+
+                // 성공 메시지 표시
+                const assistantMessage: ChatMessage = {
+                    id: (Date.now() + 1).toString(),
+                    type: 'Extion ai',
+                    content: `데이터가 성공적으로 수정되었습니다.\n\n` +
+                        `시트 이름: ${result.editedData.sheetName}\n` +
+                        `데이터 크기: ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
+                        `${changeDescription}` +
+                        `${result.explanation || ''}`,
+                    timestamp: new Date(),
+                    mode: 'datafix'
+                };
+                
+                // 현재 활성 시트에 응답 메시지 추가
+                addMessageToSheet(activeSheetIndex, assistantMessage);
+            } else {
+                throw new Error(result.error || '데이터 수정에 실패했습니다.');
+            }
+        } catch (error) {
+            let errorMessage = '데이터 수정 중 오류가 발생했습니다.';
+
+            if (error instanceof Error && error.message === 'timeout') {
+                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
+            } else if (error instanceof Error) {
+                errorMessage = `${error.message}`;
+            }
+
+            setError('dataFixError', errorMessage);
+
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: errorMessage,
+                timestamp: new Date(),
+                mode: 'datafix'
+            };
+            
+            // 현재 활성 시트에 오류 메시지 추가
+            addMessageToSheet(activeSheetIndex, assistantMessage);
+        } finally {
+            setLoadingState('dataFix', false);
         }
     };
 
