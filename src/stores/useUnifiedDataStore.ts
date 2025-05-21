@@ -3,6 +3,19 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import * as XLSX from 'xlsx';
 
+// 메시지 인터페이스 추가
+export interface ChatMessage {
+    id: string;
+    type: 'user' | 'Extion ai';
+    content: string;
+    timestamp: Date;
+    mode?: 'normal' | 'formula' | 'artifact' | 'datageneration';
+    artifactData?: {
+        type: string;
+        title: string;
+        timestamp: Date;
+    };
+}
 
 // 헤더 정보 인터페이스
 interface HeaderInfo {
@@ -91,6 +104,10 @@ interface ExtendedUnifiedDataStoreState {
     // === Active Sheet Data ===
     activeSheetData: SheetData | null; // 현재 활성 시트 데이터
     computedSheetData: { [sheetIndex: number]: string[][] }; // 시트별 계산된 데이터
+    
+    // === 시트별 채팅 메시지 ===
+    sheetMessages: { [sheetIndex: number]: ChatMessage[] }; // 시트별 메시지
+    activeSheetMessages: ChatMessage[]; // 현재 활성 시트의 메시지
 
     // === Sheet Context ===
     extendedSheetContext: ExtendedSheetContext | null;
@@ -195,6 +212,13 @@ interface ExtendedUnifiedDataStoreActions {
 
     // 데이터 생성 결과 적용
     applyGeneratedData: (generatedData: { sheetName: string; headers: string[]; data: string[][]; sheetIndex?: number }) => void;
+
+    // === 시트별 채팅 관련 액션 ===
+    addMessageToSheet: (sheetIndex: number, message: ChatMessage) => void;
+    getMessagesForSheet: (sheetIndex: number) => ChatMessage[];
+    updateActiveSheetMessages: () => void;
+    clearMessagesForSheet: (sheetIndex: number) => void;
+    clearAllMessages: () => void;
 }
 
 // 전체 스토어 타입
@@ -408,6 +432,10 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             activeSheetData: null,
             computedSheetData: {},
             extendedSheetContext: null,
+            
+            // 시트별 메시지 초기화
+            sheetMessages: {},
+            activeSheetMessages: [],
 
             loadingStates: {
                 fileUpload: false,
@@ -443,7 +471,8 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             xlsxData: null,
                             activeSheetData: null,
                             computedSheetData: {},
-                            extendedSheetContext: null
+                            extendedSheetContext: null,
+                            activeSheetMessages: [] // 데이터 없으면 메시지도 초기화
                         };
                     }
 
@@ -456,13 +485,17 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             newComputedData[index] = [...sheet.data];
                         }
                     });
+                    
+                    // 현재 활성 시트의 메시지 불러오기
+                    const activeSheetMessages = state.sheetMessages[data.activeSheetIndex] || [];
 
                     return {
                         ...state,
                         xlsxData: data,
                         activeSheetData: activeSheet,
                         computedSheetData: newComputedData,
-                        extendedSheetContext: generateExtendedSheetContext(data)
+                        extendedSheetContext: generateExtendedSheetContext(data),
+                        activeSheetMessages
                     };
                 });
             },
@@ -480,19 +513,21 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     };
 
                     const activeSheet = newXlsxData.sheets[sheetIndex];
+                    const activeSheetMessages = state.sheetMessages[sheetIndex] || [];
 
                     return {
                         ...state,
                         xlsxData: newXlsxData,
                         activeSheetData: activeSheet,
-                        extendedSheetContext: generateExtendedSheetContext(newXlsxData)
+                        extendedSheetContext: generateExtendedSheetContext(newXlsxData),
+                        activeSheetMessages
                     };
                 });
             },
 
             // 시트 전환
             switchToSheet: async (sheetIndex) => {
-                const { setLoadingState, setActiveSheet, setError } = get();
+                const { setLoadingState, setActiveSheet, setError, updateActiveSheetMessages } = get();
 
                 setLoadingState('sheetSwitch', true);
                 setError('sheetError', null);
@@ -501,6 +536,8 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     // 약간의 지연을 추가하여 UI 반응성 향상
                     await new Promise(resolve => setTimeout(resolve, 100));
                     setActiveSheet(sheetIndex);
+                    // 시트 전환 시 해당 시트의 메시지로 업데이트
+                    updateActiveSheetMessages();
                 } catch (error) {
                     setError('sheetError', error instanceof Error ? error.message : '시트 전환 실패');
                 } finally {
@@ -766,6 +803,8 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     activeSheetData: null,
                     computedSheetData: {},
                     extendedSheetContext: null,
+                    sheetMessages: {},
+                    activeSheetMessages: [],
                     loadingStates: {
                         fileUpload: false,
                         sheetSwitch: false,
@@ -961,6 +1000,74 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         };
                     });
                 }
+            },
+
+            // 시트별 채팅 관련 액션
+            addMessageToSheet: (sheetIndex, message) => {
+                set((state) => {
+                    const sheetMessages = { ...state.sheetMessages };
+                    const currentMessages = [...(sheetMessages[sheetIndex] || [])];
+                    
+                    currentMessages.push(message);
+                    sheetMessages[sheetIndex] = currentMessages;
+                    
+                    // 현재 활성 시트의 메시지인 경우 activeSheetMessages도 업데이트
+                    const activeSheetMessages = 
+                        state.xlsxData?.activeSheetIndex === sheetIndex
+                            ? currentMessages
+                            : state.activeSheetMessages;
+                    
+                    return {
+                        ...state,
+                        sheetMessages,
+                        activeSheetMessages
+                    };
+                });
+            },
+            
+            getMessagesForSheet: (sheetIndex) => {
+                return get().sheetMessages[sheetIndex] || [];
+            },
+            
+            updateActiveSheetMessages: () => {
+                set((state) => {
+                    if (!state.xlsxData) return state;
+                    
+                    const activeSheetIndex = state.xlsxData.activeSheetIndex;
+                    const activeSheetMessages = state.sheetMessages[activeSheetIndex] || [];
+                    
+                    return {
+                        ...state,
+                        activeSheetMessages
+                    };
+                });
+            },
+            
+            clearMessagesForSheet: (sheetIndex) => {
+                set((state) => {
+                    const sheetMessages = { ...state.sheetMessages };
+                    sheetMessages[sheetIndex] = [];
+                    
+                    // 현재 활성 시트의 메시지인 경우 activeSheetMessages도 초기화
+                    const activeSheetMessages = 
+                        state.xlsxData?.activeSheetIndex === sheetIndex
+                            ? []
+                            : state.activeSheetMessages;
+                    
+                    return {
+                        ...state,
+                        sheetMessages,
+                        activeSheetMessages
+                    };
+                });
+            },
+            
+            clearAllMessages: () => {
+                set((state) => ({
+                    ...state,
+                    sheetMessages: {},
+                    activeSheetMessages: []
+                }));
             },
         }),
         {

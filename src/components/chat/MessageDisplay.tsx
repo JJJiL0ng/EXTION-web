@@ -3,22 +3,13 @@
 import React from 'react';
 import { formatMessageDate } from '../../utils/chatUtils';
 import { ChatMode } from '../../app/actions/chatActions';
+import { ChatMessage } from '../../stores/useUnifiedDataStore';
 
-export interface Message {
-    id: string;
-    type: 'user' | 'Extion ai';
-    content: string;
-    timestamp: Date;
-    mode?: ChatMode;
-    artifactData?: {
-        type: string;
-        title: string;
-        timestamp: Date;
-    };
-}
+// Message 인터페이스는 기존과의 호환성을 위해 유지
+export interface Message extends ChatMessage {}
 
 interface MessageDisplayProps {
-    messages: Message[];
+    messages: ChatMessage[];
     onArtifactClick: (messageId: string) => void;
 }
 

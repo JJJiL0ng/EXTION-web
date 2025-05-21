@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
-import { useExtendedUnifiedDataStore } from '../../stores/useUnifiedDataStore';
+import { useExtendedUnifiedDataStore, ChatMessage } from '../../stores/useUnifiedDataStore';
 import { processXLSXFile } from '../../utils/fileProcessing';
 import { detectAndDecode, isValidSpreadsheetFile } from '../../utils/chatUtils';
 import { callArtifactAPI, callFormulaAPI, callDataGenerationAPI, callNormalChatAPI } from '../../services/api/dataServices';
@@ -17,7 +17,6 @@ import ChatInput from './ChatInput';
 export default function MainChatComponent() {
     // 상태들 선언
     const [currentMode, setCurrentMode] = useState<ChatMode>('normal');
-    const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);
     const [isComposing, setIsComposing] = useState(false);
@@ -39,11 +38,18 @@ export default function MainChatComponent() {
         openArtifactModal,
         switchToSheet,
         getDataForGPTAnalysis,
-        applyGeneratedData
+        applyGeneratedData,
+        // 시트별 채팅 관련 스토어 값과 액션
+        activeSheetMessages,
+        addMessageToSheet,
+        clearAllMessages
     } = useExtendedUnifiedDataStore();
 
     // 파일이 로드되었는지 확인
     const file = xlsxData ? { name: xlsxData.fileName } : null;
+    
+    // 현재 활성 시트 인덱스 가져오기
+    const activeSheetIndex = xlsxData?.activeSheetIndex || 0;
 
     // Drag and Drop 핸들러들
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -109,7 +115,7 @@ export default function MainChatComponent() {
                     newXlsxData.sheets = [...newXlsxData.sheets, ...newSheets];
                     setXLSXData(newXlsxData);
 
-                    const successMessage: Message = {
+                    const successMessage: ChatMessage = {
                         id: Date.now().toString(),
                         type: 'Extion ai',
                         content: `${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
@@ -119,7 +125,9 @@ export default function MainChatComponent() {
                             ).join('\n'),
                         timestamp: new Date()
                     };
-                    setMessages(prev => [...prev, successMessage]);
+                    
+                    // 현재 활성 시트에 메시지 추가
+                    addMessageToSheet(activeSheetIndex, successMessage);
                 } else {
                     // xlsxData가 없는 경우 새로 생성
                     const xlsxData = {
@@ -152,7 +160,7 @@ export default function MainChatComponent() {
 
                     setXLSXData(xlsxData);
 
-                    const successMessage: Message = {
+                    const successMessage: ChatMessage = {
                         id: Date.now().toString(),
                         type: 'Extion ai',
                         content: `${file.name} 파일이 성공적으로 업로드되었습니다.\n\n` +
@@ -164,7 +172,9 @@ export default function MainChatComponent() {
                             `헤더 위치: 원본 구조 유지됨`,
                         timestamp: new Date()
                     };
-                    setMessages(prev => [...prev, successMessage]);
+                    
+                    // 첫 번째 시트(인덱스 0)에 메시지 추가
+                    addMessageToSheet(0, successMessage);
                 }
             } else if (fileExtension === 'csv') {
                 // CSV 파일 처리
@@ -178,13 +188,15 @@ export default function MainChatComponent() {
                             const rawData = results.data as string[][];
 
                             if (rawData.length <= 1) {
-                                const errorMessage: Message = {
+                                const errorMessage: ChatMessage = {
                                     id: Date.now().toString(),
                                     type: 'Extion ai',
                                     content: `⚠️ 파일에 충분한 데이터가 없습니다. 헤더 행과 최소 1개 이상의 데이터 행이 필요합니다.`,
                                     timestamp: new Date()
                                 };
-                                setMessages(prev => [...prev, errorMessage]);
+                                
+                                // 현재 활성 시트에 오류 메시지 추가
+                                addMessageToSheet(activeSheetIndex, errorMessage);
                                 setLoadingState('fileUpload', false);
                                 return;
                             }
@@ -248,7 +260,7 @@ export default function MainChatComponent() {
                                 newXlsxData.sheets = [...newXlsxData.sheets, newSheet];
                                 setXLSXData(newXlsxData);
 
-                                const successMessage: Message = {
+                                const successMessage: ChatMessage = {
                                     id: Date.now().toString(),
                                     type: 'Extion ai',
                                     content: `${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
@@ -256,7 +268,9 @@ export default function MainChatComponent() {
                                         `• ${newSheet.sheetName}: ${validHeaders.length}열 × ${data.length}행`,
                                     timestamp: new Date()
                                 };
-                                setMessages(prev => [...prev, successMessage]);
+                                
+                                // 현재 활성 시트에 메시지 추가
+                                addMessageToSheet(activeSheetIndex, successMessage);
                             } else {
                                 // xlsxData가 없는 경우 새로 생성
                                 const xlsxData = {
@@ -289,7 +303,7 @@ export default function MainChatComponent() {
 
                                 setXLSXData(xlsxData);
 
-                                const successMessage: Message = {
+                                const successMessage: ChatMessage = {
                                     id: Date.now().toString(),
                                     type: 'Extion ai',
                                     content: `${file.name} 파일이 성공적으로 로드되었습니다.\n` +
@@ -297,20 +311,24 @@ export default function MainChatComponent() {
                                         `구조: 원본 위치 유지, 유효한 헤더 ${validHeaders.length}개 추출`,
                                     timestamp: new Date()
                                 };
-                                setMessages(prev => [...prev, successMessage]);
+                                
+                                // 첫 번째 시트(인덱스 0)에 메시지 추가
+                                addMessageToSheet(0, successMessage);
                             }
                         }
                     },
                     error: (error: Error) => {
                         console.error('CSV 파싱 오류:', error);
                         setError('fileError', error.message);
-                        const errorMessage: Message = {
+                        const errorMessage: ChatMessage = {
                             id: Date.now().toString(),
                             type: 'Extion ai',
                             content: `파일 처리 중 오류가 발생했습니다: ${error.message}`,
                             timestamp: new Date()
                         };
-                        setMessages(prev => [...prev, errorMessage]);
+                        
+                        // 현재 활성 시트에 오류 메시지 추가
+                        addMessageToSheet(activeSheetIndex, errorMessage);
                     }
                 });
             } else {
@@ -319,13 +337,15 @@ export default function MainChatComponent() {
         } catch (error) {
             console.error('파일 읽기 오류:', error);
             setError('fileError', error instanceof Error ? error.message : '알 수 없는 오류');
-            const errorMessage: Message = {
+            const errorMessage: ChatMessage = {
                 id: Date.now().toString(),
                 type: 'Extion ai',
                 content: `파일 읽기 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
                 timestamp: new Date()
             };
-            setMessages(prev => [...prev, errorMessage]);
+            
+            // 현재 활성 시트에 오류 메시지 추가
+            addMessageToSheet(activeSheetIndex, errorMessage);
         } finally {
             setLoadingState('fileUpload', false);
         }
@@ -339,7 +359,7 @@ export default function MainChatComponent() {
     };
 
     const removeFile = () => {
-        setMessages([]);
+        clearAllMessages();
         setXLSXData(null);
     };
 
@@ -354,13 +374,15 @@ export default function MainChatComponent() {
         setIsLoading(true);
         
         // 먼저 사용자 메시지 추가
-        const userMessage: Message = {
+        const userMessage: ChatMessage = {
             id: Date.now().toString(),
             type: 'user',
             content: inputValue,
             timestamp: new Date()
         };
-        setMessages(prev => [...prev, userMessage]);
+        
+        // 현재 활성 시트에 사용자 메시지 추가
+        addMessageToSheet(activeSheetIndex, userMessage);
         
         try {
             // 서버 액션을 호출하여 채팅 모드 결정
@@ -383,13 +405,15 @@ export default function MainChatComponent() {
             }
         } catch (error) {
             console.error('메시지 처리 중 오류 발생:', error);
-            const errorMessage: Message = {
+            const errorMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
                 content: `메시지 처리 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
                 timestamp: new Date()
             };
-            setMessages(prev => [...prev, errorMessage]);
+            
+            // 현재 활성 시트에 오류 메시지 추가
+            addMessageToSheet(activeSheetIndex, errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -409,7 +433,7 @@ export default function MainChatComponent() {
             const result = await Promise.race([apiCall, timeoutPromise]);
 
             if (result.success && result.formula) {
-                const assistantMessage: Message = {
+                const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
                     content: `함수가 생성되었습니다!
@@ -421,8 +445,11 @@ export default function MainChatComponent() {
 
 ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.` : ''}`,
                     timestamp: new Date(),
+                    mode: 'formula'
                 };
-                setMessages(prev => [...prev, assistantMessage]);
+                
+                // 현재 활성 시트에 응답 메시지 추가
+                addMessageToSheet(activeSheetIndex, assistantMessage);
 
                 const formulaApplication = {
                     formula: result.formula,
@@ -433,11 +460,11 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 setPendingFormula({
                     ...formulaApplication,
-                    sheetIndex: 0 // 현재 활성화된 시트 인덱스 추가
+                    sheetIndex: activeSheetIndex // 현재 활성화된 시트 인덱스 추가
                 });
                 addToFormulaHistory({
                     ...formulaApplication,
-                    sheetIndex: 0 // 현재 활성화된 시트 인덱스 추가
+                    sheetIndex: activeSheetIndex // 현재 활성화된 시트 인덱스 추가
                 });
             } else {
                 throw new Error(result.error || '함수 생성에 실패했습니다.');
@@ -453,13 +480,16 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
             setError('formulaError', errorMessage);
 
-            const assistantMessage: Message = {
+            const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
                 content: errorMessage,
                 timestamp: new Date(),
+                mode: 'formula'
             };
-            setMessages(prev => [...prev, assistantMessage]);
+            
+            // 현재 활성 시트에 오류 메시지 추가
+            addMessageToSheet(activeSheetIndex, assistantMessage);
         } finally {
             setLoadingState('formulaGeneration', false);
         }
@@ -488,7 +518,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 addToArtifactHistory(artifactData);
 
-                const assistantMessage: Message = {
+                const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
                     content: '',
@@ -500,7 +530,9 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                         timestamp: result.timestamp || new Date()
                     }
                 };
-                setMessages(prev => [...prev, assistantMessage]);
+                
+                // 현재 활성 시트에 응답 메시지 추가
+                addMessageToSheet(activeSheetIndex, assistantMessage);
             } else {
                 throw new Error(result.error || '아티팩트 생성에 실패했습니다.');
             }
@@ -515,13 +547,16 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
             setError('artifactError', errorMessage);
 
-            const assistantMessage: Message = {
+            const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
                 content: errorMessage,
                 timestamp: new Date(),
+                mode: 'artifact'
             };
-            setMessages(prev => [...prev, assistantMessage]);
+            
+            // 현재 활성 시트에 오류 메시지 추가
+            addMessageToSheet(activeSheetIndex, assistantMessage);
         } finally {
             setLoadingState('artifactGeneration', false);
         }
@@ -549,7 +584,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 });
 
                 // 성공 메시지 표시
-                const assistantMessage: Message = {
+                const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
                     content: `데이터가 성공적으로 ${xlsxData ? '업데이트' : '생성'}되었습니다.\n\n` +
@@ -559,7 +594,9 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                     timestamp: new Date(),
                     mode: 'datageneration'
                 };
-                setMessages(prev => [...prev, assistantMessage]);
+                
+                // 현재 활성 시트에 응답 메시지 추가
+                addMessageToSheet(activeSheetIndex, assistantMessage);
             } else {
                 throw new Error(result.error || '데이터 생성에 실패했습니다.');
             }
@@ -574,13 +611,16 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
             setError('dataGenerationError', errorMessage);
 
-            const assistantMessage: Message = {
+            const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
                 content: errorMessage,
                 timestamp: new Date(),
+                mode: 'datageneration'
             };
-            setMessages(prev => [...prev, assistantMessage]);
+            
+            // 현재 활성 시트에 오류 메시지 추가
+            addMessageToSheet(activeSheetIndex, assistantMessage);
         } finally {
             setLoadingState('dataGeneration', false);
         }
@@ -598,13 +638,15 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             const result = await Promise.race([apiCall, timeoutPromise]);
 
             if (result.success) {
-                const assistantMessage: Message = {
+                const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
                     content: result.message,
                     timestamp: new Date()
                 };
-                setMessages(prev => [...prev, assistantMessage]);
+                
+                // 현재 활성 시트에 응답 메시지 추가
+                addMessageToSheet(activeSheetIndex, assistantMessage);
             } else {
                 throw new Error(result.error || '응답 생성에 실패했습니다.');
             }
@@ -619,13 +661,15 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
             setError('fileError', errorMessage);
 
-            const assistantMessage: Message = {
+            const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
                 content: errorMessage,
-                timestamp: new Date(),
+                timestamp: new Date()
             };
-            setMessages(prev => [...prev, assistantMessage]);
+            
+            // 현재 활성 시트에 오류 메시지 추가
+            addMessageToSheet(activeSheetIndex, assistantMessage);
         }
     };
 
@@ -645,7 +689,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
-    }, [messages, isLoading]);
+    }, [activeSheetMessages, isLoading]);
 
     return (
         <div className="flex flex-col h-full w-full bg-white">
@@ -670,7 +714,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6">
                     <MessageDisplay
-                        messages={messages}
+                        messages={activeSheetMessages}
                         onArtifactClick={handleArtifactClick}
                     />
                 </div>
