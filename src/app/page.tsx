@@ -29,15 +29,15 @@ export default function Home() {
               <div className="text-left space-y-4">
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-[#005DE9] rounded-full mt-3 flex-shrink-0"></div>
-                  <p className="text-gray-700">"이 열에서 합계 구해줘"</p>
+                  <p className="text-gray-700">&quot;이 열에서 합계 구해줘&quot;</p>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-[#005DE9] rounded-full mt-3 flex-shrink-0"></div>
-                  <p className="text-gray-700">"정렬하고 중복 제거해줘"</p>
+                  <p className="text-gray-700">&quot;정렬하고 중복 제거해줘&quot;</p>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-[#005DE9] rounded-full mt-3 flex-shrink-0"></div>
-                  <p className="text-gray-700">"100 이상인 값만 새 시트로 뽑아줘"</p>
+                  <p className="text-gray-700">&quot;100 이상인 값만 새 시트로 뽑아줘&quot;</p>
                 </div>
               </div>
             </div>
