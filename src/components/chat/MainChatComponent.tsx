@@ -14,6 +14,17 @@ import MessageDisplay from './MessageDisplay';
 import FileUploadHandler from './FileUploadHandler';
 import ChatInput from './ChatInput';
 
+// 로딩 힌트 메시지 배열
+const loadingHints = [
+    "데이터를 분석하고 있습니다...",
+    "패턴을 찾고 있어요...",
+    "최적의 응답을 만들고 있습니다...",
+    "결과를 정리하는 중입니다...",
+    "데이터의 연관성을 파악하고 있어요...",
+    "통계적 의미를 분석 중입니다...",
+    "최상의 답변을 구성하고 있습니다..."
+];
+
 export default function MainChatComponent() {
     // 상태들 선언
     const [currentMode, setCurrentMode] = useState<ChatMode>('normal');
@@ -21,7 +32,10 @@ export default function MainChatComponent() {
     const [isDragOver, setIsDragOver] = useState(false);
     const [isComposing, setIsComposing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [loadingHintIndex, setLoadingHintIndex] = useState(0);
     const chatContainerRef = useRef<HTMLDivElement>(null);
+    const loadingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Zustand 스토어 사용
     const {
@@ -50,6 +64,41 @@ export default function MainChatComponent() {
     
     // 현재 활성 시트 인덱스 가져오기
     const activeSheetIndex = xlsxData?.activeSheetIndex || 0;
+
+    // 로딩 상태 관리를 위한 효과
+    useEffect(() => {
+        if (isLoading) {
+            // 로딩이 시작될 때 초기화
+            setLoadingProgress(0);
+            setLoadingHintIndex(0);
+            
+            // 진행 상태를 시뮬레이션하는 인터벌 설정
+            loadingIntervalRef.current = setInterval(() => {
+                setLoadingProgress(prev => {
+                    // 로딩 진행도를 서서히 증가시키되, 100%에 도달하지 않게 함
+                    if (prev < 90) {
+                        // 진행도가 증가함에 따라 증가 속도를 줄임
+                        const increment = Math.max(1, 10 - Math.floor(prev / 10));
+                        return prev + increment;
+                    }
+                    return prev;
+                });
+                
+                // 힌트 메시지 주기적으로 변경
+                setLoadingHintIndex(prev => (prev + 1) % loadingHints.length);
+            }, 2000);
+            
+            return () => {
+                // 로딩이 끝나면 인터벌 정리
+                if (loadingIntervalRef.current) {
+                    clearInterval(loadingIntervalRef.current);
+                    loadingIntervalRef.current = null;
+                }
+                // 로딩이 끝날 때 진행도를 100%로 설정
+                setLoadingProgress(100);
+            };
+        }
+    }, [isLoading]);
 
     // Drag and Drop 핸들러들
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -842,7 +891,23 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                     <MessageDisplay
                         messages={activeSheetMessages}
                         onArtifactClick={handleArtifactClick}
+                        isLoading={isLoading}
                     />
+                    
+                    {/* 로딩 진행 표시 */}
+                    {isLoading && (
+                        <div className="mt-4 px-4">
+                            <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
+                                <div 
+                                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-500 ease-out" 
+                                    style={{ width: `${loadingProgress}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-xs text-gray-500 text-center">
+                                {loadingHints[loadingHintIndex]}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="w-full max-w-3xl mx-auto">

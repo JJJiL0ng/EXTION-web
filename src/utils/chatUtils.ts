@@ -88,4 +88,11 @@ export const validateExtendedSheetContext = (context: any) => {
         console.error('잘못된 header 구조:', invalidHeaders);
         throw new Error('각 header는 column과 name 필드를 가져야 합니다.');
     }
+    
+    // headers의 각 요소가 올바른 타입인지 확인
+    const nonStringHeaders = context.headers.filter((h: any) => typeof h.name !== 'string');
+    if (nonStringHeaders.length > 0) {
+        console.error('잘못된 header 타입:', nonStringHeaders);
+        throw new Error('각 header의 name은 문자열 타입이어야 합니다.');
+    }
 }; 

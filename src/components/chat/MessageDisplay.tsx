@@ -4,6 +4,7 @@ import React from 'react';
 import { formatMessageDate } from '../../utils/chatUtils';
 import { ChatMode } from '../../app/actions/chatActions';
 import { ChatMessage } from '../../stores/useUnifiedDataStore';
+import { Loader2 } from 'lucide-react';
 
 // Message 인터페이스는 기존과의 호환성을 위해 유지
 export interface Message extends ChatMessage {}
@@ -11,9 +12,10 @@ export interface Message extends ChatMessage {}
 interface MessageDisplayProps {
     messages: ChatMessage[];
     onArtifactClick: (messageId: string) => void;
+    isLoading?: boolean;
 }
 
-export default function MessageDisplay({ messages, onArtifactClick }: MessageDisplayProps) {
+export default function MessageDisplay({ messages, onArtifactClick, isLoading = false }: MessageDisplayProps) {
     const getModeIcon = (mode?: ChatMode) => {
         if (!mode || mode === 'normal') return null;
         
@@ -76,6 +78,32 @@ export default function MessageDisplay({ messages, onArtifactClick }: MessageDis
                     </div>
                 );
             })}
+            
+            {/* 로딩 인디케이터 */}
+            {isLoading && (
+                <div className="py-6 border-t border-gray-100">
+                    <div className="flex items-start">
+                        <div className="flex-1">
+                            <div className="animate-pulse">
+                                <div className="flex items-start space-x-3">
+                                    <div className="flex-shrink-0 w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center">
+                                        <Loader2 className="h-5 w-5 text-white animate-spin" />
+                                    </div>
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-2 bg-gray-200 rounded w-3/4"></div>
+                                        <div className="h-2 bg-gray-200 rounded"></div>
+                                        <div className="h-2 bg-gray-200 rounded w-5/6"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-3 text-xs text-gray-500 flex items-center">
+                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping mr-2"></div>
+                                생각 중입니다...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 } 

@@ -311,7 +311,7 @@ const generateExtendedSheetContext = (xlsxData: XLSXData): ExtendedSheetContext 
 
     const headers: HeaderInfo[] = activeSheet.headers.map((header, index) => ({
         column: String.fromCharCode(65 + index),
-        name: header
+        name: String(header)
     }));
 
     const dataRange: DataRange = {
@@ -324,7 +324,7 @@ const generateExtendedSheetContext = (xlsxData: XLSXData): ExtendedSheetContext 
     const sampleData = activeSheet.data.slice(0, 3).map(row => {
         const rowData: Record<string, string> = {};
         activeSheet.headers.forEach((header, index) => {
-            rowData[header] = row[index] || '';
+            rowData[String(header)] = String(row[index] || '');
         });
         return rowData;
     });
@@ -340,64 +340,65 @@ const generateExtendedSheetContext = (xlsxData: XLSXData): ExtendedSheetContext 
     };
 };
 
-export const mapOriginalToHeaderCoords = (
-    originalRow: number,
-    originalCol: number,
-    sheetData: SheetData
-): { row: number; col: number } | null => {
-    if (!sheetData.metadata?.headerMap || !sheetData.metadata?.headerRow) {
-        return { row: originalRow, col: originalCol };
-    }
+// export const mapOriginalToHeaderCoords = (
+//     originalRow: number,
+//     originalCol: number,
+//     sheetData: SheetData
+// ): { row: number; col: number } | null => {
+//     if (!sheetData.metadata?.headerMap || !sheetData.metadata?.headerRow) {
+//         return { row: originalRow, col: originalCol };
+//     }
 
-    const headerRowIndex = sheetData.metadata.headerRow;
-    const headerMap = sheetData.metadata.headerMap;
+//     const headerRowIndex = sheetData.metadata.headerRow;
+//     const headerMap = sheetData.metadata.headerMap;
 
-    // 헤더 행인 경우
-    if (originalRow === headerRowIndex) {
-        const mappedCol = headerMap[originalCol];
-        return mappedCol !== undefined ? { row: 0, col: mappedCol } : null;
-    }
+//     // 헤더 행인 경우
+//     if (originalRow === headerRowIndex) {
+//         const mappedCol = headerMap[originalCol];
+//         return mappedCol !== undefined ? { row: 0, col: mappedCol } : null;
+//     }
 
-    // 데이터 행인 경우
-    if (originalRow > headerRowIndex) {
-        const mappedCol = headerMap[originalCol];
-        const mappedRow = originalRow - headerRowIndex;
-        return mappedCol !== undefined ? { row: mappedRow, col: mappedCol } : null;
-    }
+//     // 데이터 행인 경우
+//     if (originalRow > headerRowIndex) {
+//         const mappedCol = headerMap[originalCol];
+//         const mappedRow = originalRow - headerRowIndex;
+//         return mappedCol !== undefined ? { row: mappedRow, col: mappedCol } : null;
+//     }
 
-    return null;
-};
+//     return null;
+// };
 
 // 헤더 좌표를 원본 좌표로 변환
-export const mapHeaderToOriginalCoords = (
-    headerRow: number,
-    headerCol: number,
-    sheetData: SheetData
-): { row: number; col: number } | null => {
-    if (!sheetData.metadata?.headerMap || !sheetData.metadata?.headerRow) {
-        return { row: headerRow, col: headerCol };
-    }
+// export const mapHeaderToOriginalCoords = (
+//     headerRow: number,
+//     headerCol: number,
+//     sheetData: SheetData
+// ): { row: number; col: number } | null => {
+//     if (!sheetData.metadata?.headerMap || !sheetData.metadata?.headerRow) {
+//         return { row: headerRow, col: headerCol };
+//     }
 
-    const headerRowIndex = sheetData.metadata.headerRow;
-    const headerMap = sheetData.metadata.headerMap;
+//     const headerRowIndex = sheetData.metadata.headerRow;
+//     const headerMap = sheetData.metadata.headerMap;
 
-    // headerMap에서 역매핑 찾기
-    for (const [originalIndexStr, mappedIndex] of Object.entries(headerMap)) {
-        if (mappedIndex === headerCol) {
-            const originalCol = parseInt(originalIndexStr);
+//     // headerMap에서 역매핑 찾기
+//     for (const [originalIndexStr, mappedIndex] of Object.entries(headerMap)) {
+//         if (mappedIndex === headerCol) {
+//             const originalCol = parseInt(originalIndexStr);
 
-            // 헤더 행인 경우
-            if (headerRow === 0) {
-                return { row: headerRowIndex, col: originalCol };
-            }
+//             // 헤더 행인 경우
+//             if (headerRow === 0) {
+//                 return { row: headerRowIndex, col: originalCol };
+//             }
 
-            // 데이터 행인 경우
-            return { row: headerRowIndex + headerRow, col: originalCol };
-        }
-    }
+//             // 데이터 행인 경우
+//             return { row: headerRowIndex + headerRow, col: originalCol };
+//         }
+//     }
 
-    return null;
-};
+//     return null;
+// };
+
 // 시트 참조 문자열 생성 (예: Sheet1!A1)
 const coordsToSheetReference = (
     sheetIndex: number,

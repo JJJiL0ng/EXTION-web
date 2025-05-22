@@ -65,7 +65,8 @@ export const extractValidHeaders = (headerRow: string[]): {
   const headerMap: { [index: number]: number } = {};
   
   headerRow.forEach((header, originalIndex) => {
-    const trimmedHeader = header?.toString().trim();
+    const headerStr = String(header || ''); // 명시적으로 문자열로 변환
+    const trimmedHeader = headerStr.trim();
     if (trimmedHeader && trimmedHeader !== '') {
       headerMap[originalIndex] = headers.length;
       headers.push(trimmedHeader);
