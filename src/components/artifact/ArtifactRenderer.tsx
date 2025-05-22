@@ -450,29 +450,6 @@ function ArtifactRenderer() {
           )}
         </ArtifactErrorBoundary>
       </div>
-
-      {/* 푸터 정보 - 다중 시트 정보 포함 */}
-      <div className="bg-gray-50 border-t border-gray-200 px-4 py-2">
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <div className="flex items-center space-x-3">
-            <span>
-              파일: {xlsxData?.fileName}
-            </span>
-            {activeSheetData && (
-              <>
-                <span>•</span>
-                <span>
-                  활성 시트: {activeSheetData.sheetName} 
-                  ({activeSheetData.data.length}행 × {activeSheetData.headers.length}열)
-                </span>
-              </>
-            )}
-          </div>
-          <span>
-            최종 업데이트: {new Date().toLocaleTimeString('ko-KR')}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }
