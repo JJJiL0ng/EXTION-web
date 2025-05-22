@@ -104,7 +104,7 @@ interface ExtendedUnifiedDataStoreState {
     // === Active Sheet Data ===
     activeSheetData: SheetData | null; // 현재 활성 시트 데이터
     computedSheetData: { [sheetIndex: number]: string[][] }; // 시트별 계산된 데이터
-    
+
     // === 시트별 채팅 메시지 ===
     sheetMessages: { [sheetIndex: number]: ChatMessage[] }; // 시트별 메시지
     activeSheetMessages: ChatMessage[]; // 현재 활성 시트의 메시지
@@ -434,7 +434,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             activeSheetData: null,
             computedSheetData: {},
             extendedSheetContext: null,
-            
+
             // 시트별 메시지 초기화
             sheetMessages: {},
             activeSheetMessages: [],
@@ -489,7 +489,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             newComputedData[index] = [...sheet.data];
                         }
                     });
-                    
+
                     // 현재 활성 시트의 메시지 불러오기
                     const activeSheetMessages = state.sheetMessages[data.activeSheetIndex] || [];
 
@@ -642,7 +642,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             },
 
 
-            // GPT 분석용 데이터 가져오기
+            // GPT 분석용 데이터 가져오기 - 개선된 버전
             getDataForGPTAnalysis: (sheetIndex, allSheets = false) => {
                 const { xlsxData, computedSheetData } = get();
 
@@ -672,7 +672,12 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         ? sheet.headers.map(h => String(h))
                         : [];
 
-                    // sampleData를 문자열 배열로 변환
+                    // ✅ 전체 데이터를 포함하도록 수정 (샘플이 아닌)
+                    const fullData = currentData.map(row =>
+                        Array.isArray(row) ? row.map(cell => String(cell || '')) : []
+                    );
+
+                    // 샘플 데이터는 별도로 제공 (5행)
                     const sampleData = currentData.slice(0, 5).map(row =>
                         Array.isArray(row) ? row.map(cell => String(cell || '')) : []
                     );
@@ -684,15 +689,21 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             headers: validHeaders,               // 문자열 배열 보장
                             rowCount: currentData.length,
                             columnCount: validHeaders.length,
-                            sampleData: sampleData,              // 2차원 문자열 배열
-                            sheetIndex: sheetIdx
+                            fullData: fullData,                  // ✅ 추가: 전체 데이터
+                            sampleData: sampleData,              // 기존: 샘플 데이터 (5행)
+                            sheetIndex: sheetIdx,
+                            // ✅ 추가: 원본 시트 메타데이터
+                            originalMetadata: sheet.metadata
                         }
                     });
                 }
 
                 return {
                     sheets,
-                    activeSheet: xlsxData.sheets[xlsxData.activeSheetIndex].sheetName
+                    activeSheet: xlsxData.sheets[xlsxData.activeSheetIndex].sheetName,
+                    // ✅ 추가: 전체 컨텍스트 정보
+                    totalSheets: xlsxData.sheets.length,
+                    fileName: xlsxData.fileName
                 };
             },
 
@@ -839,7 +850,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             // 데이터 생성 결과 적용
             applyGeneratedData: (generatedData) => {
                 const { xlsxData } = get();
-                
+
                 // 파일이 없는 경우 새 파일 생성
                 if (!xlsxData) {
                     const newXlsxData = {
@@ -872,7 +883,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         }],
                         activeSheetIndex: 0
                     };
-                    
+
                     set((state) => {
                         return {
                             ...state,
@@ -882,25 +893,25 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             extendedSheetContext: generateExtendedSheetContext(newXlsxData)
                         };
                     });
-                    
+
                     return;
                 }
-                
+
                 // 기존 파일에 데이터 업데이트 또는 새 시트 추가
-                const sheetIndex = generatedData.sheetIndex !== undefined 
-                    ? generatedData.sheetIndex 
+                const sheetIndex = generatedData.sheetIndex !== undefined
+                    ? generatedData.sheetIndex
                     : xlsxData.activeSheetIndex;
-                
+
                 // 기존 시트가 있는지 확인
                 if (sheetIndex < xlsxData.sheets.length) {
                     // 기존 시트 업데이트
                     const newXlsxData = { ...xlsxData };
                     const targetSheet = { ...newXlsxData.sheets[sheetIndex] };
-                    
+
                     targetSheet.headers = generatedData.headers;
                     targetSheet.data = generatedData.data;
                     targetSheet.rawData = [generatedData.headers, ...generatedData.data];
-                    
+
                     // metadata가 확실히 존재하도록 설정
                     if (!targetSheet.metadata) {
                         targetSheet.metadata = {
@@ -943,9 +954,9 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             lastModified: new Date()
                         };
                     }
-                    
+
                     newXlsxData.sheets[sheetIndex] = targetSheet;
-                    
+
                     set((state) => {
                         return {
                             ...state,
@@ -986,13 +997,13 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             lastModified: new Date()
                         }
                     };
-                    
+
                     const newXlsxData = {
                         ...xlsxData,
                         sheets: [...xlsxData.sheets, newSheet],
                         activeSheetIndex: xlsxData.sheets.length
                     };
-                    
+
                     set((state) => {
                         return {
                             ...state,
@@ -1013,16 +1024,16 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 set((state) => {
                     const sheetMessages = { ...state.sheetMessages };
                     const currentMessages = [...(sheetMessages[sheetIndex] || [])];
-                    
+
                     currentMessages.push(message);
                     sheetMessages[sheetIndex] = currentMessages;
-                    
+
                     // 현재 활성 시트의 메시지인 경우 activeSheetMessages도 업데이트
-                    const activeSheetMessages = 
+                    const activeSheetMessages =
                         state.xlsxData?.activeSheetIndex === sheetIndex
                             ? currentMessages
                             : state.activeSheetMessages;
-                    
+
                     return {
                         ...state,
                         sheetMessages,
@@ -1030,36 +1041,36 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     };
                 });
             },
-            
+
             getMessagesForSheet: (sheetIndex) => {
                 return get().sheetMessages[sheetIndex] || [];
             },
-            
+
             updateActiveSheetMessages: () => {
                 set((state) => {
                     if (!state.xlsxData) return state;
-                    
+
                     const activeSheetIndex = state.xlsxData.activeSheetIndex;
                     const activeSheetMessages = state.sheetMessages[activeSheetIndex] || [];
-                    
+
                     return {
                         ...state,
                         activeSheetMessages
                     };
                 });
             },
-            
+
             clearMessagesForSheet: (sheetIndex) => {
                 set((state) => {
                     const sheetMessages = { ...state.sheetMessages };
                     sheetMessages[sheetIndex] = [];
-                    
+
                     // 현재 활성 시트의 메시지인 경우 activeSheetMessages도 초기화
-                    const activeSheetMessages = 
+                    const activeSheetMessages =
                         state.xlsxData?.activeSheetIndex === sheetIndex
                             ? []
                             : state.activeSheetMessages;
-                    
+
                     return {
                         ...state,
                         sheetMessages,
@@ -1067,7 +1078,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     };
                 });
             },
-            
+
             clearAllMessages: () => {
                 set((state) => ({
                     ...state,

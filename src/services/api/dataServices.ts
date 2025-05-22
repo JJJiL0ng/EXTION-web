@@ -157,21 +157,23 @@ export const callFormulaAPI = async (
     return response.json();
 };
 
-// 데이터 수정 API 호출
+// 데이터 수정 API 호출 - 수정된 버전
 export const callDataFixAPI = async (
     userInput: string,
     extendedSheetContext: any | null,
     getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any
 ): Promise<DataFixResponse> => {
     // 현재 데이터 컨텍스트 (있는 경우)
-    let currentData = null;
+    let analysisData = null;
     if (extendedSheetContext && getDataForGPTAnalysis) {
-        currentData = getDataForGPTAnalysis(undefined, true);
+        analysisData = getDataForGPTAnalysis(undefined, true);
     }
 
     const requestBody = {
         userInput,
-        currentData,
+        extendedSheetContext: extendedSheetContext,  // ✅ 추가: 샘플 데이터와 컨텍스트 정보
+        sheetsData: analysisData,                    // ✅ 수정: Artifact API와 동일한 구조
+        currentData: analysisData,                   // 기존 호환성 유지
         language: 'ko'
     };
 
@@ -203,21 +205,23 @@ export const callDataFixAPI = async (
     return result;
 };
 
-// 데이터 생성 API 호출
+// 데이터 생성 API 호출 - 수정된 버전
 export const callDataGenerationAPI = async (
     userInput: string,
     extendedSheetContext: any | null,
     getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any
 ): Promise<DataGenerationResponse> => {
     // 현재 데이터 컨텍스트 (있는 경우)
-    let currentData = null;
+    let analysisData = null;
     if (extendedSheetContext && getDataForGPTAnalysis) {
-        currentData = getDataForGPTAnalysis(undefined, true);
+        analysisData = getDataForGPTAnalysis(undefined, true);
     }
 
     const requestBody = {
         userInput,
-        currentData,
+        extendedSheetContext: extendedSheetContext,  // ✅ 추가: 샘플 데이터와 컨텍스트 정보
+        sheetsData: analysisData,                    // ✅ 수정: Artifact API와 동일한 구조
+        currentData: analysisData,                   // 기존 호환성 유지
         language: 'ko'
     };
 
@@ -249,21 +253,23 @@ export const callDataGenerationAPI = async (
     return result;
 };
 
-// 일반 채팅 API 호출
+// 일반 채팅 API 호출 - 수정된 버전
 export const callNormalChatAPI = async (
     userInput: string,
     extendedSheetContext: any | null,
     getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any
 ): Promise<NormalChatResponse> => {
     // 현재 데이터 컨텍스트 (있는 경우)
-    let currentData = null;
+    let analysisData = null;
     if (extendedSheetContext && getDataForGPTAnalysis) {
-        currentData = getDataForGPTAnalysis(undefined, true);
+        analysisData = getDataForGPTAnalysis(undefined, true);
     }
 
     const requestBody = {
         userInput,
-        currentData,
+        extendedSheetContext: extendedSheetContext,  // ✅ 추가: 컨텍스트 정보
+        sheetsData: analysisData,                    // ✅ 추가: 시트 데이터
+        currentData: analysisData,                   // 기존 호환성 유지
         language: 'ko'
     };
 
@@ -290,4 +296,4 @@ export const callNormalChatAPI = async (
     const result = await response.json();
     console.log('Normal Chat API Response:', result);
     return result;
-}; 
+};
