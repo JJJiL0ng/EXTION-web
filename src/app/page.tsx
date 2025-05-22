@@ -1,149 +1,112 @@
-'use client'
-
-import { useState, useCallback, useRef, useEffect } from 'react';
-import MainSpreadSheet from "@/components/MainSpreadSheet";
-import ChattingMainContainer from "@/components/ChattingMainContainer";
+import Link from 'next/link'
 
 export default function Home() {
-  const [leftWidth, setLeftWidth] = useState(65); // 초기 50%
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isMouseDownRef = useRef(false);
-
-  // 로컬 스토리지에서 저장된 비율 불러오기
-  useEffect(() => {
-    const savedWidth = localStorage.getItem('layout-split');
-    if (savedWidth) {
-      const width = parseFloat(savedWidth);
-      if (width >= 10 && width <= 90) {
-        setLeftWidth(width);
-      }
-    }
-  }, []);
-
-  // 비율 변경 시 로컬 스토리지에 저장
-  useEffect(() => {
-    localStorage.setItem('layout-split', leftWidth.toString());
-  }, [leftWidth]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    isMouseDownRef.current = true;
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isMouseDownRef.current || !containerRef.current) return;
-
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-    
-    // 최소 10%, 최대 90%로 제한
-    const clampedWidth = Math.min(Math.max(newLeftWidth, 10), 90);
-    setLeftWidth(clampedWidth);
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    isMouseDownRef.current = false;
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
   return (
-    <div 
-      ref={containerRef}
-      style={{ 
-        display: 'flex', 
-        width: '100%', 
-        height: '100vh', 
-        overflow: 'hidden',
-        position: 'relative'
-      }}
-    >
-      {/* 왼쪽 영역: MainSpreadSheet */}
-      <div style={{ 
-        width: `${leftWidth}%`, 
-        height: '100%',
-        overflowY: 'auto',
-        overflowX: 'auto',
-        transition: isDragging ? 'none' : 'width 0.1s ease'
-      }}>
-        <MainSpreadSheet />
-      </div>
-      
-      {/* 드래그 핸들 */}
-      <div
-        onMouseDown={handleMouseDown}
-        style={{
-          width: '8px',
-          height: '100%',
-          backgroundColor: isDragging ? '#005DE9' : '#e9ecef',
-          cursor: 'col-resize',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          transition: isDragging ? 'none' : 'background-color 0.2s ease',
-          borderLeft: '1px solid #ddd',
-          borderRight: '1px solid #ddd'
-        }}
-        onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-          if (!isDragging) {
-            (e.target as HTMLDivElement).style.backgroundColor = '#005DE9';
-          }
-        }}
-        onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-          if (!isDragging) {
-            (e.target as HTMLDivElement).style.backgroundColor = '#e9ecef';
-          }
-        }}
-      >
-        {/* 드래그 핸들 아이콘 */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px'
-        }}>
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: '2px',
-                height: '2px',
-                backgroundColor: isDragging ? '#fff' : '#6c757d',
-                borderRadius: '50%'
-              }}
-            />
-          ))}
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      {/* Hero Section */}
+      <div className="container mx-auto px-6 py-20 text-center">
+        <div className="max-w-4xl mx-auto">
+          {/* Logo/Brand */}
+          <div className="mb-8">
+            <h1 className="text-6xl font-bold text-gray-900 mb-4">
+              Ex<span className="text-[#005DE9]">tion</span>
+            </h1>
+            <div className="w-24 h-1 bg-[#005DE9] mx-auto rounded-full"></div>
+          </div>
+
+          {/* Main Message */}
+          <div className="mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+              함수 몰라도 돼.<br />
+              <span className="text-[#005DE9]">그냥 말만 해.</span>
+            </h2>
+            
+            <p className="text-xl md:text-2xl text-gray-600 mb-8 leading-relaxed">
+              엑셀을 잘 몰라도 자연어로 표를 정리하고 수정할 수 있는 AI 도구
+            </p>
+
+            <div className="bg-white rounded-2xl shadow-xl p-8 mb-12 max-w-2xl mx-auto">
+              <div className="text-left space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-[#005DE9] rounded-full mt-3 flex-shrink-0"></div>
+                  <p className="text-gray-700">"이 열에서 합계 구해줘"</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-[#005DE9] rounded-full mt-3 flex-shrink-0"></div>
+                  <p className="text-gray-700">"정렬하고 중복 제거해줘"</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-[#005DE9] rounded-full mt-3 flex-shrink-0"></div>
+                  <p className="text-gray-700">"100 이상인 값만 새 시트로 뽑아줘"</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <div className="mb-16">
+            <Link 
+              href="/login"
+              className="inline-flex items-center px-12 py-4 bg-[#005DE9] text-white text-xl font-semibold rounded-full hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl"
+            >
+              바로 시작하기
+              <svg 
+                className="ml-3 w-6 h-6" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M13 7l5 5m0 0l-5 5m5-5H6" 
+                />
+              </svg>
+            </Link>
+          </div>
+
+          {/* Value Props */}
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#005DE9] bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-[#005DE9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">자연어로 요청</h3>
+              <p className="text-gray-600">복잡한 함수 대신 말로 설명하면 바로 실행</p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#005DE9] bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-[#005DE9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">안전한 실행</h3>
+              <p className="text-gray-600">원본 보존과 미리보기로 실수 걱정 없이</p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#005DE9] bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-[#005DE9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">즉시 자동화</h3>
+              <p className="text-gray-600">반복 작업을 한번 설정으로 자동 처리</p>
+            </div>
+          </div>
         </div>
       </div>
-      
-      {/* 오른쪽 영역: CSVChatComponent */}
-      <div style={{
-        width: `${100 - leftWidth}%`,
-        height: '100%',
-        overflowY: 'auto',
-        overflowX: 'auto',
-        transition: isDragging ? 'none' : 'width 0.1s ease'
-      }}>
-        <ChattingMainContainer />
+
+      {/* Background Elements */}
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden -z-10">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-[#005DE9] opacity-5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-indigo-400 opacity-5 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-[#005DE9] to-indigo-400 opacity-3 rounded-full blur-3xl"></div>
       </div>
-    </div>
-  );
+    </main>
+  )
 }
