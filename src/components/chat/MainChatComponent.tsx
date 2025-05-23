@@ -161,18 +161,18 @@ export default function MainChatComponent() {
                                 metadata: {
                                     rowCount: sheet.data.length,
                                     columnCount: sheet.headers.length,
-                                    headerRow: sheet.metadata.headerRow,
+                                    headerRow: sheet.metadata?.headerRow || 0,
                                     dataRange: {
-                                        startRow: sheet.metadata.headerRow + 1,
-                                        endRow: sheet.metadata.headerRow + sheet.data.length,
+                                        startRow: (sheet.metadata?.headerRow || 0) + 1,
+                                        endRow: (sheet.metadata?.headerRow || 0) + sheet.data.length,
                                         startCol: 0,
                                         endCol: sheet.headers.length - 1,
                                         startColLetter: 'A',
                                         endColLetter: String.fromCharCode(65 + sheet.headers.length - 1)
                                     },
-                                    headerRowData: sheet.metadata.headerRowData,
-                                    headerMap: sheet.metadata.headerMap,
-                                    preserveOriginalStructure: sheet.metadata.preserveOriginalStructure,
+                                    headerRowData: sheet.metadata?.headerRowData || [],
+                                    headerMap: sheet.metadata?.headerMap || {},
+                                    preserveOriginalStructure: sheet.metadata?.preserveOriginalStructure || true,
                                     lastModified: new Date()
                                 }
                             };
@@ -234,18 +234,18 @@ export default function MainChatComponent() {
                             metadata: {
                                 rowCount: sheet.data.length,
                                 columnCount: sheet.headers.length,
-                                headerRow: sheet.metadata.headerRow,
+                                headerRow: sheet.metadata?.headerRow || 0,
                                 dataRange: {
-                                    startRow: sheet.metadata.headerRow + 1,
-                                    endRow: sheet.metadata.headerRow + sheet.data.length,
+                                    startRow: (sheet.metadata?.headerRow || 0) + 1,
+                                    endRow: (sheet.metadata?.headerRow || 0) + sheet.data.length,
                                     startCol: 0,
                                     endCol: sheet.headers.length - 1,
                                     startColLetter: 'A',
                                     endColLetter: String.fromCharCode(65 + sheet.headers.length - 1)
                                 },
-                                headerRowData: sheet.metadata.headerRowData,
-                                headerMap: sheet.metadata.headerMap,
-                                preserveOriginalStructure: sheet.metadata.preserveOriginalStructure,
+                                headerRowData: sheet.metadata?.headerRowData || [],
+                                headerMap: sheet.metadata?.headerMap || {},
+                                preserveOriginalStructure: sheet.metadata?.preserveOriginalStructure || true,
                                 lastModified: new Date()
                             }
                         })),

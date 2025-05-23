@@ -7,10 +7,11 @@ import { registerAllModules } from 'handsontable/registry';
 import { HyperFormula } from 'hyperformula';
 import { DetailedSettings } from 'handsontable/plugins/formulas';
 import Handsontable from 'handsontable';
-import { ChevronDown, Layers, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, Layers, ChevronLeft, ChevronRight, Plus, Save, Download, FileDown } from 'lucide-react';
 import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import { cellAddressToCoords } from '@/stores/useUnifiedDataStore';
 import { XLSXData } from '@/stores/useUnifiedDataStore';
+import { exportActiveSheetToCSV, exportSelectedSheetsToXLSX } from '@/utils/exportUtils';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -38,9 +39,37 @@ const HandsontableStyles = createGlobalStyle`
     z-index: 0 !important;
   }
 
+  /* 내보내기 드롭다운 관련 스타일 추가 */
+  .export-dropdown {
+    z-index: 9999 !important; /* 높은 z-index 설정 */
+    position: absolute;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .xlsx-sheet-selector {
+    z-index: 9999 !important; /* 높은 z-index 설정 */
+    position: absolute;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* 핸드온테이블의 z-index 조정 */
+  .handsontable {
+    z-index: 50;
+  }
+
+  .ht_master {
+    z-index: 50 !important;
+  }
+
+  .ht_clone_top,
+  .ht_clone_left,
+  .ht_clone_top_left_corner {
+    z-index: 51 !important;
+  }
+
   /* 시트 선택 드롭다운 스타일 */
   .sheet-selector {
-    z-index: 1000;
+    z-index: 9999;
   }
 
   .sheet-dropdown {
@@ -407,7 +436,7 @@ const defaultData = [
   ['', '', '', '', '', ''],
 ];
 
-// 선택된 셀 정보 인터페이스
+// 선택된 셀 정보 인터페이스 업데이트 - timestamp 속성 추가
 interface SelectedCellInfo {
   row: number;
   col: number;
@@ -433,6 +462,12 @@ const MainSpreadSheet: React.FC = () => {
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartScroll, setDragStartScroll] = useState(0);
   const [showScrollbar, setShowScrollbar] = useState(false);
+  
+  // 내보내기 관련 상태 추가
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const [isXlsxSelectorOpen, setIsXlsxSelectorOpen] = useState(false);
+  const [selectedSheets, setSelectedSheets] = useState<number[]>([]);
+  const [exportFileName, setExportFileName] = useState('');
   
   // Zustand 스토어 사용 - 확장된 스토어로 변경
   const {
@@ -869,6 +904,168 @@ const MainSpreadSheet: React.FC = () => {
     };
   }, [handleThumbDrag, handleThumbDragEnd]);
 
+  // CSV 내보내기 핸들러
+  const handleExportToCSV = useCallback(() => {
+    if (!activeSheetData) return;
+    
+    // 현재 시트 데이터 가져오기 (계산된 값 포함)
+    const currentData = getCurrentSheetData() || activeSheetData.data;
+    
+    try {
+      // 파일명에 현재 날짜와 시간 추가
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+      const fileName = `${activeSheetData.sheetName}_${dateStr}.csv`;
+      
+      // CSV로 내보내기
+      exportActiveSheetToCSV({
+        sheetName: activeSheetData.sheetName,
+        headers: activeSheetData.headers,
+        data: currentData
+      }, fileName);
+      
+      // 내보내기 드롭다운 닫기
+      setIsExportDropdownOpen(false);
+    } catch (error) {
+      console.error('CSV 내보내기 오류:', error);
+      alert('CSV 파일로 내보내는 중 오류가 발생했습니다.');
+    }
+  }, [activeSheetData, getCurrentSheetData]);
+
+  // XLSX 내보내기 핸들러
+  const handleExportToXLSX = useCallback(() => {
+    if (!xlsxData) return;
+    
+    try {
+      // 시트 선택기를 열거나 바로 내보내기
+      if (selectedSheets.length === 0) {
+        setIsXlsxSelectorOpen(true);
+        
+        // 기본적으로 모든 시트 선택
+        const allSheetIndices = xlsxData.sheets.map((_, index) => index);
+        setSelectedSheets(allSheetIndices);
+        
+        // 현재 날짜와 시간을 포함한 기본 파일명 설정
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+        const baseFileName = xlsxData.fileName.replace(/\.[^/.]+$/, '') || 'export';
+        setExportFileName(`${baseFileName}_${dateStr}`);
+      } else {
+        // 이미 시트가 선택된 상태라면 바로 내보내기
+        exportSelectedSheetsToXLSX(
+          xlsxData,
+          selectedSheets,
+          exportFileName ? `${exportFileName}.xlsx` : undefined
+        );
+        
+        // 상태 초기화
+        setIsXlsxSelectorOpen(false);
+        setIsExportDropdownOpen(false);
+        setSelectedSheets([]);
+        setExportFileName('');
+      }
+    } catch (error) {
+      console.error('XLSX 내보내기 오류:', error);
+      alert('XLSX 파일로 내보내는 중 오류가 발생했습니다.');
+    }
+  }, [xlsxData, selectedSheets, exportFileName]);
+
+  // XLSX 내보내기 실행 핸들러
+  const executeXlsxExport = useCallback(() => {
+    if (!xlsxData || selectedSheets.length === 0) return;
+    
+    try {
+      // 파일명에 날짜가 없는 경우 추가
+      let finalFileName = exportFileName;
+      if (!finalFileName.includes('_202')) { // 날짜 형식이 없는 경우
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+        finalFileName = `${finalFileName}_${dateStr}`;
+      }
+      
+      exportSelectedSheetsToXLSX(
+        xlsxData,
+        selectedSheets,
+        finalFileName ? `${finalFileName}.xlsx` : undefined
+      );
+      
+      // 상태 초기화
+      setIsXlsxSelectorOpen(false);
+      setIsExportDropdownOpen(false);
+      setSelectedSheets([]);
+      setExportFileName('');
+    } catch (error) {
+      console.error('XLSX 내보내기 오류:', error);
+      alert('XLSX 파일로 내보내는 중 오류가 발생했습니다.');
+    }
+  }, [xlsxData, selectedSheets, exportFileName]);
+
+  // 선택된 시트 토글 핸들러
+  const toggleSheetSelection = useCallback((sheetIndex: number) => {
+    setSelectedSheets(prev => {
+      if (prev.includes(sheetIndex)) {
+        return prev.filter(index => index !== sheetIndex);
+      } else {
+        return [...prev, sheetIndex];
+      }
+    });
+  }, []);
+
+  // 모든 시트 선택/해제 핸들러
+  const toggleAllSheets = useCallback(() => {
+    if (!xlsxData) return;
+    
+    if (selectedSheets.length === xlsxData.sheets.length) {
+      // 모든 시트가 선택된 상태이면 모두 해제
+      setSelectedSheets([]);
+    } else {
+      // 아니면 모든 시트 선택
+      const allSheetIndices = xlsxData.sheets.map((_, index) => index);
+      setSelectedSheets(allSheetIndices);
+    }
+  }, [xlsxData, selectedSheets]);
+
+  // Export 드롭다운과 XLSX 시트 선택기 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      
+      // 내보내기 드롭다운
+      const exportDropdown = document.querySelector('.export-dropdown');
+      const exportButton = document.querySelector('.export-button');
+      
+      if (
+        isExportDropdownOpen && 
+        exportDropdown && 
+        !exportDropdown.contains(target) && 
+        exportButton && 
+        !exportButton.contains(target)
+      ) {
+        setIsExportDropdownOpen(false);
+      }
+      
+      // XLSX 시트 선택기
+      const xlsxSelector = document.querySelector('.xlsx-sheet-selector');
+      
+      if (
+        isXlsxSelectorOpen && 
+        xlsxSelector && 
+        !xlsxSelector.contains(target) &&
+        exportDropdown && 
+        !exportDropdown.contains(target)
+      ) {
+        setIsXlsxSelectorOpen(false);
+        setSelectedSheets([]);
+        setExportFileName('');
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExportDropdownOpen, isXlsxSelectorOpen]);
+
   // 로딩 중일 때 표시
   if (loadingStates.fileUpload) {
     return (
@@ -881,19 +1078,145 @@ const MainSpreadSheet: React.FC = () => {
     );
   }
 
+  // 내보내기 버튼 UI를 상단 컨트롤 패널에 추가
+  const renderExportControls = () => {
+    return (
+      <div className="relative ml-auto" style={{ zIndex: 9999 }}>
+        <button 
+          className="export-button flex items-center space-x-1.5 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm transition-colors duration-200"
+          onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+          type="button"
+        >
+          <FileDown size={16} />
+          <span>내보내기</span>
+          <ChevronDown size={14} />
+        </button>
+        
+        {/* 내보내기 드롭다운 - 포털로 렌더링 */}
+        {isExportDropdownOpen && (
+          <div className="export-dropdown absolute right-0 top-full mt-1 bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden z-50 min-w-[180px]" style={{ zIndex: 9999 }}>
+            <div className="py-1">
+              <button
+                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors duration-150 flex items-center space-x-2 text-sm"
+                onClick={handleExportToCSV}
+                disabled={!activeSheetData}
+                type="button"
+              >
+                <span>CSV로 내보내기</span>
+                <span className="text-xs text-gray-500">(현재 시트)</span>
+              </button>
+              <button
+                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors duration-150 flex items-center space-x-2 text-sm"
+                onClick={handleExportToXLSX}
+                disabled={!xlsxData}
+                type="button"
+              >
+                <span>XLSX로 내보내기</span>
+                <span className="text-xs text-gray-500">(모든/선택 시트)</span>
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* XLSX 시트 선택기 */}
+        {isXlsxSelectorOpen && xlsxData && (
+          <div className="xlsx-sheet-selector absolute right-0 top-full mt-1 bg-white rounded-lg border border-gray-200 shadow-lg z-50 min-w-[300px]" style={{ zIndex: 9999 }}>
+            <div className="p-4">
+              <h3 className="font-medium text-gray-800 mb-3">내보낼 시트 선택</h3>
+              
+              {/* 파일명 입력 */}
+              <div className="mb-4">
+                <label className="block text-sm text-gray-600 mb-1">파일명</label>
+                <input
+                  type="text"
+                  value={exportFileName}
+                  onChange={(e) => setExportFileName(e.target.value)}
+                  placeholder="파일명 입력 (확장자 제외)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+              
+              {/* 시트 선택 */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm text-gray-600">시트</label>
+                  <button
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                    onClick={toggleAllSheets}
+                    type="button"
+                  >
+                    {selectedSheets.length === xlsxData.sheets.length ? '모두 해제' : '모두 선택'}
+                  </button>
+                </div>
+                
+                <div className="max-h-[200px] overflow-y-auto border border-gray-200 rounded-md divide-y">
+                  {xlsxData.sheets.map((sheet, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center p-2.5 hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        id={`sheet-${index}`}
+                        checked={selectedSheets.includes(index)}
+                        onChange={() => toggleSheetSelection(index)}
+                        className="mr-2.5"
+                      />
+                      <label 
+                        htmlFor={`sheet-${index}`}
+                        className="flex-1 text-sm cursor-pointer flex items-center justify-between"
+                      >
+                        <span>{sheet.sheetName}</span>
+                        <span className="text-xs text-gray-500">
+                          {sheet.headers.length}×{sheet.data.length}
+                        </span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* 버튼 */}
+              <div className="flex justify-end space-x-2">
+                <button
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    setIsXlsxSelectorOpen(false);
+                    setSelectedSheets([]);
+                    setExportFileName('');
+                  }}
+                  type="button"
+                >
+                  취소
+                </button>
+                <button
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
+                  onClick={executeXlsxExport}
+                  disabled={selectedSheets.length === 0}
+                  type="button"
+                >
+                  내보내기
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col spreadsheet-container">
       {/* Handsontable z-index 문제 해결을 위한 스타일 */}
       <HandsontableStyles />
       
       {/* 상단 컨트롤 패널 */}
-      <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm">
+      <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm" style={{ position: 'relative', zIndex: 9000 }}>
         <div className="flex items-center justify-between">
           {/* 선택된 셀 정보 표시 */}
           {selectedCellInfo && (
             <div className="flex items-center space-x-4 text-sm text-gray-700">
               <div className="flex items-center space-x-2">
-                {/* <span className="font-medium">셀:</span> */}
                 <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
                   {selectedCellInfo.cellAddress}
                 </span>
@@ -919,6 +1242,9 @@ const MainSpreadSheet: React.FC = () => {
               )}
             </div>
           )}
+          
+          {/* 내보내기 버튼 추가 */}
+          {renderExportControls()}
         </div>
 
         {/* 포뮬러 적용 대기 알림 */}
@@ -939,6 +1265,7 @@ const MainSpreadSheet: React.FC = () => {
               <button
                 onClick={() => setPendingFormula(null)}
                 className="text-[#005DE9] hover:text-[#004ab8] text-sm bg-white px-3 py-1.5 rounded-lg border border-[rgba(0,93,233,0.2)] transition-colors duration-200"
+                type="button"
               >
                 취소
               </button>
@@ -947,8 +1274,8 @@ const MainSpreadSheet: React.FC = () => {
         )}
       </div>
 
-      {/* 시트 탭 바 - 항상 표시 */}
-      <div className="relative">
+      {/* 시트 탭 바 - z-index 추가 */}
+      <div className="relative" style={{ zIndex: 8000 }}>
         <div className="flex flex-col bg-[#F9F9F7]">
           <div className="flex items-center border-b border-gray-200">
             {/* 시트 탭 컨테이너 - 시트 있을 때와 없을 때 모두 표시 */}
@@ -1046,7 +1373,7 @@ const MainSpreadSheet: React.FC = () => {
       </div>
 
       {/* 스프레드시트 영역 */}
-      <div className="flex-1 overflow-auto bg-white shadow-inner">
+      <div className="flex-1 overflow-auto bg-white shadow-inner" style={{ position: 'relative', zIndex: 50 }}>
         <HotTable
           ref={hotRef}
           rowHeaders={true}
