@@ -91,7 +91,7 @@ export const exportToXLSX = (
       const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
       
       // 워크북에 워크시트 추가 - 한글 시트명 처리
-      const safeSheetName = sheet.sheetName.replace(/[\[\]\*\/\\\?:]/g, '_').substring(0, 31);
+      const safeSheetName = sheet.sheetName.replace(/[[\]*\/\\?:]/g, '_').substring(0, 31);
       XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
     });
     
