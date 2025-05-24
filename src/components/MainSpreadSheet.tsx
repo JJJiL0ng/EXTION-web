@@ -454,7 +454,7 @@ const MainSpreadSheet: React.FC = () => {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [isCreateSheetModalOpen, setIsCreateSheetModalOpen] = useState(false);
   const [newSheetName, setNewSheetName] = useState('');
-  
+
   // 스크롤바 관련 상태
   const [scrollThumbPosition, setScrollThumbPosition] = useState(0);
   const [scrollThumbWidth, setScrollThumbWidth] = useState(30);
@@ -462,13 +462,13 @@ const MainSpreadSheet: React.FC = () => {
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartScroll, setDragStartScroll] = useState(0);
   const [showScrollbar, setShowScrollbar] = useState(false);
-  
+
   // 내보내기 관련 상태 추가
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isXlsxSelectorOpen, setIsXlsxSelectorOpen] = useState(false);
   const [selectedSheets, setSelectedSheets] = useState<number[]>([]);
   const [exportFileName, setExportFileName] = useState('');
-  
+
   // Zustand 스토어 사용 - 확장된 스토어로 변경
   const {
     xlsxData,
@@ -499,9 +499,17 @@ const MainSpreadSheet: React.FC = () => {
   });
 
   // 표시할 데이터 준비 - 활성 시트 데이터 사용
+  // 표시할 데이터 준비 - 원본 레이아웃 유지
   const displayData = useMemo(() => {
     if (!activeSheetData) return defaultData;
-    
+
+    // rawData가 있으면 원본 레이아웃 그대로 사용
+    if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
+      // 원본 데이터를 그대로 반환 (헤더 포함)
+      return activeSheetData.rawData;
+    }
+
+    // rawData가 없는 경우 기존 방식 폴백
     const currentData = getCurrentSheetData();
     const data = [activeSheetData.headers, ...(currentData || activeSheetData.data)];
     return data;
@@ -513,10 +521,10 @@ const MainSpreadSheet: React.FC = () => {
     try {
       await switchToSheet(sheetIndex);
       setIsSheetDropdownOpen(false);
-      
+
       // 시트 전환 시 선택된 셀 정보 초기화
       setSelectedCellInfo(null);
-      
+
       // Handsontable 인스턴스 재렌더링
       setTimeout(() => {
         hotRef.current?.hotInstance?.render();
@@ -528,79 +536,17 @@ const MainSpreadSheet: React.FC = () => {
     }
   }, [switchToSheet, setLoadingState]);
 
-  // 셀 선택 핸들러
-  const handleCellSelection = useCallback((row: number, col: number) => {
-    if (!hotRef.current?.hotInstance || !xlsxData || !activeSheetData) return;
-
-    const hot = hotRef.current.hotInstance;
-    
-    // 헤더 행 제외한 실제 데이터 행
-    const dataRow = row - 1;
-    let value = '';
-    let formula = '';
-
-    try {
-      // 셀 값 가져오기
-      value = hot.getDataAtCell(row, col) || '';
-      
-      // 수식 확인 (수식이 있는 경우)
-      const formulasPlugin = hot.getPlugin('formulas');
-      if (formulasPlugin && formulasPlugin.engine) {
-        const cellCoord = { row, col, sheet: 0 };
-        const cellValue = formulasPlugin.engine.getCellValue(cellCoord);
-        const cellFormula = formulasPlugin.engine.getCellFormula(cellCoord);
-        
-        if (cellFormula && cellFormula.startsWith('=')) {
-          formula = cellFormula;
-        }
-      }
-
-      // 셀 주소 계산 (A1, B2 등)
-      const colLetter = String.fromCharCode(65 + col);
-      const cellAddress = `${colLetter}${row + 1}`;
-
-      // 시트 참조 포함된 주소
-      const fullReference = coordsToSheetReference(
-        xlsxData.activeSheetIndex,
-        dataRow >= 0 ? dataRow : 0,
-        col
-      );
-
-      const cellInfo: SelectedCellInfo = {
-        row: dataRow >= 0 ? dataRow : row,
-        col,
-        cellAddress,
-        value,
-        formula: formula || undefined,
-        sheetIndex: xlsxData.activeSheetIndex,
-        timestamp: new Date()
-      };
-
-      setSelectedCellInfo(cellInfo);
-      
-      console.log('Selected cell:', {
-        address: cellAddress,
-        fullReference,
-        value,
-        formula: formula || 'none',
-        sheetName: activeSheetData.sheetName
-      });
-    } catch (error) {
-      console.error('Error getting cell info:', error);
-    }
-  }, [xlsxData, activeSheetData, coordsToSheetReference]);
-
   // 포뮬러 적용
   useEffect(() => {
     if (pendingFormula && hotRef.current?.hotInstance) {
       setInternalUpdate(true);
-      
+
       // 다중 시트 포뮬러라면 해당 시트의 포뮬러인지 확인
       const targetSheetIndex = pendingFormula.sheetIndex ?? xlsxData?.activeSheetIndex ?? 0;
-      
+
       if (targetSheetIndex === xlsxData?.activeSheetIndex) {
         applyFormulaToCell(pendingFormula.formula, pendingFormula.cellAddress);
-        
+
         // 포뮬러 적용 후 계산된 결과를 스토어에 반영
         setTimeout(() => {
           const hot = hotRef.current?.hotInstance;
@@ -631,15 +577,15 @@ const MainSpreadSheet: React.FC = () => {
     try {
       // 셀 주소를 좌표로 변환
       const { row, col } = cellAddressToCoords(cellAddress);
-      
+
       console.log(`Applying formula "${formula}" to cell ${cellAddress} (${row}, ${col})`);
-      
+
       // 수식이 = 로 시작하는지 확인하고, 그렇지 않으면 자동으로 추가
       const formulaValue = formula.startsWith('=') ? formula : `=${formula}`;
-      
+
       // 직접 셀에 함수 설정 (헤더 행 때문에 row + 1)
       hot.setDataAtCell(row + 1, col, formulaValue);
-      
+
       // 강제 재렌더링 및 계산
       setTimeout(() => {
         hot.render();
@@ -647,7 +593,7 @@ const MainSpreadSheet: React.FC = () => {
       }, 100);
     } catch (error) {
       console.error('Error applying formula:', error);
-      
+
       // 오류 발생 시 대안으로 네임드 익스프레션 사용 시도
       tryNamedExpressionApproach(formula, cellAddress);
     }
@@ -657,7 +603,7 @@ const MainSpreadSheet: React.FC = () => {
   const tryNamedExpressionApproach = (formula: string, cellAddress: string) => {
     const hot = hotRef.current?.hotInstance;
     const formulasPlugin = hot?.getPlugin('formulas');
-    
+
     if (!formulasPlugin?.engine) {
       console.error('Formulas engine not available');
       return;
@@ -666,17 +612,17 @@ const MainSpreadSheet: React.FC = () => {
     try {
       // 고유한 네임드 익스프레션 이름 생성
       const namedExpName = `FORMULA_${Date.now()}`;
-      
+
       // 네임드 익스프레션 추가
       formulasPlugin.engine.addNamedExpression(namedExpName, formula);
-      
+
       // 셀에 네임드 익스프레션 참조 설정 (헤더 행 때문에 row + 1)
       const { row, col } = cellAddressToCoords(cellAddress);
       hot?.setDataAtCell(row + 1, col, `=${namedExpName}`);
-      
+
       // 재렌더링
       hot?.render();
-      
+
       console.log(`Applied formula using named expression: ${namedExpName}`);
     } catch (error) {
       console.error('Named expression approach also failed:', error);
@@ -686,23 +632,23 @@ const MainSpreadSheet: React.FC = () => {
   // 새 시트 생성 핸들러
   const handleCreateSheet = () => {
     if (!newSheetName.trim()) return;
-    
+
     // 기본 빈 데이터로 새 시트 생성
     const emptyData = Array(20).fill(Array(6).fill(''));
     const emptyHeaders = Array(6).fill('');
-    
+
     if (xlsxData) {
       // 기존 xlsxData가 있는 경우 새 시트 추가
       // 중복되는 시트명 확인
       const existingNames = xlsxData.sheets.map(s => s.sheetName);
       let uniqueName = newSheetName;
       let counter = 1;
-      
+
       while (existingNames.includes(uniqueName)) {
         uniqueName = `${newSheetName} ${counter}`;
         counter++;
       }
-      
+
       // 새 시트 데이터 생성
       const newSheet = {
         sheetName: uniqueName,
@@ -723,15 +669,15 @@ const MainSpreadSheet: React.FC = () => {
           lastModified: new Date()
         }
       };
-      
+
       // 새 xlsxData 생성하여 적용
       const newXlsxData = { ...xlsxData };
       newXlsxData.sheets = [...newXlsxData.sheets, newSheet];
       const newSheetIndex = newXlsxData.sheets.length - 1;
-      
+
       // 상태 업데이트
       setXLSXData(newXlsxData);
-      
+
       // 새 시트로 전환
       setTimeout(() => {
         switchToSheet(newSheetIndex);
@@ -762,10 +708,10 @@ const MainSpreadSheet: React.FC = () => {
         ],
         activeSheetIndex: 0
       };
-      
+
       setXLSXData(newXlsxData);
     }
-    
+
     // 모달 상태 초기화
     setNewSheetName('');
     setIsCreateSheetModalOpen(false);
@@ -777,19 +723,19 @@ const MainSpreadSheet: React.FC = () => {
       const target = event.target as Node;
       const modalElement = document.querySelector('.sheet-create-modal');
       const addButton = document.querySelector('.sheet-add-button');
-      
+
       if (
-        isCreateSheetModalOpen && 
-        modalElement && 
-        !modalElement.contains(target) && 
-        addButton && 
+        isCreateSheetModalOpen &&
+        modalElement &&
+        !modalElement.contains(target) &&
+        addButton &&
         !addButton.contains(target)
       ) {
         setIsCreateSheetModalOpen(false);
         setNewSheetName('');
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -801,101 +747,101 @@ const MainSpreadSheet: React.FC = () => {
     const checkScroll = () => {
       const container = tabsContainerRef.current;
       if (!container) return;
-      
+
       const { scrollLeft, scrollWidth, clientWidth } = container;
       const hasHorizontalScroll = scrollWidth > clientWidth;
-      
+
       // 스크롤바 표시 여부 설정
       setShowScrollbar(hasHorizontalScroll);
-      
+
       // 스크롤바 thumb 위치와 너비 계산
       if (hasHorizontalScroll) {
         const thumbWidth = Math.max(30, (clientWidth / scrollWidth) * clientWidth);
         setScrollThumbWidth(thumbWidth);
-        
+
         const maxScrollPosition = scrollWidth - clientWidth;
         const scrollPercentage = maxScrollPosition > 0 ? scrollLeft / maxScrollPosition : 0;
         const maxThumbPosition = clientWidth - thumbWidth;
         const thumbPosition = scrollPercentage * maxThumbPosition;
-        
+
         setScrollThumbPosition(thumbPosition);
       }
     };
-    
+
     // 초기 체크
     checkScroll();
-    
+
     const container = tabsContainerRef.current;
     if (container) {
       container.addEventListener('scroll', checkScroll);
       window.addEventListener('resize', checkScroll);
-      
+
       return () => {
         container.removeEventListener('scroll', checkScroll);
         window.removeEventListener('resize', checkScroll);
       };
     }
   }, [xlsxData?.sheets.length]);
-  
+
   // 가상 스크롤바 클릭 핸들러
   const handleScrollbarClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const container = tabsContainerRef.current;
     if (!container) return;
-    
+
     const scrollbarElement = e.currentTarget;
     const rect = scrollbarElement.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    
+
     // 클릭한 위치로 thumb 이동
     const scrollPercentage = clickX / rect.width;
     const scrollPosition = scrollPercentage * (container.scrollWidth - container.clientWidth);
-    
+
     container.scrollTo({ left: scrollPosition, behavior: 'smooth' });
   };
-  
+
   // 드래그 시작 핸들러
   const handleThumbDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
     setDragStartX(e.clientX);
-    
+
     const container = tabsContainerRef.current;
     if (container) {
       setDragStartScroll(container.scrollLeft);
     }
-    
+
     // 글로벌 이벤트 리스너 추가
     document.addEventListener('mousemove', handleThumbDrag);
     document.addEventListener('mouseup', handleThumbDragEnd);
   };
-  
+
   // 드래그 중 핸들러
   const handleThumbDrag = useCallback((e: MouseEvent) => {
     if (!isDragging) return;
-    
+
     const container = tabsContainerRef.current;
     if (!container) return;
-    
+
     const deltaX = e.clientX - dragStartX;
     const containerWidth = container.clientWidth;
     const scrollWidth = container.scrollWidth;
-    
+
     const maxScrollPosition = scrollWidth - containerWidth;
     const dragRatio = containerWidth / scrollWidth;
     const scrollDelta = deltaX / dragRatio;
-    
+
     container.scrollLeft = Math.max(0, Math.min(maxScrollPosition, dragStartScroll + scrollDelta));
   }, [isDragging, dragStartX, dragStartScroll]);
-  
+
   // 드래그 종료 핸들러
   const handleThumbDragEnd = useCallback(() => {
     setIsDragging(false);
-    
+
     // 글로벌 이벤트 리스너 제거
     document.removeEventListener('mousemove', handleThumbDrag);
     document.removeEventListener('mouseup', handleThumbDragEnd);
   }, [handleThumbDrag]);
-  
+
   // 스크롤 이벤트 핸들러 등록 및 해제
   useEffect(() => {
     return () => {
@@ -907,23 +853,23 @@ const MainSpreadSheet: React.FC = () => {
   // CSV 내보내기 핸들러
   const handleExportToCSV = useCallback(() => {
     if (!activeSheetData) return;
-    
+
     // 현재 시트 데이터 가져오기 (계산된 값 포함)
     const currentData = getCurrentSheetData() || activeSheetData.data;
-    
+
     try {
       // 파일명에 현재 날짜와 시간 추가
       const now = new Date();
-      const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+      const dateStr = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
       const fileName = `${activeSheetData.sheetName}_${dateStr}.csv`;
-      
+
       // CSV로 내보내기
       exportActiveSheetToCSV({
         sheetName: activeSheetData.sheetName,
         headers: activeSheetData.headers,
         data: currentData
       }, fileName);
-      
+
       // 내보내기 드롭다운 닫기
       setIsExportDropdownOpen(false);
     } catch (error) {
@@ -935,19 +881,19 @@ const MainSpreadSheet: React.FC = () => {
   // XLSX 내보내기 핸들러
   const handleExportToXLSX = useCallback(() => {
     if (!xlsxData) return;
-    
+
     try {
       // 시트 선택기를 열거나 바로 내보내기
       if (selectedSheets.length === 0) {
         setIsXlsxSelectorOpen(true);
-        
+
         // 기본적으로 모든 시트 선택
         const allSheetIndices = xlsxData.sheets.map((_, index) => index);
         setSelectedSheets(allSheetIndices);
-        
+
         // 현재 날짜와 시간을 포함한 기본 파일명 설정
         const now = new Date();
-        const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+        const dateStr = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
         const baseFileName = xlsxData.fileName.replace(/\.[^/.]+$/, '') || 'export';
         setExportFileName(`${baseFileName}_${dateStr}`);
       } else {
@@ -957,7 +903,7 @@ const MainSpreadSheet: React.FC = () => {
           selectedSheets,
           exportFileName ? `${exportFileName}.xlsx` : undefined
         );
-        
+
         // 상태 초기화
         setIsXlsxSelectorOpen(false);
         setIsExportDropdownOpen(false);
@@ -969,26 +915,203 @@ const MainSpreadSheet: React.FC = () => {
       alert('XLSX 파일로 내보내는 중 오류가 발생했습니다.');
     }
   }, [xlsxData, selectedSheets, exportFileName]);
+  // Handsontable 설정 수정 - 원본 구조에 맞게
+  const getHandsontableSettings = useMemo(() => {
+    if (!activeSheetData) {
+      return {
+        minRows: 8,
+        minCols: 6,
+        startRows: 8,
+        startCols: 6
+      };
+    }
+
+    // 원본 데이터의 크기 확인
+    const rawRows = activeSheetData.rawData?.length || 0;
+    const rawCols = activeSheetData.rawData?.[0]?.length || 0;
+
+    // 메타데이터에서 실제 데이터 범위 확인
+    const dataRange = activeSheetData.metadata?.dataRange;
+    const startRow = dataRange?.startRow || 0;
+    const startCol = dataRange?.startCol || 0;
+
+    return {
+      minRows: Math.max(8, rawRows),
+      minCols: Math.max(6, rawCols),
+      startRows: Math.max(8, rawRows),
+      startCols: Math.max(6, rawCols),
+      // 데이터가 중간부터 시작하는 경우를 위한 설정
+      viewportRowRenderingOffset: Math.max(0, startRow - 5),
+      viewportColumnRenderingOffset: Math.max(0, startCol - 2)
+    };
+  }, [activeSheetData]);
+
+  // afterChange 핸들러 수정 - 원본 구조 고려
+  const handleAfterChange = useCallback((
+    changes: Handsontable.CellChange[] | null,
+    source: Handsontable.ChangeSource
+  ) => {
+    // 내부 업데이트이거나 로드 시점이면 스킵
+    if (isInternalUpdate || source === 'loadData') {
+      return;
+    }
+
+    // 사용자 변경사항을 스토어에 반영
+    if (changes && activeSheetData) {
+      changes.forEach(([row, col, , newValue]) => {
+        if (typeof row === 'number' && typeof col === 'number') {
+          // 원본 데이터 구조를 고려한 업데이트
+          if (activeSheetData.metadata && activeSheetData.metadata.headerRow !== undefined) {
+            const headerRow = activeSheetData.metadata.headerRow;
+
+            if (headerRow >= 0 && row > headerRow) {
+              // 헤더 이후의 데이터 행
+              const dataRow = row - headerRow - 1;
+              if (dataRow >= 0) {
+                updateActiveSheetCell(dataRow, col, newValue?.toString() || '');
+              }
+            } else if (headerRow === -1 || row < headerRow) {
+              // 헤더가 없거나 헤더 이전의 행
+              updateActiveSheetCell(row, col, newValue?.toString() || '');
+            }
+            // 헤더 행 자체는 업데이트하지 않음 (추후 헤더 편집 기능 추가 시 변경)
+          } else {
+            // 메타데이터가 없는 경우 그대로 업데이트
+            updateActiveSheetCell(row, col, newValue?.toString() || '');
+          }
+        }
+      });
+    }
+
+    if (!isAutosave) {
+      return;
+    }
+  }, [isInternalUpdate, activeSheetData, updateActiveSheetCell, isAutosave]);
+  const handleCellSelection = useCallback((row: number, col: number, row2?: number, col2?: number) => {
+    if (!hotRef.current?.hotInstance || !xlsxData || !activeSheetData) return;
+
+    const hot = hotRef.current.hotInstance;
+    
+    let value = '';
+    let formula = '';
+    let isHeader = false;
+    let actualDataRow = row;
+
+    try {
+        // 셀 값 가져오기
+        value = hot.getDataAtCell(row, col) || '';
+        
+        // rawData를 사용하는 경우
+        if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
+            // 원본 데이터에서 직접 값 가져오기
+            value = activeSheetData.rawData[row]?.[col] || '';
+            
+            // 메타데이터가 있고 헤더 행이 지정된 경우
+            if (activeSheetData.metadata && activeSheetData.metadata.headerRow !== undefined && activeSheetData.metadata.headerRow >= 0) {
+                const headerRow = activeSheetData.metadata.headerRow;
+                
+                // 헤더 행인지 확인
+                if (row === headerRow) {
+                    isHeader = true;
+                    actualDataRow = -1; // 헤더는 데이터 행이 아님
+                } else if (row > headerRow) {
+                    // 헤더 이후의 데이터 행
+                    actualDataRow = row - headerRow - 1;
+                } else {
+                    // 헤더 이전의 행 (빈 행이거나 다른 데이터)
+                    actualDataRow = row;
+                }
+            } else {
+                // 헤더가 없거나 자동 생성된 경우
+                // 모든 행을 데이터로 간주하되, 실제 데이터 범위 확인
+                const dataRange = activeSheetData.metadata?.dataRange;
+                if (dataRange && row >= dataRange.startRow) {
+                    actualDataRow = row - dataRange.startRow;
+                } else {
+                    actualDataRow = row;
+                }
+            }
+        } else {
+            // rawData가 없는 경우 기존 로직 (헤더가 첫 번째 행)
+            if (row === 0) {
+                isHeader = true;
+                actualDataRow = -1;
+            } else {
+                actualDataRow = row - 1;
+            }
+        }
+        
+        // 수식 확인
+        const formulasPlugin = hot.getPlugin('formulas');
+        if (formulasPlugin && formulasPlugin.engine) {
+            const cellCoord = { row, col, sheet: 0 };
+            const cellFormula = formulasPlugin.engine.getCellFormula(cellCoord);
+            
+            if (cellFormula && cellFormula.startsWith('=')) {
+                formula = cellFormula;
+            }
+        }
+
+        // 셀 주소 계산 - 엑셀 형식 (A1, B2 등)
+        const colLetter = String.fromCharCode(65 + col);
+        const cellAddress = `${colLetter}${row + 1}`;
+
+        // 시트 참조 포함된 주소
+        const fullReference = coordsToSheetReference(
+            xlsxData.activeSheetIndex,
+            row,
+            col
+        );
+
+        const cellInfo: SelectedCellInfo = {
+            row: actualDataRow,
+            col,
+            cellAddress,
+            value,
+            formula: formula || undefined,
+            sheetIndex: xlsxData.activeSheetIndex,
+            timestamp: new Date()
+        };
+
+        setSelectedCellInfo(cellInfo);
+        
+        // 디버그 정보
+        console.log('Selected cell:', {
+            address: cellAddress,
+            fullReference,
+            value: value || '(empty)',
+            formula: formula || 'none',
+            isHeader,
+            actualDataRow,
+            originalRow: row,
+            originalCol: col,
+            sheetName: activeSheetData.sheetName
+        });
+    } catch (error) {
+        console.error('Error getting cell info:', error);
+    }
+}, [xlsxData, activeSheetData, coordsToSheetReference]);
+
 
   // XLSX 내보내기 실행 핸들러
   const executeXlsxExport = useCallback(() => {
     if (!xlsxData || selectedSheets.length === 0) return;
-    
+
     try {
       // 파일명에 날짜가 없는 경우 추가
       let finalFileName = exportFileName;
       if (!finalFileName.includes('_202')) { // 날짜 형식이 없는 경우
         const now = new Date();
-        const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+        const dateStr = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
         finalFileName = `${finalFileName}_${dateStr}`;
       }
-      
+
       exportSelectedSheetsToXLSX(
         xlsxData,
         selectedSheets,
         finalFileName ? `${finalFileName}.xlsx` : undefined
       );
-      
+
       // 상태 초기화
       setIsXlsxSelectorOpen(false);
       setIsExportDropdownOpen(false);
@@ -1014,7 +1137,7 @@ const MainSpreadSheet: React.FC = () => {
   // 모든 시트 선택/해제 핸들러
   const toggleAllSheets = useCallback(() => {
     if (!xlsxData) return;
-    
+
     if (selectedSheets.length === xlsxData.sheets.length) {
       // 모든 시트가 선택된 상태이면 모두 해제
       setSelectedSheets([]);
@@ -1029,29 +1152,29 @@ const MainSpreadSheet: React.FC = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      
+
       // 내보내기 드롭다운
       const exportDropdown = document.querySelector('.export-dropdown');
       const exportButton = document.querySelector('.export-button');
-      
+
       if (
-        isExportDropdownOpen && 
-        exportDropdown && 
-        !exportDropdown.contains(target) && 
-        exportButton && 
+        isExportDropdownOpen &&
+        exportDropdown &&
+        !exportDropdown.contains(target) &&
+        exportButton &&
         !exportButton.contains(target)
       ) {
         setIsExportDropdownOpen(false);
       }
-      
+
       // XLSX 시트 선택기
       const xlsxSelector = document.querySelector('.xlsx-sheet-selector');
-      
+
       if (
-        isXlsxSelectorOpen && 
-        xlsxSelector && 
+        isXlsxSelectorOpen &&
+        xlsxSelector &&
         !xlsxSelector.contains(target) &&
-        exportDropdown && 
+        exportDropdown &&
         !exportDropdown.contains(target)
       ) {
         setIsXlsxSelectorOpen(false);
@@ -1059,7 +1182,7 @@ const MainSpreadSheet: React.FC = () => {
         setExportFileName('');
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -1082,7 +1205,7 @@ const MainSpreadSheet: React.FC = () => {
   const renderExportControls = () => {
     return (
       <div className="relative ml-auto" style={{ zIndex: 9999 }}>
-        <button 
+        <button
           className="export-button flex items-center space-x-1.5 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm transition-colors duration-200"
           onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
           type="button"
@@ -1091,7 +1214,7 @@ const MainSpreadSheet: React.FC = () => {
           <span>내보내기</span>
           <ChevronDown size={14} />
         </button>
-        
+
         {/* 내보내기 드롭다운 - 포털로 렌더링 */}
         {isExportDropdownOpen && (
           <div className="export-dropdown absolute right-0 top-full mt-1 bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden z-50 min-w-[180px]" style={{ zIndex: 9999 }}>
@@ -1117,13 +1240,13 @@ const MainSpreadSheet: React.FC = () => {
             </div>
           </div>
         )}
-        
+
         {/* XLSX 시트 선택기 */}
         {isXlsxSelectorOpen && xlsxData && (
           <div className="xlsx-sheet-selector absolute right-0 top-full mt-1 bg-white rounded-lg border border-gray-200 shadow-lg z-50 min-w-[300px]" style={{ zIndex: 9999 }}>
             <div className="p-4">
               <h3 className="font-medium text-gray-800 mb-3">내보낼 시트 선택</h3>
-              
+
               {/* 파일명 입력 */}
               <div className="mb-4">
                 <label className="block text-sm text-gray-600 mb-1">파일명</label>
@@ -1135,7 +1258,7 @@ const MainSpreadSheet: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
               </div>
-              
+
               {/* 시트 선택 */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
@@ -1148,10 +1271,10 @@ const MainSpreadSheet: React.FC = () => {
                     {selectedSheets.length === xlsxData.sheets.length ? '모두 해제' : '모두 선택'}
                   </button>
                 </div>
-                
+
                 <div className="max-h-[200px] overflow-y-auto border border-gray-200 rounded-md divide-y">
                   {xlsxData.sheets.map((sheet, index) => (
-                    <div 
+                    <div
                       key={index}
                       className="flex items-center p-2.5 hover:bg-gray-50"
                     >
@@ -1162,7 +1285,7 @@ const MainSpreadSheet: React.FC = () => {
                         onChange={() => toggleSheetSelection(index)}
                         className="mr-2.5"
                       />
-                      <label 
+                      <label
                         htmlFor={`sheet-${index}`}
                         className="flex-1 text-sm cursor-pointer flex items-center justify-between"
                       >
@@ -1175,7 +1298,7 @@ const MainSpreadSheet: React.FC = () => {
                   ))}
                 </div>
               </div>
-              
+
               {/* 버튼 */}
               <div className="flex justify-end space-x-2">
                 <button
@@ -1209,7 +1332,7 @@ const MainSpreadSheet: React.FC = () => {
     <div className="h-full flex flex-col spreadsheet-container">
       {/* Handsontable z-index 문제 해결을 위한 스타일 */}
       <HandsontableStyles />
-      
+
       {/* 상단 컨트롤 패널 */}
       <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm" style={{ position: 'relative', zIndex: 9000 }}>
         <div className="flex items-center justify-between">
@@ -1233,7 +1356,7 @@ const MainSpreadSheet: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <span className="font-medium">값:</span>
                   <span className="bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
-                    {selectedCellInfo.value.toString().length > 30 
+                    {selectedCellInfo.value.toString().length > 30
                       ? `${selectedCellInfo.value.toString().substring(0, 30)}...`
                       : selectedCellInfo.value.toString()
                     }
@@ -1242,7 +1365,7 @@ const MainSpreadSheet: React.FC = () => {
               )}
             </div>
           )}
-          
+
           {/* 내보내기 버튼 추가 */}
           {renderExportControls()}
         </div>
@@ -1257,7 +1380,7 @@ const MainSpreadSheet: React.FC = () => {
                 </p>
                 <p className="text-xs text-[rgba(0,93,233,0.8)] mt-1.5">
                   {pendingFormula.cellAddress}에 {pendingFormula.formula} 적용
-                  {pendingFormula.sheetIndex !== undefined && 
+                  {pendingFormula.sheetIndex !== undefined &&
                     ` (시트 ${xlsxData?.sheets[pendingFormula.sheetIndex]?.sheetName || pendingFormula.sheetIndex})`
                   }
                 </p>
@@ -1301,17 +1424,17 @@ const MainSpreadSheet: React.FC = () => {
                 </div>
               )}
             </div>
-            
+
             {/* 시트 추가 버튼 - 항상 같은 위치에 표시 */}
             <div className="relative">
-              <button 
-                className="sheet-add-button" 
+              <button
+                className="sheet-add-button"
                 onClick={() => setIsCreateSheetModalOpen(true)}
                 aria-label="새 시트 추가"
               >
                 <Plus size={18} />
               </button>
-              
+
               {isCreateSheetModalOpen && (
                 <div className="sheet-create-modal">
                   <h3 className="text-base font-medium mb-3">새 시트 만들기</h3>
@@ -1344,16 +1467,16 @@ const MainSpreadSheet: React.FC = () => {
               )}
             </div>
           </div>
-          
+
           {/* 간단한 브라우저 스타일 스크롤바 */}
           {showScrollbar && (
-            <div 
+            <div
               className="tab-scrollbar-container"
               onClick={handleScrollbarClick}
             >
-              <div 
+              <div
                 className={`tab-scrollbar-thumb ${isDragging ? 'dragging' : ''}`}
-                style={{ 
+                style={{
                   width: `${scrollThumbWidth}px`,
                   left: `${scrollThumbPosition}px`
                 }}
@@ -1362,7 +1485,7 @@ const MainSpreadSheet: React.FC = () => {
             </div>
           )}
         </div>
-        
+
         {/* 로딩 상태 표시 */}
         {loadingStates.sheetSwitch && (
           <div className="absolute top-full left-0 right-0 mt-1 flex items-center justify-center py-2 bg-white shadow-sm z-10">
@@ -1434,7 +1557,7 @@ const MainSpreadSheet: React.FC = () => {
           // 셀 값 변경 후 포뮬러 업데이트 훅
           afterSetDataAtCell={() => {
             console.log('Data set, recalculating formulas...');
-            
+
             // 100ms 후에 재렌더링 (포뮬러가 계산될 시간을 줌)
             setTimeout(() => {
               hotRef.current?.hotInstance?.render();
