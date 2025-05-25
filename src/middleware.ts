@@ -8,6 +8,8 @@ export function middleware(request: NextRequest) {
   // Firebase의 쿠키 기반 세션 검사
   const session = request.cookies.get('firebase-session-token')?.value;
   const path = request.nextUrl.pathname;
+  const userAgent = request.headers.get('user-agent') || '';
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
   
   // 개발 환경 확인
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -16,6 +18,12 @@ export function middleware(request: NextRequest) {
   const isPublicPath = publicPaths.some(publicPath => 
     path === publicPath || path.startsWith(`${publicPath}/`)
   );
+
+  // 모바일에서 /application 접근 시 /sorryformobile로 리디렉션
+  if (isMobile && path.startsWith('/application')) {
+    const sorryUrl = new URL('/sorryformobile', request.url);
+    return NextResponse.redirect(sorryUrl);
+  }
 
   // 로그인되지 않았고 공개 경로가 아닌 경우 로그인 페이지로 리디렉션
   if (!session && !isPublicPath) {
@@ -44,11 +52,19 @@ export function middleware(request: NextRequest) {
   // Firebase의 쿠키 기반 세션 검사
   const session = request.cookies.get('firebase-session-token')?.value;
   const path = request.nextUrl.pathname;
+  const userAgent = request.headers.get('user-agent') || '';
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
 
   // 공개 경로는 항상 접근 가능
   const isPublicPath = publicPaths.some(publicPath => 
     path === publicPath || path.startsWith(`${publicPath}/`)
   );
+
+  // 모바일에서 /application 접근 시 /sorryformobile로 리디렉션
+  if (isMobile && path.startsWith('/application')) {
+    const sorryUrl = new URL('/sorryformobile', request.url);
+    return NextResponse.redirect(sorryUrl);
+  }
 
   // 로그인되지 않았고 공개 경로가 아닌 경우 로그인 페이지로 리디렉션
   if (!session && !isPublicPath) {
