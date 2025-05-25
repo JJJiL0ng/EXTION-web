@@ -46,7 +46,7 @@ export default function Home() {
           {/* CTA Button */}
           <div className="mb-16 flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <Link 
-              href="https://instagram.com" // 임시 URL, 실제 인스타그램 URL로 교체해주세요.
+              href="https://www.instagram.com/orz__dik?igsh=MWlmdXQwZXduaHA0Mw==https://www.instagram.com/orz__dik?igsh=MWlmdXQwZXduaHA0Mw==" // 임시 URL, 실제 인스타그램 URL로 교체해주세요.
               className="inline-flex items-center px-12 py-4 bg-white text-gray-800 text-xl font-semibold rounded-full border-2 border-[#005DE9] hover:bg-gray-100 hover:border-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
               target="_blank" rel="noopener noreferrer"
             >
