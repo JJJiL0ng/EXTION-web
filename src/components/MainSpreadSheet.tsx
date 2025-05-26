@@ -454,6 +454,10 @@ const MainSpreadSheet: React.FC = () => {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [isCreateSheetModalOpen, setIsCreateSheetModalOpen] = useState(false);
   const [newSheetName, setNewSheetName] = useState('');
+  
+  // 셀 편집을 위한 상태 추가
+  const [cellEditValue, setCellEditValue] = useState('');
+  const [isCellEditing, setIsCellEditing] = useState(false);
 
   // 스크롤바 관련 상태
   const [scrollThumbPosition, setScrollThumbPosition] = useState(0);
@@ -1189,6 +1193,59 @@ const MainSpreadSheet: React.FC = () => {
     };
   }, [isExportDropdownOpen, isXlsxSelectorOpen]);
 
+  // 셀 편집 관련 핸들러 추가
+  const handleCellEditChange = useCallback((value: string) => {
+    setCellEditValue(value);
+  }, []);
+
+  const handleCellEditSubmit = useCallback(() => {
+    if (!selectedCellInfo || !hotRef.current?.hotInstance) return;
+
+    const hot = hotRef.current.hotInstance;
+    
+    try {
+      // 셀 값 업데이트
+      const actualRow = selectedCellInfo.row >= 0 ? selectedCellInfo.row + 1 : 0; // 헤더 고려
+      hot.setDataAtCell(actualRow, selectedCellInfo.col, cellEditValue);
+      
+      // 편집 모드 종료
+      setIsCellEditing(false);
+      
+      // 강제 재렌더링
+      setTimeout(() => {
+        hot.render();
+      }, 100);
+    } catch (error) {
+      console.error('Error updating cell:', error);
+    }
+  }, [selectedCellInfo, cellEditValue]);
+
+  const handleCellEditCancel = useCallback(() => {
+    // 원래 값으로 복원
+    if (selectedCellInfo) {
+      setCellEditValue(selectedCellInfo.formula || selectedCellInfo.value?.toString() || '');
+    }
+    setIsCellEditing(false);
+  }, [selectedCellInfo]);
+
+  const handleCellEditKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleCellEditSubmit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCellEditCancel();
+    }
+  }, [handleCellEditSubmit, handleCellEditCancel]);
+
+  // 셀 선택이 변경될 때 편집 값 업데이트
+  useEffect(() => {
+    if (selectedCellInfo) {
+      setCellEditValue(selectedCellInfo.formula || selectedCellInfo.value?.toString() || '');
+      setIsCellEditing(false);
+    }
+  }, [selectedCellInfo]);
+
   // 로딩 중일 때 표시
   if (loadingStates.fileUpload) {
     return (
@@ -1338,31 +1395,57 @@ const MainSpreadSheet: React.FC = () => {
         <div className="flex items-center justify-between">
           {/* 선택된 셀 정보 표시 */}
           {selectedCellInfo && (
-            <div className="flex items-center space-x-4 text-sm text-gray-700">
+            <div className="flex items-center space-x-4 text-sm text-gray-700 flex-1 mr-4">
               <div className="flex items-center space-x-2">
                 <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
                   {selectedCellInfo.cellAddress}
                 </span>
               </div>
-              {selectedCellInfo.formula && (
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">수식:</span>
-                  <span className="font-mono bg-[rgba(0,93,233,0.08)] px-2.5 py-1.5 rounded-lg text-[#005DE9] border border-[rgba(0,93,233,0.2)]">
-                    {selectedCellInfo.formula}
-                  </span>
+              
+              {/* 편집 가능한 셀 값 입력 필드 */}
+              <div className="flex items-center space-x-2 flex-1 max-w-md">
+                <span className="font-medium">Fx:</span>
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={cellEditValue}
+                    onChange={(e) => handleCellEditChange(e.target.value)}
+                    onFocus={() => setIsCellEditing(true)}
+                    onBlur={() => {
+                      // 블러 이벤트에서는 약간의 지연을 둬서 버튼 클릭이 처리될 수 있도록 함
+                      setTimeout(() => {
+                        if (!isCellEditing) return;
+                        handleCellEditSubmit();
+                      }, 150);
+                    }}
+                    onKeyDown={handleCellEditKeyDown}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="값 또는 수식 입력 (예: =SUM(A1:A5))"
+                  />
+                  
+                  {/* 편집 모드일 때 확인/취소 버튼 표시 */}
+                  {isCellEditing && (
+                    <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex space-x-1">
+                      <button
+                        type="button"
+                        onClick={handleCellEditSubmit}
+                        className="w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded text-xs flex items-center justify-center"
+                        title="확인 (Enter)"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCellEditCancel}
+                        className="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex items-center justify-center"
+                        title="취소 (Escape)"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              {!selectedCellInfo.formula && selectedCellInfo.value && (
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium">값:</span>
-                  <span className="bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
-                    {selectedCellInfo.value.toString().length > 30
-                      ? `${selectedCellInfo.value.toString().substring(0, 30)}...`
-                      : selectedCellInfo.value.toString()
-                    }
-                  </span>
-                </div>
-              )}
+              </div>
             </div>
           )}
 
