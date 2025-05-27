@@ -147,7 +147,8 @@ const createRequestBody = (
     getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any, // 실제 SheetsData 타입 반환 권장
     chatId?: string,
     chatTitle?: string, // 새 채팅 제목 (옵셔널)
-    messageId?: string  // 프론트 생성 임시 ID (옵셔널)
+    messageId?: string,  // 프론트 생성 임시 ID (옵셔널)
+    currentSheetIndex?: number // 현재 시트 인덱스 추가
 ) => {
     const { user: currentUser, loading: authLoading } = useAuthStore.getState();
     
@@ -163,11 +164,11 @@ const createRequestBody = (
         throw new Error('로그인이 필요합니다. (currentUser is null in createRequestBody)');
     }
 
-    // 현재 데이터 컨텍스트 (있는 경우)
+    // 현재 시트 데이터만 가져오기 (allSheets=false가 기본값)
     let analysisData = null;
-    // sheetsData는 getDataForGPTAnalysis 함수가 제공될 때만 생성
     if (getDataForGPTAnalysis) {
-        analysisData = getDataForGPTAnalysis(undefined, true);
+        // currentSheetIndex가 제공되면 해당 시트, 아니면 현재 활성 시트만 전송
+        analysisData = getDataForGPTAnalysis(currentSheetIndex, false); // false로 현재 시트만
     }
 
     return {
@@ -208,6 +209,7 @@ export const callNormalChatAPI = async (
         chatId?: string;
         chatTitle?: string; // chatTitle을 options로 받을 수 있도록 추가
         messageId?: string;
+        currentSheetIndex?: number; // 현재 시트 인덱스 추가
     }
 ): Promise<NormalChatResponse> => {
     try {
@@ -217,7 +219,8 @@ export const callNormalChatAPI = async (
             getDataForGPTAnalysis,
             options?.chatId,
             options?.chatTitle, // chatTitle 전달
-            options?.messageId
+            options?.messageId,
+            options?.currentSheetIndex // 현재 시트 인덱스 전달
         );
 
         console.log('Normal Chat Request Body:', JSON.stringify(requestBody, null, 2));
@@ -271,6 +274,7 @@ export const callArtifactAPI = async (
     options?: {
         chatId?: string;
         messageId?: string;
+        currentSheetIndex?: number; // 현재 시트 인덱스 추가
     }
 ): Promise<ArtifactResponse> => {
     if (!extendedSheetContext) {
@@ -292,7 +296,8 @@ export const callArtifactAPI = async (
             getDataForGPTAnalysis,
             options?.chatId,
             undefined, // 아티팩트는 새 채팅 생성하지 않음
-            options?.messageId
+            options?.messageId,
+            options?.currentSheetIndex // 현재 시트 인덱스 전달
         );
 
         console.log('Artifact Request Body:', JSON.stringify(requestBody, null, 2));
@@ -336,6 +341,7 @@ export const callFormulaAPI = async (
     options?: {
         chatId?: string;
         messageId?: string;
+        currentSheetIndex?: number; // 현재 시트 인덱스 추가
     }
 ): Promise<FormulaResponse> => {
     if (!extendedSheetContext) {
@@ -349,7 +355,8 @@ export const callFormulaAPI = async (
             undefined,
             options?.chatId,
             undefined,
-            options?.messageId
+            options?.messageId,
+            options?.currentSheetIndex // 현재 시트 인덱스 전달
         );
 
         const response = await fetch(`${API_BASE_URL}/formula/generate`, {
@@ -382,6 +389,7 @@ export const callDataFixAPI = async (
     options?: {
         chatId?: string;
         messageId?: string;
+        currentSheetIndex?: number; // 현재 시트 인덱스 추가
     }
 ): Promise<DataFixResponse> => {
     try {
@@ -391,7 +399,8 @@ export const callDataFixAPI = async (
             getDataForGPTAnalysis,
             options?.chatId,
             undefined,
-            options?.messageId
+            options?.messageId,
+            options?.currentSheetIndex // 현재 시트 인덱스 전달
         );
 
         console.log('Data Fix Request Body:', JSON.stringify(requestBody, null, 2));
@@ -435,6 +444,7 @@ export const callDataGenerationAPI = async (
     options?: {
         chatId?: string;
         messageId?: string;
+        currentSheetIndex?: number; // 현재 시트 인덱스 추가
     }
 ): Promise<DataGenerationResponse> => {
     try {
@@ -444,7 +454,8 @@ export const callDataGenerationAPI = async (
             getDataForGPTAnalysis,
             options?.chatId,
             undefined,
-            options?.messageId
+            options?.messageId,
+            options?.currentSheetIndex // 현재 시트 인덱스 전달
         );
 
         console.log('Data Generation Request Body:', JSON.stringify(requestBody, null, 2));

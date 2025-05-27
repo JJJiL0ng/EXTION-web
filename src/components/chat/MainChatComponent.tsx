@@ -420,8 +420,19 @@ export default function MainChatComponent() {
                         timestamp: new Date()
                     };
 
-                    // 첫 번째 시트(인덱스 0)에 메시지 추가
-                    addMessageToSheet(0, successMessage);
+                    // 각 시트별로 별도의 채팅 메시지 추가
+                    xlsxData.sheets.forEach((sheet, index) => {
+                        const sheetMessage: ChatMessage = {
+                            id: `${Date.now()}-${index}`,
+                            type: 'Extion ai',
+                            content: `${sheet.sheetName} 시트가 업로드되었습니다.\n\n` +
+                                `• 열 수: ${sheet.headers.length}\n` +
+                                `• 행 수: ${sheet.data.length}\n` +
+                                `• 헤더: ${sheet.headers.slice(0, 5).join(', ')}${sheet.headers.length > 5 ? '...' : ''}`,
+                            timestamp: new Date()
+                        };
+                        addMessageToSheet(index, sheetMessage);
+                    });
                 }
             } else if (fileExtension === 'csv') {
                 // CSV 파일 처리
@@ -823,7 +834,8 @@ export default function MainChatComponent() {
             const chatId = getCurrentChatId();
 
             const apiCall = callFormulaAPI(userInput, extendedSheetContext, {
-                chatId: chatId
+                chatId: chatId,
+                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
             });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
@@ -908,7 +920,8 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             const chatId = getCurrentChatId();
 
             const apiCall = callArtifactAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId
+                chatId: chatId,
+                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
             });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
@@ -985,7 +998,8 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             const chatId = getCurrentChatId();
 
             const apiCall = callDataGenerationAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId
+                chatId: chatId,
+                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
             });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
@@ -1059,7 +1073,8 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             const chatId = getCurrentChatId();
 
             const apiCall = callDataFixAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId
+                chatId: chatId,
+                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
             });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
@@ -1147,7 +1162,8 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             const chatId = getCurrentChatId();
             
             const apiCall = callNormalChatAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId
+                chatId: chatId,
+                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
             });
             const result = await Promise.race([apiCall, timeoutPromise]);
 

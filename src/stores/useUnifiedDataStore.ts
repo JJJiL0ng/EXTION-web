@@ -109,6 +109,9 @@ interface ExtendedUnifiedDataStoreState {
     sheetMessages: { [sheetIndex: number]: ChatMessage[] }; // 시트별 메시지
     activeSheetMessages: ChatMessage[]; // 현재 활성 시트의 메시지
 
+    // === 시트별 채팅 ID 관리 ===
+    sheetChatIds: { [sheetIndex: number]: string }; // 시트별 개별 채팅 ID
+    
     // === Sheet Context ===
     extendedSheetContext: ExtendedSheetContext | null;
 
@@ -150,7 +153,7 @@ interface ExtendedUnifiedDataStoreState {
     // === Internal Flags ===
     isInternalUpdate: boolean;
 
-    // === Chat Management ===
+    // === Chat Management (deprecated - 시트별 채팅으로 대체) ===
     currentChatId: string | null; // 현재 채팅 ID
     chatHistory: string[]; // 채팅 히스토리 (최근 채팅 ID들)
 
@@ -237,7 +240,14 @@ interface ExtendedUnifiedDataStoreActions {
     clearMessagesForSheet: (sheetIndex: number) => void;
     clearAllMessages: () => void;
 
-    // === Chat ID Management ===
+    // === 시트별 채팅 ID 관리 ===
+    getChatIdForSheet: (sheetIndex: number) => string;
+    setChatIdForSheet: (sheetIndex: number, chatId: string) => void;
+    generateNewChatIdForSheet: (sheetIndex: number, chatTitle?: string) => string;
+    getCurrentSheetChatId: () => string | null;
+    initializeSheetChatIds: () => void;
+
+    // === Chat ID Management (deprecated - 시트별 채팅으로 대체) ===
     setCurrentChatId: (chatId: string | null) => void;
     getCurrentChatId: () => string | undefined;
     generateNewChatId: () => string;
@@ -422,6 +432,9 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             // 시트별 메시지 초기화
             sheetMessages: {},
             activeSheetMessages: [],
+            
+            // 시트별 채팅 ID 초기화
+            sheetChatIds: {},
  
             loadingStates: {
                 fileUpload: false,
@@ -465,14 +478,24 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             },
  
             getCurrentChatId: () => {
+                const { xlsxData, sheetChatIds, getCurrentSheetChatId } = get();
+                
+                // 1. 현재 활성 시트의 채팅 ID 먼저 확인
+                if (xlsxData) {
+                    const currentSheetChatId = getCurrentSheetChatId();
+                    if (currentSheetChatId) {
+                        return currentSheetChatId;
+                    }
+                }
+                
+                // 2. 기존 로직 유지 (시트가 없는 경우)
                 const { currentChatId } = get();
                 
-                // 1. 스토어에서 가져오기
                 if (currentChatId) {
                     return currentChatId;
                 }
                 
-                // 2. 로컬 스토리지에서 가져오기
+                // 3. 로컬 스토리지에서 가져오기
                 if (typeof window !== 'undefined') {
                     const storedChatId = localStorage.getItem('currentChatId');
                     if (storedChatId) {
@@ -481,7 +504,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     }
                 }
                 
-                // 3. URL 파라미터에서 가져오기
+                // 4. URL 파라미터에서 가져오기
                 if (typeof window !== 'undefined') {
                     const urlParams = new URLSearchParams(window.location.search);
                     const chatIdFromUrl = urlParams.get('chatId');
@@ -575,7 +598,8 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             activeSheetData: null,
                             computedSheetData: {},
                             extendedSheetContext: null,
-                            activeSheetMessages: [] // 데이터 없으면 메시지도 초기화
+                            activeSheetMessages: [], // 데이터 없으면 메시지도 초기화
+                            sheetChatIds: {} // 시트별 채팅 ID도 초기화
                         };
                     }
  
@@ -588,6 +612,16 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             newComputedData[index] = [...sheet.data];
                         }
                     });
+                    
+                    // 시트별 채팅 ID 초기화 (기존 ID가 없는 시트만)
+                    const newSheetChatIds = { ...state.sheetChatIds };
+                    data.sheets.forEach((sheet, index) => {
+                        if (!newSheetChatIds[index]) {
+                            // 새로운 채팅 ID 생성
+                            const newChatId = `chat_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 15)}`;
+                            newSheetChatIds[index] = newChatId;
+                        }
+                    });
  
                     // 현재 활성 시트의 메시지 불러오기
                     const activeSheetMessages = state.sheetMessages[data.activeSheetIndex] || [];
@@ -598,7 +632,8 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         activeSheetData: activeSheet,
                         computedSheetData: newComputedData,
                         extendedSheetContext: generateExtendedSheetContext(data),
-                        activeSheetMessages
+                        activeSheetMessages,
+                        sheetChatIds: newSheetChatIds
                     };
                 });
             },
@@ -740,7 +775,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 return computedSheetData[sheetIndex] || null;
             },
  
-            // GPT 분석용 데이터 가져오기 - 개선된 버전
+            // GPT 분석용 데이터 가져오기 - 현재 시트 중심 버전
             getDataForGPTAnalysis: (sheetIndex, allSheets = false) => {
                 const { xlsxData, computedSheetData } = get();
  
@@ -749,6 +784,8 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 }
  
                 const sheets = [];
+                
+                // 기본적으로 현재 활성 시트만 반환 (allSheets=true일 때만 전체 시트)
                 const targetSheets = allSheets
                     ? xlsxData.sheets
                     : sheetIndex !== undefined
@@ -770,7 +807,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         ? sheet.headers.map(h => String(h))
                         : [];
  
-                    // ✅ 전체 데이터를 포함하도록 수정 (샘플이 아닌)
+                    // 전체 데이터를 포함
                     const fullData = currentData.map(row =>
                         Array.isArray(row) ? row.map(cell => String(cell || '')) : []
                     );
@@ -787,10 +824,10 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             headers: validHeaders,               // 문자열 배열 보장
                             rowCount: currentData.length,
                             columnCount: validHeaders.length,
-                            fullData: fullData,                  // ✅ 추가: 전체 데이터
-                            sampleData: sampleData,              // 기존: 샘플 데이터 (5행)
+                            fullData: fullData,                  // 전체 데이터
+                            sampleData: sampleData,              // 샘플 데이터 (5행)
                             sheetIndex: sheetIdx,
-                            // ✅ 추가: 원본 시트 메타데이터
+                            // 원본 시트 메타데이터
                             originalMetadata: sheet.metadata
                         }
                     });
@@ -799,7 +836,9 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 return {
                     sheets,
                     activeSheet: xlsxData.sheets[xlsxData.activeSheetIndex].sheetName,
-                    // ✅ 추가: 전체 컨텍스트 정보
+                    // 추가: 현재 시트 정보
+                    currentSheetIndex: xlsxData.activeSheetIndex,
+                    // 전체 컨텍스트 정보 (필요시에만)
                     totalSheets: xlsxData.sheets.length,
                     fileName: xlsxData.fileName
                 };
@@ -918,6 +957,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     extendedSheetContext: null,
                     sheetMessages: {},
                     activeSheetMessages: [],
+                    sheetChatIds: {}, // 시트별 채팅 ID 초기화
                     // === Chat Management 리셋 ===
                     currentChatId: null,
                     chatHistory: [],
@@ -1225,6 +1265,37 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     isSaved: false 
                 } : null
             })),
+
+            // === 시트별 채팅 ID 관리 ===
+            getChatIdForSheet: (sheetIndex: number) => {
+                const { sheetChatIds } = get();
+                return sheetChatIds[sheetIndex] || '';
+            },
+            setChatIdForSheet: (sheetIndex: number, chatId: string) => {
+                set((state) => ({
+                    sheetChatIds: {
+                        ...state.sheetChatIds,
+                        [sheetIndex]: chatId
+                    }
+                }));
+            },
+            generateNewChatIdForSheet: (sheetIndex: number, chatTitle?: string) => {
+                const { getCurrentChatId, generateNewChatId } = get();
+                const newChatId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+                get().setChatIdForSheet(sheetIndex, newChatId);
+                get().addToChatHistory(newChatId);
+                return newChatId;
+            },
+            getCurrentSheetChatId: () => {
+                const { currentSpreadsheetId } = get();
+                return currentSpreadsheetId;
+            },
+            initializeSheetChatIds: () => {
+                const { sheets } = get().xlsxData || { sheets: [] };
+                sheets.forEach((sheet, index) => {
+                    get().setChatIdForSheet(index, '');
+                });
+            },
         }),
         {
             name: 'extended-unified-data-store',
