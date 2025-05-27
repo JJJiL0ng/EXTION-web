@@ -20,7 +20,7 @@ export function middleware(request: NextRequest) {
   );
 
   // 모바일에서 /application 접근 시 /sorryformobile로 리디렉션
-  if (isMobile && path.startsWith('/application')) {
+  if (isMobile && path.startsWith('/ai')) {
     const sorryUrl = new URL('/sorryformobile', request.url);
     return NextResponse.redirect(sorryUrl);
   }
@@ -39,7 +39,7 @@ export function middleware(request: NextRequest) {
       return NextResponse.next();
     }
     
-    const homeUrl = new URL('/application', request.url);
+    const homeUrl = new URL('/ai', request.url);
     return NextResponse.redirect(homeUrl);
   }
 
