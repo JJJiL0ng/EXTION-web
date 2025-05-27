@@ -58,7 +58,16 @@ export default function MainChatComponent() {
         // 시트별 채팅 관련 스토어 값과 액션
         activeSheetMessages,
         addMessageToSheet,
-        clearAllMessages
+        clearAllMessages,
+        currentChatId,
+        getCurrentChatId,
+        generateNewChatId,
+        initializeChatId,
+        setCurrentChatId,
+        // 스프레드시트 관련 액션들 추가
+        setCurrentSpreadsheetId,
+        setSpreadsheetMetadata,
+        markAsSaved,
     } = useExtendedUnifiedDataStore();
 
     // 파일이 로드되었는지 확인
@@ -67,11 +76,43 @@ export default function MainChatComponent() {
     // 현재 활성 시트 인덱스 가져오기
     const activeSheetIndex = xlsxData?.activeSheetIndex || 0;
 
+    // === 채팅 ID 초기화 Effect 추가 ===
+    useEffect(() => {
+        const initChat = () => {
+            // 채팅 ID 초기화 (기존 것이 있으면 사용, 없으면 새로 생성)
+            const chatId = initializeChatId();
+            console.log('채팅 ID 초기화됨:', chatId);
+        };
+
+        initChat();
+    }, []); // 컴포넌트 마운트 시 한 번만 실행
+
+     // === URL 파라미터 변경 감지 Effect (옵션) ===
+     useEffect(() => {
+        const handleUrlChange = () => {
+            if (typeof window !== 'undefined') {
+                const urlParams = new URLSearchParams(window.location.search);
+                const chatIdFromUrl = urlParams.get('chatId');
+                
+                if (chatIdFromUrl && chatIdFromUrl !== currentChatId) {
+                    setCurrentChatId(chatIdFromUrl);
+                }
+            }
+        };
+
+        // popstate 이벤트 리스너 (뒤로 가기/앞으로 가기)
+        window.addEventListener('popstate', handleUrlChange);
+        
+        return () => {
+            window.removeEventListener('popstate', handleUrlChange);
+        };
+    }, [currentChatId, setCurrentChatId]);
+
     // 로딩 상태 관리를 위한 효과
     useEffect(() => {
         if (isLoading) {
             // 로딩이 시작될 때 초기화
-            setLoadingProgress(0);
+
             setLoadingHintIndex(0);
 
             // 진행 상태를 시뮬레이션하는 인터벌 설정
@@ -224,6 +265,24 @@ export default function MainChatComponent() {
                         };
                         setXLSXData(updatedXlsxData);
 
+                        // 스토어에 chatId와 spreadsheetId 저장
+                        if (saveResult.chatId) {
+                            setCurrentChatId(saveResult.chatId);
+                        }
+                        
+                        if (saveResult.spreadsheetId) {
+                            setCurrentSpreadsheetId(saveResult.spreadsheetId);
+                            setSpreadsheetMetadata({
+                                fileName: newXlsxData.fileName,
+                                originalFileName: file.name,
+                                fileSize: file.size,
+                                fileType: 'xlsx',
+                                isSaved: true,
+                                lastSaved: new Date()
+                            });
+                            markAsSaved(saveResult.spreadsheetId);
+                        }
+
                     } catch (saveError) {
                         console.error('Firebase 저장 실패:', saveError);
                     }
@@ -305,6 +364,24 @@ export default function MainChatComponent() {
                             spreadsheetId: saveResult.spreadsheetId
                         };
                         setXLSXData(updatedXlsxData);
+
+                        // 스토어에 chatId와 spreadsheetId 저장
+                        if (saveResult.chatId) {
+                            setCurrentChatId(saveResult.chatId);
+                        }
+                        
+                        if (saveResult.spreadsheetId) {
+                            setCurrentSpreadsheetId(saveResult.spreadsheetId);
+                            setSpreadsheetMetadata({
+                                fileName: xlsxData.fileName,
+                                originalFileName: file.name,
+                                fileSize: file.size,
+                                fileType: 'xlsx',
+                                isSaved: true,
+                                lastSaved: new Date()
+                            });
+                            markAsSaved(saveResult.spreadsheetId);
+                        }
 
                     } catch (saveError) {
                         console.error('Firebase 저장 실패:', saveError);
@@ -476,6 +553,24 @@ export default function MainChatComponent() {
                                         };
                                         setXLSXData(updatedXlsxData);
 
+                                        // 스토어에 chatId와 spreadsheetId 저장
+                                        if (saveResult.chatId) {
+                                            setCurrentChatId(saveResult.chatId);
+                                        }
+                                        
+                                        if (saveResult.spreadsheetId) {
+                                            setCurrentSpreadsheetId(saveResult.spreadsheetId);
+                                            setSpreadsheetMetadata({
+                                                fileName: newXlsxData.fileName,
+                                                originalFileName: file.name,
+                                                fileSize: file.size,
+                                                fileType: 'csv',
+                                                isSaved: true,
+                                                lastSaved: new Date()
+                                            });
+                                            markAsSaved(saveResult.spreadsheetId);
+                                        }
+
                                     } catch (saveError) {
                                         console.error('Firebase 저장 실패:', saveError);
                                     }
@@ -556,6 +651,24 @@ export default function MainChatComponent() {
                                             spreadsheetId: saveResult.spreadsheetId
                                         };
                                         setXLSXData(updatedXlsxData);
+
+                                        // 스토어에 chatId와 spreadsheetId 저장
+                                        if (saveResult.chatId) {
+                                            setCurrentChatId(saveResult.chatId);
+                                        }
+                                        
+                                        if (saveResult.spreadsheetId) {
+                                            setCurrentSpreadsheetId(saveResult.spreadsheetId);
+                                            setSpreadsheetMetadata({
+                                                fileName: xlsxData.fileName,
+                                                originalFileName: file.name,
+                                                fileSize: file.size,
+                                                fileType: 'csv',
+                                                isSaved: true,
+                                                lastSaved: new Date()
+                                            });
+                                            markAsSaved(saveResult.spreadsheetId);
+                                        }
 
                                     } catch (saveError) {
                                         console.error('Firebase 저장 실패:', saveError);
@@ -706,10 +819,20 @@ export default function MainChatComponent() {
                 setTimeout(() => reject(new Error('timeout')), 15000);
             });
 
-            const apiCall = callFormulaAPI(userInput, extendedSheetContext);
+            // 현재 chatId를 가져와서 API 호출에 포함
+            const chatId = getCurrentChatId();
+
+            const apiCall = callFormulaAPI(userInput, extendedSheetContext, {
+                chatId: chatId
+            });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
             if (result.success && result.formula) {
+                // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
+                if (result.chatId) {
+                    setCurrentChatId(result.chatId);
+                }
+
                 const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
@@ -781,10 +904,20 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 setTimeout(() => reject(new Error('timeout')), 30000);
             });
 
-            const apiCall = callArtifactAPI(userInput, extendedSheetContext, getDataForGPTAnalysis);
+            // 현재 chatId를 가져와서 API 호출에 포함
+            const chatId = getCurrentChatId();
+
+            const apiCall = callArtifactAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
+                chatId: chatId
+            });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
             if (result.success && result.code) {
+                // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
+                if (result.chatId) {
+                    setCurrentChatId(result.chatId);
+                }
+
                 const artifactData = {
                     code: result.code,
                     type: result.type || 'analysis',
@@ -848,10 +981,20 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 setTimeout(() => reject(new Error('timeout')), 30000);
             });
 
-            const apiCall = callDataGenerationAPI(userInput, extendedSheetContext, getDataForGPTAnalysis);
+            // 현재 chatId를 가져와서 API 호출에 포함
+            const chatId = getCurrentChatId();
+
+            const apiCall = callDataGenerationAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
+                chatId: chatId
+            });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
             if (result.success && result.editedData) {
+                // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
+                if (result.chatId) {
+                    setCurrentChatId(result.chatId);
+                }
+
                 // 생성된 데이터 적용
                 applyGeneratedData({
                     sheetName: result.editedData.sheetName,
@@ -912,11 +1055,21 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 setTimeout(() => reject(new Error('timeout')), 30000);
             });
 
-            const apiCall = callDataFixAPI(userInput, extendedSheetContext, getDataForGPTAnalysis);
+            // 현재 chatId를 가져와서 API 호출에 포함
+            const chatId = getCurrentChatId();
+
+            const apiCall = callDataFixAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
+                chatId: chatId
+            });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
             if (result.success && result.editedData) {
-                // 수정된 데이터 적용
+                // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
+                if (result.chatId) {
+                    setCurrentChatId(result.chatId);
+                }
+
+                // 생성된 데이터 적용
                 applyGeneratedData({
                     sheetName: result.editedData.sheetName,
                     headers: result.editedData.headers,
@@ -990,10 +1143,20 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 setTimeout(() => reject(new Error('timeout')), 30000);
             });
 
-            const apiCall = callNormalChatAPI(userInput, extendedSheetContext, getDataForGPTAnalysis);
+            // 현재 chatId를 가져와서 API 호출에 포함
+            const chatId = getCurrentChatId();
+            
+            const apiCall = callNormalChatAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
+                chatId: chatId
+            });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
             if (result.success) {
+                // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
+                if (result.chatId) {
+                    setCurrentChatId(result.chatId);
+                }
+
                 const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
@@ -1049,6 +1212,18 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
     return (
         <div className="flex flex-col h-full w-full bg-white">
+            {/* 디버그 정보 - chatId 표시 */}
+            {process.env.NODE_ENV === 'development' && (
+                <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-xs">
+                    <div className="max-w-3xl mx-auto">
+                        <span className="font-medium text-yellow-800">디버그:</span>{' '}
+                        <span className="text-yellow-700">
+                            현재 ChatID: {currentChatId || '없음'}
+                        </span>
+                    </div>
+                </div>
+            )}
+            
             <div className="flex flex-col h-full w-full">
                 {/* 파일 정보를 채팅 맨 위에 표시 */}
                 {xlsxData && (

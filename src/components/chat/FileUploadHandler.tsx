@@ -1,8 +1,8 @@
 'use client'
 
 import React from 'react';
-import { XIcon, FileIcon, FileSpreadsheetIcon } from 'lucide-react';
-import { XLSXData } from '@/stores/useUnifiedDataStore';
+import { XIcon, FileIcon, FileSpreadsheetIcon, CheckCircleIcon, CloudIcon } from 'lucide-react';
+import { XLSXData, useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 
 interface FileUploadHandlerProps {
     isDragOver: boolean;
@@ -25,6 +25,13 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
     removeFile,
     switchToSheet
 }) => {
+    // 스토어에서 스프레드시트 관련 상태 가져오기
+    const {
+        currentSpreadsheetId,
+        spreadsheetMetadata,
+        currentChatId
+    } = useExtendedUnifiedDataStore();
+
     return (
         <div className="py-3 px-4">
             <div className="flex items-center justify-between">
@@ -38,13 +45,49 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
                             <span className="text-sm font-semibold text-blue-600">
                                 {xlsxData?.fileName}
                             </span>
+                            {/* 저장 상태 표시 */}
+                            {spreadsheetMetadata?.isSaved && (
+                                <span className="ml-2" title="Firebase에 저장됨">
+                                    <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                                </span>
+                            )}
                         </div>
                         
-                        {xlsxData?.sheets && (
-                            <span className="text-xs text-gray-500">
-                                시트 {xlsxData.sheets.length}개 / 활성 시트: {xlsxData.sheets[xlsxData.activeSheetIndex]?.sheetName}
-                            </span>
-                        )}
+                        <div className="flex flex-col text-xs text-gray-500 mt-1">
+                            {xlsxData?.sheets && (
+                                <span>
+                                    시트 {xlsxData.sheets.length}개 / 활성 시트: {xlsxData.sheets[xlsxData.activeSheetIndex]?.sheetName}
+                                </span>
+                            )}
+                            
+                            {/* 스프레드시트 ID와 채팅 ID 표시 */}
+                            <div className="flex items-center space-x-3 mt-1">
+                                {currentSpreadsheetId && (
+                                    <div className="flex items-center">
+                                        <CloudIcon className="h-3 w-3 text-gray-400 mr-1" />
+                                        <span className="font-mono text-xs">
+                                            ID: {currentSpreadsheetId.substring(0, 8)}...
+                                        </span>
+                                    </div>
+                                )}
+                                
+                                {currentChatId && (
+                                    <div className="flex items-center">
+                                        <span className="text-gray-400 mr-1">💬</span>
+                                        <span className="font-mono text-xs">
+                                            채팅: {currentChatId.substring(0, 8)}...
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* 마지막 저장 시간 표시 */}
+                            {spreadsheetMetadata?.lastSaved && (
+                                <span className="text-xs text-gray-400 mt-1">
+                                    저장됨: {new Date(spreadsheetMetadata.lastSaved).toLocaleString('ko-KR')}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
                 

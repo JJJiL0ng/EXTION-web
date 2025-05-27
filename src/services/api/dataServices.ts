@@ -604,6 +604,7 @@ export const saveSpreadsheetToFirebase = async (
 ): Promise<{
     success: boolean;
     spreadsheetId: string;
+    chatId: string;
     fileName: string;
     sheets: Array<{
         sheetIndex: number;
