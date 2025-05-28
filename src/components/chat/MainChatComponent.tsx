@@ -38,12 +38,14 @@ export default function MainChatComponent() {
     const [loadingHintIndex, setLoadingHintIndex] = useState(0);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const loadingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const prevChatIdRef = useRef<string | null>(null);
 
     // Zustand 스토어 사용
     const {
         xlsxData,
         extendedSheetContext,
         loadingStates,
+        hasUploadedFile,
         setXLSXData,
         setLoadingState,
         setError,
@@ -68,6 +70,9 @@ export default function MainChatComponent() {
         setCurrentSpreadsheetId,
         setSpreadsheetMetadata,
         markAsSaved,
+        canUploadFile,
+        saveCurrentSessionToStore,
+        loadChatSessionsFromStorage,
     } = useExtendedUnifiedDataStore();
 
     // 파일이 로드되었는지 확인
@@ -75,6 +80,42 @@ export default function MainChatComponent() {
 
     // 현재 활성 시트 인덱스 가져오기
     const activeSheetIndex = xlsxData?.activeSheetIndex || 0;
+
+    // === 채팅 세션 관리 Effect ===
+    useEffect(() => {
+        // 컴포넌트 마운트 시 저장된 채팅 세션들 로드
+        loadChatSessionsFromStorage();
+    }, [loadChatSessionsFromStorage]);
+
+    // === 채팅 ID 변경 시 세션 저장 Effect ===
+    useEffect(() => {
+        // 현재 채팅 ID가 변경되었을 때 이전 세션 저장
+        if (prevChatIdRef.current && prevChatIdRef.current !== currentChatId) {
+            saveCurrentSessionToStore();
+        }
+        
+        // 현재 채팅 ID를 ref에 저장
+        prevChatIdRef.current = currentChatId;
+        
+        return () => {
+            // 컴포넌트 언마운트 시 현재 세션 저장
+            if (currentChatId) {
+                saveCurrentSessionToStore();
+            }
+        };
+    }, [currentChatId, saveCurrentSessionToStore]);
+
+    // === 주기적 세션 저장 Effect ===
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // 5분마다 현재 세션을 자동 저장
+            if (currentChatId) {
+                saveCurrentSessionToStore();
+            }
+        }, 5 * 60 * 1000); // 5분
+
+        return () => clearInterval(interval);
+    }, [currentChatId, saveCurrentSessionToStore]);
 
     // === 채팅 ID 초기화 Effect 추가 ===
     useEffect(() => {
@@ -146,8 +187,12 @@ export default function MainChatComponent() {
     // Drag and Drop 핸들러들
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
+        // 파일 업로드가 이미 된 경우 드래그 오버 상태 비활성화
+        if (!canUploadFile()) {
+            return;
+        }
         setIsDragOver(true);
-    }, []);
+    }, [canUploadFile]);
 
     const handleDragLeave = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -158,11 +203,17 @@ export default function MainChatComponent() {
         e.preventDefault();
         setIsDragOver(false);
 
+        // 파일 업로드가 이미 된 경우 파일 드롭 비활성화
+        if (!canUploadFile()) {
+            console.log('이미 파일이 업로드되어 새로운 파일을 업로드할 수 없습니다.');
+            return;
+        }
+
         const droppedFile = e.dataTransfer.files[0];
         if (droppedFile && isValidSpreadsheetFile(droppedFile)) {
             processFile(droppedFile);
         }
-    }, []);
+    }, [canUploadFile]);
 
     // 파일 처리 함수
     const processFile = async (file: File) => {
@@ -751,6 +802,12 @@ export default function MainChatComponent() {
 
 
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // 파일 업로드가 이미 된 경우 새로운 파일 업로드 비활성화
+        if (!canUploadFile()) {
+            console.log('이미 파일이 업로드되어 새로운 파일을 업로드할 수 없습니다.');
+            return;
+        }
+
         const selectedFile = e.target.files?.[0];
         if (selectedFile && isValidSpreadsheetFile(selectedFile)) {
             processFile(selectedFile);
@@ -1291,6 +1348,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                         loadingStates={loadingStates}
                         isArtifactModalOpen={isArtifactModalOpen}
                         fileExists={!!file}
+                        hasUploadedFile={hasUploadedFile}
                         onInputChange={(e) => setInputValue(e.target.value)}
                         onKeyPress={handleKeyPress}
                         onCompositionStart={() => setIsComposing(true)}

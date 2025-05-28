@@ -11,6 +11,7 @@ interface ChatInputProps {
     loadingStates: any;
     isArtifactModalOpen: boolean;
     fileExists: boolean;
+    hasUploadedFile: boolean;
     onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onKeyPress: (e: React.KeyboardEvent) => void;
     onCompositionStart: () => void;
@@ -30,6 +31,7 @@ export default function ChatInput({
     loadingStates,
     isArtifactModalOpen,
     fileExists,
+    hasUploadedFile,
     onInputChange,
     onKeyPress,
     onCompositionStart,
@@ -43,25 +45,44 @@ export default function ChatInput({
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const handleFileButtonClick = () => {
+        if (hasUploadedFile) {
+            console.log('이미 파일이 업로드되어 새로운 파일을 업로드할 수 없습니다.');
+            return;
+        }
         fileInputRef.current?.click();
     };
     
     return (
         <div className="border-t border-gray-100 bg-white p-4">
             <div
-                className={`relative border rounded-xl shadow-sm transition-all ${isDragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}
-                onDragOver={onDragOver}
-                onDragLeave={onDragLeave}
-                onDrop={onDrop}
+                className={`relative border rounded-xl shadow-sm transition-all ${
+                    hasUploadedFile 
+                        ? 'border-gray-300 bg-gray-100 cursor-not-allowed'
+                        : isDragOver 
+                            ? 'border-blue-400 bg-blue-50' 
+                            : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                }`}
+                onDragOver={hasUploadedFile ? undefined : onDragOver}
+                onDragLeave={hasUploadedFile ? undefined : onDragLeave}
+                onDrop={hasUploadedFile ? undefined : onDrop}
             >
                 <div className="flex items-center space-x-2 p-2">
                     {/* 파일 첨부 버튼 */}
                     <button
                         onClick={handleFileButtonClick}
-                        className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-gray-100 transition-colors group"
+                        disabled={hasUploadedFile}
+                        className={`flex items-center justify-center w-7 h-7 rounded-lg transition-colors group ${
+                            hasUploadedFile 
+                                ? 'bg-gray-200 cursor-not-allowed' 
+                                : 'hover:bg-gray-100'
+                        }`}
                         aria-label="파일 첨부"
                     >
-                        <Paperclip className="h-4 w-4 text-gray-500 group-hover:text-gray-700" />
+                        <Paperclip className={`h-4 w-4 ${
+                            hasUploadedFile 
+                                ? 'text-gray-400' 
+                                : 'text-gray-500 group-hover:text-gray-700'
+                        }`} />
                     </button>
                     
                     <input
@@ -94,9 +115,15 @@ export default function ChatInput({
                 className="hidden"
             />
 
-            {!fileExists && (
+            {!fileExists && !hasUploadedFile && (
                 <p className="text-xs text-gray-500 mt-2 text-center">
                     CSV 또는 XLSX 파일을 드래그하여 업로드하거나 클립 아이콘을 클릭하세요
+                </p>
+            )}
+
+            {!fileExists && hasUploadedFile && (
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                    이 채팅에서는 이미 파일이 업로드되었습니다. 새로운 파일을 업로드하려면 "New Chat"을 클릭하세요.
                 </p>
             )}
         </div>

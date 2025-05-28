@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { XIcon, FileIcon, FileSpreadsheetIcon, CheckCircleIcon, CloudIcon } from 'lucide-react';
+import { XIcon, FileIcon, FileSpreadsheetIcon, CheckCircleIcon, CloudIcon, MessageCircleIcon, PlusIcon } from 'lucide-react';
 import { XLSXData, useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 
 interface FileUploadHandlerProps {
@@ -25,17 +25,43 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
     removeFile,
     switchToSheet
 }) => {
-    // 스토어에서 스프레드시트 관련 상태 가져오기
+    // 스토어에서 스프레드시트 관련 상태와 채팅 세션 관리 액션 가져오기
     const {
         currentSpreadsheetId,
         spreadsheetMetadata,
-        currentChatId
+        currentChatId,
+        createNewChatSession,
+        saveCurrentSessionToStore
     } = useExtendedUnifiedDataStore();
+
+    // New Chat 버튼 클릭 핸들러
+    const handleNewChat = () => {
+        // 현재 세션을 저장
+        saveCurrentSessionToStore();
+        
+        // 새로운 채팅 세션 생성
+        const newChatId = createNewChatSession();
+        console.log('새로운 채팅 세션 생성:', newChatId);
+        
+        // 페이지 새로고침 없이 상태만 초기화됨 (스토어에서 처리)
+    };
 
     return (
         <div className="py-3 px-4">
+            {/* New Chat 버튼 - 파일 정보 영역 위에 배치 */}
+            <div className="mb-3 flex justify-end">
+                <button
+                    onClick={handleNewChat}
+                    className="flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+                    aria-label="새로운 채팅"
+                >
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    New Chat
+                </button>
+            </div>
+
             <div className="flex items-center justify-between">
-                <div className="flex items-center">
+                <div className="flex items-center flex-1">
                     <FileSpreadsheetIcon className="h-5 w-5 text-blue-600 mr-2" />
                     <div className="flex flex-col">
                         <div className="flex items-center">
@@ -73,7 +99,7 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
                                 
                                 {currentChatId && (
                                     <div className="flex items-center">
-                                        <span className="text-gray-400 mr-1">💬</span>
+                                        <MessageCircleIcon className="h-3 w-3 text-gray-400 mr-1" />
                                         <span className="font-mono text-xs">
                                             채팅: {currentChatId.substring(0, 8)}...
                                         </span>
@@ -91,13 +117,7 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
                     </div>
                 </div>
                 
-                <button
-                    onClick={removeFile}
-                    className="p-1.5 rounded-full hover:bg-gray-200 transition-colors"
-                    aria-label="파일 제거"
-                >
-                    <XIcon className="h-4 w-4 text-gray-500" />
-                </button>
+                {/* 파일 삭제 버튼 제거 - New Chat 버튼으로 대체됨 */}
             </div>
             
             {xlsxData && xlsxData.sheets && xlsxData.sheets.length > 1 && (

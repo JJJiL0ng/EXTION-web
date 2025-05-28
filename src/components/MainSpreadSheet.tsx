@@ -7,11 +7,12 @@ import { registerAllModules } from 'handsontable/registry';
 import { HyperFormula } from 'hyperformula';
 import { DetailedSettings } from 'handsontable/plugins/formulas';
 import Handsontable from 'handsontable';
-import { ChevronDown, Layers, ChevronLeft, ChevronRight, Plus, Save, Download, FileDown } from 'lucide-react';
+import { ChevronDown, Layers, ChevronLeft, ChevronRight, Plus, Save, Download, FileDown, MessageCircleIcon } from 'lucide-react';
 import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import { cellAddressToCoords } from '@/stores/useUnifiedDataStore';
 import { XLSXData } from '@/stores/useUnifiedDataStore';
 import { exportActiveSheetToCSV, exportSelectedSheetsToXLSX } from '@/utils/exportUtils';
+import ChatSidebar from './chat/ChatSidebar';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -454,6 +455,9 @@ const MainSpreadSheet: React.FC = () => {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [isCreateSheetModalOpen, setIsCreateSheetModalOpen] = useState(false);
   const [newSheetName, setNewSheetName] = useState('');
+  
+  // 사이드바 상태 추가
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // 셀 편집을 위한 상태 추가
   const [cellEditValue, setCellEditValue] = useState('');
@@ -1246,6 +1250,11 @@ const MainSpreadSheet: React.FC = () => {
     }
   }, [selectedCellInfo]);
 
+  // 사이드바 토글 함수
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   // 로딩 중일 때 표시
   if (loadingStates.fileUpload) {
     return (
@@ -1386,267 +1395,286 @@ const MainSpreadSheet: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col spreadsheet-container">
-      {/* Handsontable z-index 문제 해결을 위한 스타일 */}
-      <HandsontableStyles />
+    <div className="h-full flex">
+      {/* 사이드바 */}
+      <ChatSidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
+      
+      {/* 메인 스프레드시트 영역 */}
+      <div className={`h-full flex flex-col spreadsheet-container transition-all duration-300 ease-in-out ${
+        isSidebarOpen ? 'ml-80' : 'ml-0'
+      } flex-1`}>
+        {/* Handsontable z-index 문제 해결을 위한 스타일 */}
+        <HandsontableStyles />
 
-      {/* 상단 컨트롤 패널 */}
-      <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm" style={{ position: 'relative', zIndex: 9000 }}>
-        <div className="flex items-center justify-between">
-          {/* 선택된 셀 정보 표시 */}
-          {selectedCellInfo && (
-            <div className="flex items-center space-x-4 text-sm text-gray-700 flex-1 mr-4">
-              <div className="flex items-center space-x-2">
-                <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
-                  {selectedCellInfo.cellAddress}
-                </span>
+        {/* 상단 컨트롤 패널 */}
+        <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm" style={{ position: 'relative', zIndex: 9000 }}>
+          <div className="flex items-center justify-between">
+            {/* 사이드바 토글 버튼 */}
+            <button
+              onClick={toggleSidebar}
+              className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200 mr-3"
+              aria-label={isSidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
+              style={{ minWidth: '40px', height: '40px' }}
+            >
+              <MessageCircleIcon className="h-5 w-5 text-gray-600" />
+            </button>
+
+            {/* 선택된 셀 정보 표시 */}
+            {selectedCellInfo && (
+              <div className="flex items-center space-x-4 text-sm text-gray-700 flex-1 mr-4">
+                <div className="flex items-center space-x-2">
+                  <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
+                    {selectedCellInfo.cellAddress}
+                  </span>
+                </div>
+                
+                {/* 편집 가능한 셀 값 입력 필드 */}
+                <div className="flex items-center space-x-2 flex-1 max-w-md">
+                  <span className="font-medium">Fx:</span>
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={cellEditValue}
+                      onChange={(e) => handleCellEditChange(e.target.value)}
+                      onFocus={() => setIsCellEditing(true)}
+                      onBlur={() => {
+                        // 블러 이벤트에서는 약간의 지연을 둬서 버튼 클릭이 처리될 수 있도록 함
+                        setTimeout(() => {
+                          if (!isCellEditing) return;
+                          handleCellEditSubmit();
+                        }, 150);
+                      }}
+                      onKeyDown={handleCellEditKeyDown}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="값 또는 수식 입력 (예: =SUM(A1:A5))"
+                    />
+                    
+                    {/* 편집 모드일 때 확인/취소 버튼 표시 */}
+                    {isCellEditing && (
+                      <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex space-x-1">
+                        <button
+                          type="button"
+                          onClick={handleCellEditSubmit}
+                          className="w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded text-xs flex items-center justify-center"
+                          title="확인 (Enter)"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCellEditCancel}
+                          className="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex items-center justify-center"
+                          title="취소 (Escape)"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              
-              {/* 편집 가능한 셀 값 입력 필드 */}
-              <div className="flex items-center space-x-2 flex-1 max-w-md">
-                <span className="font-medium">Fx:</span>
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={cellEditValue}
-                    onChange={(e) => handleCellEditChange(e.target.value)}
-                    onFocus={() => setIsCellEditing(true)}
-                    onBlur={() => {
-                      // 블러 이벤트에서는 약간의 지연을 둬서 버튼 클릭이 처리될 수 있도록 함
-                      setTimeout(() => {
-                        if (!isCellEditing) return;
-                        handleCellEditSubmit();
-                      }, 150);
-                    }}
-                    onKeyDown={handleCellEditKeyDown}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="값 또는 수식 입력 (예: =SUM(A1:A5))"
-                  />
-                  
-                  {/* 편집 모드일 때 확인/취소 버튼 표시 */}
-                  {isCellEditing && (
-                    <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex space-x-1">
+            )}
+
+            {/* 내보내기 버튼 추가 */}
+            {renderExportControls()}
+          </div>
+
+          {/* 포뮬러 적용 대기 알림 */}
+          {pendingFormula && (
+            <div className="bg-[rgba(0,93,233,0.08)] border border-[rgba(0,93,233,0.2)] rounded-xl p-4 mt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#005DE9]">
+                    포뮬러 적용 대기 중
+                  </p>
+                  <p className="text-xs text-[rgba(0,93,233,0.8)] mt-1.5">
+                    {pendingFormula.cellAddress}에 {pendingFormula.formula} 적용
+                    {pendingFormula.sheetIndex !== undefined &&
+                      ` (시트 ${xlsxData?.sheets[pendingFormula.sheetIndex]?.sheetName || pendingFormula.sheetIndex})`
+                    }
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPendingFormula(null)}
+                  className="text-[#005DE9] hover:text-[#004ab8] text-sm bg-white px-3 py-1.5 rounded-lg border border-[rgba(0,93,233,0.2)] transition-colors duration-200"
+                  type="button"
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 시트 탭 바 - z-index 추가 */}
+        <div className="relative" style={{ zIndex: 8000 }}>
+          <div className="flex flex-col bg-[#F9F9F7]">
+            <div className="flex items-center border-b border-gray-200">
+              {/* 시트 탭 컨테이너 - 시트 있을 때와 없을 때 모두 표시 */}
+              <div ref={tabsContainerRef} className="sheet-tabs-container">
+                {xlsxData && xlsxData.sheets.length > 0 ? (
+                  /* 시트가 있는 경우 시트 탭 표시 */
+                  xlsxData.sheets.map((sheet, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleSheetChange(index)}
+                      className={`sheet-tab ${index === xlsxData.activeSheetIndex ? 'active' : ''}`}
+                    >
+                      <span>{sheet.sheetName}</span>
+                      <span className="sheet-info">
+                        {sheet.headers.length}×{sheet.data.length}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  /* 시트가 없는 경우 안내 메시지 표시 */
+                  <div className="empty-sheet-container">
+                    <span className="empty-sheet-text">시트가 없습니다. 새 시트를 추가하세요</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 시트 추가 버튼 - 항상 같은 위치에 표시 */}
+              <div className="relative">
+                <button
+                  className="sheet-add-button"
+                  onClick={() => setIsCreateSheetModalOpen(true)}
+                  aria-label="새 시트 추가"
+                >
+                  <Plus size={18} />
+                </button>
+
+                {isCreateSheetModalOpen && (
+                  <div className="sheet-create-modal">
+                    <h3 className="text-base font-medium mb-3">새 시트 만들기</h3>
+                    <input
+                      type="text"
+                      placeholder="시트 이름"
+                      value={newSheetName}
+                      onChange={(e) => setNewSheetName(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="sheet-create-modal-buttons">
                       <button
-                        type="button"
-                        onClick={handleCellEditSubmit}
-                        className="w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded text-xs flex items-center justify-center"
-                        title="확인 (Enter)"
+                        className="cancel-button"
+                        onClick={() => {
+                          setIsCreateSheetModalOpen(false);
+                          setNewSheetName('');
+                        }}
                       >
-                        ✓
+                        취소
                       </button>
                       <button
-                        type="button"
-                        onClick={handleCellEditCancel}
-                        className="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex items-center justify-center"
-                        title="취소 (Escape)"
+                        className="create-button"
+                        onClick={handleCreateSheet}
+                        disabled={!newSheetName.trim()}
                       >
-                        ✕
+                        만들기
                       </button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
 
-          {/* 내보내기 버튼 추가 */}
-          {renderExportControls()}
-        </div>
-
-        {/* 포뮬러 적용 대기 알림 */}
-        {pendingFormula && (
-          <div className="bg-[rgba(0,93,233,0.08)] border border-[rgba(0,93,233,0.2)] rounded-xl p-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[#005DE9]">
-                  포뮬러 적용 대기 중
-                </p>
-                <p className="text-xs text-[rgba(0,93,233,0.8)] mt-1.5">
-                  {pendingFormula.cellAddress}에 {pendingFormula.formula} 적용
-                  {pendingFormula.sheetIndex !== undefined &&
-                    ` (시트 ${xlsxData?.sheets[pendingFormula.sheetIndex]?.sheetName || pendingFormula.sheetIndex})`
-                  }
-                </p>
-              </div>
-              <button
-                onClick={() => setPendingFormula(null)}
-                className="text-[#005DE9] hover:text-[#004ab8] text-sm bg-white px-3 py-1.5 rounded-lg border border-[rgba(0,93,233,0.2)] transition-colors duration-200"
-                type="button"
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 시트 탭 바 - z-index 추가 */}
-      <div className="relative" style={{ zIndex: 8000 }}>
-        <div className="flex flex-col bg-[#F9F9F7]">
-          <div className="flex items-center border-b border-gray-200">
-            {/* 시트 탭 컨테이너 - 시트 있을 때와 없을 때 모두 표시 */}
-            <div ref={tabsContainerRef} className="sheet-tabs-container">
-              {xlsxData && xlsxData.sheets.length > 0 ? (
-                /* 시트가 있는 경우 시트 탭 표시 */
-                xlsxData.sheets.map((sheet, index) => (
-                  <div
-                    key={index}
-                    onClick={() => handleSheetChange(index)}
-                    className={`sheet-tab ${index === xlsxData.activeSheetIndex ? 'active' : ''}`}
-                  >
-                    <span>{sheet.sheetName}</span>
-                    <span className="sheet-info">
-                      {sheet.headers.length}×{sheet.data.length}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                /* 시트가 없는 경우 안내 메시지 표시 */
-                <div className="empty-sheet-container">
-                  <span className="empty-sheet-text">시트가 없습니다. 새 시트를 추가하세요</span>
-                </div>
-              )}
-            </div>
-
-            {/* 시트 추가 버튼 - 항상 같은 위치에 표시 */}
-            <div className="relative">
-              <button
-                className="sheet-add-button"
-                onClick={() => setIsCreateSheetModalOpen(true)}
-                aria-label="새 시트 추가"
-              >
-                <Plus size={18} />
-              </button>
-
-              {isCreateSheetModalOpen && (
-                <div className="sheet-create-modal">
-                  <h3 className="text-base font-medium mb-3">새 시트 만들기</h3>
-                  <input
-                    type="text"
-                    placeholder="시트 이름"
-                    value={newSheetName}
-                    onChange={(e) => setNewSheetName(e.target.value)}
-                    autoFocus
-                  />
-                  <div className="sheet-create-modal-buttons">
-                    <button
-                      className="cancel-button"
-                      onClick={() => {
-                        setIsCreateSheetModalOpen(false);
-                        setNewSheetName('');
-                      }}
-                    >
-                      취소
-                    </button>
-                    <button
-                      className="create-button"
-                      onClick={handleCreateSheet}
-                      disabled={!newSheetName.trim()}
-                    >
-                      만들기
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 간단한 브라우저 스타일 스크롤바 */}
-          {showScrollbar && (
-            <div
-              className="tab-scrollbar-container"
-              onClick={handleScrollbarClick}
-            >
+            {/* 간단한 브라우저 스타일 스크롤바 */}
+            {showScrollbar && (
               <div
-                className={`tab-scrollbar-thumb ${isDragging ? 'dragging' : ''}`}
-                style={{
-                  width: `${scrollThumbWidth}px`,
-                  left: `${scrollThumbPosition}px`
-                }}
-                onMouseDown={handleThumbDragStart}
-              />
+                className="tab-scrollbar-container"
+                onClick={handleScrollbarClick}
+              >
+                <div
+                  className={`tab-scrollbar-thumb ${isDragging ? 'dragging' : ''}`}
+                  style={{
+                    width: `${scrollThumbWidth}px`,
+                    left: `${scrollThumbPosition}px`
+                  }}
+                  onMouseDown={handleThumbDragStart}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 로딩 상태 표시 */}
+          {loadingStates.sheetSwitch && (
+            <div className="absolute top-full left-0 right-0 mt-1 flex items-center justify-center py-2 bg-white shadow-sm z-10">
+              <div className="w-4 h-4 border-2 border-[#005DE9] border-t-transparent rounded-full animate-spin"></div>
+              <span className="ml-2 text-xs text-gray-600">시트 전환 중...</span>
             </div>
           )}
         </div>
 
-        {/* 로딩 상태 표시 */}
-        {loadingStates.sheetSwitch && (
-          <div className="absolute top-full left-0 right-0 mt-1 flex items-center justify-center py-2 bg-white shadow-sm z-10">
-            <div className="w-4 h-4 border-2 border-[#005DE9] border-t-transparent rounded-full animate-spin"></div>
-            <span className="ml-2 text-xs text-gray-600">시트 전환 중...</span>
-          </div>
-        )}
-      </div>
+        {/* 스프레드시트 영역 */}
+        <div className="flex-1 overflow-auto bg-white shadow-inner" style={{ position: 'relative', zIndex: 50 }}>
+          <HotTable
+            ref={hotRef}
+            rowHeaders={true}
+            colHeaders={true}
+            height="100%"
+            autoWrapRow={true}
+            autoWrapCol={true}
+            data={displayData}
+            contextMenu={{
+              items: {
+                row_above: { name: '위에 행 삽입' },
+                row_below: { name: '아래에 행 삽입' },
+                remove_row: { name: '행 삭제' },
+                separator1: '---------',
+                col_left: { name: '왼쪽에 열 삽입' },
+                col_right: { name: '오른쪽에 열 삽입' },
+                remove_col: { name: '열 삭제' },
+                separator2: '---------',
+                undo: { name: '실행 취소' },
+                redo: { name: '다시 실행' },
+                cut: { name: '잘라내기' },
+                copy: { name: '복사' },
+                paste: { name: '붙여넣기' }
+              }
+            }}
+            licenseKey="non-commercial-and-evaluation"
+            formulas={formulasConfig}
+            beforeChange={(changes, source) => {
+              // 내부 업데이트가 아닌 경우에만 로깅
+              if (!isInternalUpdate && changes && source !== 'loadData') {
+                console.log('Data changing:', changes, 'Source:', source);
+              }
+            }}
+            afterChange={(changes, source) => {
+              // 내부 업데이트가 아닌 경우에만 데이터 업데이트
+              if (!isInternalUpdate && changes && source !== 'loadData' && xlsxData) {
+                setInternalUpdate(true);
 
-      {/* 스프레드시트 영역 */}
-      <div className="flex-1 overflow-auto bg-white shadow-inner" style={{ position: 'relative', zIndex: 50 }}>
-        <HotTable
-          ref={hotRef}
-          rowHeaders={true}
-          colHeaders={true}
-          height="100%"
-          autoWrapRow={true}
-          autoWrapCol={true}
-          minRows={8}
-          minCols={activeSheetData?.headers.length || 6}
-          minSpareCols={5}
-          minSpareRows={3}
-          manualColumnResize={true}
-          manualRowResize={true}
-          persistentState={true}
-          licenseKey="non-commercial-and-evaluation"
-          stretchH="all"
-          wordWrap={true}
-          readOnly={false}
-          columnSorting={false}
-          filters={true}
-          contextMenu={true}
-          dropdownMenu={true}
-          data={displayData}
-          formulas={formulasConfig}
-          afterChange={(
-            changes: Handsontable.CellChange[] | null,
-            source: Handsontable.ChangeSource
-          ) => {
-            // 내부 업데이트이거나 로드 시점이면 스킵
-            if (isInternalUpdate || source === 'loadData') {
-              return;
-            }
-
-            // 사용자 변경사항을 스토어에 반영
-            if (changes && activeSheetData) {
-              changes.forEach(([row, col, , newValue]) => {
-                if (typeof row === 'number' && typeof col === 'number') {
-                  // 헤더 행 제외 (헤더가 첫 번째 행에 있으므로)
-                  const dataRow = row - 1;
-                  if (dataRow >= 0) {
-                    updateActiveSheetCell(dataRow, col, newValue?.toString() || '');
+                changes.forEach(([row, col, oldValue, newValue]) => {
+                  if (oldValue !== newValue && 
+                      typeof row === 'number' && 
+                      typeof col === 'number' && 
+                      row !== null && 
+                      col !== null) {
+                    updateActiveSheetCell(row - 1, col, newValue);
                   }
-                }
-              });
-            }
+                });
 
-            if (!isAutosave) {
-              return;
-            }
-          }}
-          // 셀 선택 이벤트 처리
-          afterSelection={(row, col) => {
-            handleCellSelection(row, col);
-          }}
-          afterSelectionEnd={(row, col) => {
-            handleCellSelection(row, col);
-          }}
-          // 셀 값 변경 후 포뮬러 업데이트 훅
-          afterSetDataAtCell={() => {
-            console.log('Data set, recalculating formulas...');
+                setTimeout(() => setInternalUpdate(false), 100);
+              }
+            }}
+            // 셀 선택 이벤트 처리
+            afterSelection={(row, col) => {
+              handleCellSelection(row, col);
+            }}
+            afterSelectionEnd={(row, col) => {
+              handleCellSelection(row, col);
+            }}
+            // 셀 값 변경 후 포뮬러 업데이트 훅
+            afterSetDataAtCell={() => {
+              console.log('Data set, recalculating formulas...');
 
-            // 100ms 후에 재렌더링 (포뮬러가 계산될 시간을 줌)
-            setTimeout(() => {
-              hotRef.current?.hotInstance?.render();
-            }, 100);
-          }}
-        />
+              // 100ms 후에 재렌더링 (포뮬러가 계산될 시간을 줌)
+              setTimeout(() => {
+                hotRef.current?.hotInstance?.render();
+              }, 100);
+            }}
+          />
+        </div>
       </div>
     </div>
   );

@@ -16,9 +16,9 @@ export default function MainContainer() {
   } = useExtendedUnifiedDataStore();
 
   return (
-    <div className="h-screen w-full bg-gray-50">
+    <div className="h-screen w-full bg-gray-50 relative">
       {/* 메인 채팅 영역 */}
-      <div className="h-full w-full">
+      <div className="h-full">
         <MainChatComponent />
       </div>
 

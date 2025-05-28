@@ -17,6 +17,32 @@ export interface ChatMessage {
     };
 }
 
+// 개별 채팅 세션 인터페이스 추가
+interface ChatSession {
+    chatId: string;
+    chatTitle?: string;
+    xlsxData: XLSXData | null;
+    activeSheetData: SheetData | null;
+    computedSheetData: { [sheetIndex: number]: string[][] };
+    sheetMessages: { [sheetIndex: number]: ChatMessage[] };
+    activeSheetMessages: ChatMessage[];
+    sheetChatIds: { [sheetIndex: number]: string };
+    extendedSheetContext: ExtendedSheetContext | null;
+    hasUploadedFile: boolean; // 파일 업로드 여부 추적
+    createdAt: Date;
+    lastAccessedAt: Date;
+    // 스프레드시트 관련 정보
+    currentSpreadsheetId: string | null;
+    spreadsheetMetadata: {
+        fileName?: string;
+        originalFileName?: string;
+        fileSize?: number;
+        fileType?: 'xlsx' | 'csv';
+        lastSaved?: Date;
+        isSaved?: boolean;
+    } | null;
+}
+
 // 헤더 정보 인터페이스
 interface HeaderInfo {
     column: string; // 열 식별자 (A, B, C 등)
@@ -98,8 +124,14 @@ interface MultiSheetFormulaApplication extends FormulaApplication {
 
 // 확장된 상태 인터페이스
 interface ExtendedUnifiedDataStoreState {
-    // === Multi-Sheet Data ===
+    // === 채팅 세션 관리 ===
+    chatSessions: { [chatId: string]: ChatSession }; // 모든 채팅 세션
+    currentChatId: string | null; // 현재 활성 채팅 ID
+    chatHistory: string[]; // 채팅 히스토리 (최근 채팅 ID들)
+    
+    // === Multi-Sheet Data (현재 세션의 데이터) ===
     xlsxData: XLSXData | null; // XLSX 전체 데이터
+    hasUploadedFile: boolean; // 현재 채팅에서 파일 업로드 여부
 
     // === Active Sheet Data ===
     activeSheetData: SheetData | null; // 현재 활성 시트 데이터
@@ -153,10 +185,6 @@ interface ExtendedUnifiedDataStoreState {
     // === Internal Flags ===
     isInternalUpdate: boolean;
 
-    // === Chat Management (deprecated - 시트별 채팅으로 대체) ===
-    currentChatId: string | null; // 현재 채팅 ID
-    chatHistory: string[]; // 채팅 히스토리 (최근 채팅 ID들)
-
     // === Spreadsheet Management ===
     currentSpreadsheetId: string | null; // 현재 스프레드시트 ID
     spreadsheetMetadata: {
@@ -171,6 +199,19 @@ interface ExtendedUnifiedDataStoreState {
 
 // 확장된 액션 인터페이스
 interface ExtendedUnifiedDataStoreActions {
+    // === 채팅 세션 관리 액션 ===
+    createNewChatSession: () => string; // 새로운 채팅 세션 생성
+    switchToChatSession: (chatId: string) => void; // 채팅 세션 전환
+    getChatSession: (chatId: string) => ChatSession | null; // 특정 채팅 세션 가져오기
+    updateChatSession: (chatId: string, updates: Partial<ChatSession>) => void; // 채팅 세션 업데이트
+    deleteChatSession: (chatId: string) => void; // 채팅 세션 삭제
+    getCurrentChatSession: () => ChatSession | null; // 현재 채팅 세션 가져오기
+    saveCurrentSessionToStore: () => void; // 현재 세션을 스토어에 저장
+    saveChatSessionToStorage: () => void; // 채팅 세션을 로컬 스토리지에 저장
+    loadChatSessionsFromStorage: () => void; // 로컬 스토리지에서 채팅 세션 불러오기
+    markFileAsUploaded: () => void; // 파일 업로드 상태 표시
+    canUploadFile: () => boolean; // 파일 업로드 가능 여부 확인
+
     // === XLSX Data Actions ===
     setXLSXData: (data: XLSXData | null) => void;
     setActiveSheet: (sheetIndex: number) => void;
@@ -419,15 +460,17 @@ export const cellAddressToCoords = (cellAddress: string) => {
 export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
     devtools(
         (set, get) => ({
+            // === 채팅 세션 관리 초기 상태 ===
+            chatSessions: {},
+            currentChatId: null,
+            chatHistory: [],
+            
             // 초기 상태
             xlsxData: null,
+            hasUploadedFile: false, // 파일 업로드 제한 상태
             activeSheetData: null,
             computedSheetData: {},
             extendedSheetContext: null,
- 
-            // === Chat Management 초기 상태 ===
-            currentChatId: null,
-            chatHistory: [],
  
             // 시트별 메시지 초기화
             sheetMessages: {},
@@ -568,26 +611,6 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 });
             },
  
-            getChatHistory: () => {
-                const { chatHistory } = get();
-                
-                // 로컬 스토리지에서 히스토리 로드 (없는 경우)
-                if (chatHistory.length === 0 && typeof window !== 'undefined') {
-                    const storedHistory = localStorage.getItem('chatHistory');
-                    if (storedHistory) {
-                        try {
-                            const parsedHistory = JSON.parse(storedHistory);
-                            set({ chatHistory: parsedHistory });
-                            return parsedHistory;
-                        } catch (error) {
-                            console.error('채팅 히스토리 파싱 오류:', error);
-                        }
-                    }
-                }
-                
-                return chatHistory;
-            },
- 
             // XLSX 데이터 액션
             setXLSXData: (data) => {
                 set((state) => {
@@ -602,10 +625,10 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             sheetChatIds: {} // 시트별 채팅 ID도 초기화
                         };
                     }
- 
+
                     const activeSheet = data.sheets[data.activeSheetIndex];
                     const newComputedData = { ...state.computedSheetData };
- 
+
                     // 각 시트에 대한 computed data 초기화
                     data.sheets.forEach((sheet, index) => {
                         if (!newComputedData[index]) {
@@ -622,13 +645,14 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             newSheetChatIds[index] = newChatId;
                         }
                     });
- 
+
                     // 현재 활성 시트의 메시지 불러오기
                     const activeSheetMessages = state.sheetMessages[data.activeSheetIndex] || [];
- 
+
                     return {
                         ...state,
                         xlsxData: data,
+                        hasUploadedFile: true, // 파일 업로드 상태 업데이트
                         activeSheetData: activeSheet,
                         computedSheetData: newComputedData,
                         extendedSheetContext: generateExtendedSheetContext(data),
@@ -636,6 +660,10 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         sheetChatIds: newSheetChatIds
                     };
                 });
+                
+                // 파일 업로드 후 markFileAsUploaded 호출
+                const { markFileAsUploaded } = get();
+                markFileAsUploaded();
             },
  
             // 활성 시트 설정
@@ -1295,6 +1323,253 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                 sheets.forEach((sheet, index) => {
                     get().setChatIdForSheet(index, '');
                 });
+            },
+
+            // === 채팅 세션 관리 액션 ===
+            createNewChatSession: () => {
+                const newChatId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+                const newSession: ChatSession = {
+                    chatId: newChatId,
+                    chatTitle: undefined,
+                    xlsxData: null,
+                    activeSheetData: null,
+                    computedSheetData: {},
+                    sheetMessages: {},
+                    activeSheetMessages: [],
+                    sheetChatIds: {},
+                    extendedSheetContext: null,
+                    hasUploadedFile: false,
+                    createdAt: new Date(),
+                    lastAccessedAt: new Date(),
+                    currentSpreadsheetId: null,
+                    spreadsheetMetadata: null
+                };
+
+                set((state) => ({
+                    chatSessions: {
+                        ...state.chatSessions,
+                        [newChatId]: newSession
+                    },
+                    currentChatId: newChatId,
+                    chatHistory: [newChatId, ...state.chatHistory.filter(id => id !== newChatId)].slice(0, 50),
+                    // 새 채팅으로 전환 시 현재 상태 초기화
+                    xlsxData: null,
+                    hasUploadedFile: false,
+                    activeSheetData: null,
+                    computedSheetData: {},
+                    sheetMessages: {},
+                    activeSheetMessages: [],
+                    sheetChatIds: {},
+                    extendedSheetContext: null,
+                    currentSpreadsheetId: null,
+                    spreadsheetMetadata: null
+                }));
+
+                return newChatId;
+            },
+            switchToChatSession: (chatId: string) => {
+                const { chatSessions } = get();
+                const session = chatSessions[chatId];
+                
+                if (!session) {
+                    console.warn(`채팅 세션을 찾을 수 없습니다: ${chatId}`);
+                    return;
+                }
+
+                // 현재 세션을 저장
+                get().saveCurrentSessionToStore();
+
+                // 세션의 lastAccessedAt 업데이트
+                const updatedSession = {
+                    ...session,
+                    lastAccessedAt: new Date()
+                };
+
+                set((state) => ({
+                    chatSessions: {
+                        ...state.chatSessions,
+                        [chatId]: updatedSession
+                    },
+                    currentChatId: chatId,
+                    chatHistory: [chatId, ...state.chatHistory.filter(id => id !== chatId)].slice(0, 50),
+                    // 선택된 세션의 상태로 복원
+                    xlsxData: session.xlsxData,
+                    hasUploadedFile: session.hasUploadedFile,
+                    activeSheetData: session.activeSheetData,
+                    computedSheetData: session.computedSheetData,
+                    sheetMessages: session.sheetMessages,
+                    activeSheetMessages: session.activeSheetMessages,
+                    sheetChatIds: session.sheetChatIds,
+                    extendedSheetContext: session.extendedSheetContext,
+                    currentSpreadsheetId: session.currentSpreadsheetId,
+                    spreadsheetMetadata: session.spreadsheetMetadata
+                }));
+            },
+            getChatSession: (chatId: string) => {
+                const { chatSessions } = get();
+                return chatSessions[chatId] || null;
+            },
+            updateChatSession: (chatId: string, updates: Partial<ChatSession>) => {
+                set((state) => {
+                    const existingSession = state.chatSessions[chatId];
+                    if (!existingSession) return state;
+
+                    return {
+                        ...state,
+                        chatSessions: {
+                            ...state.chatSessions,
+                            [chatId]: {
+                                ...existingSession,
+                                ...updates,
+                                lastAccessedAt: new Date()
+                            }
+                        }
+                    };
+                });
+            },
+            deleteChatSession: (chatId: string) => {
+                set((state) => {
+                    const newChatSessions = { ...state.chatSessions };
+                    delete newChatSessions[chatId];
+                    
+                    const newChatHistory = state.chatHistory.filter(id => id !== chatId);
+                    
+                    // 삭제된 채팅이 현재 채팅인 경우
+                    let newCurrentChatId = state.currentChatId;
+                    let shouldCreateNew = false;
+                    
+                    if (state.currentChatId === chatId) {
+                        // 다른 채팅이 있으면 가장 최근 채팅으로 전환
+                        if (newChatHistory.length > 0) {
+                            newCurrentChatId = newChatHistory[0];
+                        } else {
+                            // 다른 채팅이 없으면 새 채팅 생성 플래그 설정
+                            shouldCreateNew = true;
+                            newCurrentChatId = null;
+                        }
+                    }
+                    
+                    const newState = {
+                        ...state,
+                        chatSessions: newChatSessions,
+                        chatHistory: newChatHistory,
+                        currentChatId: newCurrentChatId
+                    };
+                    
+                    // 새 채팅 생성이 필요한 경우 상태 초기화
+                    if (shouldCreateNew) {
+                        return {
+                            ...newState,
+                            xlsxData: null,
+                            hasUploadedFile: false,
+                            activeSheetData: null,
+                            computedSheetData: {},
+                            sheetMessages: {},
+                            activeSheetMessages: [],
+                            sheetChatIds: {},
+                            extendedSheetContext: null,
+                            currentSpreadsheetId: null,
+                            spreadsheetMetadata: null
+                        };
+                    }
+                    
+                    // 다른 채팅으로 전환하는 경우 해당 세션의 상태로 복원
+                    if (newCurrentChatId && newChatSessions[newCurrentChatId]) {
+                        const targetSession = newChatSessions[newCurrentChatId];
+                        return {
+                            ...newState,
+                            xlsxData: targetSession.xlsxData,
+                            hasUploadedFile: targetSession.hasUploadedFile,
+                            activeSheetData: targetSession.activeSheetData,
+                            computedSheetData: targetSession.computedSheetData,
+                            sheetMessages: targetSession.sheetMessages,
+                            activeSheetMessages: targetSession.activeSheetMessages,
+                            sheetChatIds: targetSession.sheetChatIds,
+                            extendedSheetContext: targetSession.extendedSheetContext,
+                            currentSpreadsheetId: targetSession.currentSpreadsheetId,
+                            spreadsheetMetadata: targetSession.spreadsheetMetadata
+                        };
+                    }
+                    
+                    return newState;
+                });
+            },
+            getCurrentChatSession: () => {
+                const { currentChatId, chatSessions } = get();
+                return currentChatId ? chatSessions[currentChatId] || null : null;
+            },
+            saveCurrentSessionToStore: () => {
+                const state = get();
+                const { currentChatId } = state;
+                
+                if (!currentChatId) return;
+                
+                const currentSession: ChatSession = {
+                    chatId: currentChatId,
+                    chatTitle: state.chatSessions[currentChatId]?.chatTitle,
+                    xlsxData: state.xlsxData,
+                    activeSheetData: state.activeSheetData,
+                    computedSheetData: state.computedSheetData,
+                    sheetMessages: state.sheetMessages,
+                    activeSheetMessages: state.activeSheetMessages,
+                    sheetChatIds: state.sheetChatIds,
+                    extendedSheetContext: state.extendedSheetContext,
+                    hasUploadedFile: state.hasUploadedFile,
+                    createdAt: state.chatSessions[currentChatId]?.createdAt || new Date(),
+                    lastAccessedAt: new Date(),
+                    currentSpreadsheetId: state.currentSpreadsheetId,
+                    spreadsheetMetadata: state.spreadsheetMetadata
+                };
+                
+                set((prevState) => ({
+                    chatSessions: {
+                        ...prevState.chatSessions,
+                        [currentChatId]: currentSession
+                    }
+                }));
+            },
+            saveChatSessionToStorage: () => {
+                const { currentChatId, chatSessions } = get();
+                if (currentChatId && typeof window !== 'undefined') {
+                    const session = chatSessions[currentChatId];
+                    if (session) {
+                        localStorage.setItem(`chatSession_${currentChatId}`, JSON.stringify(session));
+                        localStorage.setItem('chatSessions', JSON.stringify(chatSessions));
+                        localStorage.setItem('currentChatId', currentChatId);
+                    }
+                }
+            },
+            loadChatSessionsFromStorage: () => {
+                if (typeof window === 'undefined') return;
+                
+                try {
+                    const storedSessions = localStorage.getItem('chatSessions');
+                    const storedCurrentChatId = localStorage.getItem('currentChatId');
+                    
+                    if (storedSessions) {
+                        const sessions = JSON.parse(storedSessions);
+                        set((state) => ({
+                            ...state,
+                            chatSessions: sessions,
+                            currentChatId: storedCurrentChatId
+                        }));
+                        
+                        // 현재 채팅 세션이 있으면 해당 상태로 복원
+                        if (storedCurrentChatId && sessions[storedCurrentChatId]) {
+                            get().switchToChatSession(storedCurrentChatId);
+                        }
+                    }
+                } catch (error) {
+                    console.error('채팅 세션 로드 오류:', error);
+                }
+            },
+            markFileAsUploaded: () => {
+                set((state) => ({
+                    hasUploadedFile: true
+                }));
+            },
+            canUploadFile: () => {
+                return !get().hasUploadedFile;
             },
         }),
         {
