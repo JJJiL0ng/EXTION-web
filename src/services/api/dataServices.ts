@@ -80,22 +80,6 @@ export interface SheetDataItemMetadata {
     originalMetadata?: any[];
 }
 
-// 시트 데이터 아이템 (백엔드 SheetDataItem과 일치)
-export interface SheetDataItem {
-    name: string;
-    csv?: string; // 선택사항
-    metadata?: SheetDataItemMetadata;
-}
-
-// 다중 시트 데이터 구조 (백엔드 SheetsData와 일치) - 레거시
-export interface SheetsData {
-    sheets: SheetDataItem[];
-    activeSheet: string;
-    totalSheets?: number;
-    fileName?: string;
-    spreadsheetId?: string;
-}
-
 // 확장된 시트 컨텍스트 (백엔드 ExtendedSheetContext와 일치) - 레거시
 export interface ExtendedSheetContext {
     sheetName: string;
@@ -195,112 +179,6 @@ export const getCurrentUser = (): FirebaseUser | null => {
         const user = localStorage.getItem('firebase_user');
         return user ? JSON.parse(user) : null;
     }
-    return null;
-};
-
-// === 채팅 제목 자동 생성 유틸리티 ===
-const generateChatTitle = (userInput: string): string => {
-    const title = userInput.length > 30 ? userInput.substring(0, 30) + '...' : userInput;
-    return title || '새로운 채팅';
-};
-
-// === 최적화된 데이터 변환 함수 ===
-
-// 최적화된 SheetsData 구조 생성 (백엔드 SheetsData DTO와 일치)
-const createOptimizedSheetsData = (
-    analysisData: any,
-    extendedSheetContext: any | null,
-    currentSheetIndex?: number
-): SheetsData | null => {
-    if (!analysisData) {
-        console.warn('createOptimizedSheetsData: analysisData가 null 또는 undefined입니다.');
-        return null;
-    }
-
-    // getDataForGPTAnalysis에서 반환하는 실제 구조에 맞게 수정
-    // 구조: { sheets: [{ name, csv, metadata: { headers, fullData, sampleData, ... } }], activeSheet, ... }
-    if (analysisData.sheets && Array.isArray(analysisData.sheets)) {
-        if (analysisData.sheets.length === 0) {
-            console.warn('createOptimizedSheetsData: sheets 배열이 비어있습니다.');
-            return null;
-        }
-
-        const optimizedSheets: SheetDataItem[] = analysisData.sheets.map((sheet: any, index: number) => {
-            const sheetName = sheet.name || `Sheet${index + 1}`;
-            const metadata = sheet.metadata || {};
-            
-            // metadata에서 실제 데이터 추출
-            const headers = Array.isArray(metadata.headers) ? metadata.headers : [];
-            const fullData = Array.isArray(metadata.fullData) ? metadata.fullData : [];
-            const sampleData = Array.isArray(metadata.sampleData) ? metadata.sampleData : fullData.slice(0, 5);
-            const rowCount = metadata.rowCount || fullData.length;
-            const columnCount = metadata.columnCount || headers.length;
-            const sheetIndex = metadata.sheetIndex !== undefined ? metadata.sheetIndex : index;
-            
-            // 데이터가 비어있는 경우 경고 로그
-            if (headers.length === 0 && fullData.length === 0) {
-                console.warn(`시트 "${sheetName}"에 데이터가 없습니다.`);
-            }
-            
-            return {
-                name: sheetName,
-                csv: sheet.csv, // 백엔드 DTO에서 선택사항
-                metadata: {
-                    headers: headers,
-                    rowCount: rowCount,
-                    columnCount: columnCount,
-                    fullData: fullData, // GPT API에 실제로 전달되는 핵심 데이터
-                    sampleData: sampleData, // 프롬프트 크기 제한용
-                    sheetIndex: sheetIndex,
-                    originalMetadata: metadata.originalMetadata
-                }
-            };
-        });
-
-        const result: SheetsData = {
-            sheets: optimizedSheets,
-            activeSheet: analysisData.activeSheet || optimizedSheets[0]?.name || 'Sheet1',
-            totalSheets: analysisData.totalSheets || optimizedSheets.length,
-            fileName: analysisData.fileName || 'Spreadsheet',
-            spreadsheetId: analysisData.spreadsheetId
-        };
-        
-        return result;
-    }
-
-    // 레거시 구조 처리 (단일 시트 데이터인 경우)
-    if (analysisData.headers && analysisData.data && !analysisData.sheets) {
-        const sheetName = extendedSheetContext?.sheetName || analysisData.fileName || 'Sheet1';
-        const headers = Array.isArray(analysisData.headers) ? analysisData.headers : [];
-        const data = Array.isArray(analysisData.data) ? analysisData.data : [];
-        const sheetIndex = currentSheetIndex || 0;
-        
-        if (headers.length === 0 && data.length === 0) {
-            console.warn('레거시 구조에서 데이터가 없습니다.');
-        }
-        
-        return {
-            sheets: [{
-                name: sheetName,
-                csv: undefined, // 선택사항
-                metadata: {
-                    headers: headers,
-                    rowCount: data.length,
-                    columnCount: headers.length,
-                    fullData: data, // GPT API에 실제로 전달되는 핵심 데이터
-                    sampleData: data.slice(0, 5), // 프롬프트 크기 제한용 (처음 5개 행만)
-                    sheetIndex: sheetIndex,
-                    originalMetadata: undefined
-                }
-            }],
-            activeSheet: sheetName,
-            totalSheets: 1,
-            fileName: analysisData.fileName || sheetName,
-            spreadsheetId: analysisData.spreadsheetId
-        };
-    }
-
-    console.warn('createOptimizedSheetsData: 알 수 없는 데이터 구조입니다.', analysisData);
     return null;
 };
 
@@ -837,36 +715,69 @@ export const callDataGenerationAPI = async (
     options?: {
         chatId?: string;
         messageId?: string;
-        currentSheetIndex?: number; // 현재 시트 인덱스 추가
+        currentSheetIndex?: number;
     }
 ): Promise<DataGenerationResponse> => {
     try {
-        const requestBody = createRequestBody(
+        const { user: currentUser } = useAuthStore.getState();
+        
+        if (!currentUser) {
+            throw new Error('로그인이 필요합니다.');
+        }
+
+        // 현재 시트 데이터만 가져오기
+        let analysisData = null;
+        if (getDataForGPTAnalysis) {
+            analysisData = getDataForGPTAnalysis(options?.currentSheetIndex, false);
+        }
+
+        // 요청 본문 구성
+        const requestBody = {
             userInput,
-            extendedSheetContext,
-            getDataForGPTAnalysis,
-            options?.chatId,
-            undefined,
-            options?.messageId,
-            options?.currentSheetIndex // 현재 시트 인덱스 전달
-        );
+            userId: currentUser.uid,
+            chatId: options?.chatId,
+            language: 'ko',
+            extendedSheetContext: extendedSheetContext ? {
+                sheetName: extendedSheetContext.sheetName,
+                sheetIndex: extendedSheetContext.sheetIndex,
+                headers: extendedSheetContext.headers,
+                dataRange: extendedSheetContext.dataRange,
+                sampleData: extendedSheetContext.sampleData,
+                totalSheets: extendedSheetContext.totalSheets,
+                sheetList: extendedSheetContext.sheetList
+            } : undefined,
+            sheetsData: analysisData ? {
+                sheets: analysisData.sheets.map((sheet: any) => ({
+                    name: sheet.name,
+                    metadata: {
+                        headers: sheet.metadata?.headers || [],
+                        rowCount: sheet.metadata?.rowCount,
+                        columnCount: sheet.metadata?.columnCount,
+                        sampleData: sheet.metadata?.sampleData || [],
+                        fullData: sheet.metadata?.fullData || [],
+                        sheetIndex: sheet.metadata?.sheetIndex,
+                        originalMetadata: sheet.metadata?.originalMetadata
+                    }
+                })),
+                activeSheet: analysisData.activeSheet,
+                totalSheets: analysisData.totalSheets,
+                fileName: analysisData.fileName
+            } : undefined
+        };
 
         // 백엔드와 동일한 형식으로 로깅
         console.log('==================== Data Generation API 요청 데이터 시작 ====================');
         console.log(`사용자 입력: ${requestBody.userInput}`);
         console.log(`사용자 ID: ${requestBody.userId}`);
         console.log(`채팅 ID: ${requestBody.chatId}`);
-        console.log(`언어: ${requestBody.language || 'ko'}`);
-        console.log(`스프레드시트 ID: ${requestBody.spreadsheetData.spreadsheetId || '없음'}`);
+        console.log(`언어: ${requestBody.language}`);
         
-        if (requestBody.spreadsheetData.sheets.length > 0) {
-            console.log(`SpreadsheetData - 시트 수: ${requestBody.spreadsheetData.sheets.length}`);
-            console.log(`활성 시트: ${requestBody.spreadsheetData.activeSheet}`);
-            console.log(`파일명: ${requestBody.spreadsheetData.fileName}`);
-            const firstSheet = requestBody.spreadsheetData.sheets[0];
-            console.log(`첫 번째 시트 데이터 개수: ${firstSheet.data.length}`);
-        } else {
-            console.warn('⚠️ spreadsheetData가 없습니다. 빈 데이터가 전송될 수 있습니다.');
+        if (requestBody.sheetsData && requestBody.sheetsData.sheets.length > 0) {
+            console.log(`SheetsData - 시트 수: ${requestBody.sheetsData.sheets.length}`);
+            console.log(`활성 시트: ${requestBody.sheetsData.activeSheet}`);
+            console.log(`파일명: ${requestBody.sheetsData.fileName}`);
+            const firstSheet = requestBody.sheetsData.sheets[0];
+            console.log(`첫 번째 시트 데이터 개수: ${firstSheet.metadata?.fullData?.length || 0}`);
         }
         
         console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
