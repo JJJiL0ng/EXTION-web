@@ -1222,9 +1222,10 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     currentMessages.push(message);
                     sheetMessages[sheetIndex] = currentMessages;
  
-                    // 현재 활성 시트의 메시지인 경우 activeSheetMessages도 업데이트
+                    // 시트가 없을 때(xlsxData가 null)이거나 현재 활성 시트의 메시지인 경우 activeSheetMessages도 업데이트
+                    const activeSheetIndex = state.xlsxData?.activeSheetIndex ?? 0;
                     const activeSheetMessages =
-                        state.xlsxData?.activeSheetIndex === sheetIndex
+                        (!state.xlsxData || activeSheetIndex === sheetIndex)
                             ? currentMessages
                             : state.activeSheetMessages;
  
@@ -1242,9 +1243,8 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
  
             updateActiveSheetMessages: () => {
                 set((state) => {
-                    if (!state.xlsxData) return state;
- 
-                    const activeSheetIndex = state.xlsxData.activeSheetIndex;
+                    // 시트가 없을 때는 인덱스 0의 메시지를 사용
+                    const activeSheetIndex = state.xlsxData?.activeSheetIndex ?? 0;
                     const activeSheetMessages = state.sheetMessages[activeSheetIndex] || [];
  
                     return {
@@ -1259,9 +1259,10 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     const sheetMessages = { ...state.sheetMessages };
                     sheetMessages[sheetIndex] = [];
  
-                    // 현재 활성 시트의 메시지인 경우 activeSheetMessages도 초기화
+                    // 시트가 없을 때(xlsxData가 null)이거나 현재 활성 시트의 메시지인 경우 activeSheetMessages도 초기화
+                    const activeSheetIndex = state.xlsxData?.activeSheetIndex ?? 0;
                     const activeSheetMessages =
-                        state.xlsxData?.activeSheetIndex === sheetIndex
+                        (!state.xlsxData || activeSheetIndex === sheetIndex)
                             ? []
                             : state.activeSheetMessages;
  

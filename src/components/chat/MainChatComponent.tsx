@@ -976,7 +976,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
         try {
             const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('timeout')), 30000);
+                setTimeout(() => reject(new Error('timeout')), 60000);
             });
 
             // 현재 chatId를 가져와서 API 호출에 포함
@@ -1054,7 +1054,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
         try {
             const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('timeout')), 30000);
+                setTimeout(() => reject(new Error('timeout')), 60000);
             });
 
             // 현재 chatId를 가져와서 API 호출에 포함
@@ -1129,7 +1129,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
         try {
             const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('timeout')), 30000);
+                setTimeout(() => reject(new Error('timeout')), 60000);
             });
 
             // 현재 chatId를 가져와서 API 호출에 포함
@@ -1218,7 +1218,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
         try {
             const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('timeout')), 30000);
+                setTimeout(() => reject(new Error('timeout')), 60000);
             });
 
             // 현재 chatId를 가져와서 API 호출에 포함
