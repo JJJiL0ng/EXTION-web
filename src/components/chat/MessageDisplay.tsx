@@ -24,8 +24,8 @@ export default function MessageDisplay({ messages, onArtifactClick, isLoading = 
                 return <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-md mr-2">수식</span>;
             case 'artifact':
                 return <span className="text-xs px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-md mr-2">분석</span>;
-            case 'datageneration':
-                return <span className="text-xs px-1.5 py-0.5 bg-sky-100 text-sky-800 rounded-md mr-2">데이터</span>;
+            case 'datafix':
+                return <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-800 rounded-md mr-2">수정</span>;
             default:
                 return null;
         }

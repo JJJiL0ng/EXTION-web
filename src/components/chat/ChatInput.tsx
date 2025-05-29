@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { Send, Paperclip } from 'lucide-react';
 
 interface ChatInputProps {
-    currentMode: 'normal' | 'formula' | 'artifact' | 'datageneration' | 'datafix';
+    currentMode: 'normal' | 'formula' | 'artifact' | 'datafix';
     inputValue: string;
     isDragOver: boolean;
     isLoading: boolean;
@@ -123,7 +123,7 @@ export default function ChatInput({
 
             {!fileExists && hasUploadedFile && (
                 <p className="text-xs text-gray-400 mt-2 text-center">
-                    이 채팅에서는 이미 파일이 업로드되었습니다. 새로운 파일을 업로드하려면 "New Chat"을 클릭하세요.
+                    이 채팅에서는 이미 파일이 업로드되었습니다. 새로운 파일을 업로드하려면 &quot;New Chat&quot;을 클릭하세요.
                 </p>
             )}
         </div>

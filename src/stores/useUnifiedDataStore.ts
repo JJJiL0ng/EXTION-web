@@ -9,7 +9,7 @@ export interface ChatMessage {
     type: 'user' | 'Extion ai';
     content: string;
     timestamp: Date;
-    mode?: 'normal' | 'formula' | 'artifact' | 'datageneration' | 'datafix';
+    mode?: 'normal' | 'formula' | 'artifact' | 'datafix';
     artifactData?: {
         type: string;
         title: string;

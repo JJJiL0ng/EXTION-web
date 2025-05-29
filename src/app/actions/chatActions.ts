@@ -8,7 +8,7 @@ const openai = new OpenAI({
 });
 
 // 채팅 모드 타입 정의
-export type ChatMode = 'normal' | 'formula' | 'datageneration' | 'artifact' | 'datafix';
+export type ChatMode = 'normal' | 'formula' | 'datafix' | 'artifact';
 
 // 사용자 의도에 따라 채팅 모드를 결정하는 함수
 export async function determineChatMode(
@@ -22,9 +22,8 @@ export async function determineChatMode(
       
       1. normal: 일반적인 대화나 간단한 질문(ex: 안녕, 데이터 분석 어떻게 해야 할지 모르겠어요)
       2. formula: 스프레드시트 함수가 필요한 작업 요청(ex: 합계, 평균, 최대, 최소 등)
-      3. datageneration: 데이터 생성 요청(ex: 목업 데이터 생성, 새로운 데이터 추가)
-      4. datafix: 데이터 정렬, 필터링, 전체 데이터의 변환이나 수정(ex: 오름차순 정렬, 중복 제거, 특정 값 수정)
-      5. artifact: 데이터 시각화 관련 요청(ex: 시트 데이터 시각화, 데이터 트렌드 시각화 자료)
+      3. datafix: 데이터 정렬, 필터링, 전체 데이터의 변환이나 수정(ex: 오름차순 정렬, 중복 제거, 특정 값 수정)
+      4. artifact: 데이터 시각화 관련 요청(ex: 시트 데이터 시각화, 데이터 트렌드 시각화 자료)
       
       반드시 위의 5가지 모드 중 하나만 단어로 응답하세요.
     `;
@@ -49,8 +48,6 @@ export async function determineChatMode(
     
     if (gptResponse.includes('formula')) {
       mode = 'formula';
-    } else if (gptResponse.includes('datageneration')) {
-      mode = 'datageneration';
     } else if (gptResponse.includes('datafix')) {
       mode = 'datafix';
     } else if (gptResponse.includes('artifact')) {

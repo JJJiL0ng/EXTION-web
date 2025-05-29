@@ -823,7 +823,7 @@ export default function MainChatComponent() {
         openArtifactModal(messageId);
     };
 
-    // 메시지 전송 함수 - 서버 액션을 사용하여 채팅 모드 결정
+    // 메시지 전송 함수 - 시트 업로드 여부 확인 후 채팅 모드 결정
     const sendMessage = async () => {
         if (!inputValue.trim()) return;
 
@@ -841,11 +841,19 @@ export default function MainChatComponent() {
         addMessageToSheet(activeSheetIndex, userMessage);
 
         try {
-            // 서버 액션을 호출하여 채팅 모드 결정
-            const { mode } = await determineChatMode(inputValue);
             const currentInput = inputValue;
             setInputValue('');
 
+            // 시트가 업로드되어 있지 않으면 datageneration 모드 사용
+            if (!xlsxData || !xlsxData.sheets || xlsxData.sheets.length === 0) {
+                setCurrentMode('normal'); // datageneration은 ChatMode에 없으므로 normal로 설정
+                await handleDataGenerationChat(currentInput);
+                return;
+            }
+
+            // 시트가 있는 경우 서버 액션을 호출하여 채팅 모드 결정
+            const { mode } = await determineChatMode(inputValue);
+            
             // 채팅 모드 설정
             setCurrentMode(mode);
 
@@ -854,8 +862,6 @@ export default function MainChatComponent() {
                 await handleFormulaChat(currentInput);
             } else if (mode === 'artifact') {
                 await handleArtifactChat(currentInput);
-            } else if (mode === 'datageneration') {
-                await handleDataGenerationChat(currentInput);
             } else if (mode === 'datafix') {
                 await handleDataFixChat(currentInput);
             } else {
@@ -1083,7 +1089,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                         `데이터 크기: ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
                         `${result.explanation || ''}`,
                     timestamp: new Date(),
-                    mode: 'datageneration'
+                    mode: 'normal'
                 };
 
                 // 현재 활성 시트에 응답 메시지 추가
@@ -1107,7 +1113,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 type: 'Extion ai',
                 content: errorMessage,
                 timestamp: new Date(),
-                mode: 'datageneration'
+                mode: 'normal'
             };
 
             // 현재 활성 시트에 오류 메시지 추가
