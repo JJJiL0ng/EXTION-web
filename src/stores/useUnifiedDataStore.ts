@@ -819,7 +819,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
  
             // GPT 분석용 데이터 가져오기 - 현재 시트 중심 버전
             getDataForGPTAnalysis: (sheetIndex, allSheets = false) => {
-                const { xlsxData, computedSheetData } = get();
+                const { xlsxData, computedSheetData, currentSpreadsheetId } = get();
  
                 if (!xlsxData) {
                     return { sheets: [], activeSheet: '' };
@@ -882,7 +882,9 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     currentSheetIndex: xlsxData.activeSheetIndex,
                     // 전체 컨텍스트 정보 (필요시에만)
                     totalSheets: xlsxData.sheets.length,
-                    fileName: xlsxData.fileName
+                    fileName: xlsxData.fileName,
+                    // === 중요: spreadsheetId 추가 ===
+                    spreadsheetId: currentSpreadsheetId || undefined
                 };
             },
  

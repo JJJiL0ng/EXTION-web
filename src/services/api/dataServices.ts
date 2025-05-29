@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // === Firebase 관련 인터페이스 추가 ===
+
 export interface FirebaseUser {
   uid: string;
   email: string | null;
@@ -12,7 +13,37 @@ export interface FirebaseUser {
   photoURL: string | null;
 }
 
-// === 백엔드 DTO와 일치하는 타입 인터페이스 ===
+// === 백엔드 명세서에 맞는 새로운 인터페이스 정의 ===
+
+// 단순화된 시트 데이터 구조 (백엔드 SimpleSheetData와 일치)
+export interface SimpleSheetData {
+    name: string;                // 시트명
+    headers: string[];           // 헤더 배열
+    data: string[][];            // 데이터 배열 (2차원)
+    spreadsheetId?: string;      // 스프레드시트 ID (선택사항)
+    sheetIndex?: number;         // 시트 인덱스 (선택사항)
+}
+
+// 스프레드시트 데이터 구조 (백엔드 SpreadsheetData와 일치)
+export interface SpreadsheetData {
+    fileName: string;            // 파일명 (스프레드시트 ID 역할)
+    activeSheet: string;         // 활성 시트명
+    spreadsheetId: string;       // 스프레드시트 ID
+    sheets: SimpleSheetData[];   // 시트 데이터 배열
+}
+
+// 백엔드 ProcessDataDto와 완전히 일치하는 요청 DTO
+export interface ProcessDataRequestDTO {
+    userInput: string;           // 사용자 입력 메시지
+    spreadsheetData: SpreadsheetData;  // 스프레드시트 데이터
+    language?: string;           // 언어 설정 (기본값: 'ko')
+    userId: string;              // 사용자 ID
+    chatId: string;              // 채팅 ID
+    chatTitle?: string;          // 채팅 제목 (선택사항)
+    messageId?: string;          // 메시지 ID (선택사항)
+}
+
+// === 레거시 인터페이스들 (하위 호환성을 위해 유지) ===
 
 // 헤더 정보 인터페이스 (백엔드 HeaderInfo와 일치)
 export interface HeaderInfo {
@@ -56,7 +87,7 @@ export interface SheetDataItem {
     metadata?: SheetDataItemMetadata;
 }
 
-// 다중 시트 데이터 구조 (백엔드 SheetsData와 일치)
+// 다중 시트 데이터 구조 (백엔드 SheetsData와 일치) - 레거시
 export interface SheetsData {
     sheets: SheetDataItem[];
     activeSheet: string;
@@ -65,7 +96,7 @@ export interface SheetsData {
     spreadsheetId?: string;
 }
 
-// 확장된 시트 컨텍스트 (백엔드 ExtendedSheetContext와 일치)
+// 확장된 시트 컨텍스트 (백엔드 ExtendedSheetContext와 일치) - 레거시
 export interface ExtendedSheetContext {
     sheetName: string;
     sheetIndex: number;
@@ -75,42 +106,6 @@ export interface ExtendedSheetContext {
     totalSheets: number;
     sheetList: string[];
     spreadsheetId?: string;
-}
-
-// 백엔드 ProcessDataDto와 완전히 일치하는 요청 DTO
-export interface ProcessDataRequestDTO {
-    userInput: string;
-    extendedSheetContext?: ExtendedSheetContext;
-    sheetsData?: SheetsData; // 백엔드에서 우선 처리되는 필드
-    currentData?: SheetsData; // 기존 호환성 유지
-    language?: string;
-    userId?: string;
-    chatId?: string;
-    chatTitle?: string;
-    messageId?: string;
-    spreadsheetId?: string; // 스프레드시트 ID (저장된 spreadsheetId)
-    targetSheetIndex?: number; // 현재 보고 있는 시트 인덱스
-}
-
-// 수정된 데이터 DTO (백엔드 EditedDataDto와 일치)
-export interface EditedDataDto {
-    sheetName: string;
-    headers: string[];
-    data: string[][];
-}
-
-// 변경 내역 DTO (백엔드 ChangesDto와 일치)
-export interface ChangesDto {
-    type: 'sort' | 'filter' | 'modify' | 'transform';
-    details: string;
-}
-
-// 스프레드시트 메타데이터 (백엔드와 일치)
-export interface SpreadsheetMetadata {
-    fileName?: string;
-    totalSheets?: number;
-    activeSheetIndex?: number;
-    sheetNames?: string[];
 }
 
 // === 응답 인터페이스 수정 ===
@@ -329,6 +324,10 @@ const createRequestBody = (
         throw new Error('로그인이 필요합니다. (currentUser is null in createRequestBody)');
     }
 
+    if (!chatId) {
+        throw new Error('채팅 ID가 필요합니다.');
+    }
+
     // 현재 시트 데이터만 가져오기 (allSheets=false가 기본값)
     let analysisData = null;
     if (getDataForGPTAnalysis) {
@@ -414,27 +413,21 @@ const createRequestBody = (
         console.log('=== 폴백 처리 완료 ===');
     }
 
-    // 최적화된 SheetsData 생성 (백엔드 SheetsData DTO와 일치)
-    console.log('=== createOptimizedSheetsData 호출 시작 ===');
-    const optimizedSheetsData = createOptimizedSheetsData(analysisData, extendedSheetContext, currentSheetIndex);
-    
-    if (optimizedSheetsData) {
-        console.log('optimizedSheetsData 생성 성공:');
-        console.log('- sheets 수:', optimizedSheetsData.sheets?.length || 0);
-        console.log('- activeSheet:', optimizedSheetsData.activeSheet);
-        console.log('- fileName:', optimizedSheetsData.fileName);
-        
-        if (optimizedSheetsData.sheets && optimizedSheetsData.sheets.length > 0) {
-            const firstSheet = optimizedSheetsData.sheets[0];
-            console.log('변환된 첫 번째 시트:');
-            console.log('- name:', firstSheet.name);
-            console.log('- headers 수:', firstSheet.metadata?.headers?.length || 0);
-            console.log('- fullData 행 수:', firstSheet.metadata?.fullData?.length || 0);
-        }
-    } else {
-        console.error('optimizedSheetsData 생성 실패');
-    }
-    console.log('=== createOptimizedSheetsData 호출 끝 ===');
+    // analysisData를 새로운 SpreadsheetData 형식으로 변환
+    const spreadsheetData: SpreadsheetData = {
+        fileName: analysisData?.fileName || 'Spreadsheet',
+        activeSheet: analysisData?.activeSheet || 'Sheet1',
+        spreadsheetId: analysisData?.spreadsheetId || '',
+        sheets: analysisData?.sheets?.map((sheet: any) => ({
+            name: sheet.name,
+            headers: sheet.metadata?.headers || [],
+            data: sheet.metadata?.fullData || []
+        })) || [{
+            name: 'Sheet1',
+            headers: [],
+            data: []
+        }]
+    };
 
     const requestBody: ProcessDataRequestDTO = {
         // === 기본 필드 ===
@@ -443,32 +436,21 @@ const createRequestBody = (
         
         // === Firebase 필드 ===
         userId: currentUser.uid,
-        chatId: chatId || undefined,
-        chatTitle: chatTitle || undefined,
-        messageId: messageId || undefined,
-        spreadsheetId: analysisData?.spreadsheetId,
-        targetSheetIndex: currentSheetIndex,
+        chatId: chatId,
         
-        // === 스프레드시트 데이터 (백엔드 호환성) ===
-        sheetsData: optimizedSheetsData || undefined, // 백엔드에서 우선 처리
-        currentData: optimizedSheetsData || undefined, // 기존 호환성 유지
-        extendedSheetContext: extendedSheetContext || undefined
+        // === 스프레드시트 데이터 ===
+        spreadsheetData: spreadsheetData
     };
 
     console.log('=== 최종 요청 본문 요약 ===');
     console.log('- userId:', requestBody.userId);
     console.log('- userInput 길이:', requestBody.userInput.length);
     console.log('- chatId:', requestBody.chatId);
-    console.log('- spreadsheetId:', requestBody.spreadsheetId || '없음');
-    console.log('- targetSheetIndex:', requestBody.targetSheetIndex !== undefined ? requestBody.targetSheetIndex : '없음');
-    console.log('- sheetsData 존재:', !!requestBody.sheetsData);
-    console.log('- currentData 존재:', !!requestBody.currentData);
-    if (requestBody.sheetsData) {
-        console.log('- sheetsData.sheets 수:', requestBody.sheetsData.sheets?.length || 0);
-        if (requestBody.sheetsData.sheets && requestBody.sheetsData.sheets.length > 0) {
-            const sheet = requestBody.sheetsData.sheets[0];
-            console.log('- 첫 번째 시트 데이터 개수:', sheet.metadata?.fullData?.length || 0);
-        }
+    console.log('- spreadsheetData 파일명:', requestBody.spreadsheetData.fileName);
+    console.log('- spreadsheetData 시트 수:', requestBody.spreadsheetData.sheets.length);
+    if (requestBody.spreadsheetData.sheets.length > 0) {
+        const sheet = requestBody.spreadsheetData.sheets[0];
+        console.log('- 첫 번째 시트 데이터 개수:', sheet.data.length);
     }
     console.log('=== 최종 요청 본문 요약 끝 ===');
 
@@ -502,15 +484,12 @@ export const callNormalChatAPI = async (
         console.log('==================== Normal Chat API 요청 데이터 시작 ====================');
         console.log(`사용자 입력: ${requestBody.userInput}`);
         console.log(`사용자 ID: ${requestBody.userId}`);
-        console.log(`채팅 ID: ${requestBody.chatId || '새 채팅'}`);
-        console.log(`채팅 제목: ${requestBody.chatTitle || '없음'}`);
-        console.log(`메시지 ID: ${requestBody.messageId || '없음'}`);
-        console.log(`스프레드시트 ID: ${requestBody.spreadsheetId || '없음'}`);
-        console.log(`대상 시트 인덱스: ${requestBody.targetSheetIndex !== undefined ? requestBody.targetSheetIndex : '없음'}`);
+        console.log(`채팅 ID: ${requestBody.chatId}`);
+        console.log(`언어: ${requestBody.language || 'ko'}`);
         
-        if (requestBody.sheetsData) {
-            console.log(`SheetsData - 시트 수: ${requestBody.sheetsData.sheets?.length || 0}`);
-            console.log(`활성 시트: ${requestBody.sheetsData.activeSheet}`);
+        if (requestBody.spreadsheetData.sheets.length > 0) {
+            console.log(`SpreadsheetData - 시트 수: ${requestBody.spreadsheetData.sheets.length}`);
+            console.log(`활성 시트: ${requestBody.spreadsheetData.activeSheet}`);
         }
         
         console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
@@ -613,16 +592,14 @@ export const callArtifactAPI = async (
         console.log('==================== Artifact API 요청 데이터 시작 ====================');
         console.log(`사용자 입력: ${requestBody.userInput}`);
         console.log(`사용자 ID: ${requestBody.userId}`);
-        console.log(`채팅 ID: ${requestBody.chatId || '새 채팅'}`);
-        console.log(`채팅 제목: ${requestBody.chatTitle || '없음'}`);
-        console.log(`메시지 ID: ${requestBody.messageId || '없음'}`);
-        console.log(`스프레드시트 ID: ${requestBody.spreadsheetId || '없음'}`);
-        console.log(`대상 시트 인덱스: ${requestBody.targetSheetIndex !== undefined ? requestBody.targetSheetIndex : '없음'}`);
+        console.log(`채팅 ID: ${requestBody.chatId}`);
+        console.log(`언어: ${requestBody.language || 'ko'}`);
+        console.log(`스프레드시트 ID: ${requestBody.spreadsheetData.spreadsheetId || '없음'}`);
         
-        if (requestBody.sheetsData) {
-            console.log(`SheetsData - 시트 수: ${requestBody.sheetsData.sheets?.length || 0}`);
-            console.log(`활성 시트: ${requestBody.sheetsData.activeSheet}`);
-            console.log(`파일명: ${requestBody.sheetsData.fileName}`);
+        if (requestBody.spreadsheetData.sheets.length > 0) {
+            console.log(`SpreadsheetData - 시트 수: ${requestBody.spreadsheetData.sheets.length}`);
+            console.log(`활성 시트: ${requestBody.spreadsheetData.activeSheet}`);
+            console.log(`파일명: ${requestBody.spreadsheetData.fileName}`);
         }
         
         console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
@@ -767,22 +744,18 @@ export const callDataFixAPI = async (
         console.log('==================== Data Fix API 요청 데이터 시작 ====================');
         console.log(`사용자 입력: ${requestBody.userInput}`);
         console.log(`사용자 ID: ${requestBody.userId}`);
-        console.log(`채팅 ID: ${requestBody.chatId || '새 채팅'}`);
-        console.log(`채팅 제목: ${requestBody.chatTitle || '없음'}`);
-        console.log(`메시지 ID: ${requestBody.messageId || '없음'}`);
-        console.log(`스프레드시트 ID: ${requestBody.spreadsheetId || '없음'}`);
-        console.log(`대상 시트 인덱스: ${requestBody.targetSheetIndex !== undefined ? requestBody.targetSheetIndex : '없음'}`);
+        console.log(`채팅 ID: ${requestBody.chatId}`);
+        console.log(`언어: ${requestBody.language || 'ko'}`);
+        console.log(`스프레드시트 ID: ${requestBody.spreadsheetData.spreadsheetId || '없음'}`);
         
-        if (requestBody.sheetsData) {
-            console.log(`SheetsData - 시트 수: ${requestBody.sheetsData.sheets?.length || 0}`);
-            console.log(`활성 시트: ${requestBody.sheetsData.activeSheet}`);
-            console.log(`파일명: ${requestBody.sheetsData.fileName}`);
-            if (requestBody.sheetsData.sheets && requestBody.sheetsData.sheets.length > 0) {
-                const firstSheet = requestBody.sheetsData.sheets[0];
-                console.log(`첫 번째 시트 데이터 개수: ${firstSheet.metadata?.fullData?.length || 0}`);
-            }
+        if (requestBody.spreadsheetData.sheets.length > 0) {
+            console.log(`SpreadsheetData - 시트 수: ${requestBody.spreadsheetData.sheets.length}`);
+            console.log(`활성 시트: ${requestBody.spreadsheetData.activeSheet}`);
+            console.log(`파일명: ${requestBody.spreadsheetData.fileName}`);
+            const firstSheet = requestBody.spreadsheetData.sheets[0];
+            console.log(`첫 번째 시트 데이터 개수: ${firstSheet.data.length}`);
         } else {
-            console.warn('⚠️ sheetsData가 없습니다. 빈 데이터가 전송될 수 있습니다.');
+            console.warn('⚠️ spreadsheetData가 없습니다. 빈 데이터가 전송될 수 있습니다.');
         }
         
         console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
@@ -882,21 +855,18 @@ export const callDataGenerationAPI = async (
         console.log('==================== Data Generation API 요청 데이터 시작 ====================');
         console.log(`사용자 입력: ${requestBody.userInput}`);
         console.log(`사용자 ID: ${requestBody.userId}`);
-        console.log(`채팅 ID: ${requestBody.chatId || '새 채팅'}`);
-        console.log(`메시지 ID: ${requestBody.messageId || '없음'}`);
-        console.log(`스프레드시트 ID: ${requestBody.spreadsheetId || '없음'}`);
-        console.log(`대상 시트 인덱스: ${requestBody.targetSheetIndex !== undefined ? requestBody.targetSheetIndex : '없음'}`);
+        console.log(`채팅 ID: ${requestBody.chatId}`);
+        console.log(`언어: ${requestBody.language || 'ko'}`);
+        console.log(`스프레드시트 ID: ${requestBody.spreadsheetData.spreadsheetId || '없음'}`);
         
-        if (requestBody.sheetsData) {
-            console.log(`SheetsData - 시트 수: ${requestBody.sheetsData.sheets?.length || 0}`);
-            console.log(`활성 시트: ${requestBody.sheetsData.activeSheet}`);
-            console.log(`파일명: ${requestBody.sheetsData.fileName}`);
-            if (requestBody.sheetsData.sheets && requestBody.sheetsData.sheets.length > 0) {
-                const firstSheet = requestBody.sheetsData.sheets[0];
-                console.log(`첫 번째 시트 데이터 개수: ${firstSheet.metadata?.fullData?.length || 0}`);
-            }
+        if (requestBody.spreadsheetData.sheets.length > 0) {
+            console.log(`SpreadsheetData - 시트 수: ${requestBody.spreadsheetData.sheets.length}`);
+            console.log(`활성 시트: ${requestBody.spreadsheetData.activeSheet}`);
+            console.log(`파일명: ${requestBody.spreadsheetData.fileName}`);
+            const firstSheet = requestBody.spreadsheetData.sheets[0];
+            console.log(`첫 번째 시트 데이터 개수: ${firstSheet.data.length}`);
         } else {
-            console.warn('⚠️ sheetsData가 없습니다. 빈 데이터가 전송될 수 있습니다.');
+            console.warn('⚠️ spreadsheetData가 없습니다. 빈 데이터가 전송될 수 있습니다.');
         }
         
         console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
@@ -1212,3 +1182,24 @@ export const getSpreadsheetFromFirebase = async (
         throw error;
     }
 };
+
+// === 수정된 데이터 DTO (백엔드 EditedDataDto와 일치)
+export interface EditedDataDto {
+    sheetName: string;
+    headers: string[];
+    data: string[][];
+}
+
+// === 변경 내역 DTO (백엔드 ChangesDto와 일치)
+export interface ChangesDto {
+    type: 'sort' | 'filter' | 'modify' | 'transform';
+    details: string;
+}
+
+// === 스프레드시트 메타데이터 (백엔드와 일치)
+export interface SpreadsheetMetadata {
+    fileName?: string;
+    totalSheets?: number;
+    activeSheetIndex?: number;
+    sheetNames?: string[];
+}
