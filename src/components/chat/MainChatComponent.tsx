@@ -896,7 +896,7 @@ export default function MainChatComponent() {
             // 현재 chatId를 가져와서 API 호출에 포함
             const chatId = getCurrentChatId();
 
-            const apiCall = callFormulaAPI(userInput, extendedSheetContext, {
+            const apiCall = callFormulaAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
                 chatId: chatId || undefined,
                 currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
             });

@@ -110,19 +110,64 @@ export interface ArtifactResponse {
     aiMessageId?: string;
 }
 
+// === 포뮬러 요청 인터페이스 (백엔드 ProcessFormulaDto와 일치) ===
+export interface ProcessFormulaRequestDTO {
+    userInput: string;           // 사용자의 자연어 입력
+    userId: string;              // 사용자 ID (백엔드에서 필수)
+    sheetContext: SheetContext;  // 시트 컨텍스트 정보 (하위 호환성)
+    language?: string;           // 응답 언어 (기본값: "ko")
+    chatId?: string;             // 채팅 ID (선택적, 없으면 새 채팅 생성)
+    chatTitle?: string;          // 채팅 제목 (새 채팅일 때)
+    messageId?: string;          // 메시지 ID
+    preferredFunctions?: string[]; // 선호하는 함수 타입
+}
+
+// === 시트 컨텍스트 인터페이스 (백엔드 SheetContext와 일치) ===
+export interface SheetContext {
+    sheetName: string;           // 시트 이름
+    headers: HeaderInfo[];       // 헤더 정보
+    dataRange: DataRange;        // 데이터 범위
+    sampleData?: Record<string, any>[]; // 선택적: 샘플 데이터
+}
+
+// === 포뮬러 설명 인터페이스 ===
+export interface FormulaExplanation {
+    korean: string;              // 한국어 설명
+    english?: string;            // 영어 설명
+}
+
+// === 포뮬러 예시 인터페이스 ===
+export interface FormulaExample {
+    range: string;               // 예시 범위 (예: "B2:B10")
+    formula: string;             // 예시 함수 (예: "=AVERAGE(B2:B10)")
+    description: string;         // 예시 설명
+}
+
+// === 대안 포뮬러 인터페이스 ===
+export interface AlternativeFormula {
+    formula: string;             // 대안 함수
+    reason: string;              // 대안을 제시하는 이유
+    complexity?: number;         // 복잡도 (1-5)
+}
+
+// === 포뮬러 응답 인터페이스 (백엔드 FormulaResponseDto와 완전히 일치) ===
 export interface FormulaResponse {
-    success: boolean;
-    formula?: string;
-    explanation?: {
-        korean: string;
-    };
-    cellAddress?: string;
-    error?: string;
-    // Firebase 관련 필드 추가
-    chatId?: string;
-    messageId?: string;
-    userMessageId?: string;
-    aiMessageId?: string;
+    success: boolean;            // 성공 여부
+    formula?: string;            // 생성된 함수
+    cellAddress?: string;        // 함수를 넣을 셀 주소 (예: "E1")
+    functionType?: string;       // 함수 타입 (예: "AVERAGE", "SUM")
+    explanation?: FormulaExplanation; // 함수 설명
+    examples?: FormulaExample[]; // 사용 예시
+    alternatives?: AlternativeFormula[]; // 대안 함수들
+    warning?: string;            // 주의사항
+    error?: string;              // 에러 메시지
+    requestId?: string;          // 요청 추적을 위한 ID
+    // Firebase 관련 필드
+    chatId?: string;             // 채팅 ID
+    userMessageId?: string;      // 사용자 메시지 ID
+    aiMessageId?: string;        // AI 메시지 ID
+    timestamp?: string;          // 타임스탬프
+    spreadsheetMetadata?: SpreadsheetMetadata;
 }
 
 // 데이터 생성 응답 인터페이스 (백엔드 DTO와 일치)
@@ -549,14 +594,139 @@ export const callArtifactAPI = async (
     }
 };
 
+// === 포뮬러 요청 본문 생성 함수 ===
+const createFormulaRequestBody = (
+    userInput: string,
+    extendedSheetContext: any,
+    getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any,
+    chatId?: string,
+    chatTitle?: string,
+    messageId?: string,
+    currentSheetIndex?: number,
+    preferredFunctions?: string[]
+): ProcessFormulaRequestDTO => {
+    const { user: currentUser, loading: authLoading } = useAuthStore.getState();
+    
+    if (authLoading) {
+        console.warn('Auth state is still loading. API call might fail if user is not yet available.');
+    }
+
+    if (!currentUser) {
+        throw new Error('로그인이 필요합니다. (currentUser is null in createFormulaRequestBody)');
+    }
+
+    // 스프레드시트 데이터 생성 (일반 채팅과 동일한 로직)
+    let analysisData = null;
+    if (getDataForGPTAnalysis && typeof getDataForGPTAnalysis === 'function') {
+        console.log('=== getDataForGPTAnalysis 호출 (Formula) ===');
+        try {
+            analysisData = getDataForGPTAnalysis(currentSheetIndex, false);
+            console.log('Formula - 스프레드시트 데이터:', analysisData);
+        } catch (error) {
+            console.warn('getDataForGPTAnalysis 호출 실패:', error);
+            analysisData = null;
+        }
+    } else {
+        console.log('getDataForGPTAnalysis 함수가 제공되지 않았습니다.');
+    }
+
+    // 폴백: extendedSheetContext에서 데이터 추출
+    if (!analysisData || !analysisData.sheets || analysisData.sheets.length === 0) {
+        if (extendedSheetContext && extendedSheetContext.sampleData) {
+            const headers = extendedSheetContext.headers?.map((h: any) => h.name || h.column || String(h)) || [];
+            const sampleDataRows = extendedSheetContext.sampleData || [];
+            
+            const convertedData = sampleDataRows.map((rowObj: any) => {
+                if (Array.isArray(rowObj)) return rowObj;
+                if (typeof rowObj === 'object' && rowObj !== null) {
+                    return headers.map((header: string) => rowObj[header] || '');
+                }
+                return [];
+            });
+            
+            analysisData = {
+                sheets: [{
+                    name: extendedSheetContext.sheetName,
+                    csv: '',
+                    metadata: {
+                        headers: headers,
+                        rowCount: convertedData.length,
+                        columnCount: headers.length,
+                        fullData: convertedData,
+                        sampleData: convertedData.slice(0, 5),
+                        sheetIndex: extendedSheetContext.sheetIndex || 0,
+                        originalMetadata: null
+                    }
+                }],
+                activeSheet: extendedSheetContext.sheetName,
+                totalSheets: extendedSheetContext.totalSheets || 1,
+                fileName: `${extendedSheetContext.sheetName}.xlsx`,
+                spreadsheetId: extendedSheetContext.spreadsheetId
+            };
+        }
+    }
+
+    // 새로운 SpreadsheetData 형식으로 변환
+    const spreadsheetData: SpreadsheetData = {
+        fileName: analysisData?.fileName || 'Spreadsheet',
+        activeSheet: analysisData?.activeSheet || 'Sheet1',
+        spreadsheetId: analysisData?.spreadsheetId || '',
+        sheets: analysisData?.sheets?.map((sheet: any) => ({
+            name: sheet.name,
+            headers: sheet.metadata?.headers || [],
+            data: sheet.metadata?.fullData || []
+        })) || [{
+            name: 'Sheet1',
+            headers: [],
+            data: []
+        }]
+    };
+
+    // 시트 컨텍스트 생성 (하위 호환성)
+    const sheetContext: SheetContext = {
+        sheetName: extendedSheetContext?.sheetName || 'Sheet1',
+        headers: extendedSheetContext?.headers || [],
+        dataRange: extendedSheetContext?.dataRange || {
+            startRow: '1',
+            endRow: '100',
+            startColumn: 'A',
+            endColumn: 'Z'
+        },
+        sampleData: extendedSheetContext?.sampleData || []
+    };
+
+    const requestBody: ProcessFormulaRequestDTO = {
+        userInput,
+        userId: currentUser.uid,
+        sheetContext,
+        language: 'ko',
+        ...(chatId && { chatId }),
+        ...(chatTitle && { chatTitle }),
+        ...(messageId && { messageId }),
+        ...(preferredFunctions && { preferredFunctions })
+    };
+
+    console.log('=== Formula 요청 본문 요약 ===');
+    console.log('- userInput 길이:', requestBody.userInput.length);
+    console.log('- userId:', requestBody.userId);
+    console.log('- chatId:', requestBody.chatId || 'NEW CHAT');
+    console.log('- sheetContext 시트명:', requestBody.sheetContext.sheetName);
+    console.log('- language:', requestBody.language);
+
+    return requestBody;
+};
+
 // === 포뮬러 생성 API 호출 - Firebase 연동 버전 ===
 export const callFormulaAPI = async (
     userInput: string,
     extendedSheetContext: any,
+    getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any,
     options?: {
         chatId?: string;
+        chatTitle?: string;
         messageId?: string;
-        currentSheetIndex?: number; // 현재 시트 인덱스 추가
+        currentSheetIndex?: number;
+        preferredFunctions?: string[]; // 선호하는 함수 타입 추가
     }
 ): Promise<FormulaResponse> => {
     if (!extendedSheetContext) {
@@ -564,15 +734,40 @@ export const callFormulaAPI = async (
     }
 
     try {
-        const requestBody = createRequestBody(
+        const requestBody = createFormulaRequestBody(
             userInput,
             extendedSheetContext,
-            undefined,
+            getDataForGPTAnalysis,
             options?.chatId,
-            undefined,
+            options?.chatTitle,
             options?.messageId,
-            options?.currentSheetIndex // 현재 시트 인덱스 전달
+            options?.currentSheetIndex,
+            options?.preferredFunctions
         );
+
+        // 백엔드와 동일한 형식으로 로깅
+        console.log('==================== Formula API 요청 데이터 시작 ====================');
+        console.log(`사용자 입력: ${requestBody.userInput}`);
+        console.log(`사용자 ID: ${requestBody.userId}`);
+        console.log(`채팅 ID: ${requestBody.chatId || 'NEW CHAT'}`);
+        console.log(`채팅 제목: ${requestBody.chatTitle || 'N/A'}`);
+        console.log(`메시지 ID: ${requestBody.messageId || 'N/A'}`);
+        console.log(`언어: ${requestBody.language || 'ko'}`);
+
+        // 시트 컨텍스트 로깅
+        if (requestBody.sheetContext) {
+            console.log('=== Sheet Context ===');
+            console.log(`시트명: ${requestBody.sheetContext.sheetName}`);
+            console.log(`헤더 수: ${requestBody.sheetContext.headers?.length || 0}`);
+            console.log(`데이터 범위: ${requestBody.sheetContext.dataRange?.startRow}-${requestBody.sheetContext.dataRange?.endRow}`);
+        }
+
+        if (requestBody.preferredFunctions?.length) {
+            console.log(`선호 함수: ${requestBody.preferredFunctions.join(', ')}`);
+        }
+        
+        console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
+        console.log('==================== Formula API 요청 데이터 끝 ====================');
 
         const response = await fetch(`${API_BASE_URL}/formula/generate`, {
             method: 'POST',
@@ -582,16 +777,93 @@ export const callFormulaAPI = async (
             body: JSON.stringify(requestBody),
         });
 
+        // 응답 상태 확인
+        console.log('==================== Formula API 응답 상태 ====================');
+        console.log('Response Status:', response.status);
+        console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`API 오류: ${response.status} - ${errorText}`);
+            console.error('==================== Formula API 오류 상세 정보 ====================');
+            console.error('Status:', response.status);
+            console.error('Status Text:', response.statusText);
+            console.error('Error Body:', errorText);
+            console.error('==================== Formula API 오류 정보 끝 ====================');
+            
+            let errorMessage = `API 오류: ${response.status} - ${response.statusText}`;
+            try {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.message) {
+                    errorMessage = Array.isArray(errorJson.message) ? errorJson.message.join(', ') : errorJson.message;
+                } else if (errorText) {
+                    errorMessage = errorText;
+                }
+            } catch (e) {
+                if (errorText) errorMessage = errorText;
+            }
+            
+            throw new Error(errorMessage);
         }
 
-        const result = await response.json();
+        const result = await response.json() as FormulaResponse;
+        
+        // 백엔드와 동일한 형식으로 응답 로깅
+        console.log('==================== Formula API 응답 데이터 시작 ====================');
+        console.log(`성공 여부: ${result.success}`);
+        console.log(`포뮬러: ${result.formula || 'N/A'}`);
+        console.log(`셀 주소: ${result.cellAddress || 'N/A'}`);
+        console.log(`함수 타입: ${result.functionType || 'N/A'}`);
+        console.log(`채팅 ID: ${result.chatId || '없음'}`);
+        console.log(`사용자 메시지 ID: ${result.userMessageId || '없음'}`);
+        console.log(`AI 메시지 ID: ${result.aiMessageId || '없음'}`);
+        console.log(`타임스탬프: ${result.timestamp || '없음'}`);
+        
+        if (result.explanation) {
+            console.log(`설명 (한국어): ${result.explanation.korean}`);
+            if (result.explanation.english) {
+                console.log(`설명 (영어): ${result.explanation.english}`);
+            }
+        }
+        
+        if (result.examples?.length) {
+            console.log(`예시 수: ${result.examples.length}`);
+            result.examples.forEach((example, index) => {
+                console.log(`예시 ${index + 1}: ${example.formula} (${example.range})`);
+            });
+        }
+        
+        if (result.alternatives?.length) {
+            console.log(`대안 함수 수: ${result.alternatives.length}`);
+        }
+        
+        if (result.warning) {
+            console.log(`주의사항: ${result.warning}`);
+        }
+        
+        if (result.spreadsheetMetadata) {
+            console.log(`Spreadsheet Metadata:`, JSON.stringify({
+                hasSpreadsheet: result.spreadsheetMetadata.hasSpreadsheet,
+                fileName: result.spreadsheetMetadata.fileName,
+                totalSheets: result.spreadsheetMetadata.totalSheets,
+                activeSheetIndex: result.spreadsheetMetadata.activeSheetIndex,
+                sheetNames: result.spreadsheetMetadata.sheetNames
+            }, null, 2));
+        }
+        
+        if (result.error) {
+            console.log(`오류 메시지: ${result.error}`);
+        }
+        
+        console.log('전체 응답:', JSON.stringify(result, null, 2));
+        console.log('==================== Formula API 응답 데이터 끝 ====================');
+        
         return result;
         
     } catch (error) {
-        console.error('Formula API Call Error:', error);
+        console.error('==================== Formula API 호출 오류 ====================');
+        console.error('Error Message:', error instanceof Error ? error.message : String(error));
+        console.error('Error Stack:', error instanceof Error ? error.stack : 'No stack trace');
+        console.error('==================== Formula API 오류 끝 ====================');
         throw error;
     }
 };
@@ -707,393 +979,6 @@ export const callDataFixAPI = async (
     }
 };
 
-// === 데이터 생성 API 호출 - Firebase 연동 버전 ===
-export const callDataGenerationAPI = async (
-    userInput: string,
-    extendedSheetContext: any | null,
-    getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any,
-    options?: {
-        chatId?: string;
-        messageId?: string;
-        currentSheetIndex?: number;
-    }
-): Promise<DataGenerationResponse> => {
-    try {
-        const { user: currentUser } = useAuthStore.getState();
-        
-        if (!currentUser) {
-            throw new Error('로그인이 필요합니다.');
-        }
-
-        // 현재 시트 데이터만 가져오기
-        let analysisData = null;
-        if (getDataForGPTAnalysis) {
-            analysisData = getDataForGPTAnalysis(options?.currentSheetIndex, false);
-        }
-
-        // 요청 본문 구성
-        const requestBody = {
-            userInput,
-            userId: currentUser.uid,
-            chatId: options?.chatId,
-            language: 'ko',
-            extendedSheetContext: extendedSheetContext ? {
-                sheetName: extendedSheetContext.sheetName,
-                sheetIndex: extendedSheetContext.sheetIndex,
-                headers: extendedSheetContext.headers,
-                dataRange: extendedSheetContext.dataRange,
-                sampleData: extendedSheetContext.sampleData,
-                totalSheets: extendedSheetContext.totalSheets,
-                sheetList: extendedSheetContext.sheetList
-            } : undefined,
-            sheetsData: analysisData ? {
-                sheets: analysisData.sheets.map((sheet: any) => ({
-                    name: sheet.name,
-                    metadata: {
-                        headers: sheet.metadata?.headers || [],
-                        rowCount: sheet.metadata?.rowCount,
-                        columnCount: sheet.metadata?.columnCount,
-                        sampleData: sheet.metadata?.sampleData || [],
-                        fullData: sheet.metadata?.fullData || [],
-                        sheetIndex: sheet.metadata?.sheetIndex,
-                        originalMetadata: sheet.metadata?.originalMetadata
-                    }
-                })),
-                activeSheet: analysisData.activeSheet,
-                totalSheets: analysisData.totalSheets,
-                fileName: analysisData.fileName
-            } : undefined
-        };
-
-        // 백엔드와 동일한 형식으로 로깅
-        console.log('==================== Data Generation API 요청 데이터 시작 ====================');
-        console.log(`사용자 입력: ${requestBody.userInput}`);
-        console.log(`사용자 ID: ${requestBody.userId}`);
-        console.log(`채팅 ID: ${requestBody.chatId}`);
-        console.log(`언어: ${requestBody.language}`);
-        
-        if (requestBody.sheetsData && requestBody.sheetsData.sheets.length > 0) {
-            console.log(`SheetsData - 시트 수: ${requestBody.sheetsData.sheets.length}`);
-            console.log(`활성 시트: ${requestBody.sheetsData.activeSheet}`);
-            console.log(`파일명: ${requestBody.sheetsData.fileName}`);
-            const firstSheet = requestBody.sheetsData.sheets[0];
-            console.log(`첫 번째 시트 데이터 개수: ${firstSheet.metadata?.fullData?.length || 0}`);
-        }
-        
-        console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
-        console.log('==================== Data Generation API 요청 데이터 끝 ====================');
-
-        const response = await fetch(`${API_BASE_URL}/datagenerate/generate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-        });
-
-        // 응답 상태 확인
-        console.log('==================== Data Generation API 응답 상태 ====================');
-        console.log('Response Status:', response.status);
-        console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('==================== Data Generation API 오류 상세 정보 ====================');
-            console.error('Status:', response.status);
-            console.error('Status Text:', response.statusText);
-            console.error('Error Body:', errorText);
-            console.error('==================== Data Generation API 오류 정보 끝 ====================');
-            
-            let errorMessage = `API 오류: ${response.status} - ${response.statusText}`;
-            try {
-                const errorJson = JSON.parse(errorText);
-                if (errorJson.message) {
-                    errorMessage = Array.isArray(errorJson.message) ? errorJson.message.join(', ') : errorJson.message;
-                } else if (errorText) {
-                    errorMessage = errorText;
-                }
-            } catch (e) {
-                if (errorText) errorMessage = errorText;
-            }
-            
-            throw new Error(errorMessage);
-        }
-
-        const result = await response.json();
-        
-        // 백엔드와 동일한 형식으로 응답 로깅
-        console.log('==================== Data Generation API 응답 데이터 시작 ====================');
-        console.log(`성공 여부: ${result.success}`);
-        console.log(`시트 인덱스: ${result.sheetIndex || '없음'}`);
-        console.log(`설명: ${result.explanation || '없음'}`);
-        console.log(`채팅 ID: ${result.chatId || '없음'}`);
-        console.log(`사용자 메시지 ID: ${result.userMessageId || '없음'}`);
-        console.log(`AI 메시지 ID: ${result.aiMessageId || '없음'}`);
-        if (result.editedData) {
-            console.log(`생성된 시트명: ${result.editedData.sheetName}`);
-            console.log(`생성된 데이터 행 수: ${result.editedData.data?.length || 0}`);
-            console.log(`생성된 헤더 수: ${result.editedData.headers?.length || 0}`);
-        }
-        if (result.changeLog) {
-            console.log(`변경 로그 항목 수: ${result.changeLog.length}`);
-        }
-        if (result.error) {
-            console.log(`오류 메시지: ${result.error}`);
-        }
-        console.log('전체 응답:', JSON.stringify(result, null, 2));
-        console.log('==================== Data Generation API 응답 데이터 끝 ====================');
-        
-        return result;
-        
-    } catch (error) {
-        console.error('==================== Data Generation API 호출 오류 ====================');
-        console.error('Error Message:', error instanceof Error ? error.message : String(error));
-        console.error('Error Stack:', error instanceof Error ? error.stack : 'No stack trace');
-        console.error('==================== Data Generation API 오류 끝 ====================');
-        throw error;
-    }
-};
-
-// === 추가 채팅 관련 API 함수들 ===
-
-// 사용자의 채팅 목록 조회
-export const getUserChats = async (limit?: number): Promise<any[]> => {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-        throw new Error('로그인이 필요합니다.');
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/chats/user/${currentUser.uid}?limit=${limit || 50}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`채팅 목록 조회 실패: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Get User Chats Error:', error);
-        throw error;
-    }
-};
-
-// 특정 채팅의 메시지 조회
-export const getChatMessages = async (chatId: string, limit?: number): Promise<any[]> => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/chats/${chatId}/messages?limit=${limit || 50}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`채팅 메시지 조회 실패: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Get Chat Messages Error:', error);
-        throw error;
-    }
-};
-
-// 새 채팅 생성
-export const createNewChat = async (title: string, description?: string): Promise<{ chatId: string; success: boolean }> => {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-        throw new Error('로그인이 필요합니다.');
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/chats/${currentUser.uid}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ title, description }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`채팅 생성 실패: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Create Chat Error:', error);
-        throw error;
-    }
-};
-
-// 채팅 접근 권한 검증
-export const validateChatAccess = async (chatId: string): Promise<{ valid: boolean; chatTitle?: string; lastActivity?: string }> => {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-        return { valid: false };
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/normal/validate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                userId: currentUser.uid,
-                chatId: chatId,
-            }),
-        });
-
-        if (!response.ok) {
-            return { valid: false };
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Validate Chat Access Error:', error);
-        return { valid: false };
-    }  
-};
-
-// === 스프레드시트 저장 API 호출 - Firebase 연동 버전 ===
-export const saveSpreadsheetToFirebase = async (
-    parsedData: {
-        fileName: string;
-        sheets: any[];
-        activeSheetIndex?: number;
-    },
-    fileInfo: {
-        originalFileName: string;
-        fileSize: number;
-        fileType: 'xlsx' | 'csv';
-    },
-    options?: {
-        chatId?: string;
-        userId?: string;
-    }
-): Promise<{
-    success: boolean;
-    spreadsheetId: string;
-    chatId: string;
-    fileName: string;
-    sheets: Array<{
-        sheetId: string;
-        sheetIndex: number;
-        sheetName: string;
-        headers: string[];
-        rowCount: number;
-    }>;
-    error?: string;
-}> => {
-    try {
-        const { user: currentUser } = useAuthStore.getState();
-        
-        if (!currentUser) {
-            throw new Error('로그인이 필요합니다.');
-        }
-
-        const requestBody = {
-            userId: options?.userId || currentUser.uid,
-            chatId: options?.chatId,
-            fileName: parsedData.fileName,
-            originalFileName: fileInfo.originalFileName,
-            fileSize: fileInfo.fileSize,
-            fileType: fileInfo.fileType,
-            activeSheetIndex: parsedData.activeSheetIndex || 0,
-            sheets: parsedData.sheets.map((sheet: any, index: number) => ({
-                sheetName: sheet.sheetName,
-                sheetIndex: sheet.sheetIndex !== undefined ? sheet.sheetIndex : index,
-                data: {
-                    headers: sheet.headers,
-                    rows: sheet.data,
-                    rawData: sheet.rawData || sheet.data
-                },
-                computedData: sheet.computedData,
-                formulas: sheet.formulas
-            }))
-        };
-
-        console.log('Save Spreadsheet Request Body:', JSON.stringify(requestBody, null, 2));
-
-        const response = await fetch(`${API_BASE_URL}/spreadsheet/save`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Save Spreadsheet API Error Details:', {
-                status: response.status,
-                statusText: response.statusText,
-                body: errorText
-            });
-            throw new Error(`API 오류: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log('Save Spreadsheet API Response:', result);
-        return result;
-        
-    } catch (error) {
-        console.error('Save Spreadsheet API Call Error:', error);
-        throw error;
-    }
-};
-
-// === 스프레드시트 조회 API 호출 ===
-export const getSpreadsheetFromFirebase = async (
-    spreadsheetId: string,
-    options?: {
-        userId?: string;
-    }
-): Promise<{
-    success: boolean;
-    data: any;
-    error?: string;
-}> => {
-    try {
-        const { user: currentUser } = useAuthStore.getState();
-        
-        if (!currentUser) {
-            throw new Error('로그인이 필요합니다.');
-        }
-
-        const userId = options?.userId || currentUser.uid;
-        const response = await fetch(`${API_BASE_URL}/spreadsheet/${spreadsheetId}?userId=${userId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Get Spreadsheet API Error Details:', {
-                status: response.status,
-                statusText: response.statusText,
-                body: errorText
-            });
-            throw new Error(`API 오류: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log('Get Spreadsheet API Response:', result);
-        return result;
-        
-    } catch (error) {
-        console.error('Get Spreadsheet API Call Error:', error);
-        throw error;
-    }
-};
-
 // === 수정된 데이터 DTO (백엔드 EditedDataDto와 일치)
 export interface EditedDataDto {
     sheetName: string;
@@ -1109,6 +994,7 @@ export interface ChangesDto {
 
 // === 스프레드시트 메타데이터 (백엔드와 일치)
 export interface SpreadsheetMetadata {
+    hasSpreadsheet?: boolean;    // 스프레드시트 존재 여부 추가
     fileName?: string;
     totalSheets?: number;
     activeSheetIndex?: number;
