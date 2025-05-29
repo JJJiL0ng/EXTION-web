@@ -75,6 +75,7 @@ interface ArtifactCode {
 }
 
 interface SheetData {
+    sheetId?: string; // Firebase에서 생성된 시트 ID
     sheetName: string;
     headers: string[]; // 유효한 헤더만 (공백 제외)
     data: string[][]; // 헤더에 맞춰 정리된 데이터
@@ -114,6 +115,7 @@ interface ExtendedSheetContext {
     sampleData?: Record<string, string>[];
     totalSheets: number; // 전체 시트 개수
     sheetList: string[]; // 시트 이름 목록
+    spreadsheetId?: string; // 스프레드시트 ID
 }
 
 // 다중 시트 수식 적용 인터페이스
@@ -288,6 +290,17 @@ interface ExtendedUnifiedDataStoreActions {
     getCurrentSheetChatId: () => string | null;
     initializeSheetChatIds: () => void;
 
+    // === Sheet ID 관리 (Firebase에서 생성된 sheetId) ===
+    updateSheetIds: (sheetsInfo: Array<{
+        sheetId: string;
+        sheetIndex: number;
+        sheetName: string;
+        headers: string[];
+        rowCount: number;
+    }>) => void;
+    getSheetIdByIndex: (sheetIndex: number) => string | null;
+    updateSheetIdByIndex: (sheetIndex: number, sheetId: string) => void;
+
     // === Chat ID Management (deprecated - 시트별 채팅으로 대체) ===
     setCurrentChatId: (chatId: string | null) => void;
     getCurrentChatId: () => string | undefined;
@@ -391,7 +404,7 @@ const parseXLSXFile = async (file: File): Promise<XLSXData> => {
 };
 
 // 확장된 시트 컨텍스트 생성
-const generateExtendedSheetContext = (xlsxData: XLSXData): ExtendedSheetContext => {
+const generateExtendedSheetContext = (xlsxData: XLSXData, spreadsheetId?: string): ExtendedSheetContext => {
     const activeSheet = xlsxData.sheets[xlsxData.activeSheetIndex];
 
     if (!activeSheet) {
@@ -425,7 +438,8 @@ const generateExtendedSheetContext = (xlsxData: XLSXData): ExtendedSheetContext 
         dataRange,
         sampleData,
         totalSheets: xlsxData.sheets.length,
-        sheetList: xlsxData.sheets.map(sheet => sheet.sheetName)
+        sheetList: xlsxData.sheets.map(sheet => sheet.sheetName),
+        spreadsheetId: spreadsheetId
     };
 };
 
@@ -655,7 +669,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         hasUploadedFile: true, // 파일 업로드 상태 업데이트
                         activeSheetData: activeSheet,
                         computedSheetData: newComputedData,
-                        extendedSheetContext: generateExtendedSheetContext(data),
+                        extendedSheetContext: generateExtendedSheetContext(data, state.currentSpreadsheetId || undefined),
                         activeSheetMessages,
                         sheetChatIds: newSheetChatIds
                     };
@@ -685,7 +699,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         ...state,
                         xlsxData: newXlsxData,
                         activeSheetData: activeSheet,
-                        extendedSheetContext: generateExtendedSheetContext(newXlsxData),
+                        extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined),
                         activeSheetMessages
                     };
                 });
@@ -773,7 +787,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         xlsxData: newXlsxData,
                         computedSheetData: newComputedData,
                         activeSheetData: sheetIndex === state.xlsxData.activeSheetIndex ? targetSheet : state.activeSheetData,
-                        extendedSheetContext: generateExtendedSheetContext(newXlsxData)
+                        extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined)
                     };
                 });
             },
@@ -970,9 +984,9 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             setInternalUpdate: (flag) => set({ isInternalUpdate: flag }),
  
             updateExtendedSheetContext: () => {
-                const { xlsxData } = get();
+                const { xlsxData, currentSpreadsheetId } = get();
                 if (xlsxData) {
-                    set({ extendedSheetContext: generateExtendedSheetContext(xlsxData) });
+                    set({ extendedSheetContext: generateExtendedSheetContext(xlsxData, currentSpreadsheetId || undefined) });
                 }
             },
  
@@ -1068,7 +1082,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                             xlsxData: newXlsxData,
                             activeSheetData: newXlsxData.sheets[0],
                             computedSheetData: { 0: [...generatedData.data] },
-                            extendedSheetContext: generateExtendedSheetContext(newXlsxData)
+                            extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined)
                         };
                     });
  
@@ -1144,7 +1158,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                                 ...state.computedSheetData,
                                 [sheetIndex]: [...generatedData.data]
                             },
-                            extendedSheetContext: generateExtendedSheetContext(newXlsxData)
+                            extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined)
                         };
                     });
                 } else {
@@ -1191,7 +1205,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                                 ...state.computedSheetData,
                                 [xlsxData.sheets.length]: [...generatedData.data]
                             },
-                            extendedSheetContext: generateExtendedSheetContext(newXlsxData)
+                            extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined)
                         };
                     });
                 }
@@ -1570,6 +1584,75 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             },
             canUploadFile: () => {
                 return !get().hasUploadedFile;
+            },
+
+            // === Sheet ID 관리 (Firebase에서 생성된 sheetId) ===
+            updateSheetIds: (sheetsInfo: Array<{
+                sheetId: string;
+                sheetIndex: number;
+                sheetName: string;
+                headers: string[];
+                rowCount: number;
+            }>) => {
+                set((state) => {
+                    if (!state.xlsxData) return state;
+
+                    const newXlsxData = { ...state.xlsxData };
+                    newXlsxData.sheets = [...newXlsxData.sheets];
+
+                    // 각 시트에 sheetId 업데이트
+                    sheetsInfo.forEach((sheetInfo) => {
+                        const targetSheet = newXlsxData.sheets[sheetInfo.sheetIndex];
+                        if (targetSheet) {
+                            newXlsxData.sheets[sheetInfo.sheetIndex] = {
+                                ...targetSheet,
+                                sheetId: sheetInfo.sheetId
+                            };
+                        }
+                    });
+
+                    // 현재 활성 시트도 업데이트
+                    const activeSheetData = newXlsxData.sheets[newXlsxData.activeSheetIndex];
+
+                    return {
+                        ...state,
+                        xlsxData: newXlsxData,
+                        activeSheetData: activeSheetData
+                    };
+                });
+            },
+            getSheetIdByIndex: (sheetIndex: number) => {
+                const { xlsxData } = get();
+                return xlsxData?.sheets[sheetIndex]?.sheetId || null;
+            },
+            updateSheetIdByIndex: (sheetIndex: number, sheetId: string) => {
+                set((state) => {
+                    if (!state.xlsxData) return state;
+
+                    const newXlsxData = { ...state.xlsxData };
+                    newXlsxData.sheets = [...newXlsxData.sheets];
+
+                    const targetSheet = newXlsxData.sheets[sheetIndex];
+                    if (targetSheet) {
+                        newXlsxData.sheets[sheetIndex] = {
+                            ...targetSheet,
+                            sheetId: sheetId
+                        };
+
+                        // 현재 활성 시트가 업데이트된 시트라면 activeSheetData도 업데이트
+                        const activeSheetData = sheetIndex === newXlsxData.activeSheetIndex 
+                            ? newXlsxData.sheets[sheetIndex] 
+                            : state.activeSheetData;
+
+                        return {
+                            ...state,
+                            xlsxData: newXlsxData,
+                            activeSheetData: activeSheetData
+                        };
+                    }
+
+                    return state;
+                });
             },
         }),
         {

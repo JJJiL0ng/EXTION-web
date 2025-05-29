@@ -891,7 +891,7 @@ export default function MainChatComponent() {
             const chatId = getCurrentChatId();
 
             const apiCall = callFormulaAPI(userInput, extendedSheetContext, {
-                chatId: chatId,
+                chatId: chatId || undefined,
                 currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
             });
             const result = await Promise.race([apiCall, timeoutPromise]);
@@ -977,7 +977,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             const chatId = getCurrentChatId();
 
             const apiCall = callArtifactAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId,
+                chatId: chatId || undefined,
                 currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
             });
             const result = await Promise.race([apiCall, timeoutPromise]);
@@ -1055,8 +1055,8 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             const chatId = getCurrentChatId();
 
             const apiCall = callDataGenerationAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId,
-                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
+                chatId: chatId || undefined,
+                currentSheetIndex: activeSheetIndex, // 현재 시트 인덱스 전달
             });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
@@ -1130,8 +1130,8 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             const chatId = getCurrentChatId();
 
             const apiCall = callDataFixAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId,
-                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
+                chatId: chatId || undefined,
+                currentSheetIndex: activeSheetIndex, // 현재 시트 인덱스 전달
             });
             const result = await Promise.race([apiCall, timeoutPromise]);
 
@@ -1218,29 +1218,34 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
             // 현재 chatId를 가져와서 API 호출에 포함
             const chatId = getCurrentChatId();
             
-            const apiCall = callNormalChatAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId,
-                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
-            });
-            const result = await Promise.race([apiCall, timeoutPromise]);
+            const response = await callNormalChatAPI(
+                userInput,
+                extendedSheetContext,
+                getDataForGPTAnalysis,
+                {
+                    chatId: currentChatId || undefined,
+                    chatTitle: userInput.length > 30 ? userInput.substring(0, 30) + '...' : userInput,
+                    currentSheetIndex: activeSheetIndex
+                }
+            );
 
-            if (result.success) {
+            if (response.success) {
                 // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
-                if (result.chatId) {
-                    setCurrentChatId(result.chatId);
+                if (response.chatId) {
+                    setCurrentChatId(response.chatId);
                 }
 
                 const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: result.message,
+                    content: response.message,
                     timestamp: new Date()
                 };
 
                 // 현재 활성 시트에 응답 메시지 추가
                 addMessageToSheet(activeSheetIndex, assistantMessage);
             } else {
-                throw new Error(result.error || '응답 생성에 실패했습니다.');
+                throw new Error(response.error || '응답 생성에 실패했습니다.');
             }
         } catch (error) {
             let errorMessage = '응답 생성 중 오류가 발생했습니다.';
