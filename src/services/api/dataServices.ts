@@ -1000,3 +1000,195 @@ export interface SpreadsheetMetadata {
     activeSheetIndex?: number;
     sheetNames?: string[];
 }
+
+// === 데이터 생성 API 호출 - Firebase 연동 버전 ===
+export const callDataGenerationAPI = async (
+    userInput: string,
+    extendedSheetContext: any | null,
+    getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any,
+    options?: {
+        chatId?: string;
+        messageId?: string;
+        currentSheetIndex?: number;
+    }
+): Promise<DataGenerationResponse> => {
+    try {
+        const requestBody = createRequestBody(
+            userInput,
+            extendedSheetContext,
+            getDataForGPTAnalysis,
+            options?.chatId,
+            undefined,
+            options?.messageId,
+            options?.currentSheetIndex
+        );
+
+        console.log('==================== Data Generation API 요청 데이터 시작 ====================');
+        console.log(`사용자 입력: ${requestBody.userInput}`);
+        console.log(`사용자 ID: ${requestBody.userId}`);
+        console.log(`채팅 ID: ${requestBody.chatId}`);
+        console.log(`언어: ${requestBody.language}`);
+        
+        if (requestBody.spreadsheetData.sheets.length > 0) {
+            console.log(`SpreadsheetData - 시트 수: ${requestBody.spreadsheetData.sheets.length}`);
+            console.log(`활성 시트: ${requestBody.spreadsheetData.activeSheet}`);
+            console.log(`파일명: ${requestBody.spreadsheetData.fileName}`);
+            const firstSheet = requestBody.spreadsheetData.sheets[0];
+            console.log(`첫 번째 시트 데이터 개수: ${firstSheet.data.length}`);
+        }
+        
+        console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
+        console.log('==================== Data Generation API 요청 데이터 끝 ====================');
+
+        const response = await fetch(`${API_BASE_URL}/datagenerate/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('==================== Data Generation API 오류 상세 정보 ====================');
+            console.error('Status:', response.status);
+            console.error('Status Text:', response.statusText);
+            console.error('Error Body:', errorText);
+            console.error('==================== Data Generation API 오류 정보 끝 ====================');
+            
+            let errorMessage = `API 오류: ${response.status} - ${response.statusText}`;
+            try {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.message) {
+                    errorMessage = Array.isArray(errorJson.message) ? errorJson.message.join(', ') : errorJson.message;
+                } else if (errorText) {
+                    errorMessage = errorText;
+                }
+            } catch (e) {
+                if (errorText) errorMessage = errorText;
+            }
+            
+            throw new Error(errorMessage);
+        }
+
+        const result = await response.json();
+        
+        console.log('==================== Data Generation API 응답 데이터 시작 ====================');
+        console.log(`성공 여부: ${result.success}`);
+        console.log(`시트 인덱스: ${result.sheetIndex || '없음'}`);
+        console.log(`설명: ${result.explanation || '없음'}`);
+        console.log(`채팅 ID: ${result.chatId || '없음'}`);
+        console.log(`사용자 메시지 ID: ${result.userMessageId || '없음'}`);
+        console.log(`AI 메시지 ID: ${result.aiMessageId || '없음'}`);
+        if (result.editedData) {
+            console.log(`생성된 시트명: ${result.editedData.sheetName}`);
+            console.log(`생성된 데이터 행 수: ${result.editedData.data?.length || 0}`);
+            console.log(`생성된 헤더 수: ${result.editedData.headers?.length || 0}`);
+        }
+        if (result.changeLog) {
+            console.log(`변경 로그 항목 수: ${result.changeLog.length}`);
+        }
+        if (result.error) {
+            console.log(`오류 메시지: ${result.error}`);
+        }
+        console.log('전체 응답:', JSON.stringify(result, null, 2));
+        console.log('==================== Data Generation API 응답 데이터 끝 ====================');
+        
+        return result;
+        
+    } catch (error) {
+        console.error('==================== Data Generation API 호출 오류 ====================');
+        console.error('Error Message:', error instanceof Error ? error.message : String(error));
+        console.error('Error Stack:', error instanceof Error ? error.stack : 'No stack trace');
+        console.error('==================== Data Generation API 오류 끝 ====================');
+        throw error;
+    }
+};
+
+// === 스프레드시트 저장 API 호출 - Firebase 연동 버전 ===
+export const saveSpreadsheetToFirebase = async (
+    parsedData: {
+        fileName: string;
+        sheets: any[];
+        activeSheetIndex?: number;
+    },
+    fileInfo: {
+        originalFileName: string;
+        fileSize: number;
+        fileType: 'xlsx' | 'csv';
+    },
+    options?: {
+        chatId?: string;
+        userId?: string;
+    }
+): Promise<{
+    success: boolean;
+    spreadsheetId: string;
+    chatId: string;
+    fileName: string;
+    sheets: Array<{
+        sheetId: string;
+        sheetIndex: number;
+        sheetName: string;
+        headers: string[];
+        rowCount: number;
+    }>;
+    error?: string;
+}> => {
+    try {
+        const { user: currentUser } = useAuthStore.getState();
+        
+        if (!currentUser) {
+            throw new Error('로그인이 필요합니다.');
+        }
+
+        const requestBody = {
+            userId: options?.userId || currentUser.uid,
+            chatId: options?.chatId,
+            fileName: parsedData.fileName,
+            originalFileName: fileInfo.originalFileName,
+            fileSize: fileInfo.fileSize,
+            fileType: fileInfo.fileType,
+            activeSheetIndex: parsedData.activeSheetIndex || 0,
+            sheets: parsedData.sheets.map((sheet: any, index: number) => ({
+                sheetName: sheet.sheetName,
+                sheetIndex: sheet.sheetIndex !== undefined ? sheet.sheetIndex : index,
+                data: {
+                    headers: sheet.headers,
+                    rows: sheet.data,
+                    rawData: sheet.rawData || sheet.data
+                },
+                computedData: sheet.computedData,
+                formulas: sheet.formulas
+            }))
+        };
+
+        console.log('Save Spreadsheet Request Body:', JSON.stringify(requestBody, null, 2));
+
+        const response = await fetch(`${API_BASE_URL}/spreadsheet/save`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Save Spreadsheet API Error Details:', {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText
+            });
+            throw new Error(`API 오류: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log('Save Spreadsheet API Response:', result);
+        return result;
+        
+    } catch (error) {
+        console.error('Save Spreadsheet API Call Error:', error);
+        throw error;
+    }
+};
