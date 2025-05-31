@@ -12,6 +12,7 @@ import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import { cellAddressToCoords } from '@/stores/useUnifiedDataStore';
 import { XLSXData } from '@/stores/useUnifiedDataStore';
 import { exportActiveSheetToCSV, exportSelectedSheetsToXLSX } from '@/utils/exportUtils';
+import { getSpreadsheetData } from '@/services/firebase/spreadsheetService';
 import ChatSidebar from './chat/ChatSidebar';
 
 import 'handsontable/styles/handsontable.css';
@@ -434,6 +435,7 @@ const defaultData = [
   ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
+  ['', '', '', '', '', ''],
 ];
 
 // 선택된 셀 정보 인터페이스 업데이트 - timestamp 속성 추가
@@ -494,7 +496,9 @@ const MainSpreadSheet: React.FC = () => {
     coordsToSheetReference,
     setLoadingState,
     setXLSXData,
-    getCurrentSpreadsheetId
+    getCurrentSpreadsheetId,
+    setCurrentSpreadsheetId,
+    updateExtendedSheetContext
   } = useExtendedUnifiedDataStore();
 
   const [isAutosave] = useState<boolean>(false);
@@ -1314,27 +1318,28 @@ const MainSpreadSheet: React.FC = () => {
   // 개발 환경에서 상태 디버깅
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('=== MainSpreadSheet 상태 업데이트 ===');
-      console.log('현재 상태:', {
+      console.log('🔍 MainSpreadSheet 컴포넌트 상태:', {
         hasXlsxData: !!xlsxData,
         fileName: xlsxData?.fileName,
-        sheetsCount: xlsxData?.sheets.length || 0,
-        activeSheetIndex: xlsxData?.activeSheetIndex,
-        activeSheetName: activeSheetData?.sheetName,
+        sheetsCount: xlsxData?.sheets?.length || 0,
+        activeSheetIndex: xlsxData?.activeSheetIndex || 0,
+        activeSheetName: xlsxData?.sheets?.[xlsxData?.activeSheetIndex || 0]?.sheetName,
         currentSpreadsheetId: getCurrentSpreadsheetId(),
         hasActiveSheetData: !!activeSheetData,
         displayDataLength: displayData.length
       });
-      
+
       if (xlsxData?.sheets) {
-        console.log('시트 목록:', xlsxData.sheets.map((sheet, index) => ({
-          index,
-          name: sheet.sheetName,
-          headers: sheet.headers?.length || 0,
-          dataRows: sheet.data?.length || 0,
-          rawDataRows: sheet.rawData?.length || 0,
-          isActive: index === xlsxData.activeSheetIndex
-        })));
+        xlsxData.sheets.forEach((sheet, index) => {
+          console.log(`📋 시트 ${index}:`, {
+            index,
+            name: sheet.sheetName,
+            headers: sheet.headers?.length || 0,
+            dataRows: sheet.data?.length || 0,
+            rawDataRows: sheet.rawData?.length || 0,
+            isActive: index === (xlsxData.activeSheetIndex || 0)
+          });
+        });
       }
     }
   }, [xlsxData, activeSheetData, displayData, getCurrentSpreadsheetId]);

@@ -412,27 +412,67 @@ const generateExtendedSheetContext = (xlsxData: XLSXData, spreadsheetId?: string
         throw new Error('활성 시트가 없습니다');
     }
 
-    const headers: HeaderInfo[] = activeSheet.headers.map((header, index) => ({
+    console.log('ExtendedSheetContext 생성 중:', {
+        sheetName: activeSheet.sheetName,
+        headersLength: activeSheet.headers?.length || 0,
+        headers: activeSheet.headers,
+        dataLength: activeSheet.data?.length || 0,
+        rawDataLength: activeSheet.rawData?.length || 0,
+        isFirebaseData: !!spreadsheetId
+    });
+
+    // Firebase 복원 데이터의 경우 헤더 처리
+    let validHeaders: string[] = [];
+    
+    if (activeSheet.headers && activeSheet.headers.length > 0) {
+        // 기존 헤더가 있는 경우
+        validHeaders = activeSheet.headers.filter(h => h && h.trim() !== '');
+    } else if (activeSheet.rawData && activeSheet.rawData.length > 0) {
+        // rawData에서 첫 번째 행을 헤더로 사용
+        const firstRow = activeSheet.rawData[0];
+        if (firstRow && firstRow.length > 0) {
+            validHeaders = firstRow.filter(h => h && h.trim() !== '');
+            console.log('rawData에서 헤더 추출:', validHeaders);
+        }
+    } else if (activeSheet.data && activeSheet.data.length > 0) {
+        // data가 있지만 헤더가 없는 경우 자동 생성
+        const firstDataRow = activeSheet.data[0];
+        if (firstDataRow && firstDataRow.length > 0) {
+            validHeaders = firstDataRow.map((_, index) => `Column ${String.fromCharCode(65 + index)}`);
+            console.log('자동 생성된 헤더:', validHeaders);
+        }
+    }
+
+    // 여전히 헤더가 없는 경우 기본 헤더 생성
+    if (validHeaders.length === 0) {
+        validHeaders = ['Column A', 'Column B', 'Column C', 'Column D', 'Column E', 'Column F'];
+        console.warn('기본 헤더 사용:', validHeaders);
+    }
+
+    const headers: HeaderInfo[] = validHeaders.map((header, index) => ({
         column: String.fromCharCode(65 + index),
         name: String(header)
     }));
 
+    // 데이터 범위 계산
+    const dataRowCount = activeSheet.data?.length || 0;
     const dataRange: DataRange = {
         startRow: '2',
-        endRow: (activeSheet.data.length + 1).toString(),
+        endRow: (dataRowCount + 1).toString(),
         startColumn: 'A',
-        endColumn: String.fromCharCode(64 + activeSheet.headers.length)
+        endColumn: String.fromCharCode(64 + validHeaders.length)
     };
 
-    const sampleData = activeSheet.data.slice(0, 3).map(row => {
+    // 샘플 데이터 생성
+    const sampleData = (activeSheet.data || []).slice(0, 3).map(row => {
         const rowData: Record<string, string> = {};
-        activeSheet.headers.forEach((header, index) => {
+        validHeaders.forEach((header, index) => {
             rowData[String(header)] = String(row[index] || '');
         });
         return rowData;
     });
 
-    return {
+    const context = {
         sheetName: activeSheet.sheetName,
         sheetIndex: xlsxData.activeSheetIndex,
         headers,
@@ -442,6 +482,15 @@ const generateExtendedSheetContext = (xlsxData: XLSXData, spreadsheetId?: string
         sheetList: xlsxData.sheets.map(sheet => sheet.sheetName),
         spreadsheetId: spreadsheetId
     };
+
+    console.log('ExtendedSheetContext 생성 완료:', {
+        sheetName: context.sheetName,
+        headersCount: context.headers.length,
+        headerNames: context.headers.map(h => h.name),
+        sampleDataCount: context.sampleData?.length || 0
+    });
+
+    return context;
 };
 
 // 시트 참조 문자열 생성 (예: Sheet1!A1)
@@ -641,13 +690,28 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                         };
                     }
 
+                    console.log('=== setXLSXData 호출 ===');
+                    console.log('입력 데이터:', {
+                        fileName: data.fileName,
+                        sheetsCount: data.sheets.length,
+                        activeSheetIndex: data.activeSheetIndex,
+                        spreadsheetId: data.spreadsheetId,
+                        sheets: data.sheets.map((sheet, index) => ({
+                            index,
+                            name: sheet.sheetName,
+                            headers: sheet.headers?.length || 0,
+                            data: sheet.data?.length || 0,
+                            rawData: sheet.rawData?.length || 0
+                        }))
+                    });
+
                     const activeSheet = data.sheets[data.activeSheetIndex];
                     const newComputedData = { ...state.computedSheetData };
 
                     // 각 시트에 대한 computed data 초기화
                     data.sheets.forEach((sheet, index) => {
                         if (!newComputedData[index]) {
-                            newComputedData[index] = [...sheet.data];
+                            newComputedData[index] = [...(sheet.data || [])];
                         }
                     });
                     
@@ -664,16 +728,50 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     // 현재 활성 시트의 메시지 불러오기
                     const activeSheetMessages = state.sheetMessages[data.activeSheetIndex] || [];
 
-                    return {
+                    // extendedSheetContext 생성 (Firebase 데이터 지원)
+                    let extendedSheetContext = null;
+                    try {
+                        extendedSheetContext = generateExtendedSheetContext(data, state.currentSpreadsheetId || data.spreadsheetId || undefined);
+                        console.log('✅ ExtendedSheetContext 생성 성공');
+                    } catch (error) {
+                        console.error('❌ ExtendedSheetContext 생성 실패:', error);
+                        // 실패해도 계속 진행하되, 기본 컨텍스트 생성 시도
+                        try {
+                            // 기본 헤더로 재시도
+                            const fallbackData = {
+                                ...data,
+                                sheets: data.sheets.map(sheet => ({
+                                    ...sheet,
+                                    headers: sheet.headers && sheet.headers.length > 0 
+                                        ? sheet.headers 
+                                        : ['Column A', 'Column B', 'Column C', 'Column D', 'Column E', 'Column F']
+                                }))
+                            };
+                            extendedSheetContext = generateExtendedSheetContext(fallbackData, state.currentSpreadsheetId || data.spreadsheetId || undefined);
+                            console.log('✅ 폴백 ExtendedSheetContext 생성 성공');
+                        } catch (fallbackError) {
+                            console.error('❌ 폴백 ExtendedSheetContext 생성도 실패:', fallbackError);
+                        }
+                    }
+
+                    const newState = {
                         ...state,
                         xlsxData: data,
                         hasUploadedFile: true, // 파일 업로드 상태 업데이트
                         activeSheetData: activeSheet,
                         computedSheetData: newComputedData,
-                        extendedSheetContext: generateExtendedSheetContext(data, state.currentSpreadsheetId || undefined),
+                        extendedSheetContext,
                         activeSheetMessages,
                         sheetChatIds: newSheetChatIds
                     };
+
+                    console.log('✅ setXLSXData 완료:', {
+                        hasExtendedSheetContext: !!newState.extendedSheetContext,
+                        activeSheetName: newState.activeSheetData?.sheetName,
+                        contextHeaders: newState.extendedSheetContext?.headers?.length || 0
+                    });
+
+                    return newState;
                 });
                 
                 // 파일 업로드 후 markFileAsUploaded 호출
@@ -989,7 +1087,31 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             updateExtendedSheetContext: () => {
                 const { xlsxData, currentSpreadsheetId } = get();
                 if (xlsxData) {
-                    set({ extendedSheetContext: generateExtendedSheetContext(xlsxData, currentSpreadsheetId || undefined) });
+                    try {
+                        console.log('ExtendedSheetContext 업데이트 시작');
+                        const newContext = generateExtendedSheetContext(xlsxData, currentSpreadsheetId || xlsxData.spreadsheetId || undefined);
+                        set({ extendedSheetContext: newContext });
+                        console.log('✅ ExtendedSheetContext 업데이트 성공');
+                    } catch (error) {
+                        console.error('❌ ExtendedSheetContext 업데이트 실패:', error);
+                        // 실패 시 기본 헤더로 재시도
+                        try {
+                            const fallbackData = {
+                                ...xlsxData,
+                                sheets: xlsxData.sheets.map(sheet => ({
+                                    ...sheet,
+                                    headers: sheet.headers && sheet.headers.length > 0 
+                                        ? sheet.headers 
+                                        : ['Column A', 'Column B', 'Column C', 'Column D', 'Column E', 'Column F']
+                                }))
+                            };
+                            const fallbackContext = generateExtendedSheetContext(fallbackData, currentSpreadsheetId || xlsxData.spreadsheetId || undefined);
+                            set({ extendedSheetContext: fallbackContext });
+                            console.log('✅ 폴백 ExtendedSheetContext 업데이트 성공');
+                        } catch (fallbackError) {
+                            console.error('❌ 폴백 ExtendedSheetContext 업데이트도 실패:', fallbackError);
+                        }
+                    }
                 }
             },
  

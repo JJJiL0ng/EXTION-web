@@ -73,7 +73,73 @@ export default function MainChatComponent() {
         canUploadFile,
         saveCurrentSessionToStore,
         loadChatSessionsFromStorage,
+        getCurrentSpreadsheetId,
     } = useExtendedUnifiedDataStore();
+
+    // Firebase 채팅 ID 상태 추가
+    const [firebaseChatId, setFirebaseChatId] = useState<string | null>(null);
+
+    // Firebase 채팅 ID 감지 및 설정
+    useEffect(() => {
+        // URL 파라미터에서 Firebase 채팅 ID 확인
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const chatIdFromUrl = urlParams.get('chatId');
+            
+            if (chatIdFromUrl && chatIdFromUrl !== firebaseChatId) {
+                console.log('URL에서 Firebase 채팅 ID 감지:', chatIdFromUrl);
+                setFirebaseChatId(chatIdFromUrl);
+                setCurrentChatId(chatIdFromUrl);
+            }
+        }
+
+        // 현재 스프레드시트 ID가 있으면 Firebase 채팅으로 간주
+        const spreadsheetId = getCurrentSpreadsheetId();
+        if (spreadsheetId && !firebaseChatId) {
+            console.log('스프레드시트 ID로 Firebase 채팅 감지:', spreadsheetId);
+            setFirebaseChatId(currentChatId);
+        }
+    }, [getCurrentSpreadsheetId, currentChatId, firebaseChatId, setCurrentChatId]);
+
+    // 현재 채팅이 Firebase 채팅인지 확인하는 함수
+    const isFirebaseChat = useCallback(() => {
+        // 1. firebaseChatId가 설정되어 있으면 Firebase 채팅
+        if (firebaseChatId) {
+            console.log('Firebase 채팅 확인 (firebaseChatId):', firebaseChatId);
+            return true;
+        }
+
+        // 2. 현재 스프레드시트 ID가 있으면 Firebase 채팅
+        const spreadsheetId = getCurrentSpreadsheetId();
+        if (spreadsheetId) {
+            console.log('Firebase 채팅 확인 (spreadsheetId):', spreadsheetId);
+            return true;
+        }
+
+        // 3. 현재 채팅 ID가 Firebase 패턴인지 확인 (20자 이상, '_local' 포함하지 않음)
+        const chatId = getCurrentChatId();
+        if (chatId && chatId.length > 20 && !chatId.includes('_local') && !chatId.includes('chat_')) {
+            console.log('Firebase 채팅 확인 (패턴 매칭):', chatId);
+            return true;
+        }
+
+        console.log('로컬 채팅으로 확인됨');
+        return false;
+    }, [firebaseChatId, getCurrentSpreadsheetId, getCurrentChatId]);
+
+    // 현재 Firebase 채팅 ID 가져오기
+    const getCurrentFirebaseChatId = useCallback(() => {
+        if (firebaseChatId) {
+            return firebaseChatId;
+        }
+        
+        const chatId = getCurrentChatId();
+        if (chatId && isFirebaseChat()) {
+            return chatId;
+        }
+        
+        return null;
+    }, [firebaseChatId, getCurrentChatId, isFirebaseChat]);
 
     // 파일이 로드되었는지 확인
     const file = xlsxData ? { name: xlsxData.fileName } : null;
@@ -840,14 +906,21 @@ export default function MainChatComponent() {
         // 현재 활성 시트에 사용자 메시지 추가
         addMessageToSheet(activeSheetIndex, userMessage);
 
-        // Firebase 채팅인 경우 Firebase에도 메시지 저장
-        const currentChatId = getCurrentChatId();
-        const isFirebaseChat = Boolean(currentChatId && currentChatId.length > 20 && !currentChatId.includes('_local')); // Firebase 채팅 ID 패턴 확인
+        // Firebase 채팅 여부 확인 및 채팅 ID 가져오기
+        const isFirebaseChatActive = isFirebaseChat();
+        const firebaseChatIdToUse = getCurrentFirebaseChatId();
         
-        if (isFirebaseChat) {
+        console.log('=== 메시지 전송 시작 ===');
+        console.log('Firebase 채팅 여부:', isFirebaseChatActive);
+        console.log('사용할 Firebase 채팅 ID:', firebaseChatIdToUse);
+        console.log('현재 채팅 ID:', getCurrentChatId());
+        console.log('스프레드시트 ID:', getCurrentSpreadsheetId());
+        
+        // Firebase 채팅인 경우 Firebase에도 메시지 저장
+        if (isFirebaseChatActive && firebaseChatIdToUse) {
             try {
                 const { addMessage } = await import('@/services/firebase/chatService');
-                await addMessage(currentChatId!, {
+                await addMessage(firebaseChatIdToUse, {
                     role: 'user',
                     content: inputValue,
                     timestamp: new Date(),
@@ -860,9 +933,9 @@ export default function MainChatComponent() {
                         headers: xlsxData.sheets[activeSheetIndex]?.headers || []
                     } : undefined
                 });
-                console.log('사용자 메시지가 Firebase에 저장됨');
+                console.log('✅ 사용자 메시지가 Firebase에 저장됨');
             } catch (error) {
-                console.error('Firebase 메시지 저장 오류:', error);
+                console.error('❌ Firebase 메시지 저장 오류:', error);
             }
         }
 
@@ -873,7 +946,7 @@ export default function MainChatComponent() {
             // 시트가 업로드되어 있지 않으면 datageneration 모드 사용
             if (!xlsxData || !xlsxData.sheets || xlsxData.sheets.length === 0) {
                 setCurrentMode('normal'); // datageneration은 ChatMode에 없으므로 normal로 설정
-                await handleDataGenerationChat(currentInput, isFirebaseChat);
+                await handleDataGenerationChat(currentInput, isFirebaseChatActive);
                 return;
             }
 
@@ -885,13 +958,13 @@ export default function MainChatComponent() {
 
             // 해당 모드에 맞는 API 호출
             if (mode === 'formula') {
-                await handleFormulaChat(currentInput, isFirebaseChat);
+                await handleFormulaChat(currentInput, isFirebaseChatActive);
             } else if (mode === 'artifact') {
-                await handleArtifactChat(currentInput, isFirebaseChat);
+                await handleArtifactChat(currentInput, isFirebaseChatActive);
             } else if (mode === 'datafix') {
-                await handleDataFixChat(currentInput, isFirebaseChat);
+                await handleDataFixChat(currentInput, isFirebaseChatActive);
             } else {
-                await handleNormalChat(currentInput, isFirebaseChat);
+                await handleNormalChat(currentInput, isFirebaseChatActive);
             }
         } catch (error) {
             console.error('메시지 처리 중 오류 발생:', error);
@@ -906,10 +979,10 @@ export default function MainChatComponent() {
             addMessageToSheet(activeSheetIndex, errorMessage);
 
             // Firebase 채팅인 경우 오류 메시지도 Firebase에 저장
-            if (isFirebaseChat) {
+            if (isFirebaseChatActive && firebaseChatIdToUse) {
                 try {
                     const { addMessage } = await import('@/services/firebase/chatService');
-                    await addMessage(currentChatId!, {
+                    await addMessage(firebaseChatIdToUse, {
                         role: 'Extion ai',
                         content: errorMessage.content,
                         timestamp: new Date(),
@@ -930,42 +1003,31 @@ export default function MainChatComponent() {
 
     // 각 채팅 모드별 핸들러 함수
     const handleFormulaChat = async (userInput: string, isFirebaseChat?: boolean) => {
-        setLoadingState('formulaGeneration', true);
-        setError('formulaError', null);
-
         try {
-            const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('timeout')), 15000);
-            });
+            setCurrentMode('formula');
 
-            // 현재 chatId를 가져와서 API 호출에 포함
-            const chatId = getCurrentChatId();
-
-            const apiCall = callFormulaAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId || undefined,
-                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
-            });
-            const result = await Promise.race([apiCall, timeoutPromise]);
-
-            if (result.success && result.formula) {
-                // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
-                if (result.chatId) {
-                    setCurrentChatId(result.chatId);
+            const response = await callFormulaAPI(
+                userInput,
+                extendedSheetContext,
+                getDataForGPTAnalysis,
+                {
+                    chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
+                    currentSheetIndex: activeSheetIndex
                 }
+            );
+
+            if (response.success && response.formula) {
+                const chatId = getCurrentFirebaseChatId() || getCurrentChatId();
 
                 const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: `함수가 생성되었습니다!
-
-생성된 함수: ${result.formula}
-적용 위치: ${result.cellAddress || 'E1'}
-
-설명: ${result.explanation?.korean || '함수가 생성되었습니다.'}
-
-${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.` : ''}`,
-                    timestamp: new Date(),
-                    mode: 'formula'
+                    content: `수식이 생성되었습니다!\n\n` +
+                        `**수식**: \`${response.formula}\`\n` +
+                        `**적용 위치**: ${response.cellAddress || 'E1'}\n` +
+                        `**설명**: ${response.explanation?.korean || '함수가 생성되었습니다.'}\n\n` +
+                        `이 수식을 적용하시겠습니까?`,
+                    timestamp: new Date()
                 };
 
                 // 현재 활성 시트에 응답 메시지 추가
@@ -973,414 +1035,349 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 // Firebase 채팅인 경우 Firebase에도 메시지 저장
                 if (isFirebaseChat && chatId) {
-                    try {
-                        const { addMessage } = await import('@/services/firebase/chatService');
-                        await addMessage(chatId, {
-                            role: 'Extion ai',
-                            content: assistantMessage.content,
-                            timestamp: new Date(),
-                            type: 'formula',
-                            formulaData: {
-                                formula: result.formula,
-                                cellAddress: result.cellAddress || 'E1',
-                                explanation: result.explanation,
-                                sheetIndex: activeSheetIndex
-                            },
-                            sheetContext: xlsxData ? {
-                                sheetIndex: activeSheetIndex,
-                                sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
-                            } : undefined
-                        });
-                        console.log('AI 포뮬러 메시지가 Firebase에 저장됨');
-                    } catch (error) {
-                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    // 백엔드에서 이미 AI 메시지를 저장했는지 확인
+                    const isAlreadySavedByBackend = !!(response.aiMessageId);
+                    
+                    if (!isAlreadySavedByBackend) {
+                        try {
+                            const { addMessage } = await import('@/services/firebase/chatService');
+                            await addMessage(chatId, {
+                                role: 'Extion ai',
+                                content: assistantMessage.content,
+                                timestamp: new Date(),
+                                type: 'formula',
+                                formulaData: {
+                                    formula: response.formula,
+                                    cellAddress: response.cellAddress || 'E1',
+                                    explanation: response.explanation,
+                                    sheetIndex: activeSheetIndex
+                                },
+                                sheetContext: xlsxData ? {
+                                    sheetIndex: activeSheetIndex,
+                                    sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
+                                } : undefined
+                            });
+                            console.log('✅ AI 포뮬러 메시지가 Firebase에 저장됨 (프론트엔드)');
+                        } catch (error) {
+                            console.error('❌ Firebase AI 메시지 저장 오류:', error);
+                        }
+                    } else {
+                        console.log('ℹ️ 백엔드에서 이미 포뮬러 메시지가 저장됨 (messageId:', response.aiMessageId, ')');
                     }
                 }
 
                 const formulaApplication = {
-                    formula: result.formula,
-                    cellAddress: result.cellAddress || 'E1',
-                    explanation: result.explanation?.korean || '함수가 생성되었습니다.',
+                    formula: response.formula,
+                    cellAddress: response.cellAddress || 'E1',
+                    explanation: response.explanation?.korean || '함수가 생성되었습니다.',
                     timestamp: new Date()
                 };
 
                 setPendingFormula({
                     ...formulaApplication,
-                    sheetIndex: activeSheetIndex // 현재 활성화된 시트 인덱스 추가
+                    sheetIndex: activeSheetIndex
                 });
                 addToFormulaHistory({
                     ...formulaApplication,
-                    sheetIndex: activeSheetIndex // 현재 활성화된 시트 인덱스 추가
+                    sheetIndex: activeSheetIndex
                 });
             } else {
-                throw new Error(result.error || '함수 생성에 실패했습니다.');
+                throw new Error(response.error || '함수 생성에 실패했습니다.');
             }
         } catch (error) {
-            let errorMessage = '함수 생성 중 오류가 발생했습니다.';
-
-            if (error instanceof Error && error.message === 'timeout') {
-                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
-            } else if (error instanceof Error) {
-                errorMessage = `${error.message}`;
-            }
-
-            setError('formulaError', errorMessage);
-
+            console.error('포뮬러 채팅 오류:', error);
             const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
-                content: errorMessage,
-                timestamp: new Date(),
-                mode: 'formula'
+                content: `포뮬러 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+                timestamp: new Date()
             };
 
             // 현재 활성 시트에 오류 메시지 추가
             addMessageToSheet(activeSheetIndex, assistantMessage);
-        } finally {
-            setLoadingState('formulaGeneration', false);
         }
     };
 
     const handleArtifactChat = async (userInput: string, isFirebaseChat?: boolean) => {
-        setLoadingState('artifactGeneration', true);
-        setError('artifactError', null);
-
         try {
-            const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('timeout')), 60000);
-            });
+            setCurrentMode('artifact');
 
-            // 현재 chatId를 가져와서 API 호출에 포함
-            const chatId = getCurrentChatId();
-
-            const apiCall = callArtifactAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId || undefined,
-                currentSheetIndex: activeSheetIndex // 현재 시트 인덱스 전달
-            });
-            const result = await Promise.race([apiCall, timeoutPromise]);
-
-            if (result.success && result.code) {
-                // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
-                if (result.chatId) {
-                    setCurrentChatId(result.chatId);
+            const response = await callArtifactAPI(
+                userInput,
+                extendedSheetContext,
+                getDataForGPTAnalysis,
+                {
+                    chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
+                    currentSheetIndex: activeSheetIndex
                 }
+            );
+
+            if (response.success && response.code) {
+                const chatId = getCurrentFirebaseChatId() || getCurrentChatId();
 
                 const artifactData = {
-                    code: result.code,
-                    type: result.type || 'analysis',
-                    timestamp: result.timestamp || new Date(),
-                    title: result.title || `${result.type} 분석`,
+                    type: response.type || 'analysis',
+                    title: response.title || `${response.type} 분석`,
+                    timestamp: new Date(),
+                    code: response.code,
                     messageId: (Date.now() + 1).toString()
                 };
 
                 addToArtifactHistory(artifactData);
 
+                // 백엔드에서 제공하는 설명 사용
+                const explanation = typeof response.explanation === 'string' 
+                    ? response.explanation 
+                    : response.explanation?.korean || '';
+                
                 const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: '',
+                    content: explanation, // 설명을 content에 저장
                     timestamp: new Date(),
-                    mode: 'artifact',
                     artifactData: {
-                        type: result.type || 'analysis',
-                        title: result.title || `${result.type} 분석`,
-                        timestamp: result.timestamp || new Date()
+                        type: response.type || 'analysis',
+                        title: response.title || `${response.type} 분석`,
+                        timestamp: new Date()
                     }
                 };
 
-                // 현재 활성 시트에 응답 메시지 추가
                 addMessageToSheet(activeSheetIndex, assistantMessage);
 
                 // Firebase 채팅인 경우 Firebase에도 메시지 저장
                 if (isFirebaseChat && chatId) {
-                    try {
-                        const { addMessage } = await import('@/services/firebase/chatService');
-                        await addMessage(chatId, {
-                            role: 'Extion ai',
-                            content: `아티팩트가 생성되었습니다: ${result.title || '분석'}`,
-                            timestamp: new Date(),
-                            type: 'artifact',
-                            artifactData: {
-                                type: result.type || 'analysis',
-                                title: result.title || `${result.type} 분석`,
-                                code: result.code,
-                                artifactId: artifactData.messageId
-                            },
-                            sheetContext: xlsxData ? {
-                                sheetIndex: activeSheetIndex,
-                                sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
-                            } : undefined
-                        });
-                        console.log('AI 아티팩트 메시지가 Firebase에 저장됨');
-                    } catch (error) {
-                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    // 백엔드에서 이미 AI 메시지를 저장했는지 확인
+                    const isAlreadySavedByBackend = !!(response.aiMessageId || response.messageId);
+                    
+                    if (!isAlreadySavedByBackend) {
+                        try {
+                            const { addMessage } = await import('@/services/firebase/chatService');
+                            await addMessage(chatId, {
+                                role: 'Extion ai',
+                                content: explanation,
+                                timestamp: new Date(),
+                                type: 'artifact',
+                                artifactData: {
+                                    type: response.type || 'analysis',
+                                    title: response.title || `${response.type} 분석`,
+                                    code: response.code,
+                                    artifactId: artifactData.messageId
+                                },
+                                sheetContext: xlsxData ? {
+                                    sheetIndex: activeSheetIndex,
+                                    sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
+                                } : undefined
+                            });
+                            console.log('✅ AI 아티팩트 메시지가 Firebase에 저장됨 (프론트엔드)');
+                        } catch (error) {
+                            console.error('❌ Firebase AI 메시지 저장 오류:', error);
+                        }
+                    } else {
+                        console.log('ℹ️ 백엔드에서 이미 아티팩트 메시지가 저장됨 (messageId:', response.aiMessageId || response.messageId, ')');
                     }
                 }
             } else {
-                throw new Error(result.error || '아티팩트 생성에 실패했습니다.');
+                throw new Error(response.error || '아티팩트 생성에 실패했습니다.');
             }
         } catch (error) {
-            let errorMessage = '아티팩트 생성 중 오류가 발생했습니다.';
-
-            if (error instanceof Error && error.message === 'timeout') {
-                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
-            } else if (error instanceof Error) {
-                errorMessage = `${error.message}`;
-            }
-
-            setError('artifactError', errorMessage);
-
+            console.error('아티팩트 채팅 오류:', error);
             const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
-                content: errorMessage,
-                timestamp: new Date(),
-                mode: 'artifact'
+                content: `아티팩트 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+                timestamp: new Date()
             };
 
-            // 현재 활성 시트에 오류 메시지 추가
             addMessageToSheet(activeSheetIndex, assistantMessage);
-        } finally {
-            setLoadingState('artifactGeneration', false);
         }
     };
 
     const handleDataGenerationChat = async (userInput: string, isFirebaseChat?: boolean) => {
-        setLoadingState('dataGeneration', true);
-        setError('dataGenerationError', null);
-
         try {
-            const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('timeout')), 60000);
-            });
+            setCurrentMode('normal');
 
-            // 현재 chatId를 가져와서 API 호출에 포함
-            const chatId = getCurrentChatId();
-
-            const apiCall = callDataGenerationAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId || undefined,
-                currentSheetIndex: activeSheetIndex, // 현재 시트 인덱스 전달
-            });
-            const result = await Promise.race([apiCall, timeoutPromise]);
-
-            if (result.success && result.editedData) {
-                // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
-                if (result.chatId) {
-                    setCurrentChatId(result.chatId);
+            const response = await callDataGenerationAPI(
+                userInput,
+                extendedSheetContext,
+                getDataForGPTAnalysis,
+                {
+                    chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
+                    currentSheetIndex: activeSheetIndex
                 }
+            );
 
-                // 생성된 데이터 적용
+            if (response.success && response.editedData) {
+                const chatId = getCurrentFirebaseChatId() || getCurrentChatId();
+
                 applyGeneratedData({
-                    sheetName: result.editedData.sheetName,
-                    headers: result.editedData.headers,
-                    data: result.editedData.data,
-                    sheetIndex: result.sheetIndex
+                    sheetName: response.editedData.sheetName,
+                    headers: response.editedData.headers,
+                    data: response.editedData.data,
+                    sheetIndex: response.sheetIndex || activeSheetIndex
                 });
 
-                // 성공 메시지 표시
                 const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: `데이터가 성공적으로 ${xlsxData ? '업데이트' : '생성'}되었습니다.\n\n` +
-                        `시트 이름: ${result.editedData.sheetName}\n` +
-                        `데이터 크기: ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
-                        `${result.explanation || ''}`,
-                    timestamp: new Date(),
-                    mode: 'normal'
+                    content: `데이터가 생성되었습니다!\n\n` +
+                        `**시트명**: ${response.editedData.sheetName}\n` +
+                        `**생성된 행 수**: ${response.editedData.data.length}개\n` +
+                        `**열 수**: ${response.editedData.headers.length}개\n\n` +
+                        `새로운 데이터가 스프레드시트에 추가되었습니다.`,
+                    timestamp: new Date()
                 };
 
-                // 현재 활성 시트에 응답 메시지 추가
                 addMessageToSheet(activeSheetIndex, assistantMessage);
 
                 // Firebase 채팅인 경우 Firebase에도 메시지 저장
                 if (isFirebaseChat && chatId) {
-                    try {
-                        const { addMessage } = await import('@/services/firebase/chatService');
-                        await addMessage(chatId, {
-                            role: 'Extion ai',
-                            content: assistantMessage.content,
-                            timestamp: new Date(),
-                            type: 'data_generation',
-                            dataChangeInfo: {
-                                changeType: 'generation',
-                                sheetName: result.editedData.sheetName,
-                                rowCount: result.editedData.data.length,
-                                columnCount: result.editedData.headers.length
-                            },
-                            sheetContext: {
-                                sheetIndex: result.sheetIndex || activeSheetIndex,
-                                sheetName: result.editedData.sheetName
-                            }
-                        });
-                        console.log('AI 데이터 생성 메시지가 Firebase에 저장됨');
-                    } catch (error) {
-                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    // 백엔드에서 이미 AI 메시지를 저장했는지 확인
+                    const isAlreadySavedByBackend = !!(response.aiMessageId || response.messageId);
+                    
+                    if (!isAlreadySavedByBackend) {
+                        try {
+                            const { addMessage } = await import('@/services/firebase/chatService');
+                            await addMessage(chatId, {
+                                role: 'Extion ai',
+                                content: assistantMessage.content,
+                                timestamp: new Date(),
+                                type: 'data_generation',
+                                dataChangeInfo: {
+                                    changeType: 'generation',
+                                    sheetName: response.editedData.sheetName,
+                                    rowCount: response.editedData.data.length,
+                                    columnCount: response.editedData.headers.length
+                                },
+                                sheetContext: {
+                                    sheetIndex: response.sheetIndex || activeSheetIndex,
+                                    sheetName: response.editedData.sheetName
+                                }
+                            });
+                            console.log('✅ AI 데이터 생성 메시지가 Firebase에 저장됨 (프론트엔드)');
+                        } catch (error) {
+                            console.error('❌ Firebase AI 메시지 저장 오류:', error);
+                        }
+                    } else {
+                        console.log('ℹ️ 백엔드에서 이미 데이터 생성 메시지가 저장됨 (messageId:', response.aiMessageId || response.messageId, ')');
                     }
                 }
             } else {
-                throw new Error(result.error || '데이터 생성에 실패했습니다.');
+                throw new Error(response.error || '데이터 생성에 실패했습니다.');
             }
         } catch (error) {
-            let errorMessage = '데이터 생성 중 오류가 발생했습니다.';
-
-            if (error instanceof Error && error.message === 'timeout') {
-                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
-            } else if (error instanceof Error) {
-                errorMessage = `${error.message}`;
-            }
-
-            setError('dataGenerationError', errorMessage);
-
+            console.error('데이터 생성 채팅 오류:', error);
             const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
-                content: errorMessage,
-                timestamp: new Date(),
-                mode: 'normal'
+                content: `데이터 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+                timestamp: new Date()
             };
 
-            // 현재 활성 시트에 오류 메시지 추가
             addMessageToSheet(activeSheetIndex, assistantMessage);
-        } finally {
-            setLoadingState('dataGeneration', false);
         }
     };
 
     const handleDataFixChat = async (userInput: string, isFirebaseChat?: boolean) => {
-        setLoadingState('dataFix', true);
-        setError('dataFixError', null);
-
         try {
-            const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('timeout')), 60000);
-            });
+            setCurrentMode('datafix');
 
-            // 현재 chatId를 가져와서 API 호출에 포함
-            const chatId = getCurrentChatId();
-
-            const apiCall = callDataFixAPI(userInput, extendedSheetContext, getDataForGPTAnalysis, {
-                chatId: chatId || undefined,
-                currentSheetIndex: activeSheetIndex, // 현재 시트 인덱스 전달
-            });
-            const result = await Promise.race([apiCall, timeoutPromise]);
-
-            if (result.success && result.editedData) {
-                // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
-                if (result.chatId) {
-                    setCurrentChatId(result.chatId);
+            const response = await callDataFixAPI(
+                userInput,
+                extendedSheetContext,
+                getDataForGPTAnalysis,
+                {
+                    chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
+                    currentSheetIndex: activeSheetIndex
                 }
+            );
 
-                // 생성된 데이터 적용
+            if (response.success && response.editedData) {
+                const chatId = getCurrentFirebaseChatId() || getCurrentChatId();
+
                 applyGeneratedData({
-                    sheetName: result.editedData.sheetName,
-                    headers: result.editedData.headers,
-                    data: result.editedData.data,
-                    sheetIndex: result.sheetIndex
+                    sheetName: response.editedData.sheetName,
+                    headers: response.editedData.headers,
+                    data: response.editedData.data,
+                    sheetIndex: response.sheetIndex || activeSheetIndex
                 });
 
-                // 변경 내역 설명 생성
-                let changeDescription = '';
-                if (result.changes) {
-                    const typeMap = {
-                        'sort': '정렬',
-                        'filter': '필터링',
-                        'modify': '값 수정',
-                        'transform': '데이터 변환'
-                    };
+                const changesText = response.changes 
+                    ? (typeof response.changes === 'string' 
+                        ? response.changes 
+                        : JSON.stringify(response.changes))
+                    : '데이터가 수정되었습니다.';
 
-                    changeDescription = `변경 유형: ${typeMap[result.changes.type] || result.changes.type}\n`;
-                    changeDescription += `세부 내용: ${result.changes.details}\n\n`;
-                }
-
-                // 성공 메시지 표시
                 const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: `데이터가 성공적으로 수정되었습니다.\n\n` +
-                        `시트 이름: ${result.editedData.sheetName}\n` +
-                        `데이터 크기: ${result.editedData.headers.length}열 × ${result.editedData.data.length}행\n\n` +
-                        `${changeDescription}` +
-                        `${result.explanation || ''}`,
-                    timestamp: new Date(),
-                    mode: 'datafix'
+                    content: `데이터가 수정되었습니다!\n\n` +
+                        `**시트명**: ${response.editedData.sheetName}\n` +
+                        `**수정된 행 수**: ${response.editedData.data.length}개\n` +
+                        `**열 수**: ${response.editedData.headers.length}개\n\n` +
+                        `**변경 사항**:\n${changesText}`,
+                    timestamp: new Date()
                 };
 
-                // 현재 활성 시트에 응답 메시지 추가
                 addMessageToSheet(activeSheetIndex, assistantMessage);
 
                 // Firebase 채팅인 경우 Firebase에도 메시지 저장
                 if (isFirebaseChat && chatId) {
-                    try {
-                        const { addMessage } = await import('@/services/firebase/chatService');
-                        await addMessage(chatId, {
-                            role: 'Extion ai',
-                            content: assistantMessage.content,
-                            timestamp: new Date(),
-                            type: 'data_fix',
-                            dataChangeInfo: {
-                                changeType: 'fix',
-                                changes: result.changes,
-                                sheetName: result.editedData.sheetName,
-                                rowCount: result.editedData.data.length,
-                                columnCount: result.editedData.headers.length
-                            },
-                            sheetContext: {
-                                sheetIndex: result.sheetIndex || activeSheetIndex,
-                                sheetName: result.editedData.sheetName
-                            }
-                        });
-                        console.log('AI 데이터 수정 메시지가 Firebase에 저장됨');
-                    } catch (error) {
-                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    // 백엔드에서 이미 AI 메시지를 저장했는지 확인
+                    const isAlreadySavedByBackend = !!(response.aiMessageId || response.messageId);
+                    
+                    if (!isAlreadySavedByBackend) {
+                        try {
+                            const { addMessage } = await import('@/services/firebase/chatService');
+                            await addMessage(chatId, {
+                                role: 'Extion ai',
+                                content: assistantMessage.content,
+                                timestamp: new Date(),
+                                type: 'data_fix',
+                                dataChangeInfo: {
+                                    changeType: 'fix',
+                                    changes: response.changes,
+                                    sheetName: response.editedData.sheetName,
+                                    rowCount: response.editedData.data.length,
+                                    columnCount: response.editedData.headers.length
+                                },
+                                sheetContext: {
+                                    sheetIndex: response.sheetIndex || activeSheetIndex,
+                                    sheetName: response.editedData.sheetName
+                                }
+                            });
+                            console.log('✅ AI 데이터 수정 메시지가 Firebase에 저장됨 (프론트엔드)');
+                        } catch (error) {
+                            console.error('❌ Firebase AI 메시지 저장 오류:', error);
+                        }
+                    } else {
+                        console.log('ℹ️ 백엔드에서 이미 데이터 수정 메시지가 저장됨 (messageId:', response.aiMessageId || response.messageId, ')');
                     }
                 }
             } else {
-                throw new Error(result.error || '데이터 수정에 실패했습니다.');
+                throw new Error(response.error || '데이터 수정에 실패했습니다.');
             }
         } catch (error) {
-            let errorMessage = '데이터 수정 중 오류가 발생했습니다.';
-
-            if (error instanceof Error && error.message === 'timeout') {
-                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
-            } else if (error instanceof Error) {
-                errorMessage = `${error.message}`;
-            }
-
-            setError('dataFixError', errorMessage);
-
+            console.error('데이터 수정 채팅 오류:', error);
             const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
-                content: errorMessage,
-                timestamp: new Date(),
-                mode: 'datafix'
+                content: `데이터 수정 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+                timestamp: new Date()
             };
 
             // 현재 활성 시트에 오류 메시지 추가
             addMessageToSheet(activeSheetIndex, assistantMessage);
-        } finally {
-            setLoadingState('dataFix', false);
         }
     };
 
     const handleNormalChat = async (userInput: string, isFirebaseChat?: boolean) => {
-        setError('fileError', null);
-
         try {
-            const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('timeout')), 60000);
-            });
-
-            // 현재 chatId를 가져와서 API 호출에 포함
-            const chatId = getCurrentChatId();
-            
             const response = await callNormalChatAPI(
                 userInput,
                 extendedSheetContext,
                 getDataForGPTAnalysis,
                 {
-                    chatId: currentChatId || undefined,
-                    chatTitle: userInput.length > 30 ? userInput.substring(0, 30) + '...' : userInput,
+                    chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
                     currentSheetIndex: activeSheetIndex
                 }
             );
@@ -1402,46 +1399,45 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 addMessageToSheet(activeSheetIndex, assistantMessage);
 
                 // Firebase 채팅인 경우 Firebase에도 메시지 저장
+                const chatId = getCurrentFirebaseChatId() || getCurrentChatId();
                 if (isFirebaseChat && chatId) {
-                    try {
-                        const { addMessage } = await import('@/services/firebase/chatService');
-                        await addMessage(chatId, {
-                            role: 'Extion ai',
-                            content: response.message,
-                            timestamp: new Date(),
-                            type: 'text',
-                            sheetContext: xlsxData ? {
-                                sheetIndex: activeSheetIndex,
-                                sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
-                            } : undefined
-                        });
-                        console.log('AI 일반 메시지가 Firebase에 저장됨');
-                    } catch (error) {
-                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    // 백엔드에서 이미 AI 메시지를 저장했는지 확인
+                    const isAlreadySavedByBackend = !!(response.aiMessageId || response.messageId);
+                    
+                    if (!isAlreadySavedByBackend) {
+                        try {
+                            const { addMessage } = await import('@/services/firebase/chatService');
+                            await addMessage(chatId, {
+                                role: 'Extion ai',
+                                content: response.message,
+                                timestamp: new Date(),
+                                type: 'text',
+                                sheetContext: xlsxData ? {
+                                    sheetIndex: activeSheetIndex,
+                                    sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
+                                } : undefined
+                            });
+                            console.log('✅ AI 일반 메시지가 Firebase에 저장됨 (프론트엔드)');
+                        } catch (error) {
+                            console.error('❌ Firebase AI 메시지 저장 오류:', error);
+                        }
+                    } else {
+                        console.log('ℹ️ 백엔드에서 이미 일반 메시지가 저장됨 (messageId:', response.aiMessageId || response.messageId, ')');
                     }
                 }
             } else {
                 throw new Error(response.error || '응답 생성에 실패했습니다.');
             }
         } catch (error) {
-            let errorMessage = '응답 생성 중 오류가 발생했습니다.';
-
-            if (error instanceof Error && error.message === 'timeout') {
-                errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.';
-            } else if (error instanceof Error) {
-                errorMessage = `${error.message}`;
-            }
-
-            setError('fileError', errorMessage);
-
+            console.error('일반 채팅 오류:', error);
             const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
-                content: errorMessage,
+                content: `응답 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
                 timestamp: new Date()
             };
 
-            // 현재 활성 시트에 응답 메시지 추가
+            // 현재 활성 시트에 오류 메시지 추가
             addMessageToSheet(activeSheetIndex, assistantMessage);
         }
     };

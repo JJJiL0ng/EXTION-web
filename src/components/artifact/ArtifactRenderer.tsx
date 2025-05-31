@@ -3,7 +3,7 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
-import { AlertCircle, Loader2, RefreshCw, Code, Layers } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw, Code, Layers, Cloud, HardDrive } from 'lucide-react';
 import * as Recharts from 'recharts';
 
 // XLSX 데이터 타입 정의 (다중 시트 지원)
@@ -69,15 +69,17 @@ const executeArtifactCode = (
   code: string, 
   xlsxData: XlsxData,
   activeSheetData: SheetData,
-  allSheetsData?: Array<SheetData>
+  allSheetsData?: Array<SheetData>,
+  dataSource?: 'cloud' | 'local'
 ): React.ComponentType | null => {
   try {
-    console.log('Executing artifact code with XLSX data:', {
+    console.log('Executing artifact code with data:', {
       fileName: xlsxData?.fileName,
       totalSheets: xlsxData?.sheets?.length,
       activeSheet: activeSheetData?.sheetName,
       activeHeaders: activeSheetData?.headers,
-      activeRowCount: activeSheetData?.data?.length
+      activeRowCount: activeSheetData?.data?.length,
+      dataSource: dataSource || 'unknown'
     });
 
     // 실행 컨텍스트 생성
@@ -86,25 +88,27 @@ const executeArtifactCode = (
     // 코드를 함수로 래핑 - 다중 시트 데이터 지원
     const functionBody = `
       // React와 Recharts의 모든 컴포넌트를 전역으로 사용 가능하게 설정
-      const React = arguments[3].React;
+      const React = arguments[4].React;
       const { useState, useEffect, useMemo, useCallback, useRef, Fragment } = React;
       const { 
         BarChart, LineChart, PieChart, ScatterChart, AreaChart,
         XAxis, YAxis, CartesianGrid, Tooltip, Legend,
         Bar, Line, Pie, Cell, Area
-      } = arguments[3];
+      } = arguments[4];
       
       // 다중 시트 데이터를 전역에서 사용 가능하게 설정
       const xlsxData = arguments[0];
       const activeSheetData = arguments[1];
       const allSheetsData = arguments[2] || xlsxData?.sheets || [];
+      const dataSource = arguments[3] || 'unknown';
       
       // 백워드 호환성을 위한 csvData (기존 단일 시트 코드 지원)
       const csvData = {
         headers: activeSheetData?.headers || [],
         data: activeSheetData?.data || [],
         fileName: xlsxData?.fileName || 'unknown.xlsx',
-        sheetName: activeSheetData?.sheetName || 'Sheet1'
+        sheetName: activeSheetData?.sheetName || 'Sheet1',
+        source: dataSource
       };
       
       // 시트별 데이터 접근을 위한 헬퍼 함수
@@ -115,6 +119,10 @@ const executeArtifactCode = (
       const getSheetByIndex = (index) => {
         return allSheetsData[index];
       };
+      
+      // 데이터 소스 확인 함수
+      const isCloudData = () => dataSource === 'cloud';
+      const isLocalData = () => dataSource === 'local';
       
       // 백엔드 코드 실행
       ${code}
@@ -141,7 +149,7 @@ const executeArtifactCode = (
 
     // 함수 생성 및 실행
     const componentFactory = new Function(functionBody);
-    const Component = componentFactory(xlsxData, activeSheetData, allSheetsData, context);
+    const Component = componentFactory(xlsxData, activeSheetData, allSheetsData, dataSource, context);
     
     // 컴포넌트가 유효한지 확인
     if (typeof Component !== 'function') {
@@ -249,7 +257,9 @@ function ArtifactRenderer() {
     loadingStates,
     errors,
     getCurrentSheetData,
-    getDataForGPTAnalysis
+    getDataForGPTAnalysis,
+    getCurrentSpreadsheetId,
+    currentChatId
   } = useExtendedUnifiedDataStore();
 
   const [renderKey, setRenderKey] = useState(0);
@@ -268,6 +278,30 @@ function ArtifactRenderer() {
       setRenderError(null);
     }
   }, [mounted, computedSheetData, xlsxData, activeSheetData]);
+
+  // 현재 채팅이 클라우드 채팅인지 확인
+  const isCloudChat = () => {
+    const spreadsheetId = getCurrentSpreadsheetId();
+    return !!(spreadsheetId || (currentChatId && currentChatId.length > 20 && !currentChatId.includes('_local')));
+  };
+
+  // 데이터 소스 정보 가져오기
+  const getDataSourceInfo = () => {
+    if (isCloudChat()) {
+      return {
+        type: 'cloud' as const,
+        icon: <Cloud className="w-3 h-3" />,
+        label: '클라우드',
+        color: 'text-blue-600'
+      };
+    }
+    return {
+      type: 'local' as const,
+      icon: <HardDrive className="w-3 h-3" />,
+      label: '로컬',
+      color: 'text-green-600'
+    };
+  };
 
   // 렌더링할 컴포넌트 메모이제이션
   const RenderedComponent = useMemo(() => {
@@ -308,15 +342,19 @@ function ArtifactRenderer() {
         ...xlsxData,
         sheets: allSheetsData
       };
+
+      // 데이터 소스 정보
+      const dataSource = getDataSourceInfo();
       
-      console.log('Rendering artifact with XLSX data:', {
+      console.log('Rendering artifact with data:', {
         fileName: xlsxDataForArtifact.fileName,
         totalSheets: xlsxDataForArtifact.sheets.length,
         activeSheet: updatedActiveSheetData.sheetName,
         activeHeaders: updatedActiveSheetData.headers,
         activeRowCount: updatedActiveSheetData.data.length,
         codeLength: artifactCode.code.length,
-        type: artifactCode.type
+        type: artifactCode.type,
+        dataSource: dataSource.type
       });
       
       // 컴포넌트 생성
@@ -324,7 +362,8 @@ function ArtifactRenderer() {
         artifactCode.code, 
         xlsxDataForArtifact,
         updatedActiveSheetData,
-        allSheetsData
+        allSheetsData,
+        dataSource.type
       );
       
       if (!Component) {
@@ -338,7 +377,7 @@ function ArtifactRenderer() {
       console.error('Failed to render artifact:', error);
       return null;
     }
-  }, [mounted, artifactCode, xlsxData, activeSheetData, computedSheetData, renderKey, getCurrentSheetData]);
+  }, [mounted, artifactCode, xlsxData, activeSheetData, computedSheetData, renderKey, getCurrentSheetData, getCurrentSpreadsheetId, currentChatId]);
 
   // 새로고침 핸들러
   const handleRefresh = () => {
@@ -395,6 +434,8 @@ function ArtifactRenderer() {
     );
   }
 
+  const dataSource = getDataSourceInfo();
+
   return (
     <div ref={containerRef} className="bg-white rounded-lg shadow-lg overflow-hidden">
       {/* 헤더 */}
@@ -410,6 +451,11 @@ function ArtifactRenderer() {
                   {artifactCode.type === 'chart' && '차트 시각화'}
                   {artifactCode.type === 'table' && '테이블 분석'}
                   {artifactCode.type === 'analysis' && '데이터 분석'}
+                </span>
+                <span>•</span>
+                <span className={`flex items-center gap-1 ${dataSource.color}`}>
+                  {dataSource.icon}
+                  {dataSource.label}
                 </span>
                 <span>•</span>
                 <span>{new Date(artifactCode.timestamp).toLocaleString('ko-KR')}</span>

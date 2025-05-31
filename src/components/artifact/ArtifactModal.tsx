@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useEffect } from 'react';
-import { X, Layers, FileText, Maximize2, Download, Share2 } from 'lucide-react';
+import { X, Layers, FileText, Maximize2, Download, Share2, Cloud, HardDrive } from 'lucide-react';
 import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import ArtifactRenderContainer from './ArtifactRenderContainer';
 import { ResponsiveContainer } from 'recharts';
@@ -19,7 +19,9 @@ export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
     artifactCode, 
     xlsxData, 
     activeSheetData,
-    extendedSheetContext 
+    extendedSheetContext,
+    getCurrentSpreadsheetId,
+    currentChatId
   } = useExtendedUnifiedDataStore();
 
   // ESC 키로 모달 닫기
@@ -49,6 +51,30 @@ export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
   if (!isOpen) {
     return null;
   }
+
+  // 현재 채팅이 클라우드 채팅인지 확인
+  const isCloudChat = () => {
+    const spreadsheetId = getCurrentSpreadsheetId();
+    return !!(spreadsheetId || (currentChatId && currentChatId.length > 20 && !currentChatId.includes('_local')));
+  };
+
+  // 데이터 소스 표시
+  const getDataSourceInfo = () => {
+    if (isCloudChat()) {
+      return {
+        icon: <Cloud className="w-3 h-3" />,
+        label: '클라우드',
+        color: 'text-blue-600 bg-blue-50'
+      };
+    }
+    return {
+      icon: <HardDrive className="w-3 h-3" />,
+      label: '로컬',
+      color: 'text-green-600 bg-green-50'
+    };
+  };
+
+  const dataSource = getDataSourceInfo();
 
   // 다운로드 기능 (실제 구현은 필요에 따라 추가)
   const handleDownload = () => {
@@ -91,6 +117,11 @@ export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
                     {artifactCode.type.charAt(0).toUpperCase() + artifactCode.type.slice(1)} 분석
                   </span>
                 )}
+                {/* 데이터 소스 표시 */}
+                <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${dataSource.color}`}>
+                  {dataSource.icon}
+                  {dataSource.label}
+                </span>
                 {artifactCode?.timestamp && (
                   <span className="text-gray-500">
                     {artifactCode.timestamp.toLocaleString('ko-KR')}
@@ -173,6 +204,11 @@ export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
                     </span>
                   </>
                 )}
+                {/* 데이터 소스 정보 */}
+                <span className={`flex items-center gap-1 font-medium ${dataSource.color.split(' ')[0]}`}>
+                  {dataSource.icon}
+                  {dataSource.label} 데이터
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span>총 {xlsxData.sheets.length}개 시트</span>

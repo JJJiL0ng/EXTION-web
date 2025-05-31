@@ -9,7 +9,9 @@ import {
     XIcon,
     MenuIcon,
     Loader2Icon,
-    RefreshCwIcon
+    RefreshCwIcon,
+    Cloud,
+    HardDrive
 } from 'lucide-react';
 import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import { 
@@ -29,6 +31,22 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 interface ChatSidebarProps {
     isOpen: boolean;
     onToggle: () => void;
+}
+
+// 통합 채팅 아이템 타입
+interface UnifiedChatItem {
+    id: string;
+    title: string;
+    type: 'cloud' | 'local';
+    updatedAt: Date;
+    preview: string;
+    hasSpreadsheet: boolean;
+    spreadsheetInfo?: {
+        fileName: string;
+        totalSheets: number;
+    };
+    messageCount?: number;
+    isActive: boolean;
 }
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
@@ -53,7 +71,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         clearAllMessages,
         setCurrentSpreadsheetId,
         setSpreadsheetMetadata,
-        markAsSaved
+        markAsSaved,
+        updateExtendedSheetContext
     } = useExtendedUnifiedDataStore();
 
     // Firebase 인증 상태 감지
@@ -89,6 +108,49 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         }
     }, [user, loading]);
 
+    // 통합 채팅 목록 생성
+    const getUnifiedChatList = (): UnifiedChatItem[] => {
+        const unifiedChats: UnifiedChatItem[] = [];
+
+        // Firebase 채팅 추가
+        firebaseChats.forEach(chat => {
+            unifiedChats.push({
+                id: chat.id,
+                title: chat.title,
+                type: 'cloud',
+                updatedAt: chat.updatedAt,
+                preview: getFirebaseChatPreview(chat),
+                hasSpreadsheet: chat.spreadsheetData?.hasSpreadsheet || false,
+                spreadsheetInfo: chat.spreadsheetData?.hasSpreadsheet ? {
+                    fileName: chat.spreadsheetData.fileName || '',
+                    totalSheets: chat.spreadsheetData.totalSheets || 1
+                } : undefined,
+                messageCount: chat.messageCount,
+                isActive: selectedChatId === chat.id
+            });
+        });
+
+        // 로컬 채팅 추가
+        Object.values(chatSessions).forEach(session => {
+            unifiedChats.push({
+                id: session.chatId,
+                title: getLocalChatTitle(session),
+                type: 'local',
+                updatedAt: new Date(session.lastAccessedAt),
+                preview: getLocalChatPreview(session),
+                hasSpreadsheet: session.hasUploadedFile || false,
+                spreadsheetInfo: session.xlsxData ? {
+                    fileName: session.xlsxData.fileName,
+                    totalSheets: session.xlsxData.sheets?.length || 1
+                } : undefined,
+                isActive: currentChatId === session.chatId && !selectedChatId
+            });
+        });
+
+        // 최신 순으로 정렬
+        return unifiedChats.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    };
+
     // Firebase 채팅 선택 및 복원
     const handleSelectFirebaseChat = async (chat: FirebaseChat) => {
         if (selectedChatId === chat.id) return;
@@ -110,9 +172,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             console.log('1. 상태 초기화 중...');
             resetStore();
 
-            // 2. 채팅 ID 설정
+            // 2. 채팅 ID 설정 및 URL 업데이트
             console.log('2. 채팅 ID 설정:', chat.id);
             setCurrentChatId(chat.id);
+            
+            // URL 파라미터에 Firebase 채팅 ID 설정
+            if (typeof window !== 'undefined') {
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.set('chatId', chat.id);
+                window.history.replaceState({}, '', newUrl.toString());
+                console.log('✅ URL 파라미터 설정됨:', chat.id);
+            }
 
             // 3. 스프레드시트 데이터 복원 (spreadsheetId가 있는 경우)
             if (chat.spreadsheetId) {
@@ -153,6 +223,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                             lastSaved: chat.updatedAt
                         });
                         markAsSaved(chat.spreadsheetId);
+                        
+                        // extendedSheetContext 업데이트
+                        setTimeout(() => {
+                            console.log('🔄 ExtendedSheetContext 업데이트 시도');
+                            updateExtendedSheetContext();
+                        }, 100);
                         
                         console.log('✅ 스프레드시트 메타데이터 설정 완료');
                     } else {
@@ -238,54 +314,73 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     const handleNewLocalChat = () => {
         const newChatId = createNewChatSession();
         setSelectedChatId(null); // Firebase 채팅 선택 해제
+        
+        // URL 파라미터에서 Firebase 채팅 ID 제거
+        if (typeof window !== 'undefined') {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('chatId');
+            window.history.replaceState({}, '', newUrl.toString());
+            console.log('✅ URL 파라미터 제거됨 (로컬 채팅)');
+        }
+        
         console.log('새로운 로컬 채팅 세션 생성:', newChatId);
     };
 
-    // Firebase 채팅 삭제
-    const handleDeleteFirebaseChat = async (chatId: string, e: React.MouseEvent) => {
+    // 통합 채팅 선택 핸들러
+    const handleSelectChat = async (chatItem: UnifiedChatItem) => {
+        if (chatItem.type === 'cloud') {
+            const firebaseChat = firebaseChats.find(chat => chat.id === chatItem.id);
+            if (firebaseChat) {
+                await handleSelectFirebaseChat(firebaseChat);
+            }
+        } else {
+            // 로컬 채팅
+            setSelectedChatId(null); // Firebase 채팅 선택 해제
+            
+            // URL 파라미터에서 Firebase 채팅 ID 제거
+            if (typeof window !== 'undefined') {
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.delete('chatId');
+                window.history.replaceState({}, '', newUrl.toString());
+                console.log('✅ URL 파라미터 제거됨 (로컬 채팅 전환)');
+            }
+            
+            switchToChatSession(chatItem.id);
+        }
+    };
+
+    // 통합 채팅 삭제 핸들러
+    const handleDeleteChat = async (chatItem: UnifiedChatItem, e: React.MouseEvent) => {
         e.stopPropagation();
         
         if (!confirm('이 채팅을 삭제하시겠습니까?')) return;
 
         try {
-            await deleteChat(chatId);
-            console.log('Firebase 채팅 삭제됨:', chatId);
-            
-            // 삭제된 채팅이 현재 선택된 채팅이면 초기화
-            if (selectedChatId === chatId) {
-                setSelectedChatId(null);
-                resetStore();
+            if (chatItem.type === 'cloud') {
+                await deleteChat(chatItem.id);
+                console.log('Firebase 채팅 삭제됨:', chatItem.id);
+                
+                // 삭제된 채팅이 현재 선택된 채팅이면 초기화
+                if (selectedChatId === chatItem.id) {
+                    setSelectedChatId(null);
+                    resetStore();
+                }
+                
+                // 채팅 목록 새로고침
+                await loadFirebaseChats();
+            } else {
+                // 로컬 채팅 삭제
+                deleteChatSession(chatItem.id);
+                
+                // 현재 채팅이 삭제된 경우 새 채팅 생성
+                if (currentChatId === chatItem.id) {
+                    handleNewLocalChat();
+                }
             }
-            
-            // 채팅 목록 새로고침
-            await loadFirebaseChats();
         } catch (error) {
-            console.error('Firebase 채팅 삭제 오류:', error);
+            console.error('채팅 삭제 오류:', error);
         }
     };
-
-    // 로컬 채팅 전환
-    const handleSwitchLocalChat = (chatId: string) => {
-        setSelectedChatId(null); // Firebase 채팅 선택 해제
-        switchToChatSession(chatId);
-    };
-
-    // 로컬 채팅 삭제
-    const handleDeleteLocalChat = (chatId: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (confirm('이 채팅을 삭제하시겠습니까?')) {
-            deleteChatSession(chatId);
-            
-            // 현재 채팅이 삭제된 경우 새 채팅 생성
-            if (currentChatId === chatId) {
-                handleNewLocalChat();
-            }
-        }
-    };
-
-    // 로컬 채팅 세션들을 생성 시간 순으로 정렬
-    const sortedLocalChatSessions = Object.values(chatSessions)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // 로컬 채팅 제목 생성
     const getLocalChatTitle = (session: any) => {
@@ -317,6 +412,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         return '채팅을 시작하세요';
     };
 
+    const unifiedChats = getUnifiedChatList();
+
     return (
         <>
             {/* 사이드바 */}
@@ -336,13 +433,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                         onClick={handleNewFirebaseChat}
                                         disabled={isCreatingChat}
                                         className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm disabled:opacity-50"
+                                        title="새 클라우드 채팅"
                                     >
                                         {isCreatingChat ? (
                                             <Loader2Icon className="h-4 w-4 mr-1 animate-spin" />
                                         ) : (
-                                            <PlusIcon className="h-4 w-4 mr-1" />
+                                            <>
+                                                <Cloud className="h-4 w-4 mr-1" />
+                                                <PlusIcon className="h-3 w-3" />
+                                            </>
                                         )}
-                                        새 채팅
                                     </button>
                                     <button
                                         onClick={loadFirebaseChats}
@@ -357,9 +457,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                             <button
                                 onClick={handleNewLocalChat}
                                 className="flex items-center px-2 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-                                title="로컬 채팅"
+                                title="새 로컬 채팅"
                             >
-                                <PlusIcon className="h-4 w-4" />
+                                <HardDrive className="h-4 w-4 mr-1" />
+                                <PlusIcon className="h-3 w-3" />
                             </button>
                             <button
                                 onClick={onToggle}
@@ -373,108 +474,36 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                     <div className="text-sm text-gray-500">
                         {user ? (
                             <>
-                                Firebase: {firebaseChats.length}개 | 로컬: {Object.keys(chatSessions).length}개
+                                총 {unifiedChats.length}개 채팅 (클라우드: {firebaseChats.length}개, 로컬: {Object.keys(chatSessions).length}개)
                             </>
                         ) : (
                             <>
-                                로컬: {Object.keys(chatSessions).length}개 (로그인하여 클라우드 채팅 사용)
+                                총 {unifiedChats.length}개 채팅 (로그인하여 클라우드 채팅 사용)
                             </>
                         )}
                     </div>
                 </div>
 
-                {/* 채팅 목록 */}
+                {/* 통합 채팅 목록 */}
                 <div className="flex-1 overflow-y-auto">
-                    {/* Firebase 채팅 섹션 */}
-                    {user && (
-                        <div className="p-2">
-                            <div className="flex items-center justify-between mb-2 px-2">
-                                <h3 className="text-sm font-medium text-gray-600">클라우드 채팅</h3>
-                                {isLoadingChats && (
-                                    <Loader2Icon className="h-4 w-4 animate-spin text-gray-400" />
-                                )}
-                            </div>
-                            
-                            {firebaseChats.length === 0 && !isLoadingChats ? (
-                                <div className="p-4 text-center text-gray-500">
-                                    <MessageCircleIcon className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                                    <p className="text-sm">클라우드 채팅이 없습니다</p>
-                                </div>
-                            ) : (
-                                firebaseChats.map((chat) => (
-                                    <div
-                                        key={chat.id}
-                                        onClick={() => handleSelectFirebaseChat(chat)}
-                                        className={`
-                                            relative p-3 mb-2 rounded-lg cursor-pointer transition-all group
-                                            ${selectedChatId === chat.id 
-                                                ? 'bg-blue-50 border-2 border-blue-200' 
-                                                : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
-                                            }
-                                        `}
-                                    >
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center mb-1">
-                                                    {chat.spreadsheetData?.hasSpreadsheet ? (
-                                                        <FileSpreadsheetIcon className="h-4 w-4 text-blue-600 mr-2 flex-shrink-0" />
-                                                    ) : (
-                                                        <MessageCircleIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                                                    )}
-                                                    <h3 className="font-medium text-sm text-gray-800 truncate">
-                                                        {chat.title}
-                                                    </h3>
-                                                </div>
-                                                <p className="text-xs text-gray-500 truncate">
-                                                    {getFirebaseChatPreview(chat)}
-                                                </p>
-                                                <p className="text-xs text-gray-400 mt-1">
-                                                    {chat.updatedAt.toLocaleDateString('ko-KR')} {' '}
-                                                    {chat.updatedAt.toLocaleTimeString('ko-KR', { 
-                                                        hour: '2-digit', 
-                                                        minute: '2-digit' 
-                                                    })}
-                                                </p>
-                                            </div>
-                                            
-                                            {/* 삭제 버튼 */}
-                                            <button
-                                                onClick={(e) => handleDeleteFirebaseChat(chat.id, e)}
-                                                className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all ml-2"
-                                                aria-label="채팅 삭제"
-                                            >
-                                                <TrashIcon className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                        
-                                        {/* 현재 활성 채팅 표시 */}
-                                        {selectedChatId === chat.id && (
-                                            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-r"></div>
-                                        )}
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-
-                    {/* 로컬 채팅 섹션 */}
-                    <div className="p-2 border-t border-gray-100">
-                        <h3 className="text-sm font-medium text-gray-600 mb-2 px-2">로컬 채팅</h3>
-                        
-                        {sortedLocalChatSessions.length === 0 ? (
+                    <div className="p-2">
+                        {unifiedChats.length === 0 && !isLoadingChats ? (
                             <div className="p-4 text-center text-gray-500">
                                 <MessageCircleIcon className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">로컬 채팅이 없습니다</p>
+                                <p className="text-sm">채팅이 없습니다</p>
+                                <p className="text-xs mt-1">새 채팅을 시작해보세요</p>
                             </div>
                         ) : (
-                            sortedLocalChatSessions.map((session) => (
+                            unifiedChats.map((chatItem) => (
                                 <div
-                                    key={session.chatId}
-                                    onClick={() => handleSwitchLocalChat(session.chatId)}
+                                    key={`${chatItem.type}-${chatItem.id}`}
+                                    onClick={() => handleSelectChat(chatItem)}
                                     className={`
                                         relative p-3 mb-2 rounded-lg cursor-pointer transition-all group
-                                        ${currentChatId === session.chatId && !selectedChatId
-                                            ? 'bg-green-50 border-2 border-green-200' 
+                                        ${chatItem.isActive 
+                                            ? chatItem.type === 'cloud'
+                                                ? 'bg-blue-50 border-2 border-blue-200' 
+                                                : 'bg-green-50 border-2 border-green-200'
                                             : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
                                         }
                                     `}
@@ -482,30 +511,48 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center mb-1">
-                                                {session.hasUploadedFile ? (
-                                                    <FileSpreadsheetIcon className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                                                {/* 데이터 소스 아이콘 */}
+                                                {chatItem.type === 'cloud' ? (
+                                                    <Cloud className="h-4 w-4 text-blue-600 mr-2 flex-shrink-0" />
+                                                ) : (
+                                                    <HardDrive className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                                                )}
+                                                
+                                                {/* 스프레드시트 아이콘 */}
+                                                {chatItem.hasSpreadsheet ? (
+                                                    <FileSpreadsheetIcon className={`h-4 w-4 mr-2 flex-shrink-0 ${
+                                                        chatItem.type === 'cloud' ? 'text-blue-600' : 'text-green-600'
+                                                    }`} />
                                                 ) : (
                                                     <MessageCircleIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
                                                 )}
+                                                
                                                 <h3 className="font-medium text-sm text-gray-800 truncate">
-                                                    {getLocalChatTitle(session)}
+                                                    {chatItem.title}
                                                 </h3>
                                             </div>
                                             <p className="text-xs text-gray-500 truncate">
-                                                {getLocalChatPreview(session)}
+                                                {chatItem.preview}
                                             </p>
-                                            <p className="text-xs text-gray-400 mt-1">
-                                                {new Date(session.lastAccessedAt).toLocaleDateString('ko-KR')} {' '}
-                                                {new Date(session.lastAccessedAt).toLocaleTimeString('ko-KR', { 
-                                                    hour: '2-digit', 
-                                                    minute: '2-digit' 
-                                                })}
-                                            </p>
+                                            <div className="flex items-center justify-between mt-1">
+                                                <p className="text-xs text-gray-400">
+                                                    {chatItem.updatedAt.toLocaleDateString('ko-KR')} {' '}
+                                                    {chatItem.updatedAt.toLocaleTimeString('ko-KR', { 
+                                                        hour: '2-digit', 
+                                                        minute: '2-digit' 
+                                                    })}
+                                                </p>
+                                                {chatItem.spreadsheetInfo && (
+                                                    <span className="text-xs text-gray-400">
+                                                        {chatItem.spreadsheetInfo.totalSheets}개 시트
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         
                                         {/* 삭제 버튼 */}
                                         <button
-                                            onClick={(e) => handleDeleteLocalChat(session.chatId, e)}
+                                            onClick={(e) => handleDeleteChat(chatItem, e)}
                                             className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all ml-2"
                                             aria-label="채팅 삭제"
                                         >
@@ -514,11 +561,21 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                     </div>
                                     
                                     {/* 현재 활성 채팅 표시 */}
-                                    {currentChatId === session.chatId && !selectedChatId && (
-                                        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-green-600 rounded-r"></div>
+                                    {chatItem.isActive && (
+                                        <div className={`absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 rounded-r ${
+                                            chatItem.type === 'cloud' ? 'bg-blue-600' : 'bg-green-600'
+                                        }`}></div>
                                     )}
                                 </div>
                             ))
+                        )}
+                        
+                        {/* 로딩 상태 */}
+                        {isLoadingChats && (
+                            <div className="flex items-center justify-center p-4">
+                                <Loader2Icon className="h-6 w-6 animate-spin text-gray-400 mr-2" />
+                                <span className="text-sm text-gray-500">채팅 목록을 불러오는 중...</span>
+                            </div>
                         )}
                     </div>
                 </div>
