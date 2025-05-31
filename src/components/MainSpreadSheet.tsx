@@ -434,7 +434,6 @@ const defaultData = [
   ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
   ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
 ];
 
 // 선택된 셀 정보 인터페이스 업데이트 - timestamp 속성 추가
@@ -494,7 +493,8 @@ const MainSpreadSheet: React.FC = () => {
     switchToSheet,
     coordsToSheetReference,
     setLoadingState,
-    setXLSXData
+    setXLSXData,
+    getCurrentSpreadsheetId
   } = useExtendedUnifiedDataStore();
 
   const [isAutosave] = useState<boolean>(false);
@@ -506,25 +506,75 @@ const MainSpreadSheet: React.FC = () => {
     sheetName: extendedSheetContext?.sheetName || 'Sheet1',
   });
 
-  // 표시할 데이터 준비 - 활성 시트 데이터 사용
-  // 표시할 데이터 준비 - 원본 레이아웃 유지
+  // 표시할 데이터 준비 - 원본 레이아웃 유지 (Firebase 복원 데이터 지원)
   const displayData = useMemo(() => {
-    if (!activeSheetData) return defaultData;
+    if (!activeSheetData) {
+      console.log('DisplayData: activeSheetData 없음, defaultData 사용');
+      return defaultData;
+    }
 
-    // rawData가 있으면 원본 레이아웃 그대로 사용
+    // Firebase에서 복원된 데이터인지 확인
+    const currentSpreadsheetId = getCurrentSpreadsheetId();
+    const isFirebaseData = currentSpreadsheetId || 
+                          xlsxData?.spreadsheetId ||
+                          (activeSheetData.metadata?.preserveOriginalStructure === true);
+
+    console.log('=== DisplayData 생성 ===');
+    console.log('데이터 상태:', {
+      isFirebaseData,
+      currentSpreadsheetId,
+      xlsxSpreadsheetId: xlsxData?.spreadsheetId,
+      preserveOriginalStructure: activeSheetData.metadata?.preserveOriginalStructure,
+      hasRawData: !!activeSheetData.rawData,
+      rawDataLength: activeSheetData.rawData?.length || 0,
+      headersLength: activeSheetData.headers?.length || 0,
+      dataLength: activeSheetData.data?.length || 0,
+      sheetName: activeSheetData.sheetName
+    });
+
+    // rawData가 있으면 원본 레이아웃 그대로 사용 (Firebase 복원 데이터)
     if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
-      // 원본 데이터를 그대로 반환 (헤더 포함)
-      return activeSheetData.rawData;
+        console.log('✅ 원본 rawData 사용:', {
+          rows: activeSheetData.rawData.length,
+          firstRowPreview: activeSheetData.rawData[0]?.slice(0, 3),
+          lastRowPreview: activeSheetData.rawData[activeSheetData.rawData.length - 1]?.slice(0, 3)
+        });
+        return activeSheetData.rawData;
+    }
+
+    // Firebase 복원 데이터의 경우 헤더와 데이터를 결합
+    if (isFirebaseData && activeSheetData.headers && activeSheetData.data) {
+        console.log('✅ Firebase 데이터 헤더+데이터 결합:', {
+          headers: activeSheetData.headers.length,
+          dataRows: activeSheetData.data.length,
+          headersPreview: activeSheetData.headers.slice(0, 3),
+          firstDataRowPreview: activeSheetData.data[0]?.slice(0, 3)
+        });
+        const combinedData = [activeSheetData.headers, ...activeSheetData.data];
+        return combinedData;
     }
 
     // rawData가 없는 경우 기존 방식 폴백
     const currentData = getCurrentSheetData();
     const data = [activeSheetData.headers, ...(currentData || activeSheetData.data)];
+    console.log('⚠️ 기존 방식 폴백 사용:', {
+      totalRows: data.length,
+      hasCurrentData: !!currentData,
+      firstRowPreview: data[0]?.slice(0, 3)
+    });
     return data;
-  }, [activeSheetData, getCurrentSheetData]);
+  }, [activeSheetData, getCurrentSheetData, getCurrentSpreadsheetId, xlsxData?.spreadsheetId]);
 
   // 시트 전환 핸들러
   const handleSheetChange = useCallback(async (sheetIndex: number) => {
+    console.log('=== 시트 전환 시작 ===');
+    console.log('전환 정보:', {
+      fromIndex: xlsxData?.activeSheetIndex,
+      toIndex: sheetIndex,
+      totalSheets: xlsxData?.sheets.length,
+      targetSheetName: xlsxData?.sheets[sheetIndex]?.sheetName
+    });
+
     setLoadingState('sheetSwitch', true);
     try {
       await switchToSheet(sheetIndex);
@@ -533,16 +583,22 @@ const MainSpreadSheet: React.FC = () => {
       // 시트 전환 시 선택된 셀 정보 초기화
       setSelectedCellInfo(null);
 
+      console.log('✅ 시트 전환 완료:', {
+        newActiveIndex: sheetIndex,
+        sheetName: xlsxData?.sheets[sheetIndex]?.sheetName
+      });
+
       // Handsontable 인스턴스 재렌더링
       setTimeout(() => {
         hotRef.current?.hotInstance?.render();
+        console.log('Handsontable 재렌더링 완료');
       }, 100);
     } catch (error) {
-      console.error('Sheet switch error:', error);
+      console.error('❌ 시트 전환 오류:', error);
     } finally {
       setLoadingState('sheetSwitch', false);
     }
-  }, [switchToSheet, setLoadingState]);
+  }, [switchToSheet, setLoadingState, xlsxData]);
 
   // 포뮬러 적용
   useEffect(() => {
@@ -1254,6 +1310,34 @@ const MainSpreadSheet: React.FC = () => {
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
+
+  // 개발 환경에서 상태 디버깅
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== MainSpreadSheet 상태 업데이트 ===');
+      console.log('현재 상태:', {
+        hasXlsxData: !!xlsxData,
+        fileName: xlsxData?.fileName,
+        sheetsCount: xlsxData?.sheets.length || 0,
+        activeSheetIndex: xlsxData?.activeSheetIndex,
+        activeSheetName: activeSheetData?.sheetName,
+        currentSpreadsheetId: getCurrentSpreadsheetId(),
+        hasActiveSheetData: !!activeSheetData,
+        displayDataLength: displayData.length
+      });
+      
+      if (xlsxData?.sheets) {
+        console.log('시트 목록:', xlsxData.sheets.map((sheet, index) => ({
+          index,
+          name: sheet.sheetName,
+          headers: sheet.headers?.length || 0,
+          dataRows: sheet.data?.length || 0,
+          rawDataRows: sheet.rawData?.length || 0,
+          isActive: index === xlsxData.activeSheetIndex
+        })));
+      }
+    }
+  }, [xlsxData, activeSheetData, displayData, getCurrentSpreadsheetId]);
 
   // 로딩 중일 때 표시
   if (loadingStates.fileUpload) {

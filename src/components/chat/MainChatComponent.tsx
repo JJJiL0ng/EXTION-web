@@ -840,6 +840,32 @@ export default function MainChatComponent() {
         // 현재 활성 시트에 사용자 메시지 추가
         addMessageToSheet(activeSheetIndex, userMessage);
 
+        // Firebase 채팅인 경우 Firebase에도 메시지 저장
+        const currentChatId = getCurrentChatId();
+        const isFirebaseChat = Boolean(currentChatId && currentChatId.length > 20 && !currentChatId.includes('_local')); // Firebase 채팅 ID 패턴 확인
+        
+        if (isFirebaseChat) {
+            try {
+                const { addMessage } = await import('@/services/firebase/chatService');
+                await addMessage(currentChatId!, {
+                    role: 'user',
+                    content: inputValue,
+                    timestamp: new Date(),
+                    type: 'text',
+                    sheetContext: xlsxData ? {
+                        sheetIndex: activeSheetIndex,
+                        sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1',
+                        totalRows: xlsxData.sheets[activeSheetIndex]?.data.length || 0,
+                        totalColumns: xlsxData.sheets[activeSheetIndex]?.headers.length || 0,
+                        headers: xlsxData.sheets[activeSheetIndex]?.headers || []
+                    } : undefined
+                });
+                console.log('사용자 메시지가 Firebase에 저장됨');
+            } catch (error) {
+                console.error('Firebase 메시지 저장 오류:', error);
+            }
+        }
+
         try {
             const currentInput = inputValue;
             setInputValue('');
@@ -847,7 +873,7 @@ export default function MainChatComponent() {
             // 시트가 업로드되어 있지 않으면 datageneration 모드 사용
             if (!xlsxData || !xlsxData.sheets || xlsxData.sheets.length === 0) {
                 setCurrentMode('normal'); // datageneration은 ChatMode에 없으므로 normal로 설정
-                await handleDataGenerationChat(currentInput);
+                await handleDataGenerationChat(currentInput, isFirebaseChat);
                 return;
             }
 
@@ -859,13 +885,13 @@ export default function MainChatComponent() {
 
             // 해당 모드에 맞는 API 호출
             if (mode === 'formula') {
-                await handleFormulaChat(currentInput);
+                await handleFormulaChat(currentInput, isFirebaseChat);
             } else if (mode === 'artifact') {
-                await handleArtifactChat(currentInput);
+                await handleArtifactChat(currentInput, isFirebaseChat);
             } else if (mode === 'datafix') {
-                await handleDataFixChat(currentInput);
+                await handleDataFixChat(currentInput, isFirebaseChat);
             } else {
-                await handleNormalChat(currentInput);
+                await handleNormalChat(currentInput, isFirebaseChat);
             }
         } catch (error) {
             console.error('메시지 처리 중 오류 발생:', error);
@@ -878,13 +904,32 @@ export default function MainChatComponent() {
 
             // 현재 활성 시트에 오류 메시지 추가
             addMessageToSheet(activeSheetIndex, errorMessage);
+
+            // Firebase 채팅인 경우 오류 메시지도 Firebase에 저장
+            if (isFirebaseChat) {
+                try {
+                    const { addMessage } = await import('@/services/firebase/chatService');
+                    await addMessage(currentChatId!, {
+                        role: 'Extion ai',
+                        content: errorMessage.content,
+                        timestamp: new Date(),
+                        type: 'text',
+                        sheetContext: xlsxData ? {
+                            sheetIndex: activeSheetIndex,
+                            sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
+                        } : undefined
+                    });
+                } catch (fbError) {
+                    console.error('Firebase 오류 메시지 저장 실패:', fbError);
+                }
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
     // 각 채팅 모드별 핸들러 함수
-    const handleFormulaChat = async (userInput: string) => {
+    const handleFormulaChat = async (userInput: string, isFirebaseChat?: boolean) => {
         setLoadingState('formulaGeneration', true);
         setError('formulaError', null);
 
@@ -925,6 +970,32 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 // 현재 활성 시트에 응답 메시지 추가
                 addMessageToSheet(activeSheetIndex, assistantMessage);
+
+                // Firebase 채팅인 경우 Firebase에도 메시지 저장
+                if (isFirebaseChat && chatId) {
+                    try {
+                        const { addMessage } = await import('@/services/firebase/chatService');
+                        await addMessage(chatId, {
+                            role: 'Extion ai',
+                            content: assistantMessage.content,
+                            timestamp: new Date(),
+                            type: 'formula',
+                            formulaData: {
+                                formula: result.formula,
+                                cellAddress: result.cellAddress || 'E1',
+                                explanation: result.explanation,
+                                sheetIndex: activeSheetIndex
+                            },
+                            sheetContext: xlsxData ? {
+                                sheetIndex: activeSheetIndex,
+                                sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
+                            } : undefined
+                        });
+                        console.log('AI 포뮬러 메시지가 Firebase에 저장됨');
+                    } catch (error) {
+                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    }
+                }
 
                 const formulaApplication = {
                     formula: result.formula,
@@ -970,7 +1041,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
         }
     };
 
-    const handleArtifactChat = async (userInput: string) => {
+    const handleArtifactChat = async (userInput: string, isFirebaseChat?: boolean) => {
         setLoadingState('artifactGeneration', true);
         setError('artifactError', null);
 
@@ -1019,6 +1090,32 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 // 현재 활성 시트에 응답 메시지 추가
                 addMessageToSheet(activeSheetIndex, assistantMessage);
+
+                // Firebase 채팅인 경우 Firebase에도 메시지 저장
+                if (isFirebaseChat && chatId) {
+                    try {
+                        const { addMessage } = await import('@/services/firebase/chatService');
+                        await addMessage(chatId, {
+                            role: 'Extion ai',
+                            content: `아티팩트가 생성되었습니다: ${result.title || '분석'}`,
+                            timestamp: new Date(),
+                            type: 'artifact',
+                            artifactData: {
+                                type: result.type || 'analysis',
+                                title: result.title || `${result.type} 분석`,
+                                code: result.code,
+                                artifactId: artifactData.messageId
+                            },
+                            sheetContext: xlsxData ? {
+                                sheetIndex: activeSheetIndex,
+                                sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
+                            } : undefined
+                        });
+                        console.log('AI 아티팩트 메시지가 Firebase에 저장됨');
+                    } catch (error) {
+                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    }
+                }
             } else {
                 throw new Error(result.error || '아티팩트 생성에 실패했습니다.');
             }
@@ -1048,7 +1145,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
         }
     };
 
-    const handleDataGenerationChat = async (userInput: string) => {
+    const handleDataGenerationChat = async (userInput: string, isFirebaseChat?: boolean) => {
         setLoadingState('dataGeneration', true);
         setError('dataGenerationError', null);
 
@@ -1094,6 +1191,32 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 // 현재 활성 시트에 응답 메시지 추가
                 addMessageToSheet(activeSheetIndex, assistantMessage);
+
+                // Firebase 채팅인 경우 Firebase에도 메시지 저장
+                if (isFirebaseChat && chatId) {
+                    try {
+                        const { addMessage } = await import('@/services/firebase/chatService');
+                        await addMessage(chatId, {
+                            role: 'Extion ai',
+                            content: assistantMessage.content,
+                            timestamp: new Date(),
+                            type: 'data_generation',
+                            dataChangeInfo: {
+                                changeType: 'generation',
+                                sheetName: result.editedData.sheetName,
+                                rowCount: result.editedData.data.length,
+                                columnCount: result.editedData.headers.length
+                            },
+                            sheetContext: {
+                                sheetIndex: result.sheetIndex || activeSheetIndex,
+                                sheetName: result.editedData.sheetName
+                            }
+                        });
+                        console.log('AI 데이터 생성 메시지가 Firebase에 저장됨');
+                    } catch (error) {
+                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    }
+                }
             } else {
                 throw new Error(result.error || '데이터 생성에 실패했습니다.');
             }
@@ -1123,7 +1246,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
         }
     };
 
-    const handleDataFixChat = async (userInput: string) => {
+    const handleDataFixChat = async (userInput: string, isFirebaseChat?: boolean) => {
         setLoadingState('dataFix', true);
         setError('dataFixError', null);
 
@@ -1184,6 +1307,33 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 // 현재 활성 시트에 응답 메시지 추가
                 addMessageToSheet(activeSheetIndex, assistantMessage);
+
+                // Firebase 채팅인 경우 Firebase에도 메시지 저장
+                if (isFirebaseChat && chatId) {
+                    try {
+                        const { addMessage } = await import('@/services/firebase/chatService');
+                        await addMessage(chatId, {
+                            role: 'Extion ai',
+                            content: assistantMessage.content,
+                            timestamp: new Date(),
+                            type: 'data_fix',
+                            dataChangeInfo: {
+                                changeType: 'fix',
+                                changes: result.changes,
+                                sheetName: result.editedData.sheetName,
+                                rowCount: result.editedData.data.length,
+                                columnCount: result.editedData.headers.length
+                            },
+                            sheetContext: {
+                                sheetIndex: result.sheetIndex || activeSheetIndex,
+                                sheetName: result.editedData.sheetName
+                            }
+                        });
+                        console.log('AI 데이터 수정 메시지가 Firebase에 저장됨');
+                    } catch (error) {
+                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    }
+                }
             } else {
                 throw new Error(result.error || '데이터 수정에 실패했습니다.');
             }
@@ -1213,7 +1363,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
         }
     };
 
-    const handleNormalChat = async (userInput: string) => {
+    const handleNormalChat = async (userInput: string, isFirebaseChat?: boolean) => {
         setError('fileError', null);
 
         try {
@@ -1250,6 +1400,26 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
 
                 // 현재 활성 시트에 응답 메시지 추가
                 addMessageToSheet(activeSheetIndex, assistantMessage);
+
+                // Firebase 채팅인 경우 Firebase에도 메시지 저장
+                if (isFirebaseChat && chatId) {
+                    try {
+                        const { addMessage } = await import('@/services/firebase/chatService');
+                        await addMessage(chatId, {
+                            role: 'Extion ai',
+                            content: response.message,
+                            timestamp: new Date(),
+                            type: 'text',
+                            sheetContext: xlsxData ? {
+                                sheetIndex: activeSheetIndex,
+                                sheetName: xlsxData.sheets[activeSheetIndex]?.sheetName || 'Sheet1'
+                            } : undefined
+                        });
+                        console.log('AI 일반 메시지가 Firebase에 저장됨');
+                    } catch (error) {
+                        console.error('Firebase AI 메시지 저장 오류:', error);
+                    }
+                }
             } else {
                 throw new Error(response.error || '응답 생성에 실패했습니다.');
             }
@@ -1271,7 +1441,7 @@ ${result.cellAddress ? `셀 ${result.cellAddress}에 함수가 적용됩니다.`
                 timestamp: new Date()
             };
 
-            // 현재 활성 시트에 오류 메시지 추가
+            // 현재 활성 시트에 응답 메시지 추가
             addMessageToSheet(activeSheetIndex, assistantMessage);
         }
     };

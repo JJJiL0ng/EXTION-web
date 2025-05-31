@@ -104,6 +104,7 @@ interface XLSXData {
     fileName: string;
     sheets: SheetData[];
     activeSheetIndex: number; // 현재 활성 시트
+    spreadsheetId?: string; // Firebase에서 생성된 스프레드시트 ID
 }
 
 // 확장된 시트 컨텍스트
