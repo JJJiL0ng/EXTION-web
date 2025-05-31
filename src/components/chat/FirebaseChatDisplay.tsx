@@ -35,7 +35,7 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
     const [chatData, setChatData] = useState<FirebaseChat | null>(null);
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const { xlsxData } = useExtendedUnifiedDataStore();
+    const { xlsxData, setArtifactCode, openArtifactModal } = useExtendedUnifiedDataStore();
 
     // 메시지 끝으로 스크롤
     const scrollToBottom = () => {
@@ -166,6 +166,29 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
         }
     };
 
+    // Firebase 아티팩트 클릭 핸들러
+    const handleFirebaseArtifactClick = (messageId: string) => {
+        // 현재 메시지에서 해당 ID를 가진 메시지 찾기
+        const foundMessage = messages.find(msg => msg.id === messageId);
+        
+        if (foundMessage && foundMessage.artifactData && foundMessage.artifactData.code) {
+            // 아티팩트 코드 설정
+            const artifactCode = {
+                code: foundMessage.artifactData.code,
+                type: foundMessage.artifactData.type as 'chart' | 'table' | 'analysis',
+                timestamp: foundMessage.artifactData.timestamp,
+                title: foundMessage.artifactData.title,
+                messageId: foundMessage.id
+            };
+            
+            setArtifactCode(artifactCode);
+            openArtifactModal(messageId);
+        } else {
+            // 기본 핸들러 호출
+            onArtifactClick(messageId);
+        }
+    };
+
     // 채팅이 선택되지 않은 경우
     if (!chatId) {
         return (
@@ -256,7 +279,7 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
                     <div className="max-w-4xl mx-auto px-4 py-6">
                         <MessageDisplay 
                             messages={messages} 
-                            onArtifactClick={onArtifactClick}
+                            onArtifactClick={handleFirebaseArtifactClick}
                         />
                         <div ref={messagesEndRef} />
                     </div>

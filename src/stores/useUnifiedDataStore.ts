@@ -14,6 +14,9 @@ export interface ChatMessage {
         type: string;
         title: string;
         timestamp: Date;
+        code?: string;
+        artifactId?: string;
+        explanation?: string;
     };
 }
 
@@ -1058,10 +1061,45 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
             openSheetSelector: () => set({ isSheetSelectorOpen: true }),
             closeSheetSelector: () => set({ isSheetSelectorOpen: false }),
             openArtifactModal: (artifactId) => {
-                set((state) => ({
-                    isArtifactModalOpen: true,
-                    activeArtifactId: artifactId || state.activeArtifactId
-                }));
+                const state = get();
+                
+                if (artifactId) {
+                    // 모든 시트의 메시지에서 해당 ID를 가진 메시지 찾기
+                    let foundMessage: ChatMessage | null = null;
+                    
+                    for (const sheetMessages of Object.values(state.sheetMessages)) {
+                        foundMessage = sheetMessages.find(msg => msg.id === artifactId) || null;
+                        if (foundMessage) break;
+                    }
+                    
+                    // 메시지를 찾았고 아티팩트 데이터가 있으면 artifactCode 설정
+                    if (foundMessage && foundMessage.artifactData) {
+                        const artifactCode: ArtifactCode = {
+                            code: foundMessage.artifactData.code || '',
+                            type: foundMessage.artifactData.type as 'chart' | 'table' | 'analysis',
+                            timestamp: foundMessage.artifactData.timestamp,
+                            title: foundMessage.artifactData.title,
+                            messageId: foundMessage.id
+                        };
+                        
+                        set({
+                            isArtifactModalOpen: true,
+                            activeArtifactId: artifactId,
+                            artifactCode: artifactCode
+                        });
+                    } else {
+                        // 메시지를 찾지 못했거나 아티팩트 데이터가 없으면 기본 동작
+                        set({
+                            isArtifactModalOpen: true,
+                            activeArtifactId: artifactId
+                        });
+                    }
+                } else {
+                    set((state) => ({
+                        isArtifactModalOpen: true,
+                        activeArtifactId: state.activeArtifactId
+                    }));
+                }
             },
             closeArtifactModal: () => {
                 set({

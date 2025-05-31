@@ -235,7 +235,8 @@ const createRequestBody = (
     chatId?: string,
     chatTitle?: string,
     messageId?: string,
-    currentSheetIndex?: number
+    currentSheetIndex?: number,
+    excludeSpreadsheetId?: boolean // 데이터 생성 시 spreadsheetId 제외 옵션 추가
 ): ProcessDataRequestDTO => {
     const { user: currentUser, loading: authLoading } = useAuthStore.getState();
     
@@ -340,7 +341,7 @@ const createRequestBody = (
     const spreadsheetData: SpreadsheetData = {
         fileName: analysisData?.fileName || 'Spreadsheet',
         activeSheet: analysisData?.activeSheet || 'Sheet1',
-        spreadsheetId: analysisData?.spreadsheetId || '',
+        spreadsheetId: excludeSpreadsheetId ? '' : (analysisData?.spreadsheetId || ''),
         sheets: analysisData?.sheets?.map((sheet: any) => ({
             name: sheet.name,
             headers: sheet.metadata?.headers || [],
@@ -371,6 +372,8 @@ const createRequestBody = (
     console.log('- chatId:', requestBody.chatId);
     console.log('- spreadsheetData 파일명:', requestBody.spreadsheetData.fileName);
     console.log('- spreadsheetData 시트 수:', requestBody.spreadsheetData.sheets.length);
+    console.log('- spreadsheetId 제외 여부:', excludeSpreadsheetId);
+    console.log('- spreadsheetId:', requestBody.spreadsheetData.spreadsheetId);
     if (requestBody.spreadsheetData.sheets.length > 0) {
         const sheet = requestBody.spreadsheetData.sheets[0];
         console.log('- 첫 번째 시트 데이터 개수:', sheet.data.length);
@@ -400,7 +403,8 @@ export const callNormalChatAPI = async (
             options?.chatId,
             options?.chatTitle, // chatTitle 전달
             options?.messageId,
-            options?.currentSheetIndex // 현재 시트 인덱스 전달
+            options?.currentSheetIndex, // 현재 시트 인덱스 전달
+            false // excludeSpreadsheetId = false (기본 동작 유지)
         );
 
         // 백엔드와 동일한 형식으로 로깅
@@ -508,7 +512,8 @@ export const callArtifactAPI = async (
             options?.chatId,
             undefined, // 아티팩트는 새 채팅 생성하지 않음
             options?.messageId,
-            options?.currentSheetIndex // 현재 시트 인덱스 전달
+            options?.currentSheetIndex, // 현재 시트 인덱스 전달
+            false // excludeSpreadsheetId = false (기본 동작 유지)
         );
 
         // 백엔드와 동일한 형식으로 로깅
@@ -887,7 +892,8 @@ export const callDataFixAPI = async (
             options?.chatId,
             undefined,
             options?.messageId,
-            options?.currentSheetIndex // 현재 시트 인덱스 전달
+            options?.currentSheetIndex, // 현재 시트 인덱스 전달
+            false // excludeSpreadsheetId = false (기본 동작 유지)
         );
 
         // 백엔드와 동일한 형식으로 로깅
@@ -1013,6 +1019,7 @@ export const callDataGenerationAPI = async (
     }
 ): Promise<DataGenerationResponse> => {
     try {
+        // 데이터 생성 시에는 spreadsheetId를 제외하도록 true 전달
         const requestBody = createRequestBody(
             userInput,
             extendedSheetContext,
@@ -1020,7 +1027,8 @@ export const callDataGenerationAPI = async (
             options?.chatId,
             undefined,
             options?.messageId,
-            options?.currentSheetIndex
+            options?.currentSheetIndex,
+            true // excludeSpreadsheetId = true로 설정
         );
 
         console.log('==================== Data Generation API 요청 데이터 시작 ====================');
@@ -1028,6 +1036,13 @@ export const callDataGenerationAPI = async (
         console.log(`사용자 ID: ${requestBody.userId}`);
         console.log(`채팅 ID: ${requestBody.chatId}`);
         console.log(`언어: ${requestBody.language}`);
+        console.log(`SpreadsheetId 제외됨: ${!requestBody.spreadsheetData.spreadsheetId}`);
+        
+        // ⚠️ 중요: 백엔드 DTO 구조 확인 필요
+        console.log('⚠️ 백엔드 GenerateDataDto와 구조 일치 확인 필요:');
+        console.log('- 프론트엔드: ProcessDataRequestDTO.spreadsheetData 구조 사용');
+        console.log('- 백엔드: GenerateDataDto.extendedSheetContext/sheetsData 구조 기대');
+        console.log('- 백엔드에서 새로운 spreadsheetData 구조 처리 가능한지 확인 필요');
         
         if (requestBody.spreadsheetData.sheets.length > 0) {
             console.log(`SpreadsheetData - 시트 수: ${requestBody.spreadsheetData.sheets.length}`);
@@ -1035,6 +1050,7 @@ export const callDataGenerationAPI = async (
             console.log(`파일명: ${requestBody.spreadsheetData.fileName}`);
             const firstSheet = requestBody.spreadsheetData.sheets[0];
             console.log(`첫 번째 시트 데이터 개수: ${firstSheet.data.length}`);
+            console.log(`첫 번째 시트 헤더: ${JSON.stringify(firstSheet.headers)}`);
         }
         
         console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
@@ -1054,6 +1070,14 @@ export const callDataGenerationAPI = async (
             console.error('Status:', response.status);
             console.error('Status Text:', response.statusText);
             console.error('Error Body:', errorText);
+            
+            // DTO 구조 불일치로 인한 오류일 가능성 체크
+            if (response.status === 400 && errorText.includes('validation')) {
+                console.error('⚠️ DTO 구조 불일치 가능성:');
+                console.error('- 백엔드가 ProcessDataRequestDTO.spreadsheetData 구조를 인식하지 못할 수 있음');
+                console.error('- GenerateDataDto 구조로 변환 필요할 수 있음');
+            }
+            
             console.error('==================== Data Generation API 오류 정보 끝 ====================');
             
             let errorMessage = `API 오류: ${response.status} - ${response.statusText}`;
@@ -1100,6 +1124,15 @@ export const callDataGenerationAPI = async (
         console.error('==================== Data Generation API 호출 오류 ====================');
         console.error('Error Message:', error instanceof Error ? error.message : String(error));
         console.error('Error Stack:', error instanceof Error ? error.stack : 'No stack trace');
+        
+        // DTO 구조 문제 진단 도움말
+        if (error instanceof Error && error.message.includes('400')) {
+            console.error('💡 문제 해결 방안:');
+            console.error('1. 백엔드가 ProcessDataRequestDTO.spreadsheetData 구조를 인식하지 못할 수 있음');
+            console.error('2. 또는 백엔드에서 ProcessDataRequestDTO 구조 지원');
+            console.error('3. 또는 프론트엔드에서 기존 extendedSheetContext/sheetsData 구조로 변환');
+        }
+        
         console.error('==================== Data Generation API 오류 끝 ====================');
         throw error;
     }

@@ -158,7 +158,10 @@ export const convertFirebaseMessageToChatMessage = (firebaseMessage: FirebaseMes
         artifactData: firebaseMessage.artifactData ? {
             type: firebaseMessage.artifactData.type,
             title: firebaseMessage.artifactData.title,
-            timestamp: firebaseMessage.timestamp
+            timestamp: firebaseMessage.timestamp,
+            code: firebaseMessage.artifactData.code,
+            artifactId: firebaseMessage.artifactData.artifactId,
+            explanation: firebaseMessage.artifactData.explanation
         } : undefined
     };
 };
