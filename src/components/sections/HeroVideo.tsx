@@ -36,8 +36,7 @@ export function HeroVideo() {
       {/* 움짤처럼 자동재생되는 영상 플레이어 */}
       <div 
         id="demo-video" 
-        className="relative rounded-3xl overflow-hidden shadow-2xl w-full mx-auto"
-        style={{ maxHeight: '70vh' }}
+        style={{ maxHeight: '80vh' }}
       >
         <VideoPlayer 
           src="https://pub-4a3591bf83af49968ea0c99fbe105456.r2.dev/hero-sample.mp4"
