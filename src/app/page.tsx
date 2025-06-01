@@ -1,122 +1,44 @@
-import Link from 'next/link'
+import { HeroSection } from '@/components/sections/HeroSection'
+import { FeatureSection } from '@/components/sections/FeatureSection'
+import { CTASection } from '@/components/sections/CTASection'
 
-export default function Home() {
+// SSR로 정적 데이터 미리 렌더링
+export default async function HomePage() {
+  // 서버에서 미리 가져올 데이터가 있다면 여기서
+  const featuresData = {
+    features: [
+      {
+        id: 1,
+        title: "자연어 명령 처리",
+        subtitle: "말 한마디로 엑셀 자동 실행!",
+        description: "정렬해줘, 차트로 보여줘처럼 대화하듯 입력만 하면, 복잡한 엑셀 작업이 자동으로 처리됩니다.",
+        example: "매출표 정리해줘 → 병합 + 정렬 + 필터까지 자동 처리 완료!",
+        videoUrl: "https://video.extion.co/hero-sample.mp4"
+      },
+      {
+        id: 2,
+        title: "표 자동 정리",
+        subtitle: "지저분한 데이터? 한 번에 깔끔하게!",
+        description: "병합 셀, 중복값, 비어있는 셀 등을 자동으로 정리해서 읽기 쉬운 표로 재구성합니다.",
+        example: "지출내역 정리해줘 → 비어 있는 셀, 중복 제거, 표 스타일 정리까지 한 번에!",
+        videoUrl: "https://pub-4a3591bf83af49968ea0c99fbe105456.r2.dev/hero-sample.mp4"
+      },
+      {
+        id: 3,
+        title: "시각화 기능",
+        subtitle: "그래프? 그냥 말하면 그려줍니다.",
+        description: "데이터를 분석해 가장 어울리는 차트를 자동 추천 + 생성합니다.",
+        example: "이번 달 지출 차트로 보여줘 → 막대그래프 자동 생성, 컬러와 레이블까지 깔끔하게!",
+        videoUrl: "/videos/feature-3.mp4"
+      }
+    ]
+  }
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      {/* Hero Section */}
-      <div className="container mx-auto px-6 py-20 text-center">
-        <div className="max-w-4xl mx-auto">
-          {/* Logo/Brand */}
-          <div className="mb-8">
-            <h1 className="text-6xl font-bold text-gray-900 mb-4">
-              Ex<span className="text-[#005DE9]">tion</span>
-            </h1>
-            <div className="w-24 h-1 bg-[#005DE9] mx-auto rounded-full"></div>
-          </div>
-
-          {/* Main Message */}
-          <div className="mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-              함수 몰라도 돼.<br />
-              <span className="text-[#005DE9]">그냥 말만 해.</span>
-            </h2>
-            
-            <p className="text-xl md:text-2xl text-gray-600 mb-8 leading-relaxed">
-              엑셀을 잘 몰라도 자연어로 표를 정리하고 수정할 수 있는 AI 도구
-            </p>
-
-            <div className="bg-white rounded-2xl shadow-xl p-8 mb-12 max-w-2xl mx-auto">
-              <div className="text-left space-y-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-[#005DE9] rounded-full mt-3 flex-shrink-0"></div>
-                  <p className="text-gray-700">&quot;이 열에서 합계 구해줘&quot;</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-[#005DE9] rounded-full mt-3 flex-shrink-0"></div>
-                  <p className="text-gray-700">&quot;정렬하고 중복 제거해줘&quot;</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-[#005DE9] rounded-full mt-3 flex-shrink-0"></div>
-                  <p className="text-gray-700">&quot;100 이상인 값만 새 시트로 뽑아줘&quot;</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA Button */}
-          <div className="mb-16 flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <Link 
-              href="https://www.instagram.com/orz__dik?igsh=MWlmdXQwZXduaHA0Mw==https://www.instagram.com/orz__dik?igsh=MWlmdXQwZXduaHA0Mw==" // 임시 URL, 실제 인스타그램 URL로 교체해주세요.
-              className="inline-flex items-center px-12 py-4 bg-white text-gray-800 text-xl font-semibold rounded-full border-2 border-[#005DE9] hover:bg-gray-100 hover:border-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-              target="_blank" rel="noopener noreferrer"
-            >
-              액션팀과 소통하기
-              {/* 인스타그램 아이콘 또는 다른 적절한 아이콘 추가 가능 */}
-            </Link>
-            <Link 
-              href="/login"
-              className="inline-flex items-center px-12 py-4 bg-[#005DE9] text-white text-xl font-semibold rounded-full hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl"
-            >
-              바로 시작하기
-              <svg 
-                className="ml-3 w-6 h-6" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M13 7l5 5m0 0l-5 5m5-5H6" 
-                />
-              </svg>
-            </Link>
-          </div>
-
-          {/* Value Props */}
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#005DE9] bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-[#005DE9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4v16a1 1 0 001 1h14a1 1 0 001-1V4" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">쉬운 그래프</h3>
-              <p className="text-gray-600">말 한마디로 그래프 만들기</p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#005DE9] bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-[#005DE9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">말로 하는 편한 함수</h3>
-              <p className="text-gray-600">복잡한 함수 대신 말로 설명하면 바로 실행</p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#005DE9] bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-[#005DE9]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">빠른 수정</h3>
-              <p className="text-gray-600">단순 반복 작업 없이 원하는 대로 수정</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Background Elements */}
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-[#005DE9] opacity-5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-indigo-400 opacity-5 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-[#005DE9] to-indigo-400 opacity-3 rounded-full blur-3xl"></div>
-      </div>
+    <main>
+      <HeroSection />
+      <FeatureSection features={featuresData.features} />
+      <CTASection />
     </main>
   )
 }
