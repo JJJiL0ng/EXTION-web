@@ -396,9 +396,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                 <div className="p-4 border-b border-gray-100 flex-shrink-0">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-3">
-                            <h2 className="text-lg font-bold text-gray-800" style={{ color: '#005DE9' }}>
-                                EXTION
-                            </h2>
+                            <img 
+                                src="/logo.png" 
+                                alt="EXTION" 
+                                className="h-8 w-auto"
+                            />
                         </div>
                         {/* <button
                             onClick={onToggle}

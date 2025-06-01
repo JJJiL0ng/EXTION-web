@@ -1660,31 +1660,38 @@ const MainSpreadSheet: React.FC = () => {
         {/* 상단 컨트롤 패널 */}
         <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm flex-shrink-0" style={{ position: 'relative', zIndex: 9000 }}>
           <div className="flex items-center justify-between">
-            {/* 사이드바 토글 버튼 */}
-            <button
-              onClick={toggleSidebar}
-              className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200 mr-3 flex-shrink-0"
-              aria-label={isSidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
-              style={{ minWidth: '40px', height: '40px' }}
-            >
-              <div className="flex flex-col space-y-1">
-                <div 
-                  className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${
-                    isSidebarOpen ? 'rotate-45 translate-y-1.5' : ''
-                  }`}
-                />
-                <div 
-                  className={`w-5 h-0.5 bg-gray-600 transition-opacity duration-300 ${
-                    isSidebarOpen ? 'opacity-0' : 'opacity-100'
-                  }`}
-                />
-                <div 
-                  className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${
-                    isSidebarOpen ? '-rotate-45 -translate-y-1.5' : ''
-                  }`}
-                />
-              </div>
-            </button>
+            {/* 사이드바 토글 버튼과 로고 */}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={toggleSidebar}
+                className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200 flex-shrink-0"
+                aria-label={isSidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
+                style={{ minWidth: '40px', height: '40px' }}
+              >
+                <div className="flex flex-col space-y-1">
+                  <div 
+                    className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${
+                      isSidebarOpen ? 'rotate-45 translate-y-1.5' : ''
+                    }`}
+                  />
+                  <div 
+                    className={`w-5 h-0.5 bg-gray-600 transition-opacity duration-300 ${
+                      isSidebarOpen ? 'opacity-0' : 'opacity-100'
+                    }`}
+                  />
+                  <div 
+                    className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${
+                      isSidebarOpen ? '-rotate-45 -translate-y-1.5' : ''
+                    }`}
+                  />
+                </div>
+              </button>
+              
+              {/* EXTION 텍스트 로고 */}
+              <h1 className="text-xl font-bold text-gray-800" style={{ color: '#005DE9' }}>
+                EXTION
+              </h1>
+            </div>
 
             {/* 선택된 셀 정보 표시 */}
             {selectedCellInfo && (
