@@ -183,19 +183,8 @@ export default function MainChatComponent() {
         return () => clearInterval(interval);
     }, [currentChatId, saveCurrentSessionToStore]);
 
-    // === 채팅 ID 초기화 Effect 추가 ===
+    // === URL 파라미터 변경 감지 Effect (옵션) ===
     useEffect(() => {
-        const initChat = () => {
-            // 채팅 ID 초기화 (기존 것이 있으면 사용, 없으면 새로 생성)
-            const chatId = initializeChatId();
-            console.log('채팅 ID 초기화됨:', chatId);
-        };
-
-        initChat();
-    }, []); // 컴포넌트 마운트 시 한 번만 실행
-
-     // === URL 파라미터 변경 감지 Effect (옵션) ===
-     useEffect(() => {
         const handleUrlChange = () => {
             if (typeof window !== 'undefined') {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -1254,7 +1243,7 @@ export default function MainChatComponent() {
     return (
         <div className="flex flex-col h-full w-full bg-white">
             {/* 디버그 정보 - chatId 표시 */}
-            {process.env.NODE_ENV === 'development' && (
+            {/* {process.env.NODE_ENV === 'development' && (
                 <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-xs">
                     <div className="max-w-3xl mx-auto">
                         <span className="font-medium text-yellow-800">디버그:</span>{' '}
@@ -1263,7 +1252,7 @@ export default function MainChatComponent() {
                         </span>
                     </div>
                 </div>
-            )}
+            )} */}
             
             <div className="flex flex-col h-full w-full">
                 {/* 파일 정보를 채팅 맨 위에 표시 */}

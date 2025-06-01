@@ -1163,9 +1163,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     sheetMessages: {},
                     activeSheetMessages: [],
                     sheetChatIds: {}, // 시트별 채팅 ID 초기화
-                    // === Chat Management 리셋 ===
-                    currentChatId: null,
-                    chatHistory: [],
+                    // === Chat Management 리셋 - currentChatId와 chatHistory는 유지 ===
                     loadingStates: {
                         fileUpload: false,
                         sheetSwitch: false,
@@ -1195,11 +1193,7 @@ export const useExtendedUnifiedDataStore = create<ExtendedUnifiedDataStore>()(
                     spreadsheetMetadata: null,
                 });
                 
-                // 로컬 스토리지도 정리
-                if (typeof window !== 'undefined') {
-                    localStorage.removeItem('currentChatId');
-                    localStorage.removeItem('chatHistory');
-                }
+                // 로컬 스토리지는 정리하지 않음 (채팅 ID 유지)
             },
  
             // 데이터 생성 결과 적용
