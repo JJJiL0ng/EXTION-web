@@ -10,7 +10,14 @@ import {
     MenuIcon,
     Loader2Icon,
     RefreshCwIcon,
-    Cloud
+    Cloud,
+    ChevronLeftIcon,
+    SearchIcon,
+    FilterIcon,
+    MoreVerticalIcon,
+    CalendarIcon,
+    ClockIcon,
+    Layers
 } from 'lucide-react';
 import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import { 
@@ -54,6 +61,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     const [isLoadingChats, setIsLoadingChats] = useState(false);
     const [isCreatingChat, setIsCreatingChat] = useState(false);
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState<'all' | 'spreadsheet' | 'chat'>('all');
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
     const {
         resetStore,
@@ -99,7 +109,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         }
     }, [user, loading]);
 
-    // 클라우드 채팅 목록 생성
+    // 클라우드 채팅 목록 생성 및 필터링
     const getCloudChatList = (): CloudChatItem[] => {
         const cloudChats: CloudChatItem[] = [];
 
@@ -120,8 +130,26 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             });
         });
 
+        // 필터링 적용
+        let filteredChats = cloudChats;
+
+        // 검색 필터
+        if (searchQuery.trim()) {
+            filteredChats = filteredChats.filter(chat => 
+                chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                chat.preview.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        // 타입 필터
+        if (filterType === 'spreadsheet') {
+            filteredChats = filteredChats.filter(chat => chat.hasSpreadsheet);
+        } else if (filterType === 'chat') {
+            filteredChats = filteredChats.filter(chat => !chat.hasSpreadsheet);
+        }
+
         // 최신 순으로 정렬
-        return cloudChats.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+        return filteredChats.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     };
 
     // Firebase 채팅 선택 및 복원
@@ -294,15 +322,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     // 채팅 삭제 핸들러
     const handleDeleteChat = async (chatItem: CloudChatItem, e: React.MouseEvent) => {
         e.stopPropagation();
-        
-        if (!confirm('이 채팅을 삭제하시겠습니까?')) return;
+        setShowDeleteConfirm(chatItem.id);
+    };
 
+    // 삭제 확인 핸들러
+    const confirmDeleteChat = async (chatId: string) => {
         try {
-            await deleteChat(chatItem.id);
-            console.log('Firebase 채팅 삭제됨:', chatItem.id);
+            await deleteChat(chatId);
+            console.log('Firebase 채팅 삭제됨:', chatId);
             
             // 삭제된 채팅이 현재 선택된 채팅이면 초기화
-            if (selectedChatId === chatItem.id) {
+            if (selectedChatId === chatId) {
                 setSelectedChatId(null);
                 resetStore();
                 
@@ -318,18 +348,37 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             await loadFirebaseChats();
         } catch (error) {
             console.error('채팅 삭제 오류:', error);
+        } finally {
+            setShowDeleteConfirm(null);
         }
     };
 
     // Firebase 채팅 미리보기 텍스트 생성
     const getFirebaseChatPreview = (chat: FirebaseChat) => {
         if (chat.spreadsheetData?.hasSpreadsheet && chat.spreadsheetData.fileName) {
-            return `📊 ${chat.spreadsheetData.fileName} (${chat.spreadsheetData.totalSheets}개 시트)`;
+            return `📊 ${chat.spreadsheetData.fileName}`;
         }
         if (chat.lastMessage) {
             return chat.lastMessage.content;
         }
         return '채팅을 시작하세요';
+    };
+
+    // 시간 포맷팅 함수
+    const formatTime = (date: Date) => {
+        const now = new Date();
+        const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+        
+        if (diffInHours < 1) {
+            const diffInMinutes = Math.floor(diffInHours * 60);
+            return `${diffInMinutes}분 전`;
+        } else if (diffInHours < 24) {
+            return `${Math.floor(diffInHours)}시간 전`;
+        } else if (diffInHours < 48) {
+            return '어제';
+        } else {
+            return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+        }
     };
 
     const cloudChats = getCloudChatList();
@@ -338,172 +387,278 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         <>
             {/* 사이드바 */}
             <div className={`
-                fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-50 transition-transform duration-300 ease-in-out
+                fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-xl z-50 
+                transition-all duration-300 ease-out backdrop-blur-sm flex flex-col
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
                 w-80
             `}>
                 {/* 헤더 */}
-                <div className="p-4 border-b border-gray-200">
-                    <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-lg font-semibold text-gray-800">채팅 목록</h2>
-                        <div className="flex items-center gap-2">
-                            {user && (
-                                <>
-                                    <button
-                                        onClick={handleNewFirebaseChat}
-                                        disabled={isCreatingChat}
-                                        className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm disabled:opacity-50"
-                                        title="새 채팅"
-                                    >
-                                        {isCreatingChat ? (
-                                            <Loader2Icon className="h-4 w-4 mr-1 animate-spin" />
-                                        ) : (
-                                            <>
-                                                <Cloud className="h-4 w-4 mr-1" />
-                                                <PlusIcon className="h-3 w-3" />
-                                            </>
-                                        )}
-                                    </button>
-                                    <button
-                                        onClick={loadFirebaseChats}
-                                        disabled={isLoadingChats}
-                                        className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                                        title="새로고침"
-                                    >
-                                        <RefreshCwIcon className={`h-4 w-4 ${isLoadingChats ? 'animate-spin' : ''}`} />
-                                    </button>
-                                </>
-                            )}
-                            <button
-                                onClick={onToggle}
-                                className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                                aria-label="사이드바 닫기"
-                            >
-                                <XIcon className="h-5 w-5" />
-                            </button>
+                <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-blue-100 flex-shrink-0">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                            <h2 className="text-lg font-bold text-gray-800" style={{ color: '#005DE9' }}>
+                                EXTION
+                            </h2>
+                        </div>
+                        <button
+                            onClick={onToggle}
+                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded-lg transition-all duration-200 backdrop-blur-sm"
+                            aria-label="사이드바 닫기"
+                        >
+                            <ChevronLeftIcon className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    {/* 검색 및 필터 */}
+                    <div className="space-y-3">
+                        {/* 검색바 */}
+                        <div className="relative">
+                            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="채팅 검색..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-xl text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
+                                style={{ 
+                                    '--tw-ring-color': '#005DE9',
+                                    '--tw-ring-opacity': '0.5'
+                                } as React.CSSProperties}
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = '#005DE9';
+                                    e.target.style.boxShadow = '0 0 0 2px rgba(0, 93, 233, 0.2)';
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = '#e5e7eb';
+                                    e.target.style.boxShadow = 'none';
+                                }}
+                            />
                         </div>
                     </div>
-                    <div className="text-sm text-gray-500">
-                        {user ? (
-                            <>
-                                총 {cloudChats.length}개 채팅
-                            </>
-                        ) : (
-                            <>
-                                로그인하여 채팅을 시작하세요
-                            </>
+
+                    {/* 새 채팅 버튼 */}
+                    {user && (
+                        <button
+                            onClick={handleNewFirebaseChat}
+                            disabled={isCreatingChat}
+                            className="w-full mt-4 flex items-center justify-center px-4 py-3 text-white rounded-xl transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            style={{ backgroundColor: '#005DE9' }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#004ab8';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#005DE9';
+                            }}
+                        >
+                            {isCreatingChat ? (
+                                <>
+                                    <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+                                    생성 중...
+                                </>
+                            ) : (
+                                <>
+                                    <PlusIcon className="h-4 w-4 mr-2" />
+                                    새 채팅 시작
+                                </>
+                            )}
+                        </button>
+                    )}
+
+                    {/* 상태 정보 */}
+                    <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+                        <span>
+                            {user ? `총 ${cloudChats.length}개 채팅` : '로그인이 필요합니다'}
+                        </span>
+                        {user && (
+                            <button
+                                onClick={loadFirebaseChats}
+                                disabled={isLoadingChats}
+                                className="p-1 hover:bg-white/50 rounded transition-colors"
+                                title="새로고침"
+                            >
+                                <RefreshCwIcon className={`h-3 w-3 ${isLoadingChats ? 'animate-spin' : ''}`} />
+                            </button>
                         )}
                     </div>
                 </div>
 
-                {/* 채팅 목록 */}
-                <div className="flex-1 overflow-y-auto">
+                {/* 채팅 목록 - 독립적인 스크롤 영역 */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ 
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#005DE9 #f1f5f9'
+                }}>
                     <div className="p-2">
                         {cloudChats.length === 0 && !isLoadingChats ? (
-                            <div className="p-4 text-center text-gray-500">
-                                <MessageCircleIcon className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">채팅이 없습니다</p>
-                                <p className="text-xs mt-1">새 채팅을 시작해보세요</p>
+                            <div className="p-8 text-center text-gray-500">
+                                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                                    <MessageCircleIcon className="h-8 w-8 text-gray-300" />
+                                </div>
+                                <p className="text-sm font-medium mb-1">채팅이 없습니다</p>
+                                <p className="text-xs text-gray-400">새 채팅을 시작해보세요</p>
                             </div>
                         ) : (
-                            cloudChats.map((chatItem) => (
-                                <div
-                                    key={chatItem.id}
-                                    onClick={() => handleSelectChat(chatItem)}
-                                    className={`
-                                        relative p-3 mb-2 rounded-lg cursor-pointer transition-all group
-                                        ${chatItem.isActive 
-                                            ? 'bg-blue-50 border-2 border-blue-200' 
-                                            : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
-                                        }
-                                    `}
-                                >
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center mb-1">
-                                                {/* 클라우드 아이콘 */}
-                                                <Cloud className="h-4 w-4 text-blue-600 mr-2 flex-shrink-0" />
+                            <div className="space-y-2">
+                                {cloudChats.map((chatItem) => (
+                                    <div
+                                        key={chatItem.id}
+                                        onClick={() => handleSelectChat(chatItem)}
+                                        className={`
+                                            relative p-4 rounded-xl cursor-pointer transition-all duration-200 group
+                                            ${chatItem.isActive 
+                                                ? 'border-2 shadow-md' 
+                                                : 'bg-gray-50 hover:bg-white hover:shadow-md border-2 border-transparent'
+                                            }
+                                        `}
+                                        style={chatItem.isActive ? {
+                                            backgroundColor: 'rgba(0, 93, 233, 0.05)',
+                                            borderColor: '#005DE9'
+                                        } : {}}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center mb-2">
+                                                    {/* 아이콘 */}
+                                                    <div className={`
+                                                        w-8 h-8 rounded-lg flex items-center justify-center mr-3 flex-shrink-0
+                                                        ${chatItem.hasSpreadsheet 
+                                                            ? 'text-white' 
+                                                            : 'text-white'
+                                                        }
+                                                    `}
+                                                    style={{ backgroundColor: '#005DE9' }}
+                                                    >
+                                                        {chatItem.hasSpreadsheet ? (
+                                                            <FileSpreadsheetIcon className="h-4 w-4" />
+                                                        ) : (
+                                                            <MessageCircleIcon className="h-4 w-4" />
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="font-semibold text-sm text-gray-800 truncate">
+                                                            {chatItem.title}
+                                                        </h3>
+                                                        <div className="flex items-center mt-1 space-x-2">
+                                                            <ClockIcon className="h-3 w-3 text-gray-400" />
+                                                            <span className="text-xs text-gray-500">
+                                                                {formatTime(chatItem.updatedAt)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 
-                                                {/* 스프레드시트 아이콘 */}
-                                                {chatItem.hasSpreadsheet ? (
-                                                    <FileSpreadsheetIcon className="h-4 w-4 mr-2 flex-shrink-0 text-blue-600" />
-                                                ) : (
-                                                    <MessageCircleIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                                                )}
-                                                
-                                                <h3 className="font-medium text-sm text-gray-800 truncate">
-                                                    {chatItem.title}
-                                                </h3>
-                                            </div>
-                                            <p className="text-xs text-gray-500 truncate">
-                                                {chatItem.preview}
-                                            </p>
-                                            <div className="flex items-center justify-between mt-1">
-                                                <p className="text-xs text-gray-400">
-                                                    {chatItem.updatedAt.toLocaleDateString('ko-KR')} {' '}
-                                                    {chatItem.updatedAt.toLocaleTimeString('ko-KR', { 
-                                                        hour: '2-digit', 
-                                                        minute: '2-digit' 
-                                                    })}
+                                                <p className="text-xs text-gray-600 truncate mb-2">
+                                                    {chatItem.preview}
                                                 </p>
-                                                {chatItem.spreadsheetInfo && (
-                                                    <span className="text-xs text-gray-400">
-                                                        {chatItem.spreadsheetInfo.totalSheets}개 시트
-                                                    </span>
-                                                )}
+                                                
+                                                {/* 메타 정보 */}
+                                                <div className="flex items-center justify-between">
+                                                    {chatItem.spreadsheetInfo && (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs text-white"
+                                                              style={{ backgroundColor: '#005DE9' }}>
+                                                            <Layers className="h-3 w-3 mr-1" />
+                                                            {chatItem.spreadsheetInfo.totalSheets}개 시트
+                                                        </span>
+                                                    )}
+                                                    {chatItem.messageCount && (
+                                                        <span className="text-xs text-gray-400">
+                                                            {chatItem.messageCount}개 메시지
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* 액션 버튼 */}
+                                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                <button
+                                                    onClick={(e) => handleDeleteChat(chatItem, e)}
+                                                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200"
+                                                    aria-label="채팅 삭제"
+                                                >
+                                                    <TrashIcon className="h-4 w-4" />
+                                                </button>
                                             </div>
                                         </div>
                                         
-                                        {/* 삭제 버튼 */}
-                                        <button
-                                            onClick={(e) => handleDeleteChat(chatItem, e)}
-                                            className="opacity-0 group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all ml-2"
-                                            aria-label="채팅 삭제"
-                                        >
-                                            <TrashIcon className="h-4 w-4" />
-                                        </button>
+                                        {/* 현재 활성 채팅 표시 */}
+                                        {chatItem.isActive && (
+                                            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 rounded-r"
+                                                 style={{ backgroundColor: '#005DE9' }}></div>
+                                        )}
                                     </div>
-                                    
-                                    {/* 현재 활성 채팅 표시 */}
-                                    {chatItem.isActive && (
-                                        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 rounded-r bg-blue-600"></div>
-                                    )}
-                                </div>
-                            ))
+                                ))}
+                            </div>
                         )}
                         
                         {/* 로딩 상태 */}
                         {isLoadingChats && (
-                            <div className="flex items-center justify-center p-4">
-                                <Loader2Icon className="h-6 w-6 animate-spin text-gray-400 mr-2" />
-                                <span className="text-sm text-gray-500">채팅 목록을 불러오는 중...</span>
+                            <div className="flex items-center justify-center p-8">
+                                <div className="flex flex-col items-center space-y-3">
+                                    <Loader2Icon className="h-8 w-8 animate-spin" style={{ color: '#005DE9' }} />
+                                    <span className="text-sm text-gray-500">채팅 목록을 불러오는 중...</span>
+                                </div>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* 푸터 */}
-                <div className="p-4 border-t border-gray-200">
+                <div className="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
                     <div className="text-xs text-gray-500 text-center">
                         {user ? (
-                            <div>
-                                <div>로그인됨: {user.email}</div>
-                                <div className="mt-1">Extion Chat v1.0</div>
+                            <div className="space-y-1">
+                                <div className="flex items-center justify-center space-x-2">
+                                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                    <span className="font-medium">{user.email}</span>
+                                </div>
+                                <div className="text-gray-400">Extion Chat v1.0</div>
                             </div>
                         ) : (
-                            <div>
+                            <div className="space-y-1">
                                 <div>로그인하여 채팅을 시작하세요</div>
-                                <div className="mt-1">Extion Chat v1.0</div>
+                                <div className="text-gray-400">Extion Chat v1.0</div>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* 오버레이 (모바일용) - z-index 조정 */}
+            {/* 삭제 확인 모달 */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-60 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                        <div className="text-center">
+                            <div className="w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                                <TrashIcon className="h-6 w-6 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">채팅 삭제</h3>
+                            <p className="text-sm text-gray-600 mb-6">
+                                이 채팅을 삭제하시겠습니까?<br />
+                                삭제된 채팅은 복구할 수 없습니다.
+                            </p>
+                            <div className="flex space-x-3">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(null)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    onClick={() => confirmDeleteChat(showDeleteConfirm)}
+                                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+                                >
+                                    삭제
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 오버레이 */}
             {isOpen && (
                 <div 
-                    className="fixed inset-0 bg-black bg-opacity-25 z-40 xl:hidden"
+                    className="fixed inset-0 bg-black bg-opacity-25 z-40 xl:hidden backdrop-blur-sm"
                     onClick={onToggle}
                 />
             )}

@@ -68,9 +68,9 @@ export default function Home() {
   return (
     <div 
       ref={containerRef}
-      className="flex w-full h-screen overflow-hidden relative"
+      className="flex w-full h-screen relative"
     >
-      {/* 왼쪽 영역: MainSpreadSheet - 스크롤바 중복 방지를 위해 overflow 제거 */}
+      {/* 왼쪽 영역: MainSpreadSheet - 독립적인 스크롤 영역 */}
       <div 
         className="h-full transition-all duration-100 ease-linear"
         style={{ 
@@ -85,7 +85,7 @@ export default function Home() {
       <div
         onMouseDown={handleMouseDown}
         className={`
-          w-2 h-full cursor-col-resize flex items-center justify-center relative
+          w-2 h-full cursor-col-resize flex items-center justify-center relative z-50
           border-l border-r border-gray-300 transition-colors duration-200
           ${isDragging ? 'bg-blue-600' : 'bg-gray-200 hover:bg-blue-600'}
         `}
@@ -104,7 +104,7 @@ export default function Home() {
         </div>
       </div>
       
-      {/* 오른쪽 영역: ChattingMainContainer - 스크롤바 중복 방지를 위해 overflow 제거 */}
+      {/* 오른쪽 영역: ChattingMainContainer - 독립적인 스크롤 영역 */}
       <div 
         className="h-full transition-all duration-100 ease-linear"
         style={{

@@ -1241,7 +1241,7 @@ export default function MainChatComponent() {
     }, [activeSheetMessages, isLoading]);
 
     return (
-        <div className="flex flex-col h-full w-full bg-white">
+        <div className="flex flex-col h-full w-full overflow-hidden">
             {/* 디버그 정보 - chatId 표시 */}
             {/* {process.env.NODE_ENV === 'development' && (
                 <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-xs">
@@ -1257,7 +1257,7 @@ export default function MainChatComponent() {
             <div className="flex flex-col h-full w-full">
                 {/* 파일 정보를 채팅 맨 위에 표시 */}
                 {xlsxData && (
-                    <div className="w-full border-b border-gray-200 bg-gray-50 shadow-sm">
+                    <div className="w-full border-b border-gray-200 bg-gray-50 shadow-sm flex-shrink-0">
                         <div className="w-full max-w-3xl mx-auto">
                             <FileUploadHandler
                                 isDragOver={isDragOver}
@@ -1273,7 +1273,7 @@ export default function MainChatComponent() {
                     </div>
                 )}
 
-                <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6">
+                <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6 min-h-0">
                     <MessageDisplay
                         messages={activeSheetMessages}
                         onArtifactClick={handleArtifactClick}
@@ -1296,7 +1296,7 @@ export default function MainChatComponent() {
                     )}
                 </div>
 
-                <div className="w-full max-w-3xl mx-auto">
+                <div className="w-full max-w-3xl mx-auto flex-shrink-0">
                     <ChatInput
                         currentMode={currentMode}
                         inputValue={inputValue}

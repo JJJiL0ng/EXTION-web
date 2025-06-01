@@ -60,27 +60,6 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
                                 </span>
                             )}
                             
-                            {/* 스프레드시트 ID와 채팅 ID 표시 */}
-                            <div className="flex items-center space-x-3 mt-1">
-                                {currentSpreadsheetId && (
-                                    <div className="flex items-center">
-                                        <CloudIcon className="h-3 w-3 text-gray-400 mr-1" />
-                                        <span className="font-mono text-xs">
-                                            ID: {currentSpreadsheetId.substring(0, 8)}...
-                                        </span>
-                                    </div>
-                                )}
-                                
-                                {currentChatId && (
-                                    <div className="flex items-center">
-                                        <MessageCircleIcon className="h-3 w-3 text-gray-400 mr-1" />
-                                        <span className="font-mono text-xs">
-                                            채팅: {currentChatId.substring(0, 8)}...
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                            
                             {/* 마지막 저장 시간 표시 */}
                             {spreadsheetMetadata?.lastSaved && (
                                 <span className="text-xs text-gray-400 mt-1">

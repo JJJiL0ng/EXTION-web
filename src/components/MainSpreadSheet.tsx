@@ -1,7 +1,7 @@
 //Src/components/MainSpreadSheet.tsx
 'use client'
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { HotTable, HotTableRef } from '@handsontable/react-wrapper';
 import { registerAllModules } from 'handsontable/registry';
 import { HyperFormula } from 'hyperformula';
@@ -14,6 +14,7 @@ import { XLSXData } from '@/stores/useUnifiedDataStore';
 import { exportActiveSheetToCSV, exportSelectedSheetsToXLSX } from '@/utils/exportUtils';
 import { getSpreadsheetData } from '@/services/firebase/spreadsheetService';
 import ChatSidebar from './chat/ChatSidebar';
+import Image from 'next/image';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -378,9 +379,40 @@ const HandsontableStyles = createGlobalStyle`
     background-color: #a1a1a1;
   }
 
-  /* 사이드바 전환 시 부드러운 애니메이션 */
+  /* 스크롤바 숨기기 - 중복 스크롤바 방지 */
+  .spreadsheet-main-container {
+    overflow: hidden;
+  }
+
+  .spreadsheet-main-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .spreadsheet-main-container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* 스프레드시트 컨테이너 독립적인 스크롤 */
   .spreadsheet-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
     transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* 스프레드시트 영역만 스크롤 가능하도록 설정 */
+  .spreadsheet-area {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    background-color: white;
+  }
+
+  .spreadsheet-area .handsontable {
+    height: 100% !important;
+    width: 100% !important;
   }
 
   /* 반응형 디자인 개선 */
@@ -409,20 +441,6 @@ const HandsontableStyles = createGlobalStyle`
       flex-wrap: wrap;
       gap: 0.5rem;
     }
-  }
-
-  /* 스크롤바 숨기기 - 중복 스크롤바 방지 */
-  .spreadsheet-main-container {
-    overflow: hidden;
-  }
-
-  .spreadsheet-main-container::-webkit-scrollbar {
-    display: none;
-  }
-
-  .spreadsheet-main-container {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
   }
 `;
 
@@ -1367,6 +1385,16 @@ const MainSpreadSheet: React.FC = () => {
           className="export-button flex items-center space-x-1.5 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm transition-colors duration-200"
           onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
           type="button"
+          style={{
+            borderColor: '#005DE9',
+            color: '#005DE9'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(0, 93, 233, 0.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'white';
+          }}
         >
           <FileDown size={16} />
           <span>내보내기</span>
@@ -1382,6 +1410,12 @@ const MainSpreadSheet: React.FC = () => {
                 onClick={handleExportToCSV}
                 disabled={!activeSheetData}
                 type="button"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 93, 233, 0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
                 <span>CSV로 내보내기</span>
                 <span className="text-xs text-gray-500">(현재 시트)</span>
@@ -1391,6 +1425,12 @@ const MainSpreadSheet: React.FC = () => {
                 onClick={handleExportToXLSX}
                 disabled={!xlsxData}
                 type="button"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 93, 233, 0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
                 <span>XLSX로 내보내기</span>
                 <span className="text-xs text-gray-500">(모든/선택 시트)</span>
@@ -1413,7 +1453,18 @@ const MainSpreadSheet: React.FC = () => {
                   value={exportFileName}
                   onChange={(e) => setExportFileName(e.target.value)}
                   placeholder="파일명 입력 (확장자 제외)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
+                  style={{
+                    '--tw-ring-color': '#005DE9'
+                  } as React.CSSProperties}
+                  onFocusCapture={(e) => {
+                    e.target.style.borderColor = '#005DE9';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(0, 93, 233, 0.2)';
+                  }}
+                  onBlurCapture={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 />
               </div>
 
@@ -1422,9 +1473,16 @@ const MainSpreadSheet: React.FC = () => {
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm text-gray-600">시트</label>
                   <button
-                    className="text-xs text-blue-600 hover:text-blue-800"
+                    className="text-xs hover:underline transition-colors duration-200"
                     onClick={toggleAllSheets}
                     type="button"
+                    style={{ color: '#005DE9' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#004ab8';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#005DE9';
+                    }}
                   >
                     {selectedSheets.length === xlsxData.sheets.length ? '모두 해제' : '모두 선택'}
                   </button>
@@ -1442,6 +1500,9 @@ const MainSpreadSheet: React.FC = () => {
                         checked={selectedSheets.includes(index)}
                         onChange={() => toggleSheetSelection(index)}
                         className="mr-2.5"
+                        style={{
+                          accentColor: '#005DE9'
+                        }}
                       />
                       <label
                         htmlFor={`sheet-${index}`}
@@ -1471,10 +1532,23 @@ const MainSpreadSheet: React.FC = () => {
                   취소
                 </button>
                 <button
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
+                  className="px-3 py-1.5 text-white rounded-md text-sm transition-colors"
                   onClick={executeXlsxExport}
                   disabled={selectedSheets.length === 0}
                   type="button"
+                  style={{
+                    backgroundColor: '#005DE9'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = '#004ab8';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.backgroundColor = '#005DE9';
+                    }
+                  }}
                 >
                   내보내기
                 </button>
@@ -1515,14 +1589,15 @@ const MainSpreadSheet: React.FC = () => {
             {selectedCellInfo && (
               <div className="flex items-center space-x-4 text-sm text-gray-700 flex-1 mr-4 min-w-0">
                 <div className="flex items-center space-x-2 flex-shrink-0">
-                  <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
+                  <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200"
+                        style={{ borderColor: '#005DE9', backgroundColor: 'rgba(0, 93, 233, 0.05)' }}>
                     {selectedCellInfo.cellAddress}
                   </span>
                 </div>
                 
                 {/* 편집 가능한 셀 값 입력 필드 */}
                 <div className="flex items-center space-x-2 flex-1 max-w-md min-w-0">
-                  <span className="font-medium flex-shrink-0">Fx:</span>
+                  <span className="font-medium flex-shrink-0" style={{ color: '#005DE9' }}>Fx:</span>
                   <div className="relative flex-1 min-w-0">
                     <input
                       type="text"
@@ -1537,7 +1612,18 @@ const MainSpreadSheet: React.FC = () => {
                         }, 150);
                       }}
                       onKeyDown={handleCellEditKeyDown}
-                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
+                      style={{
+                        '--tw-ring-color': '#005DE9'
+                      } as React.CSSProperties}
+                      onFocusCapture={(e) => {
+                        e.target.style.borderColor = '#005DE9';
+                        e.target.style.boxShadow = '0 0 0 2px rgba(0, 93, 233, 0.2)';
+                      }}
+                      onBlurCapture={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
                       placeholder="값 또는 수식 입력 (예: =SUM(A1:A5))"
                     />
                     
@@ -1547,7 +1633,14 @@ const MainSpreadSheet: React.FC = () => {
                         <button
                           type="button"
                           onClick={handleCellEditSubmit}
-                          className="w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded text-xs flex items-center justify-center"
+                          className="w-6 h-6 text-white rounded text-xs flex items-center justify-center transition-colors duration-200"
+                          style={{ backgroundColor: '#005DE9' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#004ab8';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#005DE9';
+                          }}
                           title="확인 (Enter)"
                         >
                           ✓
@@ -1555,7 +1648,7 @@ const MainSpreadSheet: React.FC = () => {
                         <button
                           type="button"
                           onClick={handleCellEditCancel}
-                          className="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex items-center justify-center"
+                          className="w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded text-xs flex items-center justify-center transition-colors duration-200"
                           title="취소 (Escape)"
                         >
                           ✕
@@ -1573,13 +1666,18 @@ const MainSpreadSheet: React.FC = () => {
 
           {/* 포뮬러 적용 대기 알림 */}
           {pendingFormula && (
-            <div className="bg-[rgba(0,93,233,0.08)] border border-[rgba(0,93,233,0.2)] rounded-xl p-4 mt-4">
+            <div className="rounded-xl p-4 mt-4" 
+                 style={{ 
+                   backgroundColor: 'rgba(0, 93, 233, 0.08)', 
+                   borderColor: 'rgba(0, 93, 233, 0.2)',
+                   border: '1px solid'
+                 }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-[#005DE9]">
+                  <p className="text-sm font-medium" style={{ color: '#005DE9' }}>
                     포뮬러 적용 대기 중
                   </p>
-                  <p className="text-xs text-[rgba(0,93,233,0.8)] mt-1.5">
+                  <p className="text-xs mt-1.5" style={{ color: 'rgba(0, 93, 233, 0.8)' }}>
                     {pendingFormula.cellAddress}에 {pendingFormula.formula} 적용
                     {pendingFormula.sheetIndex !== undefined &&
                       ` (시트 ${xlsxData?.sheets[pendingFormula.sheetIndex]?.sheetName || pendingFormula.sheetIndex})`
@@ -1588,7 +1686,17 @@ const MainSpreadSheet: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setPendingFormula(null)}
-                  className="text-[#005DE9] hover:text-[#004ab8] text-sm bg-white px-3 py-1.5 rounded-lg border border-[rgba(0,93,233,0.2)] transition-colors duration-200"
+                  className="text-sm bg-white px-3 py-1.5 rounded-lg border transition-colors duration-200"
+                  style={{ 
+                    color: '#005DE9',
+                    borderColor: 'rgba(0, 93, 233, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#004ab8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#005DE9';
+                  }}
                   type="button"
                 >
                   취소

@@ -16,9 +16,9 @@ export default function MainContainer() {
   } = useExtendedUnifiedDataStore();
 
   return (
-    <div className="h-screen w-full bg-gray-50 relative">
+    <div className="h-full w-full bg-gray-50 relative overflow-hidden flex flex-col">
       {/* 메인 채팅 영역 */}
-      <div className="h-full">
+      <div className="flex-1 overflow-hidden">
         <MainChatComponent />
       </div>
 

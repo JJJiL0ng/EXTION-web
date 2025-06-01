@@ -168,10 +168,10 @@ export default function MessageDisplay({ messages, onArtifactClick, isLoading = 
                                 ) : message.content ? (
                                     /* 일반 텍스트 메시지 */
                                     <div
-                                        className={`prose prose-sm max-w-none ${isUser ? 'bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center' : ''}`}
+                                        className={`prose prose-sm max-w-none ${isUser ? 'bg-gray-50 p-3 rounded-lg border border-gray-200 flex items-center' : ''}`}
                                     >
                                         {isUser && (
-                                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mr-3">
+                                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center mr-3">
                                                 <span className="text-white text-xs font-medium">U</span>
                                             </div>
                                         )}
