@@ -6,7 +6,7 @@ import MainSpreadSheet from "@/components/MainSpreadSheet";
 import ChattingMainContainer from "@/components/ChattingMainContainer";
 
 export default function Home() {
-  const [leftWidth, setLeftWidth] = useState(65); // 초기 50%
+  const [leftWidth, setLeftWidth] = useState(65); // 초기 65%
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isMouseDownRef = useRef(false);
@@ -39,8 +39,8 @@ export default function Home() {
     const containerRect = containerRef.current.getBoundingClientRect();
     const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
     
-    // 최소 10%, 최대 90%로 제한
-    const clampedWidth = Math.min(Math.max(newLeftWidth, 10), 90);
+    // 최소 20%, 최대 80%로 제한 (사이드바 고려)
+    const clampedWidth = Math.min(Math.max(newLeftWidth, 20), 80);
     setLeftWidth(clampedWidth);
   }, []);
 
@@ -68,81 +68,50 @@ export default function Home() {
   return (
     <div 
       ref={containerRef}
-      style={{ 
-        display: 'flex', 
-        width: '100%', 
-        height: '100vh', 
-        overflow: 'hidden',
-        position: 'relative'
-      }}
+      className="flex w-full h-screen overflow-hidden relative"
     >
-      {/* 왼쪽 영역: MainSpreadSheet */}
-      <div style={{ 
-        width: `${leftWidth}%`, 
-        height: '100%',
-        overflowY: 'auto',
-        overflowX: 'auto',
-        transition: isDragging ? 'none' : 'width 0.1s ease'
-      }}>
+      {/* 왼쪽 영역: MainSpreadSheet - 스크롤바 중복 방지를 위해 overflow 제거 */}
+      <div 
+        className="h-full transition-all duration-100 ease-linear"
+        style={{ 
+          width: `${leftWidth}%`,
+          transition: isDragging ? 'none' : 'width 0.1s ease'
+        }}
+      >
         <MainSpreadSheet />
       </div>
       
-      {/* 드래그 핸들 */}
+      {/* 드래그 핸들 - 개선된 스타일링 */}
       <div
         onMouseDown={handleMouseDown}
-        style={{
-          width: '8px',
-          height: '100%',
-          backgroundColor: isDragging ? '#005DE9' : '#e9ecef',
-          cursor: 'col-resize',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          transition: isDragging ? 'none' : 'background-color 0.2s ease',
-          borderLeft: '1px solid #ddd',
-          borderRight: '1px solid #ddd'
-        }}
-        onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-          if (!isDragging) {
-            (e.target as HTMLDivElement).style.backgroundColor = '#005DE9';
-          }
-        }}
-        onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-          if (!isDragging) {
-            (e.target as HTMLDivElement).style.backgroundColor = '#e9ecef';
-          }
-        }}
+        className={`
+          w-2 h-full cursor-col-resize flex items-center justify-center relative
+          border-l border-r border-gray-300 transition-colors duration-200
+          ${isDragging ? 'bg-blue-600' : 'bg-gray-200 hover:bg-blue-600'}
+        `}
       >
-        {/* 드래그 핸들 아이콘 */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px'
-        }}>
+        {/* 드래그 핸들 아이콘 - 더 명확한 시각적 피드백 */}
+        <div className="flex flex-col items-center gap-0.5">
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              style={{
-                width: '2px',
-                height: '2px',
-                backgroundColor: isDragging ? '#fff' : '#6c757d',
-                borderRadius: '50%'
-              }}
+              className={`
+                w-0.5 h-0.5 rounded-full transition-colors duration-200
+                ${isDragging ? 'bg-white' : 'bg-gray-600'}
+              `}
             />
           ))}
         </div>
       </div>
       
-      {/* 오른쪽 영역: CSVChatComponent */}
-      <div style={{
-        width: `${100 - leftWidth}%`,
-        height: '100%',
-        overflowY: 'auto',
-        overflowX: 'auto',
-        transition: isDragging ? 'none' : 'width 0.1s ease'
-      }}>
+      {/* 오른쪽 영역: ChattingMainContainer - 스크롤바 중복 방지를 위해 overflow 제거 */}
+      <div 
+        className="h-full transition-all duration-100 ease-linear"
+        style={{
+          width: `${100 - leftWidth}%`,
+          transition: isDragging ? 'none' : 'width 0.1s ease'
+        }}
+      >
         <ChattingMainContainer />
       </div>
     </div>

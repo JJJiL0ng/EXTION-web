@@ -338,7 +338,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         <>
             {/* 사이드바 */}
             <div className={`
-                fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-40 transition-transform duration-300 ease-in-out
+                fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-lg z-50 transition-transform duration-300 ease-in-out
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
                 w-80
             `}>
@@ -500,10 +500,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                 </div>
             </div>
 
-            {/* 오버레이 (모바일용) */}
+            {/* 오버레이 (모바일용) - z-index 조정 */}
             {isOpen && (
                 <div 
-                    className="fixed inset-0 bg-black bg-opacity-25 z-30 lg:hidden"
+                    className="fixed inset-0 bg-black bg-opacity-25 z-40 xl:hidden"
                     onClick={onToggle}
                 />
             )}

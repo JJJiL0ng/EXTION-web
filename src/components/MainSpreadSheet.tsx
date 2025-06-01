@@ -377,6 +377,53 @@ const HandsontableStyles = createGlobalStyle`
   .tab-scrollbar-thumb.dragging {
     background-color: #a1a1a1;
   }
+
+  /* 사이드바 전환 시 부드러운 애니메이션 */
+  .spreadsheet-container {
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* 반응형 디자인 개선 */
+  @media (max-width: 1024px) {
+    .sheet-tabs-container {
+      padding: 0 0.25rem;
+    }
+    
+    .sheet-tab {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+    }
+    
+    .sheet-tab .sheet-info {
+      font-size: 0.65rem;
+      padding: 0.1rem 0.4rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .example-controls-container {
+      padding: 0.5rem;
+    }
+    
+    .example-controls-container .flex {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+  }
+
+  /* 스크롤바 숨기기 - 중복 스크롤바 방지 */
+  .spreadsheet-main-container {
+    overflow: hidden;
+  }
+
+  .spreadsheet-main-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .spreadsheet-main-container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 `;
 
 registerAllModules();
@@ -392,51 +439,7 @@ const hyperformulaInstance = HyperFormula.buildEmpty({
 });
 
 // CSV 데이터가 없을 때의 기본 설정
-const defaultData = [
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-  ['', '', '', '', '', ''],
-];
+const defaultData = Array(30).fill(null).map(() => Array(12).fill(''));
 
 // 선택된 셀 정보 인터페이스 업데이트 - timestamp 속성 추가
 interface SelectedCellInfo {
@@ -1484,24 +1487,24 @@ const MainSpreadSheet: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex relative spreadsheet-main-container">
       {/* 사이드바 */}
       <ChatSidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
       
-      {/* 메인 스프레드시트 영역 */}
-      <div className={`h-full flex flex-col spreadsheet-container transition-all duration-300 ease-in-out ${
+      {/* 메인 스프레드시트 영역 - 사이드바 상태에 따른 마진 조정 */}
+      <div className={`h-full flex flex-col flex-1 min-w-0 spreadsheet-container transition-all duration-300 ease-in-out ${
         isSidebarOpen ? 'ml-80' : 'ml-0'
-      } flex-1`}>
+      }`}>
         {/* Handsontable z-index 문제 해결을 위한 스타일 */}
         <HandsontableStyles />
 
         {/* 상단 컨트롤 패널 */}
-        <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm" style={{ position: 'relative', zIndex: 9000 }}>
+        <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm flex-shrink-0" style={{ position: 'relative', zIndex: 9000 }}>
           <div className="flex items-center justify-between">
             {/* 사이드바 토글 버튼 */}
             <button
               onClick={toggleSidebar}
-              className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200 mr-3"
+              className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200 mr-3 flex-shrink-0"
               aria-label={isSidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
               style={{ minWidth: '40px', height: '40px' }}
             >
@@ -1510,17 +1513,17 @@ const MainSpreadSheet: React.FC = () => {
 
             {/* 선택된 셀 정보 표시 */}
             {selectedCellInfo && (
-              <div className="flex items-center space-x-4 text-sm text-gray-700 flex-1 mr-4">
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-4 text-sm text-gray-700 flex-1 mr-4 min-w-0">
+                <div className="flex items-center space-x-2 flex-shrink-0">
                   <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
                     {selectedCellInfo.cellAddress}
                   </span>
                 </div>
                 
                 {/* 편집 가능한 셀 값 입력 필드 */}
-                <div className="flex items-center space-x-2 flex-1 max-w-md">
-                  <span className="font-medium">Fx:</span>
-                  <div className="relative flex-1">
+                <div className="flex items-center space-x-2 flex-1 max-w-md min-w-0">
+                  <span className="font-medium flex-shrink-0">Fx:</span>
+                  <div className="relative flex-1 min-w-0">
                     <input
                       type="text"
                       value={cellEditValue}
@@ -1596,7 +1599,7 @@ const MainSpreadSheet: React.FC = () => {
         </div>
 
         {/* 시트 탭 바 - z-index 추가 */}
-        <div className="relative" style={{ zIndex: 8000 }}>
+        <div className="relative flex-shrink-0" style={{ zIndex: 8000 }}>
           <div className="flex flex-col bg-[#F9F9F7]">
             <div className="flex items-center border-b border-gray-200">
               {/* 시트 탭 컨테이너 - 시트 있을 때와 없을 때 모두 표시 */}
@@ -1693,8 +1696,8 @@ const MainSpreadSheet: React.FC = () => {
           )}
         </div>
 
-        {/* 스프레드시트 영역 */}
-        <div className="flex-1 overflow-auto bg-white shadow-inner" style={{ position: 'relative', zIndex: 50 }}>
+        {/* 스프레드시트 영역 - flex-1로 남은 공간 모두 사용 */}
+        <div className="flex-1 bg-white shadow-inner overflow-hidden" style={{ position: 'relative', zIndex: 50 }}>
           <HotTable
             ref={hotRef}
             rowHeaders={true}
