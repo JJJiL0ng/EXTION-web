@@ -400,13 +400,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                 EXTION
                             </h2>
                         </div>
-                        <button
+                        {/* <button
                             onClick={onToggle}
                             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded-lg transition-all duration-200 backdrop-blur-sm"
                             aria-label="사이드바 닫기"
                         >
                             <ChevronLeftIcon className="h-5 w-5" />
-                        </button>
+                        </button> */}
                     </div>
 
                     {/* 검색 및 필터 */}

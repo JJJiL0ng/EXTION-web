@@ -106,32 +106,64 @@ const HandsontableStyles = createGlobalStyle`
     font-weight: 500;
   }
 
-  /* 핸즈온테이블 테마 커스터마이징 */
+  /* 핸즈온테이블 테마 커스터마이징 - 엑셀 스타일 */
   .handsontable {
-    font-family: 'Inter', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 14px;
+    font-family: 'Calibri', 'Segoe UI', 'Inter', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px; /* 엑셀 기본 폰트 크기 */
+    line-height: 1.2;
   }
 
-  /* 헤더 스타일 */
+  /* 헤더 스타일 - 엑셀과 유사하게 */
   .handsontable th {
     background-color: #F9F9F7 !important;
     color: #333 !important;
-    font-weight: 600 !important;
+    font-weight: 400 !important;
     border-color: rgba(0, 0, 0, 0.08) !important;
-    padding: 8px !important;
+    padding: 2px 4px !important; /* 엑셀과 유사한 패딩 */
+    height: 20px !important; /* 엑셀 기본 행 높이 */
+    font-size: 11px !important;
+    text-align: center !important;
+  }
+
+  /* 행/열 헤더 텍스트 굵기 조정 */
+  .handsontable .ht_clone_left th,
+  .handsontable .ht_clone_top th,
+  .handsontable .ht_clone_top_left_corner th {
+    font-weight: 400 !important;
+    width: 50px !important; /* 엑셀 기본 열 너비 - 더 컴팩트하게 */
+    min-width: 50px !important;
+  }
+
+  /* 행 헤더 너비 조정 */
+  .handsontable .ht_clone_left th {
+    width: 32px !important; /* 엑셀 행 헤더 너비 - 더 컴팩트하게 */
+    min-width: 32px !important;
   }
 
   /* 활성 헤더 스타일 */
   .handsontable th.ht__active_highlight {
     background-color: rgba(0, 93, 233, 0.08) !important;
     color: #005DE9 !important;
+    font-weight: 400 !important;
   }
 
-  /* 셀 스타일 */
+  /* 셀 스타일 - 엑셀과 유사하게 */
   .handsontable td {
     border-color: rgba(0, 0, 0, 0.05) !important;
-    padding: 8px !important;
+    padding: 2px 6px !important; /* 엑셀과 유사한 패딩 */
+    height: 20px !important; /* 엑셀 기본 행 높이 */
+    font-size: 11px !important;
+    line-height: 16px !important;
+    vertical-align: middle !important;
     transition: background-color 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 기본 열 너비 설정 */
+  .handsontable col {
+    width: 64px !important; /* 엑셀 기본 열 너비 */
   }
 
   /* 선택된 셀 스타일 */
@@ -147,6 +179,7 @@ const HandsontableStyles = createGlobalStyle`
   /* 행/열 헤더 하이라이트 */
   .handsontable th.ht__highlight {
     background-color: rgba(0, 93, 233, 0.08) !important;
+    font-weight: 400 !important;
   }
 
   /* 컨텍스트 메뉴 */
@@ -182,6 +215,24 @@ const HandsontableStyles = createGlobalStyle`
   /* 포뮬러가 있는 셀 스타일 */
   .handsontable td.formula {
     background-color: rgba(0, 93, 233, 0.05) !important;
+  }
+
+  /* 텍스트 정렬 스타일 */
+  .handsontable td.htLeft {
+    text-align: left !important;
+  }
+
+  .handsontable td.htCenter {
+    text-align: center !important;
+  }
+
+  .handsontable td.htRight {
+    text-align: right !important;
+  }
+
+  /* 숫자 셀 기본 우측 정렬 */
+  .handsontable td.htNumeric {
+    text-align: right !important;
   }
 
   /* 시트 탭 바 스타일 */
@@ -1433,7 +1484,6 @@ const MainSpreadSheet: React.FC = () => {
         >
           <FileDown size={16} />
           <span>내보내기</span>
-          <ChevronDown size={14} />
         </button>
 
         {/* 내보내기 드롭다운 - 포털로 렌더링 */}
@@ -1617,13 +1667,23 @@ const MainSpreadSheet: React.FC = () => {
               aria-label={isSidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
               style={{ minWidth: '40px', height: '40px' }}
             >
-              <Image 
-                src="/logo.png" 
-                alt="Logo" 
-                width={24} 
-                height={24} 
-                className="object-contain"
-              />
+              <div className="flex flex-col space-y-1">
+                <div 
+                  className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${
+                    isSidebarOpen ? 'rotate-45 translate-y-1.5' : ''
+                  }`}
+                />
+                <div 
+                  className={`w-5 h-0.5 bg-gray-600 transition-opacity duration-300 ${
+                    isSidebarOpen ? 'opacity-0' : 'opacity-100'
+                  }`}
+                />
+                <div 
+                  className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${
+                    isSidebarOpen ? '-rotate-45 -translate-y-1.5' : ''
+                  }`}
+                />
+              </div>
             </button>
 
             {/* 선택된 셀 정보 표시 */}
@@ -1749,7 +1809,7 @@ const MainSpreadSheet: React.FC = () => {
         {/* 시트 탭 바 - z-index 추가 */}
         <div className="relative flex-shrink-0" style={{ zIndex: 8000 }}>
           <div className="flex flex-col bg-[#F9F9F7]">
-            <div className="flex items-center border-b border-gray-200">
+            <div className="flex items-center border-gray-200">
               {/* 시트 탭 컨테이너 - 시트 있을 때와 없을 때 모두 표시 */}
               <div ref={tabsContainerRef} className="sheet-tabs-container">
                 {xlsxData && xlsxData.sheets.length > 0 ? (
