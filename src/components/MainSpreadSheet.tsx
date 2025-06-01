@@ -1582,22 +1582,27 @@ const MainSpreadSheet: React.FC = () => {
               aria-label={isSidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
               style={{ minWidth: '40px', height: '40px' }}
             >
-              <MessageCircleIcon className="h-5 w-5 text-gray-600" />
+              <Image 
+                src="/logo.png" 
+                alt="Logo" 
+                width={24} 
+                height={24} 
+                className="object-contain"
+              />
             </button>
 
             {/* 선택된 셀 정보 표시 */}
             {selectedCellInfo && (
               <div className="flex items-center space-x-4 text-sm text-gray-700 flex-1 mr-4 min-w-0">
                 <div className="flex items-center space-x-2 flex-shrink-0">
-                  <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200"
-                        style={{ borderColor: '#005DE9', backgroundColor: 'rgba(0, 93, 233, 0.05)' }}>
+                  <span className="font-mono bg-white px-2.5 py-1.5 rounded-lg border border-gray-200">
                     {selectedCellInfo.cellAddress}
                   </span>
                 </div>
                 
                 {/* 편집 가능한 셀 값 입력 필드 */}
                 <div className="flex items-center space-x-2 flex-1 max-w-md min-w-0">
-                  <span className="font-medium flex-shrink-0" style={{ color: '#005DE9' }}>Fx:</span>
+                  <span className="font-medium flex-shrink-0">Fx:</span>
                   <div className="relative flex-1 min-w-0">
                     <input
                       type="text"
@@ -1729,13 +1734,12 @@ const MainSpreadSheet: React.FC = () => {
                 ) : (
                   /* 시트가 없는 경우 안내 메시지 표시 */
                   <div className="empty-sheet-container">
-                    <span className="empty-sheet-text">시트가 없습니다. 새 시트를 추가하세요</span>
                   </div>
                 )}
               </div>
 
               {/* 시트 추가 버튼 - 항상 같은 위치에 표시 */}
-              <div className="relative">
+              {/* <div className="relative">
                 <button
                   className="sheet-add-button"
                   onClick={() => setIsCreateSheetModalOpen(true)}
@@ -1774,7 +1778,7 @@ const MainSpreadSheet: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </div>
+              </div> */}
             </div>
 
             {/* 간단한 브라우저 스타일 스크롤바 */}

@@ -517,23 +517,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center mb-2">
-                                                    {/* 아이콘 */}
-                                                    <div className={`
-                                                        w-8 h-8 rounded-lg flex items-center justify-center mr-3 flex-shrink-0
-                                                        ${chatItem.hasSpreadsheet 
-                                                            ? 'text-white' 
-                                                            : 'text-white'
-                                                        }
-                                                    `}
-                                                    style={{ backgroundColor: '#005DE9' }}
-                                                    >
-                                                        {chatItem.hasSpreadsheet ? (
-                                                            <FileSpreadsheetIcon className="h-4 w-4" />
-                                                        ) : (
-                                                            <MessageCircleIcon className="h-4 w-4" />
-                                                        )}
-                                                    </div>
-                                                    
                                                     <div className="flex-1 min-w-0">
                                                         <h3 className="font-semibold text-sm text-gray-800 truncate">
                                                             {chatItem.title}
@@ -545,26 +528,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                                             </span>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                
-                                                <p className="text-xs text-gray-600 truncate mb-2">
-                                                    {chatItem.preview}
-                                                </p>
-                                                
-                                                {/* 메타 정보 */}
-                                                <div className="flex items-center justify-between">
-                                                    {chatItem.spreadsheetInfo && (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs text-white"
-                                                              style={{ backgroundColor: '#005DE9' }}>
-                                                            <Layers className="h-3 w-3 mr-1" />
-                                                            {chatItem.spreadsheetInfo.totalSheets}개 시트
-                                                        </span>
-                                                    )}
-                                                    {chatItem.messageCount && (
-                                                        <span className="text-xs text-gray-400">
-                                                            {chatItem.messageCount}개 메시지
-                                                        </span>
-                                                    )}
                                                 </div>
                                             </div>
                                             
