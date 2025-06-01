@@ -485,7 +485,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                 {/* 채팅 목록 - 독립적인 스크롤 영역 */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ 
                     scrollbarWidth: 'thin',
-                    scrollbarColor: '#005DE9 #f1f5f9'
+                    scrollbarColor: '#cbd5e1 #f1f5f9'
                 }}>
                     <div className="p-2">
                         {cloudChats.length === 0 && !isLoadingChats ? (

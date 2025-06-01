@@ -457,7 +457,7 @@ const hyperformulaInstance = HyperFormula.buildEmpty({
 });
 
 // CSV 데이터가 없을 때의 기본 설정
-const defaultData = Array(30).fill(null).map(() => Array(12).fill(''));
+const defaultData = Array(100).fill(null).map(() => Array(26).fill(''));
 
 // 선택된 셀 정보 인터페이스 업데이트 - timestamp 속성 추가
 interface SelectedCellInfo {
@@ -557,6 +557,8 @@ const MainSpreadSheet: React.FC = () => {
       sheetName: activeSheetData.sheetName
     });
 
+    let baseData: any[][] = [];
+
     // rawData가 있으면 원본 레이아웃 그대로 사용 (Firebase 복원 데이터)
     if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
         console.log('✅ 원본 rawData 사용:', {
@@ -564,30 +566,59 @@ const MainSpreadSheet: React.FC = () => {
           firstRowPreview: activeSheetData.rawData[0]?.slice(0, 3),
           lastRowPreview: activeSheetData.rawData[activeSheetData.rawData.length - 1]?.slice(0, 3)
         });
-        return activeSheetData.rawData;
-    }
-
-    // Firebase 복원 데이터의 경우 헤더와 데이터를 결합
-    if (isFirebaseData && activeSheetData.headers && activeSheetData.data) {
+        baseData = [...activeSheetData.rawData];
+    } else if (isFirebaseData && activeSheetData.headers && activeSheetData.data) {
+        // Firebase 복원 데이터의 경우 헤더와 데이터를 결합
         console.log('✅ Firebase 데이터 헤더+데이터 결합:', {
           headers: activeSheetData.headers.length,
           dataRows: activeSheetData.data.length,
           headersPreview: activeSheetData.headers.slice(0, 3),
           firstDataRowPreview: activeSheetData.data[0]?.slice(0, 3)
         });
-        const combinedData = [activeSheetData.headers, ...activeSheetData.data];
-        return combinedData;
+        baseData = [activeSheetData.headers, ...activeSheetData.data];
+    } else {
+        // rawData가 없는 경우 기존 방식 폴백
+        const currentData = getCurrentSheetData();
+        baseData = [activeSheetData.headers, ...(currentData || activeSheetData.data)];
+        console.log('⚠️ 기존 방식 폴백 사용:', {
+          totalRows: baseData.length,
+          hasCurrentData: !!currentData,
+          firstRowPreview: baseData[0]?.slice(0, 3)
+        });
     }
 
-    // rawData가 없는 경우 기존 방식 폴백
-    const currentData = getCurrentSheetData();
-    const data = [activeSheetData.headers, ...(currentData || activeSheetData.data)];
-    console.log('⚠️ 기존 방식 폴백 사용:', {
-      totalRows: data.length,
-      hasCurrentData: !!currentData,
-      firstRowPreview: data[0]?.slice(0, 3)
+    // 엑셀처럼 추가 빈 행과 열 제공
+    const currentRows = baseData.length;
+    const currentCols = Math.max(...baseData.map(row => row?.length || 0));
+    
+    // 최소 100행, 26열(A-Z) 보장하되 현재 데이터보다 50행, 10열 더 추가
+    const targetRows = Math.max(100, currentRows + 50);
+    const targetCols = Math.max(26, currentCols + 10);
+
+    // 기존 데이터의 각 행을 목표 열 수만큼 확장
+    const expandedData = baseData.map(row => {
+      const expandedRow = [...(row || [])];
+      while (expandedRow.length < targetCols) {
+        expandedRow.push('');
+      }
+      return expandedRow;
     });
-    return data;
+
+    // 추가 빈 행들 생성
+    while (expandedData.length < targetRows) {
+      expandedData.push(Array(targetCols).fill(''));
+    }
+
+    console.log('📊 확장된 데이터:', {
+      originalRows: currentRows,
+      originalCols: currentCols,
+      expandedRows: expandedData.length,
+      expandedCols: targetCols,
+      addedRows: expandedData.length - currentRows,
+      addedCols: targetCols - currentCols
+    });
+
+    return expandedData;
   }, [activeSheetData, getCurrentSheetData, getCurrentSpreadsheetId, xlsxData?.spreadsheetId]);
 
   // 시트 전환 핸들러
@@ -1006,32 +1037,36 @@ const MainSpreadSheet: React.FC = () => {
   }, [xlsxData, selectedSheets, exportFileName]);
   // Handsontable 설정 수정 - 원본 구조에 맞게
   const getHandsontableSettings = useMemo(() => {
+    // 엑셀처럼 충분한 행과 열을 제공하되, 최소한의 크기 보장
+    const minRows = 100;  // 최소 100행
+    const minCols = 26;   // 최소 26열 (A-Z)
+    
     if (!activeSheetData) {
       return {
-        minRows: 8,
-        minCols: 6,
-        startRows: 8,
-        startCols: 6
+        minRows,
+        minCols,
+        startRows: minRows,
+        startCols: minCols,
+        maxRows: 10000,  // 최대 10,000행
+        maxCols: 100     // 최대 100열
       };
     }
 
     // 원본 데이터의 크기 확인
     const rawRows = activeSheetData.rawData?.length || 0;
     const rawCols = activeSheetData.rawData?.[0]?.length || 0;
-
-    // 메타데이터에서 실제 데이터 범위 확인
-    const dataRange = activeSheetData.metadata?.dataRange;
-    const startRow = dataRange?.startRow || 0;
-    const startCol = dataRange?.startCol || 0;
+    
+    // 데이터 크기보다 충분히 큰 크기로 설정
+    const calculatedRows = Math.max(minRows, rawRows + 50);  // 데이터 + 50행 여유
+    const calculatedCols = Math.max(minCols, rawCols + 10);  // 데이터 + 10열 여유
 
     return {
-      minRows: Math.max(8, rawRows),
-      minCols: Math.max(6, rawCols),
-      startRows: Math.max(8, rawRows),
-      startCols: Math.max(6, rawCols),
-      // 데이터가 중간부터 시작하는 경우를 위한 설정
-      viewportRowRenderingOffset: Math.max(0, startRow - 5),
-      viewportColumnRenderingOffset: Math.max(0, startCol - 2)
+      minRows: calculatedRows,
+      minCols: calculatedCols,
+      startRows: calculatedRows,
+      startCols: calculatedCols,
+      maxRows: 10000,  // 최대 10,000행
+      maxCols: 100     // 최대 100열
     };
   }, [activeSheetData]);
 
@@ -1815,9 +1850,22 @@ const MainSpreadSheet: React.FC = () => {
             rowHeaders={true}
             colHeaders={true}
             height="100%"
+            width="100%"
             autoWrapRow={true}
             autoWrapCol={true}
             data={displayData}
+            // 엑셀처럼 무제한 확장 가능하도록 설정
+            {...getHandsontableSettings}
+            // 행/열 자동 확장 설정
+            allowInsertRow={true}
+            allowInsertColumn={true}
+            allowRemoveRow={true}
+            allowRemoveColumn={true}
+            // 가상화 설정으로 성능 최적화
+            renderAllRows={false}
+            renderAllColumns={false}
+            viewportRowRenderingOffset={30}
+            viewportColumnRenderingOffset={10}
             contextMenu={{
               items: {
                 row_above: { name: '위에 행 삽입' },
@@ -1843,24 +1891,7 @@ const MainSpreadSheet: React.FC = () => {
                 console.log('Data changing:', changes, 'Source:', source);
               }
             }}
-            afterChange={(changes, source) => {
-              // 내부 업데이트가 아닌 경우에만 데이터 업데이트
-              if (!isInternalUpdate && changes && source !== 'loadData' && xlsxData) {
-                setInternalUpdate(true);
-
-                changes.forEach(([row, col, oldValue, newValue]) => {
-                  if (oldValue !== newValue && 
-                      typeof row === 'number' && 
-                      typeof col === 'number' && 
-                      row !== null && 
-                      col !== null) {
-                    updateActiveSheetCell(row - 1, col, newValue);
-                  }
-                });
-
-                setTimeout(() => setInternalUpdate(false), 100);
-              }
-            }}
+            afterChange={handleAfterChange}
             // 셀 선택 이벤트 처리
             afterSelection={(row, col) => {
               handleCellSelection(row, col);
@@ -1876,6 +1907,13 @@ const MainSpreadSheet: React.FC = () => {
               setTimeout(() => {
                 hotRef.current?.hotInstance?.render();
               }, 100);
+            }}
+            // 행/열 추가 시 자동으로 데이터 확장
+            afterCreateRow={(index, amount) => {
+              console.log(`Added ${amount} rows at index ${index}`);
+            }}
+            afterCreateCol={(index, amount) => {
+              console.log(`Added ${amount} columns at index ${index}`);
             }}
           />
         </div>

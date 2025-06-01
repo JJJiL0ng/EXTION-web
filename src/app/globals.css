@@ -41,18 +41,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #005DE9;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #004ab8;
+  background: #94a3b8;
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #005DE9 #f1f5f9;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
 /* Smooth animations */
