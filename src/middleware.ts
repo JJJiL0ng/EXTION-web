@@ -4,6 +4,8 @@ import type { NextRequest } from 'next/server';
 // 공개 경로 (로그인 없이 접근 가능)
 const publicPaths = ['/login', '/']; // 루트 경로(/)를 공개 경로에 추가
 
+// 개발 환경에서 사용되던 코드 (주석 처리)
+/*
 export function middleware(request: NextRequest) {
   // Firebase의 쿠키 기반 세션 검사
   const session = request.cookies.get('firebase-session-token')?.value;
@@ -45,9 +47,9 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
+*/
 
-// 프로덕션 환경에서는 아래 코드로 변경해야 함:
-/*
+// 프로덕션 환경용 코드:
 export function middleware(request: NextRequest) {
   // Firebase의 쿠키 기반 세션 검사
   const session = request.cookies.get('firebase-session-token')?.value;
@@ -60,8 +62,8 @@ export function middleware(request: NextRequest) {
     path === publicPath || path.startsWith(`${publicPath}/`)
   );
 
-  // 모바일에서 /application 접근 시 /sorryformobile로 리디렉션
-  if (isMobile && path.startsWith('/application')) {
+  // 모바일에서 /ai 접근 시 /sorryformobile로 리디렉션
+  if (isMobile && path.startsWith('/ai')) {
     const sorryUrl = new URL('/sorryformobile', request.url);
     return NextResponse.redirect(sorryUrl);
   }
@@ -74,13 +76,12 @@ export function middleware(request: NextRequest) {
 
   // 이미 로그인된 상태에서 로그인 페이지에 접근하는 경우 메인 페이지로 리디렉션
   if (session && isPublicPath) {
-    const homeUrl = new URL('/application', request.url);
+    const homeUrl = new URL('/ai', request.url);
     return NextResponse.redirect(homeUrl);
   }
 
   return NextResponse.next();
 }
-*/
 
 export const config = {
   matcher: [
