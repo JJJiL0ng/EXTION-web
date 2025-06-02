@@ -50,11 +50,8 @@ export function FeatureSection({ features }: FeatureSectionProps) {
             >
               {/* 텍스트 영역 */}
               <div className="flex-1 space-y-6">
-                <div className="flex items-center gap-3">
-                  <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium">
-                    {getFeatureIcon(feature.id)}
-                  </span>
-                  <h3 className="text-2xl font-bold text-gray-900">
+                <div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-2">
                     {feature.title}
                   </h3>
                 </div>
@@ -69,7 +66,7 @@ export function FeatureSection({ features }: FeatureSectionProps) {
                 
                 <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg">
                   <p className="text-gray-700">
-                    <span className="text-blue-600 font-medium">🔹 예시:</span> {feature.example}
+                    <span className="text-blue-600 font-medium"></span> {feature.example}
                   </p>
                 </div>
               </div>
