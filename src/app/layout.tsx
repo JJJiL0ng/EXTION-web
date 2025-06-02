@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { generateMetadata } from '@/libs/seo'
 import { Analytics } from '@vercel/analytics/react'
 import AuthProvider from '@/components/AuthProvider'
+import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 import './globals.css'
 
 export const metadata: Metadata = generateMetadata({
@@ -61,9 +63,13 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased min-h-screen flex flex-col">
         <AuthProvider>
-          {children}
+          <Header />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
         </AuthProvider>
         <Analytics />
       </body>

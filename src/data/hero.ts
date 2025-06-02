@@ -22,8 +22,8 @@ export const heroData = {
   
   // 비디오 메타데이터
   video: {
-    src: "https://pub-4a3591bf83af49968ea0c99fbe105456.r2.dev/hero-sample.mp4",
-    poster: "https://video.extion.co/KakaoTalk_Photo_2025-06-02-13-04-41.png",
+    src: "https://video.extion.co/main-demo.MP4",
+    poster: "https://video.extion.co/main-demo-thum.png",
     title: "Extion 데모 - 자연어로 엑셀 작업하기",
     description: "\"정렬해줘\", \"차트 만들어줘\", \"중복 제거해줘\" 같은 자연어 명령만으로 복잡한 엑셀 작업이 자동으로 처리됩니다",
     duration: 30,

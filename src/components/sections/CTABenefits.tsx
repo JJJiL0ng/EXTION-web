@@ -5,19 +5,19 @@ const getBenefitIcon = (id: number) => {
   switch (id) {
     case 1:
       return (
-        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 md:w-6 md:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
         </svg>
       )
     case 2:
       return (
-        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 md:w-6 md:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
     case 3:
       return (
-        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 md:w-6 md:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       )
@@ -32,9 +32,9 @@ export function CTABenefits() {
     <>
       {/* 주요 혜택 강조 박스 */}
       <div className="max-w-2xl mx-auto mb-12">
-        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 md:p-8">
           <div 
-            className="grid md:grid-cols-3 gap-6 text-center"
+            className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-6 text-center"
             itemScope 
             itemType="https://schema.org/ItemList"
           >
@@ -44,7 +44,7 @@ export function CTABenefits() {
             {ctaData.mainBenefits.map((benefit, index) => (
               <div 
                 key={benefit.id} 
-                className="space-y-2"
+                className="space-y-1 md:space-y-2"
                 itemProp="itemListElement"
                 itemScope 
                 itemType="https://schema.org/ListItem"
@@ -62,23 +62,18 @@ export function CTABenefits() {
                   <meta itemProp="priceCurrency" content="KRW" />
                   
                   {/* 아이콘 */}
-                  <div className="w-12 h-12 bg-yellow-300 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <div className="w-8 h-8 md:w-12 md:h-12 bg-yellow-300 rounded-full flex items-center justify-center mx-auto mb-1 md:mb-3">
                     {getBenefitIcon(benefit.id)}
                   </div>
                   
                   {/* 제목 */}
-                  <h3 className="text-lg font-semibold text-white" itemProp="name">
+                  <h3 className="text-sm md:text-lg font-semibold text-white" itemProp="name">
                     {benefit.title}
                   </h3>
                   
                   {/* 설명 */}
-                  <p className="text-blue-100 text-sm" itemProp="description">
-                    {benefit.description.split('\n').map((line, lineIndex) => (
-                      <span key={lineIndex}>
-                        {line}
-                        {lineIndex < benefit.description.split('\n').length - 1 && <br />}
-                      </span>
-                    ))}
+                  <p className="text-blue-100 text-xs md:text-sm" itemProp="description">
+                    {benefit.description}
                   </p>
                   
                   {/* 숨겨진 키워드 - SEO용 */}

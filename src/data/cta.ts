@@ -13,16 +13,16 @@ export const ctaData = {
     {
       id: 1,
       icon: "💰",
-      title: "엑션 pro 한 달 무료",
-      description: "프로 버전 모든 기능을\n1달 간 무료로 이용하세요",
+      title: "1달 무료",
+      description: "프로 버전 무료 체험",
       value: "12,900원 상당",
       keywords: ["무료 체험", "프로 버전", "베타 혜택"]
     },
     {
       id: 2,
       icon: "✅",
-      title: "12,900원 상당",
-      description: "정식 출시 후\n월 구독료와 동일한 혜택",
+      title: "12,900원 할인",
+      description: "정가 대비 100% 할인",
       value: "정가 대비 100% 할인",
       keywords: ["할인", "구독료", "혜택"]
     },
@@ -30,7 +30,7 @@ export const ctaData = {
       id: 3,
       icon: "⚡",
       title: "우선 사용권",
-      description: "정식 출시 전\n가장 먼저 체험하세요",
+      description: "선착순 100명 한정",
       value: "선착순 100명 한정",
       keywords: ["우선 사용", "베타 테스터", "선착순"]
     }

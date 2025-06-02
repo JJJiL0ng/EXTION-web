@@ -104,9 +104,9 @@ export default async function HomePage() {
         <HeroSection />
         {/* Feature 데이터는 이제 컴포넌트 내부에서 SSG로 처리 */}
         <FeatureSection />
+        <CTASection />
         {/* Device 섹션 추가 - SSG로 처리 */}
         <DeviceSection />
-        <CTASection />
       </main>
     </>
   )
