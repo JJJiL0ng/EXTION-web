@@ -17,22 +17,44 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* 구조화된 데이터 (JSON-LD) */}
+        {/* 기본 구조화된 데이터 (JSON-LD) - 조직 정보 */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
+              "@type": "Organization",
               "name": "Extion",
+              "url": "https://extion.app",
+              "logo": "https://extion.app/logo.png",
+              "description": "자연어로 엑셀 작업을 자동화하는 AI 도구 개발사",
+              "foundingDate": "2024",
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "customer service",
+                "email": "support@extion.app"
+              },
+              "sameAs": [
+                "https://twitter.com/extion_app"
+              ]
+            })
+          }}
+        />
+        
+        {/* 웹사이트 구조화된 데이터 */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "Extion",
+              "url": "https://extion.app",
               "description": "자연어로 엑셀 작업을 자동화하는 AI 도구",
-              "applicationCategory": "ProductivityApplication",
-              "operatingSystem": "Windows, macOS",
-              "offers": {
-                "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "KRW",
-                "description": "베타 무료 체험"
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://extion.app/search?q={search_term_string}",
+                "query-input": "required name=search_term_string"
               }
             })
           }}

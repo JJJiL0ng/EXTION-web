@@ -1,10 +1,54 @@
 import { HeroSection } from '@/components/sections/HeroSection'
 import { FeatureSection } from '@/components/sections/FeatureSection'
 import { CTASection } from '@/components/sections/CTASection'
+import { heroData, generateHeroStructuredData } from '@/data/hero'
+import type { Metadata } from 'next'
 
-// SSR로 정적 데이터 미리 렌더링
+// SSG로 정적 데이터 미리 렌더링 + SEO 최적화
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: `${heroData.headline.main} ${heroData.headline.highlight} | Extion`,
+    description: `${heroData.headline.subtitle} ${heroData.headline.description}`,
+    keywords: heroData.seoKeywords.join(', '),
+    openGraph: {
+      title: `${heroData.headline.main} ${heroData.headline.highlight}`,
+      description: heroData.headline.subtitle,
+      images: [
+        {
+          url: heroData.video.poster,
+          width: heroData.video.width,
+          height: heroData.video.height,
+          alt: heroData.video.title
+        }
+      ],
+      videos: [
+        {
+          url: heroData.video.src,
+          width: heroData.video.width,
+          height: heroData.video.height,
+          type: 'video/mp4'
+        }
+      ]
+    },
+    twitter: {
+      card: 'player',
+      title: `${heroData.headline.main} ${heroData.headline.highlight}`,
+      description: heroData.headline.subtitle,
+      images: [heroData.video.poster],
+      players: [
+        {
+          playerUrl: heroData.video.src,
+          streamUrl: heroData.video.src,
+          width: heroData.video.width,
+          height: heroData.video.height
+        }
+      ]
+    }
+  }
+}
+
 export default async function HomePage() {
-  // 서버에서 미리 가져올 데이터가 있다면 여기서
+  // 서버에서 미리 가져올 데이터 - SSG 최적화
   const featuresData = {
     features: [
       {
@@ -34,11 +78,24 @@ export default async function HomePage() {
     ]
   }
 
+  // 구조화된 데이터 생성
+  const structuredData = generateHeroStructuredData()
+
   return (
-    <main>
-      <HeroSection />
-      <FeatureSection features={featuresData.features} />
-      <CTASection />
-    </main>
+    <>
+      {/* 구조화된 데이터 (JSON-LD) - SEO 최적화 */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData)
+        }}
+      />
+      
+      <main>
+        <HeroSection />
+        <FeatureSection features={featuresData.features} />
+        <CTASection />
+      </main>
+    </>
   )
 }
