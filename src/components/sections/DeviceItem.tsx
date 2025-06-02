@@ -8,20 +8,15 @@ interface DeviceItemProps {
 
 // 디바이스별 로고 이미지 매핑
 const getDeviceLogo = (deviceName: string): string => {
-  switch (deviceName) {
-    case "웹 브라우저":
-      return "/Chrome.png"
-    case "Windows 데스크탑":
-      return "/Window.png"
-    case "macOS 데스크탑":
-      return "/Apple.png"
-    case "Google Sheets":
-      return "/Gss.png"
-    case "Microsoft 365":
-      return "/Excel.png"
-    default:
-      return "/Chrome.png"
+  const logoMap: { [key: string]: string } = {
+    "웹 브라우저": "/Chrome.png",
+    "Windows 데스크탑": "/Window.png",
+    "macOS 데스크탑": "/Apple.png",
+    "Google Sheets": "/Gss.png",
+    "Microsoft 365": "/Excel.png"
   }
+  
+  return logoMap[deviceName] || "/Chrome.png"
 }
 
 // SSG로 렌더링되는 개별 디바이스 아이템
@@ -43,7 +38,7 @@ export function DeviceItem({ device, index }: DeviceItemProps) {
       
       {/* 헤더 영역 */}
       <div className="text-center mb-6">
-        {/* 로고 이미지 */}
+        {/* 로고 이미지 - Next.js Image 컴포넌트 사용 */}
         <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4 p-3">
           <Image
             src={logoSrc}
@@ -51,13 +46,9 @@ export function DeviceItem({ device, index }: DeviceItemProps) {
             width={40}
             height={40}
             className="object-contain"
-            style={{
-              width: 'auto',
-              height: 'auto',
-              maxWidth: '40px',
-              maxHeight: '40px'
-            }}
-            priority={index < 3}
+            priority={index < 3} // 첫 3개 이미지는 우선 로드
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
           />
         </div>
         
@@ -111,4 +102,4 @@ export function DeviceItem({ device, index }: DeviceItemProps) {
       </div>
     </div>
   )
-} 
+}

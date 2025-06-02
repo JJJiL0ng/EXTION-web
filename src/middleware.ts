@@ -88,7 +88,8 @@ export const config = {
     /*
      * 미들웨어가 실행될 경로를 여기에 추가하세요
      * 예: 대시보드, 프로필, API 경로 등
+     * 정적 파일들은 제외합니다
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif|txt|xml|robots\\.txt|sitemap\\.xml)).*)',
   ],
 }; 

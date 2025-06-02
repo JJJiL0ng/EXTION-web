@@ -15,6 +15,15 @@ const nextConfig = {
           port: '',
           pathname: '/**',
         },
+        // 개발환경용 localhost 추가 (개발 시에만 적용)
+        ...(process.env.NODE_ENV === 'development' ? [
+          {
+            protocol: 'http',
+            hostname: 'localhost',
+            port: '3000',
+            pathname: '/**',
+          }
+        ] : []),
       ],
       formats: ['image/webp', 'image/avif'],
     },
@@ -66,6 +75,6 @@ const nextConfig = {
         // },
       ]
     },
-   }
-   
-   export default nextConfig;
+}
+
+export default nextConfig;
