@@ -1,0 +1,30 @@
+# Extion 랜딩페이지 robots.txt
+# 검색엔진 크롤러에게 사이트 크롤링 규칙을 알려주는 파일
+
+User-agent: *
+Allow: /
+
+# 특정 경로 차단 (개인정보, 관리자 등)
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+Disallow: /private/
+
+# 사이트맵 위치 알려주기
+Sitemap: https://extion.app/sitemap.xml
+
+# 주요 검색엔진별 특별 설정
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: NaverBot
+Allow: /
+Crawl-delay: 1
+
+# 크롤링 빈도 조절 (서버 부하 방지)
+Crawl-delay: 1

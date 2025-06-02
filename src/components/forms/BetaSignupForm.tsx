@@ -120,9 +120,9 @@ export function BetaSignupForm() {
         </div>
         
         <div className="space-y-3 text-sm text-gray-500">
-          <p>✅ 베타 기간 무료 체험</p>
-          <p>✅ 정식 출시 시 할인 혜택</p>
-          <p>✅ 우선 사용권 제공</p>
+          <p>✅ 프로 이용권 1달 무료</p>
+          <p>✅ 베타 피드백 우선 반영</p>
+          <p>✅ 언제든 해지 가능</p>
         </div>
       </div>
     )
@@ -145,7 +145,7 @@ export function BetaSignupForm() {
         <Input
           type="tel"
           label="전화번호"
-          placeholder="010-1234-5678"
+          placeholder="010 1234 5678"
           value={formData.phone}
           onChange={handlePhoneChange}
           error={errors.phone}

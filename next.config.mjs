@@ -9,6 +9,12 @@ const nextConfig = {
           port: '',
           pathname: '/**',
         },
+        {
+          protocol: 'https',
+          hostname: 'video.extion.co',
+          port: '',
+          pathname: '/**',
+        },
       ],
       formats: ['image/webp', 'image/avif'],
     },

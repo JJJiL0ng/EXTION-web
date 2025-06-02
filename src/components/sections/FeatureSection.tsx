@@ -13,6 +13,20 @@ interface FeatureSectionProps {
   features: Feature[]
 }
 
+// 각 기능에 맞는 아이콘 매핑
+const getFeatureIcon = (id: number) => {
+  switch (id) {
+    case 1:
+      return '💬' // 자연어 명령 처리
+    case 2:
+      return '📊' // 표 자동 정리
+    case 3:
+      return '📈' // 시각화 기능
+    default:
+      return '✨'
+  }
+}
+
 export function FeatureSection({ features }: FeatureSectionProps) {
   return (
     <section className="py-20 bg-gray-50">
@@ -37,8 +51,8 @@ export function FeatureSection({ features }: FeatureSectionProps) {
               {/* 텍스트 영역 */}
               <div className="flex-1 space-y-6">
                 <div className="flex items-center gap-3">
-                  <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    ✅ {feature.id}
+                  <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-medium">
+                    {getFeatureIcon(feature.id)}
                   </span>
                   <h3 className="text-2xl font-bold text-gray-900">
                     {feature.title}

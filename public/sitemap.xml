@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+
+    <!-- 메인 홈페이지 -->
+    <url>
+        <loc>https://extion.co</loc>
+        <lastmod>2025-01-01</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>1.0</priority>
+        
+        <!-- 메인 데모 영상 정보 -->
+        <video:video>
+            <video:thumbnail_loc>https://cdn.extion.app/images/hero-poster.jpg</video:thumbnail_loc>
+            <video:title>Extion Demo - 자연어로 엑셀 작업하기</video:title>
+            <video:description>자연어 명령어로 엑셀 표 정리, 차트 생성, 데이터 분석을 자동화하는 Extion의 실제 사용 화면</video:description>
+            <video:content_loc>https://cdn.extion.app/videos/hero-demo.mp4</video:content_loc>
+            <video:duration>30</video:duration>
+            <video:family_friendly>yes</video:family_friendly>
+        </video:video>
+        
+        <!-- 메인 이미지 정보 -->
+        <image:image>
+            <image:loc>https://extion.app/og-image.jpg</image:loc>
+            <image:title>Extion - 함수 몰라도 되는 엑셀 AI 도구</image:title>
+            <image:caption>자연어로 엑셀 작업을 자동화하는 AI 도구</image:caption>
+        </image:image>
+    </url>
+
+    <!-- 개인정보 처리방침 (베타 신청 시 필요) -->
+    <url>
+        <loc>https://extion.app/privacy</loc>
+        <lastmod>2025-01-01</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+    <!-- 이용약관 -->
+    <url>
+        <loc>https://extion.app/terms</loc>
+        <lastmod>2025-01-01</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.4</priority>
+    </url>
+
+</urlset>
