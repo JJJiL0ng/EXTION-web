@@ -20,7 +20,7 @@ export function FeatureItem({ feature, index }: FeatureItemProps) {
     >
       {/* 구조화된 데이터 - 기능 메타데이터 */}
       <meta itemProp="name" content={feature.title} />
-      <meta itemProp="description" content={feature.description} />
+      {/* <meta itemProp="description" content={feature.description} /> */}
       <meta itemProp="keywords" content={feature.keywords.join(', ')} />
       
       {/* 텍스트 영역 - SSG 렌더링 */}
@@ -41,9 +41,9 @@ export function FeatureItem({ feature, index }: FeatureItemProps) {
         </h4>
         
         {/* 설명 */}
-        <p className="text-lg text-gray-600 leading-relaxed" itemProp="description">
+        {/* <p className="text-lg text-gray-600 leading-relaxed" itemProp="description">
           {feature.description}
-        </p>
+        </p> */}
         
         {/* 혜택 목록 - SEO 최적화 */}
         <div className="space-y-2">
@@ -76,7 +76,7 @@ export function FeatureItem({ feature, index }: FeatureItemProps) {
       {/* 영상 영역 */}
       <div className="flex-1" itemScope itemType="https://schema.org/VideoObject">
         <meta itemProp="name" content={`${feature.title} 데모`} />
-        <meta itemProp="description" content={feature.description} />
+        {/* <meta itemProp="description" content={feature.description} /> */}
         <meta itemProp="thumbnailUrl" content={feature.poster || `/images/feature-${feature.id}-thumbnail.jpg`} />
         <meta itemProp="contentUrl" content={feature.videoUrl} />
         

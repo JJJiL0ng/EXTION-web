@@ -5,19 +5,19 @@ export function FeatureHeader() {
   return (
     <div className="text-center mb-16">
       {/* 메인 제목 - SEO 최적화 */}
-      <h2 className="text-4xl font-bold text-gray-900 mb-4">
+      <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
         {featuresData.header.title}
       </h2>
       
       {/* 서브 제목 */}
-      <p className="text-xl text-gray-600 mb-6">
+      <p className="text-base md:text-xl text-gray-600 mb-6">
         {featuresData.header.subtitle}
       </p>
       
-      {/* 상세 설명 - SEO용 */}
-      <p className="text-lg text-gray-500 max-w-3xl mx-auto leading-relaxed">
+      {/* 상세 설명 - SEO용 - UI에서는 숨김 */}
+      {/* <p className="text-lg text-gray-500 max-w-3xl mx-auto leading-relaxed">
         {featuresData.header.description}
-      </p>
+      </p> */}
       
       {/* 구조화된 데이터 - 숨겨진 SEO 정보 */}
       <div className="hidden" itemScope itemType="https://schema.org/ItemList">

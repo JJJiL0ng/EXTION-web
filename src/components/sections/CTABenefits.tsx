@@ -91,7 +91,7 @@ export function CTABenefits() {
 
       {/* 추가 혜택 리스트 */}
       <div className="text-center mb-12">
-        <div className="inline-flex flex-wrap justify-center gap-4 text-sm">
+        <div className="inline-flex flex-wrap justify-center gap-4 text-sm md:text-base">
           {ctaData.additionalBenefits.map((benefit, index) => (
             <div 
               key={index} 
