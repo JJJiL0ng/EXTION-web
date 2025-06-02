@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { generateMetadata } from '@/libs/seo'
 import { Analytics } from '@vercel/analytics/react'
+import AuthProvider from '@/components/AuthProvider'
 import './globals.css'
 
 export const metadata: Metadata = generateMetadata({
@@ -61,7 +62,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Analytics />
       </body>
     </html>
