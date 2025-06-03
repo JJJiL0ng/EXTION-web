@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { 
     MessageCircleIcon, 
     PlusIcon, 
@@ -101,7 +102,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     }, []);
 
     // Firebase 채팅 목록 로드
-    const loadFirebaseChats = async () => {
+    const loadFirebaseChats = useCallback(async () => {
         if (!user) return;
 
         setIsLoadingChats(true);
@@ -114,14 +115,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         } finally {
             setIsLoadingChats(false);
         }
-    };
+    }, [user]);
 
     // 컴포넌트 마운트 시 Firebase 채팅 목록 로드
     useEffect(() => {
         if (user && !loading) {
             loadFirebaseChats();
         }
-    }, [user, loading]);
+    }, [user, loading, loadFirebaseChats]);
 
     // URL 파라미터와 선택된 채팅 동기화
     useEffect(() => {
@@ -291,10 +292,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                 <div className="p-4 border-b border-gray-100 flex-shrink-0">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-3">
-                            <img 
+                            <Image 
                                 src="/logo.png" 
                                 alt="EXTION" 
-                                className="h-8 w-auto"
+                                width={32}
+                                height={32}
+                                className="w-auto"
                             />
                         </div>
                         {/* <button

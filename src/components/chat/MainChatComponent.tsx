@@ -36,6 +36,9 @@ const loadingHints = [
     "최상의 답변을 구성하고 있습니다..."
 ];
 
+// NodeJS timeout 타입 정의
+type TimeoutHandle = ReturnType<typeof setTimeout>;
+
 export default function MainChatComponent() {
     // 상태들 선언
     const [currentMode, setCurrentMode] = useState<ChatMode>('normal');
@@ -46,7 +49,7 @@ export default function MainChatComponent() {
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [loadingHintIndex, setLoadingHintIndex] = useState(0);
     const chatContainerRef = useRef<HTMLDivElement>(null);
-    const loadingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const loadingIntervalRef = useRef<TimeoutHandle | null>(null);
     const prevChatIdRef = useRef<string | null>(null);
 
     // Zustand 스토어 사용
@@ -156,110 +159,25 @@ export default function MainChatComponent() {
     // 현재 활성 시트 인덱스 가져오기
     const activeSheetIndex = xlsxData?.activeSheetIndex || 0;
 
-    // === 채팅 세션 관리 Effect ===
-    useEffect(() => {
-        // 컴포넌트 마운트 시 저장된 채팅 세션들 로드
-        loadChatSessionsFromStorage();
-    }, [loadChatSessionsFromStorage]);
+    // 유효한 스프레드시트 파일인지 확인하는 함수
+    const isValidSpreadsheetFile = (file: File): boolean => {
+        const fileName = file.name.toLowerCase();
+        const validExtensions = ['.xlsx', '.xls', '.csv'];
+        return validExtensions.some((ext: string) => fileName.endsWith(ext));
+    };
 
-    // === 채팅 ID 변경 시 세션 저장 Effect ===
-    useEffect(() => {
-        // 현재 채팅 ID가 변경되었을 때 이전 세션 저장
-        if (prevChatIdRef.current && prevChatIdRef.current !== currentChatId) {
-            saveCurrentSessionToStore();
+    // columnIndexToLetter 함수 추가 (없는 경우)
+    const columnIndexToLetter = (index: number): string => {
+        let result = '';
+        while (index >= 0) {
+            result = String.fromCharCode(65 + (index % 26)) + result;
+            index = Math.floor(index / 26) - 1;
         }
-        
-        // 현재 채팅 ID를 ref에 저장
-        prevChatIdRef.current = currentChatId;
-        
-        return () => {
-            // 컴포넌트 언마운트 시 현재 세션 저장
-            if (currentChatId) {
-                saveCurrentSessionToStore();
-            }
-        };
-    }, [currentChatId, saveCurrentSessionToStore]);
-
-    // === 주기적 세션 저장 Effect ===
-    useEffect(() => {
-        const interval = setInterval(() => {
-            // 5분마다 현재 세션을 자동 저장
-            if (currentChatId) {
-                saveCurrentSessionToStore();
-            }
-        }, 5 * 60 * 1000); // 5분
-
-        return () => clearInterval(interval);
-    }, [currentChatId, saveCurrentSessionToStore]);
-
-    // 로딩 상태 관리를 위한 효과
-    useEffect(() => {
-        if (isLoading) {
-            // 로딩이 시작될 때 초기화
-
-            setLoadingHintIndex(0);
-
-            // 진행 상태를 시뮬레이션하는 인터벌 설정
-            loadingIntervalRef.current = setInterval(() => {
-                setLoadingProgress(prev => {
-                    // 로딩 진행도를 서서히 증가시키되, 100%에 도달하지 않게 함
-                    if (prev < 90) {
-                        // 진행도가 증가함에 따라 증가 속도를 줄임
-                        const increment = Math.max(1, 10 - Math.floor(prev / 10));
-                        return prev + increment;
-                    }
-                    return prev;
-                });
-
-                // 힌트 메시지 주기적으로 변경
-                setLoadingHintIndex(prev => (prev + 1) % loadingHints.length);
-            }, 2000);
-
-            return () => {
-                // 로딩이 끝나면 인터벌 정리
-                if (loadingIntervalRef.current) {
-                    clearInterval(loadingIntervalRef.current);
-                    loadingIntervalRef.current = null;
-                }
-                // 로딩이 끝날 때 진행도를 100%로 설정
-                setLoadingProgress(100);
-            };
-        }
-    }, [isLoading]);
-
-    // Drag and Drop 핸들러들
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        // 파일 업로드가 이미 된 경우 드래그 오버 상태 비활성화
-        if (!canUploadFile()) {
-            return;
-        }
-        setIsDragOver(true);
-    }, [canUploadFile]);
-
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragOver(false);
-    }, []);
-
-    const handleDrop = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragOver(false);
-
-        // 파일 업로드가 이미 된 경우 파일 드롭 비활성화
-        if (!canUploadFile()) {
-            console.log('이미 파일이 업로드되어 새로운 파일을 업로드할 수 없습니다.');
-            return;
-        }
-
-        const droppedFile = e.dataTransfer.files[0];
-        if (droppedFile && isValidSpreadsheetFile(droppedFile)) {
-            processFile(droppedFile);
-        }
-    }, [canUploadFile]);
+        return result;
+    };
 
     // 파일 처리 함수
-    const processFile = async (file: File) => {
+    const processFile = useCallback(async (file: File) => {
         setLoadingState('fileUpload', true);
         setError('fileError', null);
 
@@ -467,7 +385,7 @@ export default function MainChatComponent() {
                         if (saveResult.spreadsheetId) {
                             setCurrentSpreadsheetId(saveResult.spreadsheetId);
                             setSpreadsheetMetadata({
-                                fileName: xlsxData.fileName,
+                                fileName: updatedXlsxData.fileName,
                                 originalFileName: file.name,
                                 fileSize: file.size,
                                 fileType: 'xlsx',
@@ -481,52 +399,24 @@ export default function MainChatComponent() {
                         console.error('Firebase 저장 실패:', saveError);
                     }
 
-                    const firstSheet = result.sheets[0];
-                    const headerInfo = firstSheet.headerInfo;
-                    const headerStatus = headerInfo?.isAutoGenerated
-                        ? '\n헤더가 자동으로 생성되었습니다. 추후 헤더를 직접 지정할 수 있습니다.'
-                        : headerInfo?.headerRow === -1
-                            ? '\n헤더를 감지하지 못했습니다. 데이터가 첫 행부터 시작됩니다.'
-                            : '';
-
                     const successMessage: ChatMessage = {
                         id: Date.now().toString(),
                         type: 'Extion ai',
                         content: `${file.name} 파일이 성공적으로 업로드되었습니다.\n\n` +
-                            `시트 정보:\n` +
-                            xlsxData.sheets.map((sheet, index) => {
-                                const originalSheet = result.sheets[index];
-                                const headerInfo = originalSheet.headerInfo;
+                            `파일 정보:\n` +
+                            result.sheets.map((sheet, index) => {
+                                const headerInfo = sheet.headerInfo;
                                 const headerStatus = headerInfo?.isAutoGenerated
                                     ? '(자동 생성된 헤더)'
                                     : headerInfo?.headerRow === -1
                                         ? '(헤더 없음)'
                                         : '';
-
-                                // 데이터 위치 정보
-                                const bounds = originalSheet.dataBounds;
-                                const dataLocation = bounds.minRow > 0 || bounds.minCol > 0
-                                    ? ` - 데이터 위치: ${columnIndexToLetter(bounds.minCol)}${bounds.minRow + 1}부터`
-                                    : '';
-
-                                return `${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행 ${headerStatus}${dataLocation}`;
-                            }).join('\n') + headerStatus,
+                                return `• ${sheet.sheetName}: ${sheet.headers.length}열 × ${sheet.data.length}행 ${headerStatus}`;
+                            }).join('\n') +
+                            `\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!`,
                         timestamp: new Date()
                     };
-
-                    // 각 시트별로 별도의 채팅 메시지 추가
-                    xlsxData.sheets.forEach((sheet, index) => {
-                        const sheetMessage: ChatMessage = {
-                            id: `${Date.now()}-${index}`,
-                            type: 'Extion ai',
-                            content: `${sheet.sheetName} 시트가 업로드되었습니다.\n\n` +
-                                `• 열 수: ${sheet.headers.length}\n` +
-                                `• 행 수: ${sheet.data.length}\n` +
-                                `• 헤더: ${sheet.headers.slice(0, 5).join(', ')}${sheet.headers.length > 5 ? '...' : ''}`,
-                            timestamp: new Date()
-                        };
-                        addMessageToSheet(index, sheetMessage);
-                    });
+                    addMessageToSheet(activeSheetIndex, successMessage);
                 }
             } else if (fileExtension === 'csv') {
                 // CSV 파일 처리
@@ -832,25 +722,124 @@ export default function MainChatComponent() {
         } finally {
             setLoadingState('fileUpload', false);
         }
-    };
-    // columnIndexToLetter 함수 추가 (없는 경우)
-    const columnIndexToLetter = (index: number): string => {
-        let result = '';
-        while (index >= 0) {
-            result = String.fromCharCode(65 + (index % 26)) + result;
-            index = Math.floor(index / 26) - 1;
+    }, [
+        xlsxData, 
+        activeSheetIndex, 
+        setLoadingState, 
+        setError, 
+        setXLSXData, 
+        addMessageToSheet, 
+        getCurrentChatId, 
+        setCurrentChatId, 
+        setCurrentSpreadsheetId, 
+        setSpreadsheetMetadata, 
+        markAsSaved
+    ]);
+
+    // === 채팅 세션 관리 Effect ===
+    useEffect(() => {
+        // 컴포넌트 마운트 시 저장된 채팅 세션들 로드
+        loadChatSessionsFromStorage();
+    }, [loadChatSessionsFromStorage]);
+
+    // === 채팅 ID 변경 시 세션 저장 Effect ===
+    useEffect(() => {
+        // 현재 채팅 ID가 변경되었을 때 이전 세션 저장
+        if (prevChatIdRef.current && prevChatIdRef.current !== currentChatId) {
+            saveCurrentSessionToStore();
         }
-        return result;
-    };
+        
+        // 현재 채팅 ID를 ref에 저장
+        prevChatIdRef.current = currentChatId;
+        
+        return () => {
+            // 컴포넌트 언마운트 시 현재 세션 저장
+            if (currentChatId) {
+                saveCurrentSessionToStore();
+            }
+        };
+    }, [currentChatId, saveCurrentSessionToStore]);
 
+    // === 주기적 세션 저장 Effect ===
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // 5분마다 현재 세션을 자동 저장
+            if (currentChatId) {
+                saveCurrentSessionToStore();
+            }
+        }, 5 * 60 * 1000); // 5분
 
-    const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        // 파일 업로드가 이미 된 경우 새로운 파일 업로드 비활성화
+        return () => clearInterval(interval);
+    }, [currentChatId, saveCurrentSessionToStore]);
+
+    // 로딩 상태 관리를 위한 효과
+    useEffect(() => {
+        if (isLoading) {
+            // 로딩이 시작될 때 초기화
+
+            setLoadingHintIndex(0);
+
+            // 진행 상태를 시뮬레이션하는 인터벌 설정
+            loadingIntervalRef.current = setInterval(() => {
+                setLoadingProgress(prev => {
+                    // 로딩 진행도를 서서히 증가시키되, 100%에 도달하지 않게 함
+                    if (prev < 90) {
+                        // 진행도가 증가함에 따라 증가 속도를 줄임
+                        const increment = Math.max(1, 10 - Math.floor(prev / 10));
+                        return prev + increment;
+                    }
+                    return prev;
+                });
+
+                // 힌트 메시지 주기적으로 변경
+                setLoadingHintIndex(prev => (prev + 1) % loadingHints.length);
+            }, 2000);
+
+            return () => {
+                // 로딩이 끝나면 인터벌 정리
+                if (loadingIntervalRef.current) {
+                    clearInterval(loadingIntervalRef.current);
+                    loadingIntervalRef.current = null;
+                }
+                // 로딩이 끝날 때 진행도를 100%로 설정
+                setLoadingProgress(100);
+            };
+        }
+    }, [isLoading]);
+
+    // Drag and Drop 핸들러들
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        // 파일 업로드가 이미 된 경우 드래그 오버 상태 비활성화
         if (!canUploadFile()) {
-            console.log('이미 파일이 업로드되어 새로운 파일을 업로드할 수 없습니다.');
+            return;
+        }
+        setIsDragOver(true);
+    }, [canUploadFile]);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    }, []);
+
+    const handleDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        
+        if (!canUploadFile()) {
             return;
         }
 
+        const droppedFile = e.dataTransfer.files[0];
+        if (droppedFile && isValidSpreadsheetFile(droppedFile)) {
+            // processFile을 직접 호출하여 종속성 문제 해결
+            (async () => {
+                await processFile(droppedFile);
+            })();
+        }
+    }, [canUploadFile]);
+
+    const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (selectedFile && isValidSpreadsheetFile(selectedFile)) {
             processFile(selectedFile);

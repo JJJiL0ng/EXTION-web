@@ -1,9 +1,9 @@
 // components/ArtifactRenderer.tsx
 'use client'
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { useUnifiedStore } from '@/stores';
-import { AlertCircle, Loader2, RefreshCw, Code, Layers, Cloud, HardDrive } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw, Code, Layers, Cloud, HardDrive, Database } from 'lucide-react';
 import * as Recharts from 'recharts';
 
 // XLSX 데이터 타입 정의 (다중 시트 지원)
@@ -279,29 +279,17 @@ function ArtifactRenderer() {
     }
   }, [mounted, computedSheetData, xlsxData, activeSheetData]);
 
-  // 현재 채팅이 클라우드 채팅인지 확인
-  const isCloudChat = () => {
-    const spreadsheetId = currentSpreadsheetId;
-    return !!(spreadsheetId || (currentChatId && currentChatId.length > 20 && !currentChatId.includes('_local')));
-  };
+  // 클라우드 채팅인지 확인
+  const isCloudChat = useCallback(() => {
+    return !!(currentSpreadsheetId || currentChatId);
+  }, [currentSpreadsheetId, currentChatId]);
 
-  // 데이터 소스 정보 가져오기
-  const getDataSourceInfo = () => {
-    if (isCloudChat()) {
-      return {
-        type: 'cloud' as const,
-        icon: <Cloud className="w-3 h-3" />,
-        label: '클라우드',
-        color: 'text-blue-600'
-      };
-    }
-    return {
-      type: 'local' as const,
-      icon: <HardDrive className="w-3 h-3" />,
-      label: '로컬',
-      color: 'text-green-600'
-    };
-  };
+  const getDataSourceInfo = useCallback(() => {
+    const isCloud = isCloudChat();
+    return isCloud 
+      ? { type: 'cloud' as const, icon: <Cloud className="w-3 h-3" />, label: '클라우드 데이터', color: 'text-blue-600' }
+      : { type: 'local' as const, icon: <Database className="w-3 h-3" />, label: '로컬 데이터', color: 'text-green-600' };
+  }, [isCloudChat]);
 
   // 렌더링할 컴포넌트 메모이제이션
   const RenderedComponent = useMemo(() => {
@@ -377,7 +365,7 @@ function ArtifactRenderer() {
       console.error('Failed to render artifact:', error);
       return null;
     }
-  }, [mounted, artifactCode, xlsxData, activeSheetData, computedSheetData, renderKey, getCurrentSheetData, currentSpreadsheetId, currentChatId]);
+  }, [mounted, artifactCode, xlsxData, activeSheetData, computedSheetData, getCurrentSheetData, getDataSourceInfo]);
 
   // 새로고침 핸들러
   const handleRefresh = () => {

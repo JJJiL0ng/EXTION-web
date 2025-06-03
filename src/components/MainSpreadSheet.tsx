@@ -697,7 +697,7 @@ const MainSpreadSheet: React.FC = () => {
     });
 
     return expandedData;
-  }, [activeSheetData, getCurrentSheetData, currentSpreadsheetId, xlsxData?.spreadsheetId, xlsxData?.activeSheetIndex]);
+  }, [activeSheetData, getCurrentSheetData, currentSpreadsheetId, xlsxData]);
 
   // 시트 전환 핸들러
   const handleSheetChange = useCallback(async (sheetIndex: number) => {
@@ -741,42 +741,8 @@ const MainSpreadSheet: React.FC = () => {
     }
   }, [switchToSheet, setLoadingState, xlsxData]);
 
-  // 포뮬러 적용
-  useEffect(() => {
-    if (pendingFormula && hotRef.current?.hotInstance) {
-      setInternalUpdate(true);
-
-      // 다중 시트 포뮬러라면 해당 시트의 포뮬러인지 확인
-      const targetSheetIndex = pendingFormula.sheetIndex ?? xlsxData?.activeSheetIndex ?? 0;
-
-      if (targetSheetIndex === xlsxData?.activeSheetIndex) {
-        applyFormulaToCell(pendingFormula.formula, pendingFormula.cellAddress);
-
-        // 포뮬러 적용 후 계산된 결과를 스토어에 반영
-        setTimeout(() => {
-          const hot = hotRef.current?.hotInstance;
-          if (hot && !hot.isDestroyed && xlsxData) {
-            try {
-              const evaluatedData = hot.getData();
-              // 헤더 행 제외하고 데이터만 저장 - setComputedDataForSheet 제거
-              console.log('포뮬러 적용 완료, 데이터 계산됨');
-            } catch (error) {
-              console.warn('포뮬러 적용 완료 처리 중 오류 (무시됨):', error);
-            }
-          }
-          setPendingFormula(null);
-          setInternalUpdate(false);
-        }, 200);
-      } else {
-        // 다른 시트의 포뮬러는 그 시트로 전환 후 적용
-        setPendingFormula(null);
-        setInternalUpdate(false);
-      }
-    }
-  }, [pendingFormula, setPendingFormula, setInternalUpdate, xlsxData]);
-
   // 셀에 함수를 적용하는 함수
-  const applyFormulaToCell = (formula: string, cellAddress: string) => {
+  const applyFormulaToCell = useCallback((formula: string, cellAddress: string) => {
     const hot = hotRef.current?.hotInstance;
     if (!hot) {
       console.error('Handsontable 인스턴스를 찾을 수 없습니다.');
@@ -840,7 +806,41 @@ const MainSpreadSheet: React.FC = () => {
         // alert(`포뮬러 적용 중 오류가 발생했습니다: ${error.message}`);
       }
     }
-  };
+  }, [xlsxData, activeSheetData, updateActiveSheetCell]);
+
+  // 포뮬러 적용
+  useEffect(() => {
+    if (pendingFormula && hotRef.current?.hotInstance) {
+      setInternalUpdate(true);
+
+      // 다중 시트 포뮬러라면 해당 시트의 포뮬러인지 확인
+      const targetSheetIndex = pendingFormula.sheetIndex ?? xlsxData?.activeSheetIndex ?? 0;
+
+      if (targetSheetIndex === xlsxData?.activeSheetIndex) {
+        applyFormulaToCell(pendingFormula.formula, pendingFormula.cellAddress);
+
+        // 포뮬러 적용 후 계산된 결과를 스토어에 반영
+        setTimeout(() => {
+          const hot = hotRef.current?.hotInstance;
+          if (hot && !hot.isDestroyed && xlsxData) {
+            try {
+              const evaluatedData = hot.getData();
+              // 헤더 행 제외하고 데이터만 저장 - setComputedDataForSheet 제거
+              console.log('포뮬러 적용 완료, 데이터 계산됨');
+            } catch (error) {
+              console.warn('포뮬러 적용 완료 처리 중 오류 (무시됨):', error);
+            }
+          }
+          setPendingFormula(null);
+          setInternalUpdate(false);
+        }, 200);
+      } else {
+        // 다른 시트의 포뮬러는 그 시트로 전환 후 적용
+        setPendingFormula(null);
+        setInternalUpdate(false);
+      }
+    }
+  }, [pendingFormula, setPendingFormula, setInternalUpdate, xlsxData, applyFormulaToCell]);
 
   // Named expression을 사용한 포뮬러 적용 시도
   const tryNamedExpressionApproach = (formula: string, cellAddress: string) => {
@@ -1782,19 +1782,7 @@ const MainSpreadSheet: React.FC = () => {
       // 포뮬러가 없는 경우 셀 선택 상태 업데이트
       setSelectedCell({ row, col });
     }
-  }, [pendingFormula, setPendingFormula]);
-
-  // 로딩 중일 때 표시
-  if (loadingStates.fileUpload) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">파일을 처리하는 중...</p>
-        </div>
-      </div>
-    );
-  }
+  }, [pendingFormula, setPendingFormula, applyFormulaToCell]);
 
   // 빈 시트 상태에서 기본 컨텍스트 생성
   useEffect(() => {
@@ -1807,6 +1795,18 @@ const MainSpreadSheet: React.FC = () => {
       console.log('빈 스프레드시트 환경 준비 완료');
     }
   }, [xlsxData, activeSheetData, loadingStates.fileUpload]);
+
+  // 로딩 중일 때 표시
+  if (loadingStates.fileUpload) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">파일을 처리하는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex relative spreadsheet-main-container">
