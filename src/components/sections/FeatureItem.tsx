@@ -24,7 +24,7 @@ export function FeatureItem({ feature, index }: FeatureItemProps) {
       <meta itemProp="keywords" content={feature.keywords.join(', ')} />
       
       {/* 텍스트 영역 - SSG 렌더링 */}
-      <div className="flex-1 space-y-6">
+      <div className="flex-1 space-y-2">
         {/* 아이콘과 제목 */}
         <div className="flex items-center gap-4">
           <span className="text-4xl" role="img" aria-label={feature.title}>
@@ -46,7 +46,7 @@ export function FeatureItem({ feature, index }: FeatureItemProps) {
         </p> */}
         
         {/* 혜택 목록 - SEO 최적화 */}
-        <div className="space-y-2">
+        <div className="space-y-6">
           {feature.benefits.map((benefit, benefitIndex) => (
             <div key={benefitIndex} className="flex items-center gap-2">
               <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">

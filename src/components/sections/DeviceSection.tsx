@@ -74,7 +74,7 @@ export function DeviceSection({ devices = devicesData.devices }: DeviceSectionPr
             </p>
             
             {/* 동기화 기능 강조 */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+            <div className="grid grid-cols-3 gap-6 text-center">
               <div className="space-y-2">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
