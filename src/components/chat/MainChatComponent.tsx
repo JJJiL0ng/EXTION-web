@@ -2,19 +2,28 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
-import { useExtendedUnifiedDataStore, ChatMessage } from '../../stores/useUnifiedDataStore';
+import { useRouter } from 'next/navigation';
+import { useUnifiedStore, ChatMessage } from '@/stores';
 import { processXLSXFile } from '../../utils/fileProcessing';
 import { detectAndDecode, isValidSpreadsheetFile } from '../../utils/chatUtils';
 import { callArtifactAPI, callFormulaAPI, callDataGenerationAPI, callNormalChatAPI, callDataFixAPI } from '../../services/api/dataServices';
 import { Message } from './MessageDisplay';
-import { determineChatMode, ChatMode } from '../../app/actions/chatActions';
+import { ChatMode } from '../../app/actions/chatActions';
 import { findActualDataBounds } from '../../utils/fileProcessing';
 import { saveSpreadsheetToFirebase } from '../../services/api/dataServices';
+import { Send, Upload, FileSpreadsheet, Trash2, RotateCcw, Activity } from 'lucide-react';
 
 // 컴포넌트 가져오기
 import MessageDisplay from './MessageDisplay';
 import FileUploadHandler from './FileUploadHandler';
 import ChatInput from './ChatInput';
+
+// NodeJS 타입 정의
+declare global {
+    namespace NodeJS {
+        interface Timeout {}
+    }
+}
 
 // 로딩 힌트 메시지 배열
 const loadingHints = [
@@ -67,39 +76,39 @@ export default function MainChatComponent() {
         initializeChatId,
         setCurrentChatId,
         // 스프레드시트 관련 액션들 추가
+        currentSpreadsheetId,
         setCurrentSpreadsheetId,
         setSpreadsheetMetadata,
         markAsSaved,
         canUploadFile,
         saveCurrentSessionToStore,
         loadChatSessionsFromStorage,
-        getCurrentSpreadsheetId,
-    } = useExtendedUnifiedDataStore();
+    } = useUnifiedStore();
 
     // Firebase 채팅 ID 상태 추가
     const [firebaseChatId, setFirebaseChatId] = useState<string | null>(null);
 
     // Firebase 채팅 ID 감지 및 설정
     useEffect(() => {
-        // URL 파라미터에서 Firebase 채팅 ID 확인
-        if (typeof window !== 'undefined') {
+        // URL 파라미터에서 Firebase 채팅 ID 확인 (초기 로드시에만)
+        if (typeof window !== 'undefined' && !firebaseChatId) {
             const urlParams = new URLSearchParams(window.location.search);
             const chatIdFromUrl = urlParams.get('chatId');
             
-            if (chatIdFromUrl && chatIdFromUrl !== firebaseChatId) {
-                console.log('URL에서 Firebase 채팅 ID 감지:', chatIdFromUrl);
+            if (chatIdFromUrl) {
+                console.log('MainChatComponent URL에서 Firebase 채팅 ID 감지:', chatIdFromUrl);
                 setFirebaseChatId(chatIdFromUrl);
-                setCurrentChatId(chatIdFromUrl);
+                // setCurrentChatId는 AI 페이지에서 이미 처리하므로 여기서는 제거
             }
         }
 
         // 현재 스프레드시트 ID가 있으면 Firebase 채팅으로 간주
-        const spreadsheetId = getCurrentSpreadsheetId();
-        if (spreadsheetId && !firebaseChatId) {
+        const spreadsheetId = currentSpreadsheetId;
+        if (spreadsheetId && !firebaseChatId && currentChatId) {
             console.log('스프레드시트 ID로 Firebase 채팅 감지:', spreadsheetId);
             setFirebaseChatId(currentChatId);
         }
-    }, [getCurrentSpreadsheetId, currentChatId, firebaseChatId, setCurrentChatId]);
+    }, [currentSpreadsheetId, currentChatId, firebaseChatId]);
 
     // 현재 채팅이 Firebase 채팅인지 확인하는 함수
     const isFirebaseChat = useCallback(() => {
@@ -110,7 +119,7 @@ export default function MainChatComponent() {
         }
 
         // 2. 현재 스프레드시트 ID가 있으면 Firebase 채팅
-        const spreadsheetId = getCurrentSpreadsheetId();
+        const spreadsheetId = currentSpreadsheetId;
         if (spreadsheetId) {
             console.log('Firebase 채팅 확인 (spreadsheetId):', spreadsheetId);
             return true;
@@ -125,7 +134,7 @@ export default function MainChatComponent() {
 
         console.log('로컬 채팅으로 확인됨');
         return false;
-    }, [firebaseChatId, getCurrentSpreadsheetId, getCurrentChatId]);
+    }, [firebaseChatId, currentSpreadsheetId, getCurrentChatId]);
 
     // 현재 Firebase 채팅 ID 가져오기
     const getCurrentFirebaseChatId = useCallback(() => {
@@ -182,27 +191,6 @@ export default function MainChatComponent() {
 
         return () => clearInterval(interval);
     }, [currentChatId, saveCurrentSessionToStore]);
-
-    // === URL 파라미터 변경 감지 Effect (옵션) ===
-    useEffect(() => {
-        const handleUrlChange = () => {
-            if (typeof window !== 'undefined') {
-                const urlParams = new URLSearchParams(window.location.search);
-                const chatIdFromUrl = urlParams.get('chatId');
-                
-                if (chatIdFromUrl && chatIdFromUrl !== currentChatId) {
-                    setCurrentChatId(chatIdFromUrl);
-                }
-            }
-        };
-
-        // popstate 이벤트 리스너 (뒤로 가기/앞으로 가기)
-        window.addEventListener('popstate', handleUrlChange);
-        
-        return () => {
-            window.removeEventListener('popstate', handleUrlChange);
-        };
-    }, [currentChatId, setCurrentChatId]);
 
     // 로딩 상태 관리를 위한 효과
     useEffect(() => {
@@ -903,7 +891,7 @@ export default function MainChatComponent() {
         console.log('Firebase 채팅 여부:', isFirebaseChatActive);
         console.log('사용할 Firebase 채팅 ID:', firebaseChatIdToUse);
         console.log('현재 채팅 ID:', getCurrentChatId());
-        console.log('스프레드시트 ID:', getCurrentSpreadsheetId());
+        console.log('스프레드시트 ID:', currentSpreadsheetId);
 
         try {
             const currentInput = inputValue;
@@ -916,8 +904,22 @@ export default function MainChatComponent() {
                 return;
             }
 
-            // 시트가 있는 경우 서버 액션을 호출하여 채팅 모드 결정
-            const { mode } = await determineChatMode(inputValue);
+            // 시트가 있는 경우 간단한 키워드 기반으로 채팅 모드 결정
+            let mode: ChatMode = 'normal'; // 기본값 설정
+            
+            // 임시로 간단한 키워드 기반 모드 결정 (서버 액션 문제 회피)
+            const input = currentInput.toLowerCase();
+            if (input.includes('함수') || input.includes('수식') || input.includes('평균') || input.includes('합계') || input.includes('최대') || input.includes('최소')) {
+                mode = 'formula';
+            } else if (input.includes('시각화') || input.includes('차트') || input.includes('그래프') || input.includes('분석')) {
+                mode = 'artifact';
+            } else if (input.includes('정렬') || input.includes('필터') || input.includes('수정') || input.includes('변경') || input.includes('삭제')) {
+                mode = 'datafix';
+            } else {
+                mode = 'normal';
+            }
+            
+            console.log(`채팅 모드 결정: "${currentInput}" -> ${mode}`);
             
             // 채팅 모드 설정
             setCurrentMode(mode);
@@ -968,10 +970,9 @@ export default function MainChatComponent() {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
                     content: `수식이 생성되었습니다!\n\n` +
-                        `**수식**: \`${response.formula}\`\n` +
-                        `**적용 위치**: ${response.cellAddress || 'E1'}\n` +
-                        `**설명**: ${response.explanation?.korean || '함수가 생성되었습니다.'}\n\n` +
-                        `이 수식을 적용하시겠습니까?`,
+                        `수식: \`${response.formula}\`\n` +
+                        `설명: ${response.explanation?.korean || '함수가 생성되었습니다.'}\n\n` +
+                        `이 수식을 ${response.cellAddress} 에 적용하였습니다`,
                     timestamp: new Date()
                 };
 
@@ -1097,9 +1098,9 @@ export default function MainChatComponent() {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
                     content: `데이터가 생성되었습니다!\n\n` +
-                        `**시트명**: ${response.editedData.sheetName}\n` +
-                        `**생성된 행 수**: ${response.editedData.data.length}개\n` +
-                        `**열 수**: ${response.editedData.headers.length}개\n\n` +
+                        `시트명: ${response.editedData.sheetName}\n` +
+                        `생성된 행 수: ${response.editedData.data.length}개\n` +
+                        `열 수: ${response.editedData.headers.length}개\n\n` +
                         `새로운 데이터가 스프레드시트에 추가되었습니다.`,
                     timestamp: new Date()
                 };
@@ -1153,10 +1154,10 @@ export default function MainChatComponent() {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
                     content: `데이터가 수정되었습니다!\n\n` +
-                        `**시트명**: ${response.editedData.sheetName}\n` +
-                        `**수정된 행 수**: ${response.editedData.data.length}개\n` +
-                        `**열 수**: ${response.editedData.headers.length}개\n\n` +
-                        `**변경 사항**:\n${changesText}`,
+                        `시트명: ${response.editedData.sheetName}\n` +
+                        `수정된 행 수: ${response.editedData.data.length}개\n` +
+                        `열 수: ${response.editedData.headers.length}개\n\n` +
+                        `변경 사항:\n${changesText}`,
                     timestamp: new Date()
                 };
 
@@ -1260,7 +1261,6 @@ export default function MainChatComponent() {
                     <div className="w-full border-b border-gray-200 bg-gray-50 shadow-sm flex-shrink-0">
                         <div className="w-full max-w-3xl mx-auto">
                             <FileUploadHandler
-                                isDragOver={isDragOver}
                                 xlsxData={xlsxData}
                                 handleDragOver={handleDragOver}
                                 handleDragLeave={handleDragLeave}

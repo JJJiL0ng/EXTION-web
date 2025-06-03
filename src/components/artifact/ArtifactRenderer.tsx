@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
+import { useUnifiedStore } from '@/stores';
 import { AlertCircle, Loader2, RefreshCw, Code, Layers, Cloud, HardDrive } from 'lucide-react';
 import * as Recharts from 'recharts';
 
@@ -247,7 +247,7 @@ const ArtifactEmpty: React.FC = () => (
 function ArtifactRenderer() {
   const [mounted, setMounted] = useState(false);
   
-  // 확장된 스토어 사용
+  // 통합된 스토어 사용
   const {
     xlsxData,
     activeSheetData,
@@ -258,9 +258,9 @@ function ArtifactRenderer() {
     errors,
     getCurrentSheetData,
     getDataForGPTAnalysis,
-    getCurrentSpreadsheetId,
+    currentSpreadsheetId,
     currentChatId
-  } = useExtendedUnifiedDataStore();
+  } = useUnifiedStore();
 
   const [renderKey, setRenderKey] = useState(0);
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -281,7 +281,7 @@ function ArtifactRenderer() {
 
   // 현재 채팅이 클라우드 채팅인지 확인
   const isCloudChat = () => {
-    const spreadsheetId = getCurrentSpreadsheetId();
+    const spreadsheetId = currentSpreadsheetId;
     return !!(spreadsheetId || (currentChatId && currentChatId.length > 20 && !currentChatId.includes('_local')));
   };
 
@@ -377,7 +377,7 @@ function ArtifactRenderer() {
       console.error('Failed to render artifact:', error);
       return null;
     }
-  }, [mounted, artifactCode, xlsxData, activeSheetData, computedSheetData, renderKey, getCurrentSheetData, getCurrentSpreadsheetId, currentChatId]);
+  }, [mounted, artifactCode, xlsxData, activeSheetData, computedSheetData, renderKey, getCurrentSheetData, currentSpreadsheetId, currentChatId]);
 
   // 새로고침 핸들러
   const handleRefresh = () => {

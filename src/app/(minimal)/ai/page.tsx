@@ -2,14 +2,32 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import MainSpreadSheet from "@/components/MainSpreadSheet";
 import ChattingMainContainer from "@/components/ChattingMainContainer";
+import { useUnifiedStore } from '@/stores';
+import { getSpreadsheetData } from '@/services/firebase/spreadsheetService';
+import { getUserChats, getChatMessages, convertFirebaseMessageToChatMessage } from '@/services/firebase/chatService';
+import { auth } from '@/services/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 export default function Home() {
   const [leftWidth, setLeftWidth] = useState(65); // 초기 65%
   const [isDragging, setIsDragging] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isMouseDownRef = useRef(false);
+  const searchParams = useSearchParams();
+  
+  const {
+    setXLSXData,
+    setCurrentChatId,
+    setCurrentSpreadsheetId,
+    clearAllMessages,
+    currentChatId,
+    addMessageToSheet
+  } = useUnifiedStore();
 
   // 로컬 스토리지에서 저장된 비율 불러오기
   useEffect(() => {
@@ -26,6 +44,122 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem('layout-split', leftWidth.toString());
   }, [leftWidth]);
+
+  // Firebase 인증 상태 감지
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // URL 파라미터에서 chatId를 읽어와서 채팅 로드
+  useEffect(() => {
+    const loadChatFromUrl = async () => {
+      if (!user) return;
+      
+      const chatId = searchParams.get('chatId');
+      if (!chatId || chatId === currentChatId) return;
+
+      console.log('=== URL에서 채팅 로드 시작 ===', chatId);
+      setIsLoading(true);
+
+      try {
+        // 1. 사용자의 채팅 목록에서 해당 채팅 찾기
+        const userChats = await getUserChats(user.uid);
+        const targetChat = userChats.find(chat => chat.id === chatId);
+        
+        if (!targetChat) {
+          console.warn('해당 채팅을 찾을 수 없습니다:', chatId);
+          return;
+        }
+
+        console.log('채팅 발견:', targetChat);
+
+        // 2. 채팅 ID 설정
+        setCurrentChatId(chatId);
+
+        // 먼저 메시지를 지우지 말고 로드 시작
+        console.log('기존 메시지 유지하며 새 채팅 로드 시작');
+
+        // 3. 스프레드시트 데이터 로드
+        if (targetChat.spreadsheetId) {
+          console.log('스프레드시트 로드 시작:', targetChat.spreadsheetId);
+          
+          try {
+            const spreadsheetData = await getSpreadsheetData(targetChat.spreadsheetId);
+            
+            if (spreadsheetData) {
+              console.log('✅ 스프레드시트 데이터 로드 성공:', {
+                fileName: spreadsheetData.fileName,
+                sheetsCount: spreadsheetData.sheets?.length,
+                spreadsheetId: targetChat.spreadsheetId
+              });
+              
+              // 스프레드시트 데이터 설정
+              setXLSXData(spreadsheetData);
+              setCurrentSpreadsheetId(targetChat.spreadsheetId);
+              
+              console.log('✅ 스프레드시트 메타데이터 설정 완료');
+            } else {
+              console.warn('⚠️ 스프레드시트 데이터를 찾을 수 없습니다:', targetChat.spreadsheetId);
+              // 스프레드시트 로드 실패 시에만 메시지 지우기
+            }
+          } catch (spreadsheetError) {
+            console.error('❌ 스프레드시트 로드 실패:', spreadsheetError);
+            // 스프레드시트 로드 실패 시에만 메시지 지우기
+          }
+        } else {
+          console.log('스프레드시트 ID가 없음 - 채팅만 로드');
+          // 스프레드시트가 없는 경우는 메시지를 지우지 않음
+        }
+
+        // 4. 채팅 메시지 로드
+        console.log('채팅 메시지 로드 시작:', chatId);
+        try {
+          // 먼저 기존 메시지를 지워서 중복 방지
+          clearAllMessages();
+          
+          const firebaseMessages = await getChatMessages(chatId);
+          console.log('✅ Firebase 메시지 로드 성공:', firebaseMessages.length, '개');
+
+          // Firebase 메시지를 ChatMessage로 변환하고 시트별로 분류
+          if (firebaseMessages.length > 0) {
+            firebaseMessages.forEach((firebaseMessage) => {
+              const chatMessage = convertFirebaseMessageToChatMessage(firebaseMessage);
+              const sheetIndex = firebaseMessage.sheetContext?.sheetIndex ?? 0;
+              
+              console.log('메시지 추가:', {
+                messageId: chatMessage.id,
+                sheetIndex,
+                type: chatMessage.type,
+                contentPreview: chatMessage.content.substring(0, 50) + '...'
+              });
+              
+              addMessageToSheet(sheetIndex, chatMessage);
+            });
+            
+            console.log('✅ 모든 메시지가 스토어에 저장되었습니다');
+          } else {
+            console.log('📭 채팅에 메시지가 없습니다');
+          }
+        } catch (messagesError) {
+          console.error('❌ 채팅 메시지 로드 실패:', messagesError);
+          // 메시지 로드 실패 시에만 메시지 지우기
+          clearAllMessages();
+        }
+
+        console.log('=== URL에서 채팅 로드 완료 ===');
+      } catch (error) {
+        console.error('❌ URL 채팅 로드 실패:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadChatFromUrl();
+  }, [user, searchParams, currentChatId, setCurrentChatId, setXLSXData, setCurrentSpreadsheetId, clearAllMessages, addMessageToSheet]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -70,6 +204,16 @@ export default function Home() {
       ref={containerRef}
       className="flex w-full h-screen relative"
     >
+      {/* 로딩 오버레이 */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="text-sm text-gray-600">채팅을 불러오는 중...</p>
+          </div>
+        </div>
+      )}
+
       {/* 왼쪽 영역: MainSpreadSheet - 독립적인 스크롤 영역 */}
       <div 
         className="h-full transition-all duration-100 ease-linear"

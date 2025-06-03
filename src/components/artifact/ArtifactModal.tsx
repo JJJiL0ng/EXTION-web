@@ -1,28 +1,34 @@
 // components/ArtifactModal.tsx
 'use client'
 
-import React, { useEffect } from 'react';
-import { X, Layers, FileText, Maximize2, Download, Share2, Cloud, HardDrive } from 'lucide-react';
-import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
+import React, { useEffect, useState } from 'react';
+import { X, Layers, FileText, Maximize2, Download, Share2, Cloud, HardDrive, Copy, Minimize2 } from 'lucide-react';
+import { useUnifiedStore } from '@/stores';
 import ArtifactRenderContainer from './ArtifactRenderContainer';
 import { ResponsiveContainer } from 'recharts';
 import { BarChart } from 'recharts';
+import { Button } from '@/components/ui/Button';
 
 interface ArtifactModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
-  // 확장된 스토어 사용
-  const { 
-    artifactCode, 
+const ArtifactModal: React.FC<ArtifactModalProps> = ({ isOpen, onClose }) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  const {
+    artifactCode,
+    isArtifactModalOpen,
+    closeArtifactModal,
+    // 확장된 스토어 기능들
     xlsxData, 
     activeSheetData,
     extendedSheetContext,
-    getCurrentSpreadsheetId,
+    currentSpreadsheetId,
     currentChatId
-  } = useExtendedUnifiedDataStore();
+  } = useUnifiedStore();
 
   // ESC 키로 모달 닫기
   useEffect(() => {
@@ -54,7 +60,7 @@ export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
 
   // 현재 채팅이 클라우드 채팅인지 확인
   const isCloudChat = () => {
-    const spreadsheetId = getCurrentSpreadsheetId();
+    const spreadsheetId = currentSpreadsheetId;
     return !!(spreadsheetId || (currentChatId && currentChatId.length > 20 && !currentChatId.includes('_local')));
   };
 
@@ -230,3 +236,5 @@ export default function ArtifactModal({ isOpen, onClose }: ArtifactModalProps) {
     </div>
   );
 }
+
+export default ArtifactModal;

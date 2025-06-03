@@ -11,9 +11,9 @@ import {
     getChat
 } from '@/services/firebase/chatService';
 import MessageDisplay from './MessageDisplay';
-import { ChatMessage } from '@/stores/useUnifiedDataStore';
+import { ChatMessage } from '@/stores';
 import { Loader2, MessageCircleIcon, AlertCircleIcon, SendIcon } from 'lucide-react';
-import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
+import { useUnifiedStore } from '@/stores';
 import { callNormalChatAPI } from '@/services/api/dataServices';
 
 interface FirebaseChatDisplayProps {
@@ -35,7 +35,7 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
     const [chatData, setChatData] = useState<FirebaseChat | null>(null);
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const { xlsxData, setArtifactCode, openArtifactModal } = useExtendedUnifiedDataStore();
+    const { xlsxData, setArtifactCode, openArtifactModal } = useUnifiedStore();
 
     // 메시지 끝으로 스크롤
     const scrollToBottom = () => {

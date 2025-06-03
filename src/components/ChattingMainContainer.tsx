@@ -1,19 +1,28 @@
 // components/MainContainer.tsx (메인 컨테이너 - 모든 컴포넌트 통합)
 'use client'
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import MainSpreadSheet from './MainSpreadSheet';
+import { Loader2, Activity } from 'lucide-react';
+import { useUnifiedStore } from '@/stores';
 import ArtifactModal from './artifact/ArtifactModal';
-import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import MainChatComponent from './chat/MainChatComponent';
 
-export default function MainContainer() {
-  // 확장된 스토어 사용
+export default function ChattingMainContainer() {
+  const [currentComponent, setCurrentComponent] = useState('mainSpreadSheet');
+  
   const { 
+    xlsxData,
+    loadingStates,
+    errors,
+    hasUploadedFile,
+    canUploadFile,
+    // 확장된 스토어 기능들
     isArtifactModalOpen, 
     closeArtifactModal,
-    xlsxData,
     activeSheetData
-  } = useExtendedUnifiedDataStore();
+  } = useUnifiedStore();
 
   return (
     <div className="h-full w-full bg-gray-50 relative overflow-hidden flex flex-col">

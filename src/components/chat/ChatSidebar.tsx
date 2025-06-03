@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
     MessageCircleIcon, 
     PlusIcon, 
@@ -19,7 +20,7 @@ import {
     ClockIcon,
     Layers
 } from 'lucide-react';
-import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
+import { useUnifiedStore } from '@/stores';
 import { 
     getUserChats, 
     deleteChat, 
@@ -66,15 +67,28 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
     const {
-        resetStore,
+        chatSessions,
+        currentChatId,
+        chatHistory,
+        createNewChatSession,
+        switchToChatSession,
+        deleteChatSession,
+        loadChatSessionsFromStorage,
+        saveChatSessionToStorage,
+        xlsxData,
+        resetAllStores,
+        getCurrentChatSession,
+        updateChatSession,
         setXLSXData,
         setCurrentChatId,
-        addMessageToSheet,
+        saveCurrentSessionToStore,
         setCurrentSpreadsheetId,
-        setSpreadsheetMetadata,
-        markAsSaved,
-        updateExtendedSheetContext
-    } = useExtendedUnifiedDataStore();
+        addMessageToSheet,
+        clearAllMessages
+    } = useUnifiedStore();
+
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
     // Firebase 인증 상태 감지
     useEffect(() => {
@@ -108,6 +122,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             loadFirebaseChats();
         }
     }, [user, loading]);
+
+    // URL 파라미터와 선택된 채팅 동기화
+    useEffect(() => {
+        const chatId = searchParams.get('chatId');
+        setSelectedChatId(chatId);
+    }, [searchParams]);
 
     // 클라우드 채팅 목록 생성 및 필터링
     const getCloudChatList = (): CloudChatItem[] => {
@@ -154,134 +174,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
 
     // Firebase 채팅 선택 및 복원
     const handleSelectFirebaseChat = async (chat: FirebaseChat) => {
-        if (selectedChatId === chat.id) return;
-
-        setSelectedChatId(chat.id);
-        console.log('=== Firebase 채팅 선택 시작 ===');
-        console.log('채팅 정보:', {
-            id: chat.id,
-            title: chat.title,
-            hasSpreadsheet: chat.spreadsheetData?.hasSpreadsheet,
-            spreadsheetId: chat.spreadsheetId,
-            fileName: chat.spreadsheetData?.fileName,
-            totalSheets: chat.spreadsheetData?.totalSheets,
-            messageCount: chat.messageCount
-        });
-
         try {
-            // 1. 현재 상태 초기화
-            console.log('1. 상태 초기화 중...');
-            resetStore();
-
-            // 2. 채팅 ID 설정 및 URL 업데이트
-            console.log('2. 채팅 ID 설정:', chat.id);
-            setCurrentChatId(chat.id);
+            console.log('=== Firebase 채팅 선택 ===', chat.id);
             
-            // URL 파라미터에 Firebase 채팅 ID 설정
-            if (typeof window !== 'undefined') {
-                const newUrl = new URL(window.location.href);
-                newUrl.searchParams.set('chatId', chat.id);
-                window.history.replaceState({}, '', newUrl.toString());
-                console.log('✅ URL 파라미터 설정됨:', chat.id);
-            }
-
-            // 3. 스프레드시트 데이터 복원 (spreadsheetId가 있는 경우)
-            if (chat.spreadsheetId) {
-                console.log('3. 스프레드시트 데이터 복원 시작...');
-                console.log('사용할 spreadsheetId:', chat.spreadsheetId);
-                
-                try {
-                    // spreadsheetId로 직접 스프레드시트 조회
-                    console.log('스프레드시트 직접 조회 시작...');
-                    const { getSpreadsheetData } = await import('@/services/firebase/spreadsheetService');
-                    const spreadsheetData = await getSpreadsheetData(chat.spreadsheetId);
-                    
-                    if (spreadsheetData) {
-                        console.log('✅ 스프레드시트 데이터 복원 성공:', {
-                            fileName: spreadsheetData.fileName,
-                            sheetsCount: spreadsheetData.sheets.length,
-                            spreadsheetId: spreadsheetData.spreadsheetId,
-                            activeSheetIndex: spreadsheetData.activeSheetIndex,
-                            sheets: spreadsheetData.sheets.map((s: any) => ({
-                                name: s.sheetName,
-                                headers: s.headers?.length || 0,
-                                dataRows: s.data?.length || 0,
-                                rawDataRows: s.rawData?.length || 0
-                            }))
-                        });
-                        
-                        // 스프레드시트 데이터 설정
-                        setXLSXData(spreadsheetData);
-                        
-                        // 스프레드시트 메타데이터 설정
-                        setCurrentSpreadsheetId(chat.spreadsheetId);
-                        setSpreadsheetMetadata({
-                            fileName: spreadsheetData.fileName,
-                            originalFileName: spreadsheetData.fileName,
-                            fileSize: 0, // Firebase에서 가져올 수 없는 정보
-                            fileType: 'xlsx', // 기본값
-                            isSaved: true,
-                            lastSaved: chat.updatedAt
-                        });
-                        markAsSaved(chat.spreadsheetId);
-                        
-                        // extendedSheetContext 업데이트
-                        setTimeout(() => {
-                            console.log('🔄 ExtendedSheetContext 업데이트 시도');
-                            updateExtendedSheetContext();
-                        }, 100);
-                        
-                        console.log('✅ 스프레드시트 메타데이터 설정 완료');
-                    } else {
-                        console.warn('⚠️ 스프레드시트 데이터를 찾을 수 없습니다. spreadsheetId:', chat.spreadsheetId);
-                    }
-                } catch (spreadsheetError) {
-                    console.error('❌ 스프레드시트 데이터 복원 오류:', spreadsheetError);
-                    // 스프레드시트 로딩 실패해도 채팅은 계속 진행
-                }
-            } else {
-                console.log('3. spreadsheetId 없음 - 스프레드시트 건너뛰기');
-            }
-
-            // 4. 채팅 메시지 복원
-            console.log('4. 채팅 메시지 복원 시작...');
-            try {
-                const messages = await getChatMessages(chat.id, 100);
-                console.log('✅ Firebase 메시지 로드 성공:', {
-                    messageCount: messages.length,
-                    messageTypes: messages.reduce((acc, msg) => {
-                        acc[msg.type] = (acc[msg.type] || 0) + 1;
-                        return acc;
-                    }, {} as Record<string, number>)
-                });
-
-                // 메시지를 시트별로 분류하여 추가
-                messages.forEach((firebaseMessage, index) => {
-                    const chatMessage = convertFirebaseMessageToChatMessage(firebaseMessage);
-                    const sheetIndex = firebaseMessage.sheetContext?.sheetIndex || 0;
-                    
-                    if (index < 5) { // 처음 5개 메시지만 로깅
-                        console.log(`메시지 ${index + 1}:`, {
-                            role: firebaseMessage.role,
-                            type: firebaseMessage.type,
-                            sheetIndex,
-                            contentPreview: firebaseMessage.content.substring(0, 50) + '...'
-                        });
-                    }
-                    
-                    addMessageToSheet(sheetIndex, chatMessage);
-                });
-
-                console.log('✅ 채팅 메시지 복원 완료');
-            } catch (messageError) {
-                console.error('❌ 채팅 메시지 복원 오류:', messageError);
-            }
-
-            console.log('=== Firebase 채팅 복원 완료 ===');
+            // URL 업데이트만 수행 - 실제 데이터 로드는 페이지에서 처리
+            router.push(`/ai?chatId=${chat.id}`);
+            console.log('URL 업데이트:', `/ai?chatId=${chat.id}`);
+            
         } catch (error) {
-            console.error('❌ Firebase 채팅 복원 전체 오류:', error);
-            // 오류 발생 시 사용자에게 알림
-            alert(`채팅 데이터를 불러오는 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+            console.error('❌ Firebase 채팅 선택 실패:', error);
         }
     };
 
@@ -299,11 +200,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             // 채팅 목록 새로고침
             await loadFirebaseChats();
             
-            // 새 채팅 선택
-            const newChat = firebaseChats.find(chat => chat.id === newChatId);
-            if (newChat) {
-                await handleSelectFirebaseChat(newChat);
-            }
+            // 새 채팅으로 URL 이동
+            router.push(`/ai?chatId=${newChatId}`);
+            
         } catch (error) {
             console.error('새 Firebase 채팅 생성 오류:', error);
         } finally {
@@ -334,14 +233,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             // 삭제된 채팅이 현재 선택된 채팅이면 초기화
             if (selectedChatId === chatId) {
                 setSelectedChatId(null);
-                resetStore();
+                resetAllStores();
                 
-                // URL 파라미터에서 Firebase 채팅 ID 제거
-                if (typeof window !== 'undefined') {
-                    const newUrl = new URL(window.location.href);
-                    newUrl.searchParams.delete('chatId');
-                    window.history.replaceState({}, '', newUrl.toString());
-                }
+                // URL을 기본 AI 페이지로 리다이렉트
+                router.push('/ai');
             }
             
             // 채팅 목록 새로고침

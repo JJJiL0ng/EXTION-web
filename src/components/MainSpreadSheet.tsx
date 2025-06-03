@@ -8,9 +8,9 @@ import { HyperFormula } from 'hyperformula';
 import { DetailedSettings } from 'handsontable/plugins/formulas';
 import Handsontable from 'handsontable';
 import { ChevronDown, Layers, ChevronLeft, ChevronRight, Plus, Save, Download, FileDown, MessageCircleIcon } from 'lucide-react';
-import { useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
-import { cellAddressToCoords } from '@/stores/useUnifiedDataStore';
-import { XLSXData } from '@/stores/useUnifiedDataStore';
+import { useUnifiedStore } from '@/stores';
+import { cellAddressToCoords } from '@/stores/utils/xlsxUtils';
+import { XLSXData, SheetData } from '@/stores/types';
 import { exportActiveSheetToCSV, exportSelectedSheetsToXLSX } from '@/utils/exportUtils';
 import { getSpreadsheetData } from '@/services/firebase/spreadsheetService';
 import ChatSidebar from './chat/ChatSidebar';
@@ -550,30 +550,38 @@ const MainSpreadSheet: React.FC = () => {
   const [selectedSheets, setSelectedSheets] = useState<number[]>([]);
   const [exportFileName, setExportFileName] = useState('');
 
-  // Zustand 스토어 사용 - 확장된 스토어로 변경
+  // Zustand store 사용
   const {
     xlsxData,
     activeSheetData,
     extendedSheetContext,
     loadingStates,
-    isInternalUpdate,
-    pendingFormula,
+    errors,
     computedSheetData,
-    updateActiveSheetCell,
-    setComputedDataForSheet,
-    setInternalUpdate,
-    setPendingFormula,
-    getCurrentSheetData,
-    switchToSheet,
-    coordsToSheetReference,
-    setLoadingState,
+    hasUploadedFile,
+    canUploadFile,
     setXLSXData,
-    getCurrentSpreadsheetId,
-    setCurrentSpreadsheetId,
-    updateExtendedSheetContext
-  } = useExtendedUnifiedDataStore();
+    switchToSheet,
+    updateActiveSheetCell,
+    addMessageToSheet,
+    getCurrentSheetData,
+    currentSpreadsheetId,
+    isInternalUpdate,
+    setInternalUpdate,
+    setLoadingState,
+    pendingFormula,
+    setPendingFormula,
+    applyPendingFormulaToSheet,
+    setError
+  } = useUnifiedStore();
+
+  // 추가 상태 관리
+  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
 
   const [isAutosave] = useState<boolean>(false);
+
+  // 현재 활성 시트 인덱스 계산 (시트가 없을 때는 0)
+  const activeSheetIndex = xlsxData?.activeSheetIndex ?? 0;
 
   // HyperFormula 설정
   const [formulasConfig] = useState<DetailedSettings>({
@@ -584,21 +592,40 @@ const MainSpreadSheet: React.FC = () => {
 
   // 표시할 데이터 준비 - 원본 레이아웃 유지 (Firebase 복원 데이터 지원)
   const displayData = useMemo(() => {
-    if (!activeSheetData) {
-      console.log('DisplayData: activeSheetData 없음, defaultData 사용');
-      return defaultData;
+    // 시트가 없는 경우 기본 빈 스프레드시트 생성
+    if (!activeSheetData || !activeSheetData.headers || !activeSheetData.data) {
+      console.log('=== 빈 시트 생성 ===');
+      console.log('activeSheetData 상태:', {
+        hasActiveSheetData: !!activeSheetData,
+        hasHeaders: !!activeSheetData?.headers,
+        hasData: !!activeSheetData?.data,
+        xlsxDataExists: !!xlsxData
+      });
+
+      // 엑셀처럼 기본 크기의 빈 스프레드시트 생성 (100행 x 26열)
+      const defaultRows = 100;
+      const defaultCols = 26; // A-Z
+
+      const emptyData = Array(defaultRows).fill(null).map(() => Array(defaultCols).fill(''));
+      
+      console.log('빈 스프레드시트 생성:', {
+        rows: emptyData.length,
+        cols: emptyData[0]?.length || 0
+      });
+
+      return emptyData;
     }
 
     // Firebase에서 복원된 데이터인지 확인
-    const currentSpreadsheetId = getCurrentSpreadsheetId();
-    const isFirebaseData = currentSpreadsheetId || 
+    const currentSpreadsheetIdValue = currentSpreadsheetId;
+    const isFirebaseData = currentSpreadsheetIdValue || 
                           xlsxData?.spreadsheetId ||
                           (activeSheetData.metadata?.preserveOriginalStructure === true);
 
     console.log('=== DisplayData 생성 ===');
     console.log('데이터 상태:', {
       isFirebaseData,
-      currentSpreadsheetId,
+      currentSpreadsheetId: currentSpreadsheetIdValue,
       xlsxSpreadsheetId: xlsxData?.spreadsheetId,
       preserveOriginalStructure: activeSheetData.metadata?.preserveOriginalStructure,
       hasRawData: !!activeSheetData.rawData,
@@ -670,7 +697,7 @@ const MainSpreadSheet: React.FC = () => {
     });
 
     return expandedData;
-  }, [activeSheetData, getCurrentSheetData, getCurrentSpreadsheetId, xlsxData?.spreadsheetId]);
+  }, [activeSheetData, getCurrentSheetData, currentSpreadsheetId, xlsxData?.spreadsheetId, xlsxData?.activeSheetIndex]);
 
   // 시트 전환 핸들러
   const handleSheetChange = useCallback(async (sheetIndex: number) => {
@@ -697,8 +724,15 @@ const MainSpreadSheet: React.FC = () => {
 
       // Handsontable 인스턴스 재렌더링
       setTimeout(() => {
-        hotRef.current?.hotInstance?.render();
-        console.log('Handsontable 재렌더링 완료');
+        const currentHot = hotRef.current?.hotInstance;
+        if (currentHot && !currentHot.isDestroyed) {
+          try {
+            currentHot.render();
+            console.log('Handsontable 재렌더링 완료');
+          } catch (error) {
+            console.warn('Handsontable 재렌더링 중 오류 (무시됨):', error);
+          }
+        }
       }, 100);
     } catch (error) {
       console.error('❌ 시트 전환 오류:', error);
@@ -721,10 +755,14 @@ const MainSpreadSheet: React.FC = () => {
         // 포뮬러 적용 후 계산된 결과를 스토어에 반영
         setTimeout(() => {
           const hot = hotRef.current?.hotInstance;
-          if (hot && xlsxData) {
-            const evaluatedData = hot.getData();
-            // 헤더 행 제외하고 데이터만 저장
-            setComputedDataForSheet(xlsxData.activeSheetIndex, evaluatedData.slice(1));
+          if (hot && !hot.isDestroyed && xlsxData) {
+            try {
+              const evaluatedData = hot.getData();
+              // 헤더 행 제외하고 데이터만 저장 - setComputedDataForSheet 제거
+              console.log('포뮬러 적용 완료, 데이터 계산됨');
+            } catch (error) {
+              console.warn('포뮬러 적용 완료 처리 중 오류 (무시됨):', error);
+            }
           }
           setPendingFormula(null);
           setInternalUpdate(false);
@@ -735,68 +773,101 @@ const MainSpreadSheet: React.FC = () => {
         setInternalUpdate(false);
       }
     }
-  }, [pendingFormula, setPendingFormula, setInternalUpdate, setComputedDataForSheet, xlsxData]);
+  }, [pendingFormula, setPendingFormula, setInternalUpdate, xlsxData]);
 
   // 셀에 함수를 적용하는 함수
   const applyFormulaToCell = (formula: string, cellAddress: string) => {
     const hot = hotRef.current?.hotInstance;
     if (!hot) {
-      console.error('Handsontable instance not available');
+      console.error('Handsontable 인스턴스를 찾을 수 없습니다.');
       return;
     }
 
     try {
+      console.log('포뮬러 적용 시작:', { formula, cellAddress });
+      
       // 셀 주소를 좌표로 변환
       const { row, col } = cellAddressToCoords(cellAddress);
-
-      console.log(`Applying formula "${formula}" to cell ${cellAddress} (${row}, ${col})`);
-
-      // 수식이 = 로 시작하는지 확인하고, 그렇지 않으면 자동으로 추가
+      console.log('변환된 좌표:', { row, col, from: cellAddress });
+      
+      // 포뮬러가 =로 시작하지 않으면 추가
       const formulaValue = formula.startsWith('=') ? formula : `=${formula}`;
-
-      // 직접 셀에 함수 설정 (헤더 행 때문에 row + 1)
-      hot.setDataAtCell(row + 1, col, formulaValue);
-
-      // 강제 재렌더링 및 계산
+      
+      // Handsontable에 포뮬러 적용
+      hot.setDataAtCell(row, col, formulaValue);
+      
+      console.log('포뮬러 적용 완료:', {
+        cellAddress,
+        coordinates: `${row},${col}`,
+        formula: formulaValue
+      });
+      
+      // 포뮬러 적용 후 재계산 및 스토어 업데이트
       setTimeout(() => {
-        hot.render();
-        console.log('Formula applied successfully');
-      }, 100);
+        const currentHot = hotRef.current?.hotInstance;
+        if (currentHot && !currentHot.isDestroyed) {
+          try {
+            currentHot.render();
+            
+            // 스토어에 변경사항 반영
+            if (xlsxData && activeSheetData) {
+              const sheetIndex = xlsxData.activeSheetIndex;
+              
+              // 헤더 행을 고려한 데이터 행 계산
+              const dataRow = activeSheetData.metadata?.headerRow !== undefined && activeSheetData.metadata.headerRow >= 0 
+                ? Math.max(0, row - activeSheetData.metadata.headerRow - 1)
+                : row;
+              
+              if (dataRow >= 0) {
+                updateActiveSheetCell(dataRow, col, formulaValue);
+              }
+            }
+            
+            console.log('포뮬러 적용 및 스토어 업데이트 완료');
+          } catch (error) {
+            console.warn('포뮬러 적용 후 렌더링 중 오류 (무시됨):', error);
+          }
+        }
+      }, 200);
+      
     } catch (error) {
-      console.error('Error applying formula:', error);
-
-      // 오류 발생 시 대안으로 네임드 익스프레션 사용 시도
-      tryNamedExpressionApproach(formula, cellAddress);
+      console.error('포뮬러 적용 중 오류:', error);
+      
+      // 에러 발생 시 사용자에게 알림
+      if (error instanceof Error) {
+        console.error('에러 상세:', error.message);
+        // 선택적으로 사용자에게 알림 표시
+        // alert(`포뮬러 적용 중 오류가 발생했습니다: ${error.message}`);
+      }
     }
   };
 
-  // 네임드 익스프레션을 사용한 대안 접근법
+  // Named expression을 사용한 포뮬러 적용 시도
   const tryNamedExpressionApproach = (formula: string, cellAddress: string) => {
     const hot = hotRef.current?.hotInstance;
-    const formulasPlugin = hot?.getPlugin('formulas');
-
-    if (!formulasPlugin?.engine) {
-      console.error('Formulas engine not available');
-      return;
-    }
+    if (!hot) return;
 
     try {
-      // 고유한 네임드 익스프레션 이름 생성
-      const namedExpName = `FORMULA_${Date.now()}`;
-
-      // 네임드 익스프레션 추가
-      formulasPlugin.engine.addNamedExpression(namedExpName, formula);
-
-      // 셀에 네임드 익스프레션 참조 설정 (헤더 행 때문에 row + 1)
+      console.log('Using named expression approach for formula:', formula);
+      
+      // 임시 해결책: 수식을 직접 셀에 적용
       const { row, col } = cellAddressToCoords(cellAddress);
-      hot?.setDataAtCell(row + 1, col, `=${namedExpName}`);
-
-      // 재렌더링
-      hot?.render();
-
-      console.log(`Applied formula using named expression: ${namedExpName}`);
+      const formulaValue = formula.startsWith('=') ? formula : `=${formula}`;
+      hot.setDataAtCell(row + 1, col, formulaValue);
+      
+      // 포뮬러 상태 초기화
+      if (setPendingFormula) {
+        setPendingFormula(null);
+      }
+      
+      console.log('Named expression approach applied successfully');
     } catch (error) {
-      console.error('Named expression approach also failed:', error);
+      console.error('Named expression approach failed:', error);
+      
+      // 최종 대안: 기본 셀 값 설정
+      if (setPendingFormula) {
+        setPendingFormula(null);
+      }
     }
   };
 
@@ -851,7 +922,11 @@ const MainSpreadSheet: React.FC = () => {
 
       // 새 시트로 전환
       setTimeout(() => {
-        switchToSheet(newSheetIndex);
+        try {
+          switchToSheet(newSheetIndex);
+        } catch (error) {
+          console.warn('시트 전환 중 오류 (무시됨):', error);
+        }
       }, 100);
     } else {
       // xlsxData가 없는 경우 새로 생성
@@ -1163,7 +1238,7 @@ const MainSpreadSheet: React.FC = () => {
     }
   }, [isInternalUpdate, activeSheetData, updateActiveSheetCell, isAutosave]);
   const handleCellSelection = useCallback((row: number, col: number, row2?: number, col2?: number) => {
-    if (!hotRef.current?.hotInstance || !xlsxData || !activeSheetData) return;
+    if (!hotRef.current?.hotInstance) return;
 
     const hot = hotRef.current.hotInstance;
     
@@ -1171,72 +1246,78 @@ const MainSpreadSheet: React.FC = () => {
     let formula = '';
     let isHeader = false;
     let actualDataRow = row;
+    let sheetName = 'Sheet1'; // 기본 시트명
 
     try {
         // 셀 값 가져오기
         value = hot.getDataAtCell(row, col) || '';
         
-        // rawData를 사용하는 경우
-        if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
-            // 원본 데이터에서 직접 값 가져오기
-            value = activeSheetData.rawData[row]?.[col] || '';
+        // 시트가 있는 경우
+        if (xlsxData && activeSheetData) {
+            sheetName = activeSheetData.sheetName;
             
-            // 메타데이터가 있고 헤더 행이 지정된 경우
-            if (activeSheetData.metadata && activeSheetData.metadata.headerRow !== undefined && activeSheetData.metadata.headerRow >= 0) {
-                const headerRow = activeSheetData.metadata.headerRow;
+            // rawData를 사용하는 경우
+            if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
+                // 원본 데이터에서 직접 값 가져오기
+                value = activeSheetData.rawData[row]?.[col] || '';
                 
-                // 헤더 행인지 확인
-                if (row === headerRow) {
-                    isHeader = true;
-                    actualDataRow = -1; // 헤더는 데이터 행이 아님
-                } else if (row > headerRow) {
-                    // 헤더 이후의 데이터 행
-                    actualDataRow = row - headerRow - 1;
+                // 메타데이터가 있고 헤더 행이 지정된 경우
+                if (activeSheetData.metadata && activeSheetData.metadata.headerRow !== undefined && activeSheetData.metadata.headerRow >= 0) {
+                    const headerRow = activeSheetData.metadata.headerRow;
+                    
+                    // 헤더 행인지 확인
+                    if (row === headerRow) {
+                        isHeader = true;
+                        actualDataRow = -1; // 헤더는 데이터 행이 아님
+                    } else if (row > headerRow) {
+                        // 헤더 이후의 데이터 행
+                        actualDataRow = row - headerRow - 1;
+                    } else {
+                        // 헤더 이전의 행 (빈 행이거나 다른 데이터)
+                        actualDataRow = row;
+                    }
                 } else {
-                    // 헤더 이전의 행 (빈 행이거나 다른 데이터)
-                    actualDataRow = row;
+                    // 헤더가 없거나 자동 생성된 경우
+                    // 모든 행을 데이터로 간주하되, 실제 데이터 범위 확인
+                    const dataRange = activeSheetData.metadata?.dataRange;
+                    if (dataRange && row >= dataRange.startRow) {
+                        actualDataRow = row - dataRange.startRow;
+                    } else {
+                        actualDataRow = row;
+                    }
                 }
             } else {
-                // 헤더가 없거나 자동 생성된 경우
-                // 모든 행을 데이터로 간주하되, 실제 데이터 범위 확인
-                const dataRange = activeSheetData.metadata?.dataRange;
-                if (dataRange && row >= dataRange.startRow) {
-                    actualDataRow = row - dataRange.startRow;
+                // rawData가 없는 경우 기존 로직 (헤더가 첫 번째 행)
+                if (row === 0) {
+                    isHeader = true;
+                    actualDataRow = -1;
                 } else {
-                    actualDataRow = row;
+                    actualDataRow = row - 1;
+                }
+            }
+            
+            // 수식 확인
+            const formulasPlugin = hot.getPlugin('formulas');
+            if (formulasPlugin && formulasPlugin.engine) {
+                const cellCoord = { row, col, sheet: 0 };
+                const cellFormula = formulasPlugin.engine.getCellFormula(cellCoord);
+                
+                if (cellFormula && cellFormula.startsWith('=')) {
+                    formula = cellFormula;
                 }
             }
         } else {
-            // rawData가 없는 경우 기존 로직 (헤더가 첫 번째 행)
-            if (row === 0) {
-                isHeader = true;
-                actualDataRow = -1;
-            } else {
-                actualDataRow = row - 1;
-            }
-        }
-        
-        // 수식 확인
-        const formulasPlugin = hot.getPlugin('formulas');
-        if (formulasPlugin && formulasPlugin.engine) {
-            const cellCoord = { row, col, sheet: 0 };
-            const cellFormula = formulasPlugin.engine.getCellFormula(cellCoord);
-            
-            if (cellFormula && cellFormula.startsWith('=')) {
-                formula = cellFormula;
-            }
+            // 시트가 없는 경우 기본 처리
+            actualDataRow = row;
+            isHeader = false;
         }
 
         // 셀 주소 계산 - 엑셀 형식 (A1, B2 등)
         const colLetter = String.fromCharCode(65 + col);
         const cellAddress = `${colLetter}${row + 1}`;
 
-        // 시트 참조 포함된 주소
-        const fullReference = coordsToSheetReference(
-            xlsxData.activeSheetIndex,
-            row,
-            col
-        );
+        // 시트 참조 포함된 주소 - 간단한 셀 주소 생성
+        const fullReference = `${sheetName}!${cellAddress}`;
 
         const cellInfo: SelectedCellInfo = {
             row: actualDataRow,
@@ -1244,7 +1325,7 @@ const MainSpreadSheet: React.FC = () => {
             cellAddress,
             value,
             formula: formula || undefined,
-            sheetIndex: xlsxData.activeSheetIndex,
+            sheetIndex: xlsxData?.activeSheetIndex ?? 0,
             timestamp: new Date()
         };
 
@@ -1260,12 +1341,14 @@ const MainSpreadSheet: React.FC = () => {
             actualDataRow,
             originalRow: row,
             originalCol: col,
-            sheetName: activeSheetData.sheetName
+            sheetName,
+            hasXlsxData: !!xlsxData,
+            hasActiveSheetData: !!activeSheetData
         });
     } catch (error) {
         console.error('Error getting cell info:', error);
     }
-}, [xlsxData, activeSheetData, coordsToSheetReference]);
+}, [xlsxData, activeSheetData]);
 
 
   // XLSX 내보내기 실행 핸들러
@@ -1427,13 +1510,14 @@ const MainSpreadSheet: React.FC = () => {
     if (process.env.NODE_ENV === 'development') {
       console.log('🔍 MainSpreadSheet 컴포넌트 상태:', {
         hasXlsxData: !!xlsxData,
-        fileName: xlsxData?.fileName,
+        fileName: xlsxData?.fileName || 'No file',
         sheetsCount: xlsxData?.sheets?.length || 0,
-        activeSheetIndex: xlsxData?.activeSheetIndex || 0,
-        activeSheetName: xlsxData?.sheets?.[xlsxData?.activeSheetIndex || 0]?.sheetName,
-        currentSpreadsheetId: getCurrentSpreadsheetId(),
+        activeSheetIndex: xlsxData?.activeSheetIndex ?? 0,
+        activeSheetName: xlsxData?.sheets?.[xlsxData?.activeSheetIndex || 0]?.sheetName || 'Sheet1 (default)',
+        currentSpreadsheetId: currentSpreadsheetId || 'None',
         hasActiveSheetData: !!activeSheetData,
-        displayDataLength: displayData.length
+        displayDataLength: displayData.length,
+        isEmptySpreadsheet: !xlsxData && !activeSheetData
       });
 
       if (xlsxData?.sheets) {
@@ -1447,24 +1531,57 @@ const MainSpreadSheet: React.FC = () => {
             isActive: index === (xlsxData.activeSheetIndex || 0)
           });
         });
+      } else {
+        console.log('📋 기본 빈 시트 표시 중:', {
+          sheetName: 'Sheet1',
+          rows: displayData.length,
+          cols: displayData[0]?.length || 0,
+          isEmpty: true
+        });
       }
     }
-  }, [xlsxData, activeSheetData, displayData, getCurrentSpreadsheetId]);
+  }, [xlsxData, activeSheetData, displayData, currentSpreadsheetId]);
 
-  // 로딩 중일 때 표시
-  if (loadingStates.fileUpload) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">파일을 처리하는 중...</p>
-        </div>
-      </div>
-    );
-  }
+  // 시트 변경 시 Handsontable 데이터 강제 업데이트
+  useEffect(() => {
+    const hot = hotRef.current?.hotInstance;
+    if (hot && displayData && displayData.length > 0) {
+      console.log('🔄 시트 데이터 강제 업데이트:', {
+        activeSheetIndex: xlsxData?.activeSheetIndex,
+        activeSheetName: activeSheetData?.sheetName,
+        dataRows: displayData.length,
+        dataCols: displayData[0]?.length || 0
+      });
+
+      // Handsontable에 새 데이터 로드
+      hot.loadData(displayData);
+      
+      // 추가 렌더링으로 확실하게 업데이트 - cleanup 추가
+      const timeoutId = setTimeout(() => {
+        // 타임아웃 실행 시점에 인스턴스가 여전히 유효한지 체크
+        const currentHot = hotRef.current?.hotInstance;
+        if (currentHot && !currentHot.isDestroyed) {
+          try {
+            currentHot.render();
+            console.log('✅ Handsontable 데이터 업데이트 완료');
+          } catch (error) {
+            console.warn('Handsontable 렌더링 중 오류 (무시됨):', error);
+          }
+        }
+      }, 50);
+
+      // cleanup 함수
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+
+    // 데이터가 없는 경우에도 cleanup 함수 반환
+    return () => {};
+  }, [xlsxData?.activeSheetIndex, activeSheetData?.sheetName, displayData]);
 
   // 내보내기 버튼 UI를 상단 컨트롤 패널에 추가
-  const renderExportControls = () => {
+  const renderExportControls = useCallback(() => {
     return (
       <div className="relative ml-auto" style={{ zIndex: 9999 }}>
         <button
@@ -1643,7 +1760,53 @@ const MainSpreadSheet: React.FC = () => {
         )}
       </div>
     );
-  };
+  }, [isExportDropdownOpen, isXlsxSelectorOpen, xlsxData, activeSheetData, exportFileName, selectedSheets, handleExportToCSV, handleExportToXLSX, executeXlsxExport, toggleAllSheets, toggleSheetSelection]);
+
+  // 셀 클릭 시 포뮬러 적용 버튼 표시
+  const handleCellClick = useCallback((row: number, col: number) => {
+    if (pendingFormula) {
+      console.log('Pending formula detected, showing application prompt');
+      
+      // 포뮬러가 있는 경우 확인 창 표시
+      const colLetter = String.fromCharCode(65 + col);
+      const cellAddress = `${colLetter}${row + 1}`;
+      const shouldApply = window.confirm(
+        `포뮬러 "${pendingFormula.formula}"를 셀 ${cellAddress}에 적용하시겠습니까?`
+      );
+
+      if (shouldApply) {
+        applyFormulaToCell(pendingFormula.formula, cellAddress);
+        setPendingFormula(null);
+      }
+    } else {
+      // 포뮬러가 없는 경우 셀 선택 상태 업데이트
+      setSelectedCell({ row, col });
+    }
+  }, [pendingFormula, setPendingFormula]);
+
+  // 로딩 중일 때 표시
+  if (loadingStates.fileUpload) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">파일을 처리하는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 빈 시트 상태에서 기본 컨텍스트 생성
+  useEffect(() => {
+    // 시트가 없고 채팅이 가능한 상태에서 기본 시트 컨텍스트 설정
+    if (!xlsxData && !activeSheetData && !loadingStates.fileUpload) {
+      console.log('🔧 빈 시트 상태에서 기본 컨텍스트 초기화');
+      
+      // 현재 사용자가 채팅을 시작할 수 있도록 빈 시트 환경 준비
+      // 실제 XLSX 데이터가 없어도 채팅은 가능하도록 설정
+      console.log('빈 스프레드시트 환경 준비 완료');
+    }
+  }, [xlsxData, activeSheetData, loadingStates.fileUpload]);
 
   return (
     <div className="h-full flex relative spreadsheet-main-container">
@@ -1834,8 +1997,12 @@ const MainSpreadSheet: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  /* 시트가 없는 경우 안내 메시지 표시 */
-                  <div className="empty-sheet-container">
+                  /* 시트가 없는 경우 기본 시트 탭 표시 */
+                  <div className="sheet-tab active">
+                    <span>Sheet1</span>
+                    <span className="sheet-info">
+                      26×100
+                    </span>
                   </div>
                 )}
               </div>
@@ -1972,7 +2139,14 @@ const MainSpreadSheet: React.FC = () => {
 
               // 100ms 후에 재렌더링 (포뮬러가 계산될 시간을 줌)
               setTimeout(() => {
-                hotRef.current?.hotInstance?.render();
+                const currentHot = hotRef.current?.hotInstance;
+                if (currentHot && !currentHot.isDestroyed) {
+                  try {
+                    currentHot.render();
+                  } catch (error) {
+                    console.warn('afterSetDataAtCell 렌더링 중 오류 (무시됨):', error);
+                  }
+                }
               }, 100);
             }}
             // 행/열 추가 시 자동으로 데이터 확장

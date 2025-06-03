@@ -1,22 +1,24 @@
 'use client'
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
+import { Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { XLSXData, useUnifiedStore } from '@/stores';
 import { XIcon, FileIcon, FileSpreadsheetIcon, CheckCircleIcon, CloudIcon, MessageCircleIcon } from 'lucide-react';
-import { XLSXData, useExtendedUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 
 interface FileUploadHandlerProps {
-    isDragOver: boolean;
-    xlsxData: XLSXData | null;
+    isDragOver?: boolean;
+    xlsxData: XLSXData;
     handleDragOver: (e: React.DragEvent) => void;
     handleDragLeave: (e: React.DragEvent) => void;
     handleDrop: (e: React.DragEvent) => void;
     handleFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     removeFile: () => void;
-    switchToSheet: (index: number) => void;
+    switchToSheet: (sheetIndex: number) => void;
 }
 
 const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
-    isDragOver,
+    isDragOver = false,
     xlsxData,
     handleDragOver,
     handleDragLeave,
@@ -25,12 +27,20 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
     removeFile,
     switchToSheet
 }) => {
-    // 스토어에서 스프레드시트 관련 상태 가져오기
+    const [isDragging, setIsDragging] = useState(false);
+    const [previewFiles, setPreviewFiles] = useState<File[]>([]);
+    
     const {
+        loadingStates,
+        errors,
+        canUploadFile,
+        setLoadingState,
+        setError,
+        // 스프레드시트 관련 상태
         currentSpreadsheetId,
         spreadsheetMetadata,
         currentChatId
-    } = useExtendedUnifiedDataStore();
+    } = useUnifiedStore();
 
     return (
         <div className="py-3 px-4">
@@ -43,7 +53,7 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
                                 현재 파일:
                             </span>
                             <span className="text-sm font-semibold text-blue-600">
-                                {xlsxData?.fileName}
+                                {xlsxData.fileName}
                             </span>
                             {/* 저장 상태 표시 */}
                             {spreadsheetMetadata?.isSaved && (
@@ -54,7 +64,7 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
                         </div>
                         
                         <div className="flex flex-col text-xs text-gray-500 mt-1">
-                            {xlsxData?.sheets && (
+                            {xlsxData.sheets && (
                                 <span>
                                     시트 {xlsxData.sheets.length}개 / 활성 시트: {xlsxData.sheets[xlsxData.activeSheetIndex]?.sheetName}
                                 </span>
@@ -71,7 +81,7 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
                 </div>
             </div>
             
-            {xlsxData && xlsxData.sheets && xlsxData.sheets.length > 1 && (
+            {xlsxData.sheets && xlsxData.sheets.length > 1 && (
                 <div className="mt-3">
                     <div className="text-xs font-medium text-gray-600 mb-1.5">시트 선택:</div>
                     <div className="flex flex-wrap gap-2">
