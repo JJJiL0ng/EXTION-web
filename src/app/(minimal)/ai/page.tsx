@@ -1,7 +1,7 @@
 //src/app/ai/page.tsx
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import MainSpreadSheet from "@/components/MainSpreadSheet";
 import ChattingMainContainer from "@/components/ChattingMainContainer";
@@ -11,7 +11,8 @@ import { getUserChats, getChatMessages, convertFirebaseMessageToChatMessage } fr
 import { auth } from '@/services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
-export default function Home() {
+// useSearchParams를 사용하는 컴포넌트를 별도로 분리
+function AIPageContent() {
   const [leftWidth, setLeftWidth] = useState(65); // 초기 65%
   const [isDragging, setIsDragging] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -259,5 +260,26 @@ export default function Home() {
         <ChattingMainContainer />
       </div>
     </div>
+  );
+}
+
+// 로딩 폴백 컴포넌트
+function AIPageLoading() {
+  return (
+    <div className="flex w-full h-screen items-center justify-center">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p className="text-sm text-gray-600">페이지를 불러오는 중...</p>
+      </div>
+    </div>
+  );
+}
+
+// 메인 컴포넌트 - Suspense로 감싸기
+export default function Home() {
+  return (
+    <Suspense fallback={<AIPageLoading />}>
+      <AIPageContent />
+    </Suspense>
   );
 }
