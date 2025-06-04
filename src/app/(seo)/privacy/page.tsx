@@ -13,7 +13,7 @@ export default function PrivacyPage() {
         <div className="max-w-4xl mx-auto px-4">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">개인정보 처리방침</h1>
           <p className="text-gray-600">
-            <strong>Extion</strong>(이하 "회사")은 고객님의 개인정보를 중요시하며, 「개인정보 보호법」을 준수하고 있습니다.
+            <strong>Extion</strong>(이하 &ldquo;회사&rdquo;)은 고객님의 개인정보를 중요시하며, 「개인정보 보호법」을 준수하고 있습니다.
           </p>
         </div>
       </div>

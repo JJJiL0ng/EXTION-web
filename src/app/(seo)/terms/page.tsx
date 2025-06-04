@@ -36,11 +36,11 @@ export default function TermsPage() {
             <p className="text-gray-700 mb-4">본 약관에서 사용하는 용어의 정의는 다음과 같습니다.</p>
             
             <div className="space-y-3 text-gray-700">
-              <div><strong>1. "서비스"</strong>: 회사가 제공하는 Extion AI 엑셀 자동화 도구 및 관련 서비스</div>
-              <div><strong>2. "이용자"</strong>: 본 약관에 따라 회사가 제공하는 서비스를 받는 회원 및 비회원</div>
-              <div><strong>3. "회원"</strong>: 회사에 개인정보를 제공하여 회원등록을 한 자</div>
-              <div><strong>4. "자연어 명령"</strong>: 이용자가 일상 언어로 입력하는 엑셀 작업 지시사항</div>
-              <div><strong>5. "AI 처리"</strong>: 자연어를 분석하여 엑셀 작업을 자동으로 수행하는 기능</div>
+              <div><strong>1. &ldquo;서비스&rdquo;</strong>: 회사가 제공하는 Extion AI 엑셀 자동화 도구 및 관련 서비스</div>
+              <div><strong>2. &ldquo;이용자&rdquo;</strong>: 본 약관에 따라 회사가 제공하는 서비스를 받는 회원 및 비회원</div>
+              <div><strong>3. &ldquo;회원&rdquo;</strong>: 회사에 개인정보를 제공하여 회원등록을 한 자</div>
+              <div><strong>4. &ldquo;자연어 명령&rdquo;</strong>: 이용자가 일상 언어로 입력하는 엑셀 작업 지시사항</div>
+              <div><strong>5. &ldquo;AI 처리&rdquo;</strong>: 자연어를 분석하여 엑셀 작업을 자동으로 수행하는 기능</div>
             </div>
           </section>
 
