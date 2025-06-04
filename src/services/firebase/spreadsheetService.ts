@@ -18,7 +18,7 @@ import {
     QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { auth } from '../firebase';
-import { XLSXData, SheetData } from '@/stores/useUnifiedDataStore';
+import { XLSXData, SheetData } from '@/stores/store-types';
 
 const db = getFirestore();
 

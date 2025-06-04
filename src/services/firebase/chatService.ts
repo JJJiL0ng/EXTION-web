@@ -19,7 +19,7 @@ import {
     QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { auth } from '../firebase';
-import { ChatMessage } from '@/stores/useUnifiedDataStore';
+import { ChatMessage } from '@/stores/store-types';
 
 const db = getFirestore();
 
