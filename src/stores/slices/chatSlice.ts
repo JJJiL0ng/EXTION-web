@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { ChatMessage, ChatSession } from '../types';
+import { ChatMessage, ChatSession } from '../store-types';
 
 // 채팅 슬라이스 상태
 export interface ChatSlice {

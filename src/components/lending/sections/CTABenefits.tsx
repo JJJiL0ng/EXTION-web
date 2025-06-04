@@ -1,4 +1,4 @@
-import { ctaData } from '@/data/cta'
+import { ctaData } from '@/components/lending/data/cta'
 
 // 혜택 아이콘 매핑
 const getBenefitIcon = (id: number) => {

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { generateMetadata } from '@/libs/seo'
+import { generateMetadata } from '@/lending-libs/seo'
 import { Analytics } from '@vercel/analytics/react'
 import AuthProvider from '@/components/AuthProvider'
 import './globals.css'

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, VideoHTMLAttributes } from 'react'
-import { cn } from '@/libs/utils'
+import { cn } from '@/lending-libs/lending-utils'
 
 interface VideoPlayerProps extends VideoHTMLAttributes<HTMLVideoElement> {
   src: string

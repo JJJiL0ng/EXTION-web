@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { LoadingStates, ErrorStates, ArtifactCode, MultiSheetFormulaApplication, ChatMessage } from '../types';
+import { LoadingStates, ErrorStates, ArtifactCode, MultiSheetFormulaApplication, ChatMessage } from '../store-types';
 
 // UI 슬라이스 상태
 export interface UISlice {

@@ -1,4 +1,4 @@
-import type { Device } from '@/data/devices'
+import type { Device } from '@/components/lending/data/devices'
 import Image from 'next/image'
 
 interface DeviceItemProps {

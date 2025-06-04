@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { XLSXData, SheetData, ExtendedSheetContext, HeaderInfo, DataRange } from '../types';
+import { XLSXData, SheetData, ExtendedSheetContext, HeaderInfo, DataRange } from '../store-types';
 
 // XLSX 파일을 파싱하는 헬퍼 함수
 export const parseXLSXFile = async (file: File): Promise<XLSXData> => {

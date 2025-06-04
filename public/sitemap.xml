@@ -32,7 +32,7 @@
 
     <!-- 개인정보 처리방침 (베타 신청 시 필요) -->
     <url>
-        <loc>https://extion.app/privacy</loc>
+        <loc>https://extion.co/privacy</loc>
         <lastmod>2025-01-01</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.5</priority>
@@ -40,7 +40,7 @@
 
     <!-- 이용약관 -->
     <url>
-        <loc>https://extion.app/terms</loc>
+        <loc>https://extion.co/terms</loc>
         <lastmod>2025-01-01</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.4</priority>

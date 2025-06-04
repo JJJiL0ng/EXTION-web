@@ -1,4 +1,4 @@
-import { devicesData } from '@/data/devices'
+import { devicesData } from '@/components/lending/data/devices'
 
 // SSG로 렌더링되는 디바이스 섹션 헤더
 export function DeviceHeader() {

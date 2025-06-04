@@ -3,7 +3,7 @@
 import { VideoPlayer } from '@/components/ui/VideoPlayer'
 import { HeroVideoStatic } from './HeroVideoStatic'
 import { useState, useEffect } from 'react'
-import { heroData } from '@/data/hero'
+import { heroData } from '@/components/lending/data/hero'
 
 // 클라이언트에서만 로드되는 영상 컴포넌트 - 하이드레이션 최적화
 export function HeroVideo() {

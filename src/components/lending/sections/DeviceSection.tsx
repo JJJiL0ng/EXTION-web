@@ -1,6 +1,6 @@
 import { DeviceHeader } from './DeviceHeader'
 import { DeviceItem } from './DeviceItem'
-import { devicesData, type Device } from '@/data/devices'
+import { devicesData, type Device } from '@/components/lending/data/devices'
 
 interface DeviceSectionProps {
   devices?: Device[]

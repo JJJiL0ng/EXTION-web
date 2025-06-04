@@ -1,1 +1,0 @@
-        <output className="console text-sm text-gray-600" id="output">{output}</output>

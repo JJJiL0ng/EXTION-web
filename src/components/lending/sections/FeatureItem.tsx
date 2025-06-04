@@ -1,5 +1,5 @@
 import { VideoPlayer } from '@/components/ui/VideoPlayer'
-import type { Feature } from '@/data/features'
+import type { Feature } from '@/components/lending/data/features'
 
 interface FeatureItemProps {
   feature: Feature

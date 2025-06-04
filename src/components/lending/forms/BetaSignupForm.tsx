@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { validatePhoneNumber, formatPhoneNumber } from '@/libs/utils'
+import { validatePhoneNumber, formatPhoneNumber } from '@/lending-libs/lending-utils'
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { initializeApp, getApps } from 'firebase/app'
 

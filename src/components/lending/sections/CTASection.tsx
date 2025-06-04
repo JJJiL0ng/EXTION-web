@@ -2,8 +2,8 @@
 
 import { CTAHeader } from './CTAHeader'
 import { CTABenefits } from './CTABenefits'
-import { BetaSignupForm } from '@/components/forms/BetaSignupForm'
-import { ctaData } from '@/data/cta'
+import { BetaSignupForm } from '@/components/lending/forms/BetaSignupForm'
+import { ctaData } from '@/components/lending/data/cta'
 
 export function CTASection() {
   return (

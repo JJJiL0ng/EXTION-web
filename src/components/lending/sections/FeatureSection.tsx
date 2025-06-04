@@ -1,6 +1,6 @@
 import { FeatureHeader } from './FeatureHeader'
 import { FeatureItem } from './FeatureItem'
-import { featuresData, type Feature } from '@/data/features'
+import { featuresData, type Feature } from '@/components/lending/data/features'
 
 interface FeatureSectionProps {
   features?: Feature[]

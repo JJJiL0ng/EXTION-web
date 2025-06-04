@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { formatMessageDate } from '../../utils/chatUtils';
 import { ChatMode } from '../../app/actions/chatActions';
-import { ChatMessage } from '../../stores/useUnifiedDataStore';
+import { ChatMessage } from '../../stores/store-types';
 import { Loader2, ChevronDown, ChevronUp, BarChart3, Table, FileText, Sparkles } from 'lucide-react';
 
 // Message 인터페이스는 기존과의 호환성을 위해 유지

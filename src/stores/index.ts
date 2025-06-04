@@ -3,8 +3,8 @@ import { devtools } from 'zustand/middleware';
 import { createSpreadsheetSlice, SpreadsheetSlice } from './slices/spreadsheetSlice';
 import { createChatSlice, ChatSlice } from './slices/chatSlice';
 import { createUISlice, UISlice } from './slices/uiSlice';
-import { parseXLSXFile, coordsToSheetReference, cellAddressToCoords } from './utils/xlsxUtils';
-import { SheetData } from './types';
+import { parseXLSXFile, coordsToSheetReference, cellAddressToCoords } from './sotre-utils/xlsxUtils';
+import { SheetData } from './store-types';
 
 // 전체 스토어 타입 (resetAllStores 함수 포함)
 type UnifiedStore = SpreadsheetSlice & ChatSlice & UISlice & {
@@ -75,5 +75,5 @@ export const resetAllStores = () => {
 export { parseXLSXFile, coordsToSheetReference, cellAddressToCoords };
 
 // 타입들 export
-export * from './types';
+export * from './store-types';
 export type { SpreadsheetSlice, ChatSlice, UISlice, UnifiedStore }; 

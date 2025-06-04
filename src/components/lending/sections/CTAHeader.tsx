@@ -1,4 +1,4 @@
-import { ctaData } from '@/data/cta'
+import { ctaData } from '@/components/lending/data/cta'
 
 // SSG로 렌더링되는 CTA 섹션 헤더
 export function CTAHeader() {

@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/Button'
-import { scrollToElement } from '@/libs/utils'
+import { scrollToElement } from '@/lending-libs/lending-utils'
 
 // 클라이언트에서만 실행되는 인터랙티브 버튼들
 export function HeroButtons() {

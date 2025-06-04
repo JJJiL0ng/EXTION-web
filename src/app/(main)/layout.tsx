@@ -1,5 +1,5 @@
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
+import Header from '@/components/lending/lending-layout/Header'
+import Footer from '@/components/lending/lending-layout/Footer'
 
 export default function MainLayout({
   children,
