@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // 공개 경로 (로그인 없이 접근 가능)
-const publicPaths = ['/login', '/']; // 루트 경로(/)를 공개 경로에 추가
+const publicPaths = [
+  '/login', 
+  '/',
+  '/naver6311f1e113c866990f51184e6e9dc27b.html',
+  '/terms',
+  '/privacy'
+]; // 루트 경로(/)를 공개 경로에 추가
 
 // 개발 환경에서 사용되던 코드 (주석 처리)
 /*
