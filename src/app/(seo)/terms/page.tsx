@@ -26,7 +26,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">제1조 (목적)</h2>
             <p className="text-gray-700">
-              본 약관은 Extion(이하 "회사")이 제공하는 AI 엑셀 자동화 도구 서비스(이하 "서비스")의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
+              본 약관은 Extion(이하 &ldquo;회사&rdquo;)이 제공하는 AI 엑셀 자동화 도구 서비스(이하 &ldquo;서비스&rdquo;)의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
             </p>
           </section>
 
@@ -64,7 +64,7 @@ export default function TermsPage() {
                 <h3 className="text-xl font-semibold text-gray-800 mb-3">4.1 제공 서비스</h3>
                 <p className="text-gray-700 mb-3">회사는 다음과 같은 서비스를 제공합니다:</p>
                 <ul className="list-decimal pl-6 space-y-2 text-gray-700">
-                  <li><strong>자연어 엑셀 자동화</strong>: "정렬해줘", "차트 만들어줘" 등의 명령어로 엑셀 작업 자동 실행</li>
+                  <li><strong>자연어 엑셀 자동화</strong>: &ldquo;정렬해줘&rdquo;, &ldquo;차트 만들어줘&rdquo; 등의 명령어로 엑셀 작업 자동 실행</li>
                   <li><strong>표 자동 정리</strong>: 데이터 정리, 중복 제거, 표 스타일 적용</li>
                   <li><strong>시각화 기능</strong>: 데이터 분석 후 적절한 그래프 자동 생성</li>
                   <li><strong>멀티플랫폼 지원</strong>: 웹, Windows, macOS, Google Sheets, Microsoft 365 지원</li>
