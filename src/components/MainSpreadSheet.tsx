@@ -593,18 +593,12 @@ const MainSpreadSheet: React.FC = () => {
     sheetName: extendedSheetContext?.sheetName || 'Sheet1',
   });
 
-  // 표시할 데이터 준비 - 원본 레이아웃 유지 (Firebase 복원 데이터 지원)
-  const displayData = useMemo(() => {
+  // 초기 표시할 데이터 준비 - 한번만 생성하고 이후 업데이트는 Handsontable을 통해서만
+  const [initialDisplayData, setInitialDisplayData] = useState<any[][]>(() => {
     // 시트가 없는 경우 기본 빈 스프레드시트 생성
     if (!activeSheetData || !activeSheetData.headers || !activeSheetData.data) {
       console.log('=== 빈 시트 생성 ===');
-      console.log('activeSheetData 상태:', {
-        hasActiveSheetData: !!activeSheetData,
-        hasHeaders: !!activeSheetData?.headers,
-        hasData: !!activeSheetData?.data,
-        xlsxDataExists: !!xlsxData
-      });
-
+      
       // 엑셀처럼 기본 크기의 빈 스프레드시트 생성 (100행 x 26열)
       const defaultRows = 100;
       const defaultCols = 26; // A-Z
@@ -619,25 +613,6 @@ const MainSpreadSheet: React.FC = () => {
       return emptyData;
     }
 
-    // Firebase에서 복원된 데이터인지 확인
-    const currentSpreadsheetIdValue = currentSpreadsheetId;
-    const isFirebaseData = currentSpreadsheetIdValue || 
-                          xlsxData?.spreadsheetId ||
-                          (activeSheetData.metadata?.preserveOriginalStructure === true);
-
-    console.log('=== DisplayData 생성 ===');
-    console.log('데이터 상태:', {
-      isFirebaseData,
-      currentSpreadsheetId: currentSpreadsheetIdValue,
-      xlsxSpreadsheetId: xlsxData?.spreadsheetId,
-      preserveOriginalStructure: activeSheetData.metadata?.preserveOriginalStructure,
-      hasRawData: !!activeSheetData.rawData,
-      rawDataLength: activeSheetData.rawData?.length || 0,
-      headersLength: activeSheetData.headers?.length || 0,
-      dataLength: activeSheetData.data?.length || 0,
-      sheetName: activeSheetData.sheetName
-    });
-
     let baseData: any[][] = [];
 
     // rawData가 있으면 원본 레이아웃 그대로 사용 (Firebase 복원 데이터)
@@ -648,24 +623,15 @@ const MainSpreadSheet: React.FC = () => {
           lastRowPreview: activeSheetData.rawData[activeSheetData.rawData.length - 1]?.slice(0, 3)
         });
         baseData = [...activeSheetData.rawData];
-    } else if (isFirebaseData && activeSheetData.headers && activeSheetData.data) {
-        // Firebase 복원 데이터의 경우 헤더와 데이터를 결합
-        console.log('✅ Firebase 데이터 헤더+데이터 결합:', {
+    } else if (activeSheetData.headers && activeSheetData.data) {
+        // 헤더와 데이터를 결합
+        console.log('✅ 헤더+데이터 결합:', {
           headers: activeSheetData.headers.length,
           dataRows: activeSheetData.data.length,
           headersPreview: activeSheetData.headers.slice(0, 3),
           firstDataRowPreview: activeSheetData.data[0]?.slice(0, 3)
         });
         baseData = [activeSheetData.headers, ...activeSheetData.data];
-    } else {
-        // rawData가 없는 경우 기존 방식 폴백
-        const currentData = getCurrentSheetData();
-        baseData = [activeSheetData.headers, ...(currentData || activeSheetData.data)];
-        console.log('⚠️ 기존 방식 폴백 사용:', {
-          totalRows: baseData.length,
-          hasCurrentData: !!currentData,
-          firstRowPreview: baseData[0]?.slice(0, 3)
-        });
     }
 
     // 엑셀처럼 추가 빈 행과 열 제공
@@ -700,7 +666,7 @@ const MainSpreadSheet: React.FC = () => {
     });
 
     return expandedData;
-  }, [activeSheetData, getCurrentSheetData, currentSpreadsheetId, xlsxData]);
+  });
 
   // 시트 전환 핸들러
   const handleSheetChange = useCallback(async (sheetIndex: number) => {
@@ -1579,7 +1545,7 @@ const MainSpreadSheet: React.FC = () => {
         activeSheetName: xlsxData?.sheets?.[xlsxData?.activeSheetIndex || 0]?.sheetName || 'Sheet1 (default)',
         currentSpreadsheetId: currentSpreadsheetId || 'None',
         hasActiveSheetData: !!activeSheetData,
-        displayDataLength: displayData.length,
+        initialDisplayDataLength: initialDisplayData.length,
         isEmptySpreadsheet: !xlsxData && !activeSheetData
       });
 
@@ -1597,51 +1563,74 @@ const MainSpreadSheet: React.FC = () => {
       } else {
         console.log('📋 기본 빈 시트 표시 중:', {
           sheetName: 'Sheet1',
-          rows: displayData.length,
-          cols: displayData[0]?.length || 0,
+          rows: initialDisplayData.length,
+          cols: initialDisplayData[0]?.length || 0,
           isEmpty: true
         });
       }
     }
-  }, [xlsxData, activeSheetData, displayData, currentSpreadsheetId]);
+  }, [xlsxData, activeSheetData, initialDisplayData, currentSpreadsheetId]);
 
-  // 시트 변경 시 Handsontable 데이터 강제 업데이트
+  // 시트 변경 시에만 Handsontable 데이터 업데이트
   useEffect(() => {
     const hot = hotRef.current?.hotInstance;
-    if (hot && displayData && displayData.length > 0) {
-      console.log('🔄 시트 데이터 강제 업데이트:', {
-        activeSheetIndex: xlsxData?.activeSheetIndex,
-        activeSheetName: activeSheetData?.sheetName,
-        dataRows: displayData.length,
-        dataCols: displayData[0]?.length || 0
+    if (hot && xlsxData && activeSheetData) {
+      console.log('🔄 시트 변경 감지 - 데이터 업데이트:', {
+        activeSheetIndex: xlsxData.activeSheetIndex,
+        activeSheetName: activeSheetData.sheetName
       });
 
-      // Handsontable에 새 데이터 로드
-      hot.loadData(displayData);
+      // 새 시트 데이터 생성
+      let newSheetData: any[][] = [];
+
+      if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
+        newSheetData = [...activeSheetData.rawData];
+      } else if (activeSheetData.headers && activeSheetData.data) {
+        newSheetData = [activeSheetData.headers, ...activeSheetData.data];
+      }
+
+      // 엑셀처럼 추가 빈 행과 열 제공
+      const currentRows = newSheetData.length;
+      const currentCols = Math.max(...newSheetData.map(row => row?.length || 0));
       
-      // 추가 렌더링으로 확실하게 업데이트 - cleanup 추가
+      const targetRows = Math.max(100, currentRows + 50);
+      const targetCols = Math.max(26, currentCols + 10);
+
+      // 데이터 확장
+      const expandedData = newSheetData.map(row => {
+        const expandedRow = [...(row || [])];
+        while (expandedRow.length < targetCols) {
+          expandedRow.push('');
+        }
+        return expandedRow;
+      });
+
+      while (expandedData.length < targetRows) {
+        expandedData.push(Array(targetCols).fill(''));
+      }
+
+      // Handsontable에 새 데이터 로드 (시트 변경 시에만)
+      hot.loadData(expandedData);
+      setInitialDisplayData(expandedData);
+      
+      // 추가 렌더링으로 확실하게 업데이트
       const timeoutId = setTimeout(() => {
-        // 타임아웃 실행 시점에 인스턴스가 여전히 유효한지 체크
         const currentHot = hotRef.current?.hotInstance;
         if (currentHot && !currentHot.isDestroyed) {
           try {
             currentHot.render();
-            console.log('✅ Handsontable 데이터 업데이트 완료');
+            console.log('✅ 시트 변경 데이터 업데이트 완료');
           } catch (error) {
             console.warn('Handsontable 렌더링 중 오류 (무시됨):', error);
           }
         }
       }, 50);
 
-      // cleanup 함수
       return () => {
         clearTimeout(timeoutId);
       };
     }
-
-    // 데이터가 없는 경우에도 cleanup 함수 반환
-    return () => {};
-  }, [xlsxData?.activeSheetIndex, activeSheetData?.sheetName, displayData]);
+  }, [xlsxData?.activeSheetIndex, activeSheetData?.sheetName]); // 리렌더링 시 데이터 덮어쓰기 방지
 
   // 내보내기 버튼 UI를 상단 컨트롤 패널에 추가
   const renderExportControls = useCallback(() => {
@@ -2161,7 +2150,12 @@ const MainSpreadSheet: React.FC = () => {
             width="100%"
             autoWrapRow={true}
             autoWrapCol={true}
-            data={displayData}
+            data={initialDisplayData}
+            readOnly={false}
+            fillHandle={true}
+            manualColumnResize={true}
+            manualRowResize={true}
+            stretchH="all"
             // 엑셀처럼 무제한 확장 가능하도록 설정
             {...getHandsontableSettings}
             // 행/열 자동 확장 설정
