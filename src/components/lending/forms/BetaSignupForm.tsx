@@ -228,10 +228,48 @@ export function BetaSignupForm() {
           </p>
         </div>
         
-        <div className="space-y-3 text-sm text-gray-500">
+        <div className="space-y-3 text-sm text-gray-500 mb-6">
           <p>✅ 프로 이용권 1달 무료</p>
           <p>✅ 베타 피드백 우선 반영</p>
           <p>✅ 언제든 해지 가능</p>
+        </div>
+
+        {/* 오픈채팅방 안내 */}
+        <div className="border-t pt-6">
+          <div className="mb-4">
+            <h4 className="text-lg font-semibold text-gray-900 mb-2">
+              사전신청자 오픈채팅방 참여하기
+            </h4>
+            <p className="text-sm text-gray-600 mb-4">
+              다른 사전신청자들과 소통하고 최신 소식을 받아보세요!
+            </p>
+          </div>
+          
+          {/* QR 코드 이미지 */}
+          <div className="mb-4">
+            <img 
+              src="/openchatQR.jpeg" 
+              alt="Extion 사전신청자 오픈채팅방 QR 코드" 
+              className="w-40 h-40 mx-auto rounded-lg border border-gray-200"
+            />
+          </div>
+          
+          {/* 오픈채팅방 링크 버튼 */}
+          <a
+            href="https://open.kakao.com/o/gB4EkaAh"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 3c5.5 0 10 3.58 10 8 0 4.42-4.5 8-10 8-1.18 0-2.31-.16-3.37-.46L4 20l1.46-4.63C3.58 14.31 2 12.42 2 11c0-4.42 4.5-8 10-8z"/>
+            </svg>
+            오픈채팅방 참여하기
+          </a>
+          
+          <p className="text-xs text-gray-500 mt-2">
+            카카오톡으로 바로 연결됩니다
+          </p>
         </div>
       </div>
     )

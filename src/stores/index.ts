@@ -3,7 +3,7 @@ import { devtools } from 'zustand/middleware';
 import { createSpreadsheetSlice, SpreadsheetSlice } from './slices/spreadsheetSlice';
 import { createChatSlice, ChatSlice } from './slices/chatSlice';
 import { createUISlice, UISlice } from './slices/uiSlice';
-import { parseXLSXFile, coordsToSheetReference, cellAddressToCoords } from './sotre-utils/xlsxUtils';
+import { parseXLSXFile, coordsToSheetReference, cellAddressToCoords } from './store-utils/xlsxUtils';
 import { SheetData } from './store-types';
 
 // 전체 스토어 타입 (resetAllStores 함수 포함)

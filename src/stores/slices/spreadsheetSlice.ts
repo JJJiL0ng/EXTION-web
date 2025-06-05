@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { XLSXData, SheetData, ExtendedSheetContext, SpreadsheetMetadata, LoadingStates, ErrorStates } from '../store-types';
-import { generateExtendedSheetContext, coordsToSheetReference, cellAddressToCoords } from '../sotre-utils/xlsxUtils';
+import { generateExtendedSheetContext, coordsToSheetReference, cellAddressToCoords } from '../store-utils/xlsxUtils';
 
 // 스프레드시트 슬라이스 상태
 export interface SpreadsheetSlice {

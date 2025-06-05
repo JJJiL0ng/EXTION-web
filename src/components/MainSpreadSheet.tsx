@@ -9,7 +9,7 @@ import { DetailedSettings } from 'handsontable/plugins/formulas';
 import Handsontable from 'handsontable';
 import { ChevronDown, Layers, ChevronLeft, ChevronRight, Plus, Save, Download, FileDown, MessageCircleIcon } from 'lucide-react';
 import { useUnifiedStore } from '@/stores';
-import { cellAddressToCoords } from '@/stores/sotre-utils/xlsxUtils';
+import { cellAddressToCoords } from '@/stores/store-utils/xlsxUtils';
 import { XLSXData, SheetData } from '@/stores/store-types';
 import { exportActiveSheetToCSV, exportSelectedSheetsToXLSX } from '@/utils/exportUtils';
 import { getSpreadsheetData } from '@/services/firebase/spreadsheetService';
