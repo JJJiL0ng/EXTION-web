@@ -63,7 +63,7 @@ export default function ChatInput({
     };
     
     return (
-        <div className="border-t border-gray-100 bg-white p-4">
+        <div className="border-t border-gray-100 bg-gray-50 p-4">
             <div className="flex items-center space-x-3">
                 {/* 파일 첨부 버튼 - 파일이 업로드되지 않았을 때만 표시 */}
                 {!hasUploadedFile && (

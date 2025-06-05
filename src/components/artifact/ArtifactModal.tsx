@@ -82,17 +82,17 @@ const ArtifactModal: React.FC<ArtifactModalProps> = ({ isOpen, onClose }) => {
 
   const dataSource = getDataSourceInfo();
 
-  // 다운로드 기능 (실제 구현은 필요에 따라 추가)
-  const handleDownload = () => {
-    console.log('다운로드 기능');
-    // 여기에 다운로드 로직 구현
-  };
+  // // 다운로드 기능 (실제 구현은 필요에 따라 추가)
+  // const handleDownload = () => {
+  //   console.log('다운로드 기능');
+  //   // 여기에 다운로드 로직 구현
+  // };
 
-  // 공유 기능 (실제 구현은 필요에 따라 추가)
-  const handleShare = () => {
-    console.log('공유 기능');
-    // 여기에 공유 로직 구현
-  };
+  // // 공유 기능 (실제 구현은 필요에 따라 추가)
+  // const handleShare = () => {
+  //   console.log('공유 기능');
+  //   // 여기에 공유 로직 구현
+  // };
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center transition-opacity duration-300">
@@ -164,7 +164,7 @@ const ArtifactModal: React.FC<ArtifactModalProps> = ({ isOpen, onClose }) => {
             
             {/* 액션 버튼 그룹 */}
             <div className="flex items-center gap-1">
-              <button
+              {/* <button
                 onClick={handleDownload}
                 className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                 title="분석 결과 다운로드"
@@ -178,7 +178,7 @@ const ArtifactModal: React.FC<ArtifactModalProps> = ({ isOpen, onClose }) => {
                 title="분석 결과 공유"
               >
                 <Share2 className="w-5 h-5" />
-              </button>
+              </button> */}
               
               <button
                 onClick={onClose}
