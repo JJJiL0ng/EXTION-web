@@ -58,7 +58,7 @@ function ReviewCard({ review }: { review: ReviewData }) {
                   overflow: 'hidden'
                 }}
               >
-                "{review.comment}"
+                &ldquo;{review.comment}&rdquo;
               </p>
             </div>
             
