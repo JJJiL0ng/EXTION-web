@@ -955,6 +955,13 @@ export default function MainChatComponent() {
             );
 
             if (response.success && response.formula) {
+                console.log('🎉 포뮬러 응답 수신:', {
+                    formula: response.formula,
+                    cellAddress: response.cellAddress,
+                    explanation: response.explanation?.korean,
+                    activeSheetIndex
+                });
+
                 const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
@@ -975,15 +982,32 @@ export default function MainChatComponent() {
                     timestamp: new Date()
                 };
 
+                console.log('🚀 setPendingFormula 호출 준비:', {
+                    formulaApplication,
+                    sheetIndex: activeSheetIndex,
+                    finalObject: {
+                        ...formulaApplication,
+                        sheetIndex: activeSheetIndex
+                    }
+                });
+
                 setPendingFormula({
                     ...formulaApplication,
                     sheetIndex: activeSheetIndex
                 });
+
+                console.log('✅ setPendingFormula 호출 완료');
+
                 addToFormulaHistory({
                     ...formulaApplication,
                     sheetIndex: activeSheetIndex
                 });
             } else {
+                console.error('❌ 포뮬러 응답 실패:', {
+                    success: response.success,
+                    hasFormula: !!response.formula,
+                    error: response.error
+                });
                 throw new Error(response.error || '함수 생성에 실패했습니다.');
             }
         } catch (error) {

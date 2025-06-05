@@ -1,10 +1,12 @@
 import { HeroSection } from '@/components/lending/sections/HeroSection'
 import { FeatureSection } from '@/components/lending/sections/FeatureSection'
 import { DeviceSection } from '@/components/lending/sections/DeviceSection'
+import { ReviewSection } from '@/components/lending/sections/reviewSection'
 import { CTASection } from '@/components/lending/sections/CTASection'
 import { heroData, generateHeroStructuredData } from '@/components/lending/data/hero'
 import { featuresData, generateFeaturesStructuredData, getAllFeatureKeywords } from '@/components/lending/data/features'
 import { devicesData, generateDevicesStructuredData, getAllDeviceKeywords } from '@/components/lending/data/devices'
+import { reviewsData, generateReviewsStructuredData, getAllReviewKeywords } from '@/components/lending/data/review'
 import { ctaData, generateCTAStructuredData } from '@/components/lending/data/cta'
 import type { Metadata } from 'next'
 
@@ -15,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
     ...heroData.seoKeywords,
     ...getAllFeatureKeywords(),
     ...getAllDeviceKeywords(),
+    ...getAllReviewKeywords(),
     ...ctaData.seoKeywords
   ]
 
@@ -64,6 +67,7 @@ export default async function HomePage() {
   const heroStructuredData = generateHeroStructuredData()
   const featuresStructuredData = generateFeaturesStructuredData()
   const devicesStructuredData = generateDevicesStructuredData()
+  const reviewsStructuredData = generateReviewsStructuredData()
   const ctaStructuredData = generateCTAStructuredData()
 
   return (
@@ -92,6 +96,14 @@ export default async function HomePage() {
         }}
       />
       
+      {/* Review 섹션 구조화된 데이터 */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(reviewsStructuredData)
+        }}
+      />
+      
       {/* CTA 섹션 구조화된 데이터 */}
       <script
         type="application/ld+json"
@@ -104,9 +116,11 @@ export default async function HomePage() {
         <HeroSection />
         {/* Feature 데이터는 이제 컴포넌트 내부에서 SSG로 처리 */}
         <FeatureSection />
-        <CTASection />
         {/* Device 섹션 추가 - SSG로 처리 */}
         <DeviceSection />
+        {/* Review 섹션 - 전환 직전 배치 */}
+        <ReviewSection />
+        <CTASection />
       </main>
     </>
   )

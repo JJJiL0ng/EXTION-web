@@ -70,23 +70,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/" className="text-gray-600 hover:text-gray-900 transition-colors">
-                  문서
-                </Link>
-              </li>
-              <li>
-                <Link href="/" className="text-gray-600 hover:text-gray-900 transition-colors">
+                <Link href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors">
                   개인정보처리방침
                 </Link>
               </li>
               <li>
-                <Link href="/" className="text-gray-600 hover:text-gray-900 transition-colors">
+                <Link href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">
                   이용약관
-                </Link>
-              </li>
-              <li>
-                <Link href="/" className="text-gray-600 hover:text-gray-900 transition-colors">
-                  문의하기
                 </Link>
               </li>
             </ul>
@@ -132,4 +122,4 @@ export default function Footer() {
       </div>
     </footer>
   )
-} 
+}

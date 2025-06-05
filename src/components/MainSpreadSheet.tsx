@@ -15,6 +15,8 @@ import { exportActiveSheetToCSV, exportSelectedSheetsToXLSX } from '@/utils/expo
 import { getSpreadsheetData } from '@/services/firebase/spreadsheetService';
 import ChatSidebar from './chat/ChatSidebar';
 import Image from 'next/image';
+import { CustomFormulaPlugin, CustomFormulaPluginTranslations } from '@/utils/CustomFormulaPlugin';
+
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -497,14 +499,15 @@ const HandsontableStyles = createGlobalStyle`
 
 registerAllModules();
 
+HyperFormula.registerFunctionPlugin(CustomFormulaPlugin, CustomFormulaPluginTranslations);
+
 // 공유 HyperFormula 인스턴스 생성
 const hyperformulaInstance = HyperFormula.buildEmpty({
   licenseKey: 'internal-use-in-handsontable',
   maxRows: 10000,
   maxColumns: 1000,
-  useArrayArithmetic: true,  // 배열 연산 활성화
-  useColumnIndex: true,       // 열 인덱스 사용 활성화
-
+  useArrayArithmetic: true,
+  useColumnIndex: true,
 });
 
 // CSV 데이터가 없을 때의 기본 설정
@@ -743,26 +746,42 @@ const MainSpreadSheet: React.FC = () => {
 
   // 셀에 함수를 적용하는 함수
   const applyFormulaToCell = useCallback((formula: string, cellAddress: string) => {
+    console.log('🚀 applyFormulaToCell 시작:', { formula, cellAddress });
+    
     const hot = hotRef.current?.hotInstance;
     if (!hot) {
-      console.error('Handsontable 인스턴스를 찾을 수 없습니다.');
+      console.error('❌ Handsontable 인스턴스를 찾을 수 없습니다.');
       return;
     }
 
+    console.log('✅ Handsontable 인스턴스 확인됨');
+
     try {
-      console.log('포뮬러 적용 시작:', { formula, cellAddress });
+      console.log('🔄 포뮬러 적용 시작:', { formula, cellAddress });
       
       // 셀 주소를 좌표로 변환
       const { row, col } = cellAddressToCoords(cellAddress);
-      console.log('변환된 좌표:', { row, col, from: cellAddress });
+      console.log('🎯 변환된 좌표:', { row, col, from: cellAddress });
+      
+      // 현재 셀 값 확인
+      const currentValue = hot.getDataAtCell(row, col);
+      console.log('📋 현재 셀 값:', currentValue);
       
       // 포뮬러가 =로 시작하지 않으면 추가
       const formulaValue = formula.startsWith('=') ? formula : `=${formula}`;
+      console.log('📝 적용할 포뮬러:', formulaValue);
       
       // Handsontable에 포뮬러 적용
+      console.log('⚡ Handsontable에 데이터 설정 중...');
       hot.setDataAtCell(row, col, formulaValue);
       
-      console.log('포뮬러 적용 완료:', {
+      // 적용 후 값 확인
+      setTimeout(() => {
+        const afterValue = hot.getDataAtCell(row, col);
+        console.log('🔍 적용 후 셀 값:', afterValue);
+      }, 50);
+      
+      console.log('✅ 포뮬러 적용 완료:', {
         cellAddress,
         coordinates: `${row},${col}`,
         formula: formulaValue
@@ -773,7 +792,9 @@ const MainSpreadSheet: React.FC = () => {
         const currentHot = hotRef.current?.hotInstance;
         if (currentHot && !currentHot.isDestroyed) {
           try {
+            console.log('🔄 Handsontable 렌더링 시작...');
             currentHot.render();
+            console.log('✅ Handsontable 렌더링 완료');
             
             // 스토어에 변경사항 반영
             if (xlsxData && activeSheetData) {
@@ -784,39 +805,75 @@ const MainSpreadSheet: React.FC = () => {
                 ? Math.max(0, row - activeSheetData.metadata.headerRow - 1)
                 : row;
               
+              console.log('💾 스토어 업데이트:', {
+                sheetIndex,
+                dataRow,
+                col,
+                formula: formulaValue,
+                originalRow: row
+              });
+              
               if (dataRow >= 0) {
                 updateActiveSheetCell(dataRow, col, formulaValue);
+                console.log('✅ 스토어 업데이트 완료');
+              } else {
+                console.log('⚠️ 스토어 업데이트 스킵 (헤더 행)');
               }
+            } else {
+              console.log('⚠️ 스토어 업데이트 스킵 (데이터 없음)');
             }
             
-            console.log('포뮬러 적용 및 스토어 업데이트 완료');
+            console.log('🎉 포뮬러 적용 및 스토어 업데이트 완료');
           } catch (error) {
             console.warn('포뮬러 적용 후 렌더링 중 오류 (무시됨):', error);
           }
+        } else {
+          console.warn('⚠️ Handsontable 인스턴스가 파괴됨');
         }
       }, 200);
       
     } catch (error) {
-      console.error('포뮬러 적용 중 오류:', error);
+      console.error('❌ 포뮬러 적용 중 오류:', error);
       
       // 에러 발생 시 사용자에게 알림
       if (error instanceof Error) {
         console.error('에러 상세:', error.message);
+        console.error('에러 스택:', error.stack);
         // 선택적으로 사용자에게 알림 표시
-        // alert(`포뮬러 적용 중 오류가 발생했습니다: ${error.message}`);
+        alert(`포뮬러 적용 중 오류가 발생했습니다: ${error.message}`);
       }
     }
   }, [xlsxData, activeSheetData, updateActiveSheetCell]);
 
   // 포뮬러 적용
   useEffect(() => {
+    console.log('🔍 pendingFormula useEffect 트리거:', {
+      hasPendingFormula: !!pendingFormula,
+      hasHotInstance: !!hotRef.current?.hotInstance,
+      pendingFormula: pendingFormula
+    });
+
     if (pendingFormula && hotRef.current?.hotInstance) {
+      console.log('✅ 포뮬러 적용 시작:', {
+        formula: pendingFormula.formula,
+        cellAddress: pendingFormula.cellAddress,
+        sheetIndex: pendingFormula.sheetIndex,
+        currentActiveSheetIndex: xlsxData?.activeSheetIndex
+      });
+
       setInternalUpdate(true);
 
       // 다중 시트 포뮬러라면 해당 시트의 포뮬러인지 확인
       const targetSheetIndex = pendingFormula.sheetIndex ?? xlsxData?.activeSheetIndex ?? 0;
 
+      console.log('🔍 시트 인덱스 확인:', {
+        targetSheetIndex,
+        currentActiveSheetIndex: xlsxData?.activeSheetIndex,
+        shouldApply: targetSheetIndex === xlsxData?.activeSheetIndex
+      });
+
       if (targetSheetIndex === xlsxData?.activeSheetIndex) {
+        console.log('✅ 포뮬러 적용 중...');
         applyFormulaToCell(pendingFormula.formula, pendingFormula.cellAddress);
 
         // 포뮬러 적용 후 계산된 결과를 스토어에 반영
@@ -825,20 +882,26 @@ const MainSpreadSheet: React.FC = () => {
           if (hot && !hot.isDestroyed && xlsxData) {
             try {
               const evaluatedData = hot.getData();
-              // 헤더 행 제외하고 데이터만 저장 - setComputedDataForSheet 제거
-              console.log('포뮬러 적용 완료, 데이터 계산됨');
+              console.log('🔄 포뮬러 적용 완료, 데이터 업데이트됨');
             } catch (error) {
               console.warn('포뮬러 적용 완료 처리 중 오류 (무시됨):', error);
             }
           }
+          console.log('🧹 pendingFormula 정리 중...');
           setPendingFormula(null);
           setInternalUpdate(false);
         }, 200);
       } else {
+        console.log('⚠️ 다른 시트의 포뮬러이므로 스킵');
         // 다른 시트의 포뮬러는 그 시트로 전환 후 적용
         setPendingFormula(null);
         setInternalUpdate(false);
       }
+    } else {
+      console.log('⚠️ 포뮬러 적용 조건 미충족:', {
+        hasPendingFormula: !!pendingFormula,
+        hasHotInstance: !!hotRef.current?.hotInstance
+      });
     }
   }, [pendingFormula, setPendingFormula, setInternalUpdate, xlsxData, applyFormulaToCell]);
 
