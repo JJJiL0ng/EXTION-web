@@ -63,7 +63,7 @@ export default function ChatInput({
     };
     
     return (
-        <div className="border-t border-gray-100 bg-white p-4">
+        <div className="border-t border-gray-100 bg-gray-50 p-4">
             <div className="flex items-center space-x-3">
                 {/* 파일 첨부 버튼 - 파일이 업로드되지 않았을 때만 표시 */}
                 {!hasUploadedFile && (
@@ -71,7 +71,7 @@ export default function ChatInput({
                         className={`w-14 h-14 rounded-full border-2 transition-all flex items-center justify-center cursor-pointer ${
                             isDragOver 
                                 ? 'border-[#0052d1] bg-blue-50' 
-                                : 'border-[#005DE9] bg-white hover:border-[#0052d1] hover:bg-blue-50'
+                                : 'border-[#005DE9] bg-gray-50 hover:border-[#0052d1] hover:bg-blue-50'
                         }`}
                         onDragOver={onDragOver}
                         onDragLeave={onDragLeave}
@@ -92,7 +92,7 @@ export default function ChatInput({
 
                 {/* 입력창 - 파일 업로드 여부에 따라 공간 조정 */}
                 <div className="flex-1 relative">
-                    <div className="flex items-center bg-white border-2 border-[#005DE9] rounded-full shadow-sm hover:border-[#0052d1] transition-all px-4 py-3">
+                    <div className="flex items-center bg-gray-50 border-2 border-[#005DE9] rounded-full shadow-sm hover:border-[#0052d1] transition-all px-4 py-3">
                         <input
                             type="text"
                             value={inputValue}
