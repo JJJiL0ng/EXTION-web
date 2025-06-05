@@ -185,31 +185,32 @@ const HandsontableStyles = createGlobalStyle`
   }
 
   /* 컨텍스트 메뉴 */
-  .handsontable .htContextMenu {
+  .htContextMenu.handsontable {
     border-radius: 0.75rem !important;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
     padding: 0.5rem 0 !important;
     border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    min-width: 200px !important; /* 컨텍스트 메뉴 최소 너비를 확보하여 텍스트 깨짐 방지 */
   }
 
-  .handsontable .htContextMenu .ht_master .wtHolder {
+  .htContextMenu.handsontable .ht_master .wtHolder {
     background-color: white !important;
   }
 
-  .handsontable .htContextMenu table tbody tr td {
+  .htContextMenu.handsontable table tbody tr td {
     padding: 0.75rem 1.2rem !important;
     border: none !important;
   }
 
-  .handsontable .htContextMenu table tbody tr td:hover {
+  .htContextMenu.handsontable table tbody tr td:hover {
     background-color: #F9F9F7 !important;
   }
 
-  .handsontable .htContextMenu table tbody tr td.htDisabled:hover {
+  .htContextMenu.handsontable table tbody tr td.htDisabled:hover {
     background-color: #f8f8f8 !important;
   }
 
-  .handsontable .htContextMenu table tbody tr td.htSeparator {
+  .htContextMenu.handsontable table tbody tr td.htSeparator {
     height: 1px !important;
     background-color: rgba(0, 0, 0, 0.08) !important;
   }
@@ -2168,23 +2169,7 @@ const MainSpreadSheet: React.FC = () => {
             renderAllColumns={false}
             viewportRowRenderingOffset={30}
             viewportColumnRenderingOffset={10}
-            contextMenu={{
-              items: {
-                row_above: { name: '위에 행 삽입' },
-                row_below: { name: '아래에 행 삽입' },
-                remove_row: { name: '행 삭제' },
-                separator1: '---------',
-                col_left: { name: '왼쪽에 열 삽입' },
-                col_right: { name: '오른쪽에 열 삽입' },
-                remove_col: { name: '열 삭제' },
-                separator2: '---------',
-                undo: { name: '실행 취소' },
-                redo: { name: '다시 실행' },
-                cut: { name: '잘라내기' },
-                copy: { name: '복사' },
-                paste: { name: '붙여넣기' }
-              }
-            }}
+            contextMenu={false}
             licenseKey="non-commercial-and-evaluation"
             formulas={formulasConfig}
             beforeChange={(changes, source) => {
