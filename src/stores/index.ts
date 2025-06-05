@@ -21,6 +21,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
             
             // resetAllStores 함수 추가
             resetAllStores: () => {
+                console.log('🧹 모든 스토어 초기화 중...');
                 const { resetUIStore } = get();
                 resetUIStore();
                 
@@ -33,13 +34,15 @@ export const useUnifiedStore = create<UnifiedStore>()(
                     extendedSheetContext: null,
                     currentSpreadsheetId: null,
                     spreadsheetMetadata: null,
-                    hasUploadedFile: false,
+                    hasUploadedFile: false, // 파일 업로드 상태 초기화
                     
                     // 채팅 리셋 (세션과 히스토리는 유지)
                     sheetMessages: {},
                     activeSheetMessages: [],
                     sheetChatIds: {},
                 });
+                
+                console.log('✅ 모든 스토어 초기화 완료 - 파일 업로드 가능');
             }
         }),
         {

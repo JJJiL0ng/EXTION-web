@@ -76,15 +76,31 @@ function AIPageContent() {
           return;
         }
 
-        console.log('채팅 발견:', targetChat);
+        console.log('📋 채팅 발견:', {
+          id: targetChat.id,
+          title: targetChat.title,
+          hasSpreadsheet: !!targetChat.spreadsheetId,
+          spreadsheetId: targetChat.spreadsheetId,
+          messageCount: targetChat.messageCount,
+          status: targetChat.status
+        });
 
-        // 2. 채팅 ID 설정
+        // 2. 기존 데이터 초기화 (다른 채팅으로 전환 시)
+        console.log('🧹 새 채팅 전환 - 기존 데이터 초기화');
+        setXLSXData(null);
+        setCurrentSpreadsheetId(null);
+        clearAllMessages();
+        
+        // 파일 업로드 상태도 초기화하여 새 파일 업로드 가능하게 함
+        const store = useUnifiedStore.getState();
+        store.resetAllStores(); // 완전한 초기화
+
+        // 3. 채팅 ID 설정
         setCurrentChatId(chatId);
 
-        // 먼저 메시지를 지우지 말고 로드 시작
-        console.log('기존 메시지 유지하며 새 채팅 로드 시작');
+        console.log('새 채팅 로드 시작:', chatId);
 
-        // 3. 스프레드시트 데이터 로드
+        // 4. 스프레드시트 데이터 로드
         if (targetChat.spreadsheetId) {
           console.log('스프레드시트 로드 시작:', targetChat.spreadsheetId);
           
@@ -116,11 +132,9 @@ function AIPageContent() {
           // 스프레드시트가 없는 경우는 메시지를 지우지 않음
         }
 
-        // 4. 채팅 메시지 로드
+        // 5. 채팅 메시지 로드
         console.log('채팅 메시지 로드 시작:', chatId);
         try {
-          // 먼저 기존 메시지를 지워서 중복 방지
-          clearAllMessages();
           
           const firebaseMessages = await getChatMessages(chatId);
           console.log('✅ Firebase 메시지 로드 성공:', firebaseMessages.length, '개');

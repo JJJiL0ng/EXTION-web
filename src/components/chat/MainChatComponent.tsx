@@ -11,6 +11,7 @@ import { Message } from './MessageDisplay';
 import { ChatMode } from '../../app/actions/chatActions';
 import { findActualDataBounds } from '../../utils/fileProcessing';
 import { saveSpreadsheetToFirebase } from '../../services/api/dataServices';
+import { updateChatTitle } from '@/services/firebase/chatService';
 import { Send, Upload, FileSpreadsheet, Trash2, RotateCcw, Activity } from 'lucide-react';
 
 // 컴포넌트 가져오기
@@ -91,6 +92,16 @@ export default function MainChatComponent() {
     // Firebase 채팅 ID 상태 추가
     const [firebaseChatId, setFirebaseChatId] = useState<string | null>(null);
 
+    // 디버깅: hasUploadedFile 상태 변화 추적
+    useEffect(() => {
+        console.log('📁 hasUploadedFile 상태 변화:', {
+            hasUploadedFile,
+            xlsxData: !!xlsxData,
+            currentChatId,
+            firebaseChatId
+        });
+    }, [hasUploadedFile, xlsxData, currentChatId, firebaseChatId]);
+
     // Firebase 채팅 ID 감지 및 설정
     useEffect(() => {
         // URL 파라미터에서 Firebase 채팅 ID 확인 (초기 로드시에만)
@@ -152,6 +163,31 @@ export default function MainChatComponent() {
         
         return null;
     }, [firebaseChatId, getCurrentChatId, isFirebaseChat]);
+
+    // 채팅 제목을 파일명으로 업데이트하는 함수
+    const updateChatTitleWithFileName = useCallback(async (fileName: string) => {
+        try {
+            const chatId = getCurrentFirebaseChatId();
+            if (!chatId) {
+                console.log('Firebase 채팅이 아니므로 제목 업데이트를 스킵합니다.');
+                return;
+            }
+
+            // 파일 확장자 제거하여 깔끔한 제목 만들기
+            const cleanFileName = fileName.replace(/\.(xlsx|xls|csv)$/i, '');
+            
+            console.log('채팅 제목 업데이트 시도:', {
+                chatId,
+                originalFileName: fileName,
+                newTitle: cleanFileName
+            });
+
+            await updateChatTitle(chatId, cleanFileName);
+            console.log('✅ 채팅 제목이 파일명으로 업데이트되었습니다:', cleanFileName);
+        } catch (error) {
+            console.error('❌ 채팅 제목 업데이트 실패:', error);
+        }
+    }, [getCurrentFirebaseChatId]);
 
     // 파일이 로드되었는지 확인
     const file = xlsxData ? { name: xlsxData.fileName } : null;
@@ -398,6 +434,9 @@ export default function MainChatComponent() {
                     } catch (saveError) {
                         console.error('Firebase 저장 실패:', saveError);
                     }
+
+                    // 파일 업로드 성공 시 채팅 제목을 파일명으로 업데이트
+                    await updateChatTitleWithFileName(file.name);
 
                     const successMessage: ChatMessage = {
                         id: Date.now().toString(),
@@ -668,6 +707,9 @@ export default function MainChatComponent() {
                                     } catch (saveError) {
                                         console.error('Firebase 저장 실패:', saveError);
                                     }
+                                    
+                                    // 파일 업로드 성공 시 채팅 제목을 파일명으로 업데이트
+                                    await updateChatTitleWithFileName(file.name);
                                 })();
 
                                 const headerStatus = headerRow === -1
@@ -733,7 +775,8 @@ export default function MainChatComponent() {
         setCurrentChatId, 
         setCurrentSpreadsheetId, 
         setSpreadsheetMetadata, 
-        markAsSaved
+        markAsSaved,
+        updateChatTitleWithFileName
     ]);
 
     // === 채팅 세션 관리 Effect ===
@@ -1309,7 +1352,7 @@ export default function MainChatComponent() {
                     )}
                 </div>
 
-                <div className="w-full max-w-3xl mx-auto flex-shrink-0">
+                <div className="w-full max-w-2xl mx-auto flex-shrink-0">
                     <ChatInput
                         currentMode={currentMode}
                         inputValue={inputValue}

@@ -109,9 +109,20 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         try {
             const chats = await getUserChats(user.uid);
             setFirebaseChats(chats);
-            console.log('Firebase 채팅 목록 로드됨:', chats.length, '개');
+            console.log('📋 Firebase 채팅 목록 로드됨:', chats.length, '개');
+            
+            // 각 채팅의 스프레드시트 정보 디버깅
+            chats.forEach(chat => {
+                console.log('채팅:', {
+                    id: chat.id,
+                    title: chat.title,
+                    spreadsheetId: chat.spreadsheetId,
+                    hasSpreadsheetData: !!chat.spreadsheetData,
+                    messageCount: chat.messageCount
+                });
+            });
         } catch (error) {
-            console.error('Firebase 채팅 목록 로드 오류:', error);
+            console.error('❌ Firebase 채팅 목록 로드 오류:', error);
         } finally {
             setIsLoadingChats(false);
         }
@@ -136,15 +147,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
 
         // Firebase 채팅 추가
         firebaseChats.forEach(chat => {
+            const hasSpreadsheet = !!chat.spreadsheetId;
             cloudChats.push({
                 id: chat.id,
                 title: chat.title,
                 updatedAt: chat.updatedAt,
                 preview: getFirebaseChatPreview(chat),
-                hasSpreadsheet: chat.spreadsheetData?.hasSpreadsheet || false,
-                spreadsheetInfo: chat.spreadsheetData?.hasSpreadsheet ? {
-                    fileName: chat.spreadsheetData.fileName || '',
-                    totalSheets: chat.spreadsheetData.totalSheets || 1
+                hasSpreadsheet: hasSpreadsheet,
+                spreadsheetInfo: hasSpreadsheet ? {
+                    fileName: chat.spreadsheetData?.fileName || 'Spreadsheet',
+                    totalSheets: chat.spreadsheetData?.totalSheets || 1
                 } : undefined,
                 messageCount: chat.messageCount,
                 isActive: selectedChatId === chat.id
@@ -193,15 +205,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
 
         setIsCreatingChat(true);
         try {
+            // 1. 먼저 기존 스프레드시트 데이터 초기화
+            console.log('🧹 새 채팅 시작 - 기존 데이터 초기화');
+            resetAllStores();
+            
             const chatTitle = `새 채팅 ${new Date().toLocaleString('ko-KR')}`;
             const newChatId = await createChat(chatTitle, user.uid);
             
             console.log('새 Firebase 채팅 생성됨:', newChatId);
             
-            // 채팅 목록 새로고침
+            // 2. 채팅 목록 새로고침
             await loadFirebaseChats();
             
-            // 새 채팅으로 URL 이동
+            // 3. 새 채팅으로 URL 이동
             router.push(`/ai?chatId=${newChatId}`);
             
         } catch (error) {
@@ -251,8 +267,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
 
     // Firebase 채팅 미리보기 텍스트 생성
     const getFirebaseChatPreview = (chat: FirebaseChat) => {
-        if (chat.spreadsheetData?.hasSpreadsheet && chat.spreadsheetData.fileName) {
-            return `📊 ${chat.spreadsheetData.fileName}`;
+        // spreadsheetId가 있으면 스프레드시트 채팅
+        if (chat.spreadsheetId) {
+            const fileName = chat.spreadsheetData?.fileName || 'Spreadsheet';
+            return `📊 ${fileName}`;
         }
         if (chat.lastMessage) {
             return chat.lastMessage.content;

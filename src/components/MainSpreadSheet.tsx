@@ -1847,7 +1847,7 @@ const MainSpreadSheet: React.FC = () => {
     }
   }, [pendingFormula, setPendingFormula, applyFormulaToCell]);
 
-  // 빈 시트 상태에서 기본 컨텍스트 생성
+  // 빈 시트 상태에서 기본 컨텍스트 생성 및 데이터 변경 감지
   useEffect(() => {
     // 시트가 없고 채팅이 가능한 상태에서 기본 시트 컨텍스트 설정
     if (!xlsxData && !activeSheetData && !loadingStates.fileUpload) {
@@ -1858,6 +1858,14 @@ const MainSpreadSheet: React.FC = () => {
       console.log('빈 스프레드시트 환경 준비 완료');
     }
   }, [xlsxData, activeSheetData, loadingStates.fileUpload]);
+
+  // 스프레드시트 데이터 변경 시 선택된 셀 정보 초기화
+  useEffect(() => {
+    console.log('📋 스프레드시트 데이터 변경 감지 - 선택된 셀 정보 초기화');
+    setSelectedCellInfo(null);
+    setCellEditValue('');
+    setIsCellEditing(false);
+  }, [xlsxData, activeSheetData]);
 
   // 로딩 중일 때 표시
   if (loadingStates.fileUpload) {
@@ -1888,6 +1896,8 @@ const MainSpreadSheet: React.FC = () => {
           <div className="flex items-center justify-between">
             {/* 사이드바 토글 버튼과 로고 */}
             <div className="flex items-center space-x-3">
+              {/* 햄버거 버튼 주석처리 */}
+              {/*
               <button
                 onClick={toggleSidebar}
                 className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200 flex-shrink-0"
@@ -1912,6 +1922,7 @@ const MainSpreadSheet: React.FC = () => {
                   />
                 </div>
               </button>
+              */}
               
               {/* EXTION 텍스트 로고 */}
               <h1 className="text-xl font-bold text-gray-800" style={{ color: '#005DE9' }}>

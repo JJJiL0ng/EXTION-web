@@ -66,7 +66,7 @@ export interface FirebaseMessage {
     metadata?: any;
 }
 
-// Firebase 채팅 인터페이스
+// Firebase 채팅 인터페이스 - 실제 Firebase 구조에 맞게 수정
 export interface FirebaseChat {
     id: string;
     userId: string;
@@ -80,6 +80,16 @@ export interface FirebaseChat {
         role: 'user' | 'Extion ai';
         type: string;
     };
+    status: 'active' | 'archived' | 'deleted';
+    analytics: {
+        formulaCount: number;
+        artifactCount: number;
+        dataGenerationCount: number;
+        dataFixCount: number;
+    };
+    spreadsheetId?: string; // 직접 연관된 스프레드시트 ID
+    
+    // 호환성을 위한 계산된 속성들
     spreadsheetData?: {
         hasSpreadsheet: boolean;
         fileName?: string;
@@ -88,14 +98,6 @@ export interface FirebaseChat {
         sheetNames: string[];
         lastModifiedAt: Date;
     };
-    status: 'active' | 'archived' | 'deleted';
-    analytics: {
-        formulaCount: number;
-        artifactCount: number;
-        dataGenerationCount: number;
-        dataFixCount: number;
-    };
-    spreadsheetId?: string; // 연관된 스프레드시트 ID
 }
 
 // Firestore 문서를 Firebase 메시지로 변환
@@ -121,6 +123,17 @@ const convertDocToFirebaseMessage = (doc: QueryDocumentSnapshot<DocumentData>): 
 // Firestore 문서를 Firebase 채팅으로 변환
 const convertDocToFirebaseChat = (doc: QueryDocumentSnapshot<DocumentData>): FirebaseChat => {
     const data = doc.data();
+    
+    // spreadsheetData 계산 - 호환성을 위해
+    const spreadsheetData = data.spreadsheetId ? {
+        hasSpreadsheet: true,
+        fileName: data.fileName || 'Unknown File',
+        totalSheets: data.totalSheets || 1,
+        activeSheetIndex: data.activeSheetIndex || 0,
+        sheetNames: data.sheetNames || ['Sheet1'],
+        lastModifiedAt: data.updatedAt?.toDate() || new Date()
+    } : undefined;
+    
     return {
         id: doc.id,
         userId: data.userId,
@@ -132,10 +145,6 @@ const convertDocToFirebaseChat = (doc: QueryDocumentSnapshot<DocumentData>): Fir
             ...data.lastMessage,
             timestamp: data.lastMessage.timestamp?.toDate() || new Date()
         } : undefined,
-        spreadsheetData: data.spreadsheetData ? {
-            ...data.spreadsheetData,
-            lastModifiedAt: data.spreadsheetData.lastModifiedAt?.toDate() || new Date()
-        } : undefined,
         status: data.status || 'active',
         analytics: data.analytics || {
             formulaCount: 0,
@@ -143,7 +152,8 @@ const convertDocToFirebaseChat = (doc: QueryDocumentSnapshot<DocumentData>): Fir
             dataGenerationCount: 0,
             dataFixCount: 0
         },
-        spreadsheetId: data.spreadsheetId
+        spreadsheetId: data.spreadsheetId,
+        spreadsheetData: spreadsheetData
     };
 };
 

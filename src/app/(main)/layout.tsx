@@ -15,4 +15,4 @@ export default function MainLayout({
       <Footer />
     </div>
   )
-} 
+}
