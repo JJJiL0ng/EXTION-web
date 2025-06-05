@@ -34,7 +34,7 @@ export const reviewsData: ReviewSectionData = {
   overallRating: 4.8,
   totalReviews: 137,
   activeUsers: 31,
-  averageTimeReduction: "87%",
+  averageTimeReduction: "47%",
   reviews: [
     {
       id: "review-1",

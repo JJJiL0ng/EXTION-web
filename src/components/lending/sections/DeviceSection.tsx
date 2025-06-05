@@ -19,8 +19,41 @@ export function DeviceSection({ devices = devicesData.devices }: DeviceSectionPr
         {/* 헤더 섹션 - SSG 렌더링 */}
         <DeviceHeader />
 
-        {/* 디바이스 그리드 - 3/2 레이아웃 */}
-        <div className="space-y-8">
+        {/* 모바일 캐러셀 (lg 미만에서만 표시) */}
+        <div className="lg:hidden">
+          <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide snap-x snap-mandatory">
+            {devices.map((device, index) => (
+              <div
+                key={device.id}
+                className="flex-shrink-0 w-80 snap-center"
+                itemProp="itemListElement"
+                itemScope
+                itemType="https://schema.org/ListItem"
+              >
+                <meta itemProp="position" content={(index + 1).toString()} />
+                <div itemProp="item">
+                  <DeviceItem 
+                    device={device}
+                    index={index}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* 스크롤 인디케이터 */}
+          <div className="flex justify-center mt-4 gap-2">
+            {devices.map((_, index) => (
+              <div
+                key={index}
+                className="w-2 h-2 rounded-full bg-gray-300"
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* 데스크탑 그리드 (lg 이상에서만 표시) - 3/2 레이아웃 */}
+        <div className="hidden lg:block space-y-8">
           {/* 첫 번째 줄 - 3개 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {firstRowDevices.map((device, index) => (

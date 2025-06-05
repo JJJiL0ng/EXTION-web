@@ -25,7 +25,7 @@ export function DeviceItem({ device, index }: DeviceItemProps) {
 
   return (
     <div 
-      className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
+      className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300 lg:h-auto h-[520px] flex flex-col"
       itemScope 
       itemType="https://schema.org/SoftwareApplication"
     >
@@ -37,7 +37,7 @@ export function DeviceItem({ device, index }: DeviceItemProps) {
       <meta itemProp="keywords" content={device.keywords.join(', ')} />
       
       {/* 헤더 영역 */}
-      <div className="text-center mb-6">
+      <div className="text-center mb-6 flex-shrink-0">
         {/* 로고 이미지 - Next.js Image 컴포넌트 사용 */}
         <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-4 p-3">
           <Image
@@ -59,27 +59,34 @@ export function DeviceItem({ device, index }: DeviceItemProps) {
       </div>
       
       {/* 설명 */}
-      <p className="text-gray-600 leading-relaxed mb-6 text-center" itemProp="description">
+      <p className="text-gray-600 leading-relaxed mb-6 text-center flex-shrink-0 lg:block line-clamp-3" itemProp="description">
         {device.description}
       </p>
       
       {/* 기능 목록 - SEO 최적화 */}
-      <div className="mb-6">
+      <div className="mb-6 flex-grow">
         <h4 className="text-sm font-semibold text-gray-900 mb-3 text-center">주요 기능</h4>
-        <div className="space-y-2">
-          {device.features.map((feature, featureIndex) => (
+        <div className="space-y-2 lg:space-y-2">
+          {device.features.slice(0, 4).map((feature, featureIndex) => (
             <div key={featureIndex} className="flex items-center gap-2 justify-center">
               <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
-              <span className="text-sm text-gray-700" itemProp="featureList">{feature}</span>
+              <span className="text-sm text-gray-700 lg:block truncate" itemProp="featureList">{feature}</span>
             </div>
           ))}
+          {device.features.length > 4 && (
+            <div className="text-center lg:hidden">
+              <span className="text-xs text-gray-500">
+                +{device.features.length - 4}개 더
+              </span>
+            </div>
+          )}
         </div>
       </div>
       
       {/* 호환성 정보 */}
-      <div className="text-center">
+      <div className="text-center flex-shrink-0">
         <h4 className="text-sm font-semibold text-gray-900 mb-2">호환성</h4>
         <div className="flex flex-wrap gap-2 justify-center">
           {device.compatibility.map((os, osIndex) => (
