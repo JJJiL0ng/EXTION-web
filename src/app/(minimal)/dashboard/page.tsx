@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { MessageCircle, User, Bot, FileSpreadsheetIcon, Menu } from 'lucide-react';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import DashFileUpload from '@/components/dashboard/DashFileUpload';
@@ -179,7 +179,11 @@ export default function DashboardPage() {
     return (
         <div className="flex h-screen bg-gradient-to-br from-gray-50 to-blue-50">
             {/* 사이드바 */}
-            <ChatSidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
+            <Suspense fallback={<div className="w-80 bg-white border-r border-gray-200 flex items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>}>
+                <ChatSidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
+            </Suspense>
             
             {/* 메인 콘텐츠 */}
             <div className="flex-1 flex flex-col">

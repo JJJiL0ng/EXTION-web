@@ -837,14 +837,14 @@ export default function MainChatComponent() {
                 await processFile(droppedFile);
             })();
         }
-    }, [canUploadFile]);
+    }, [canUploadFile, processFile]);
 
-    const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (selectedFile && isValidSpreadsheetFile(selectedFile)) {
             processFile(selectedFile);
         }
-    };
+    }, [processFile]);
 
     const removeFile = () => {
         clearAllMessages();
