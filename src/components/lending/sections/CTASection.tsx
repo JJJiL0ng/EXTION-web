@@ -8,7 +8,7 @@ import { ctaData } from '@/components/lending/data/cta'
 export function CTASection() {
   return (
     <section id="cta-section" className="py-20 bg-blue-600" itemScope itemType="https://schema.org/Offer">
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-4xl mx-auto px-4">
         
         {/* 헤더 섹션 - SSG 렌더링 */}
         <CTAHeader />

@@ -21,7 +21,7 @@ export function CTAHeader() {
       </div>
       
       {/* 메인 제목 - SEO 최적화 */}
-      <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+      <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
         {ctaData.header.title}
         <span className="block text-yellow-300">{ctaData.header.highlight}</span>
       </h2>
