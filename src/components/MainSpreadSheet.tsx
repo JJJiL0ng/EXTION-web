@@ -15,7 +15,7 @@ import { exportActiveSheetToCSV, exportSelectedSheetsToXLSX } from '@/utils/expo
 import { getSpreadsheetData } from '@/services/firebase/spreadsheetService';
 import ChatSidebar from './chat/ChatSidebar';
 import Image from 'next/image';
-import { CustomFormulaPlugin, CustomFormulaPluginTranslations } from '@/utils/CustomFormulaPlugin';
+import { EnhancedFormulaPlugin, EnhancedFormulaPluginTranslations } from '@/utils/EnhancedFormulaPlugin';
 
 
 import 'handsontable/styles/handsontable.css';
@@ -500,7 +500,7 @@ const HandsontableStyles = createGlobalStyle`
 
 registerAllModules();
 
-HyperFormula.registerFunctionPlugin(CustomFormulaPlugin, CustomFormulaPluginTranslations);
+HyperFormula.registerFunctionPlugin(EnhancedFormulaPlugin, EnhancedFormulaPluginTranslations);
 
 // 공유 HyperFormula 인스턴스 생성
 const hyperformulaInstance = HyperFormula.buildEmpty({

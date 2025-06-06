@@ -3,7 +3,7 @@ export const ctaData = {
   // 런칭 날짜 정보 - 새로 추가
   launch: {
     date: "2024-06-06",
-    displayDate: "6월 6일",
+    displayDate: "6월 9일",
     dayOfWeek: "목요일",
     countdown: {
       title: "베타 서비스 런칭까지",
@@ -12,15 +12,15 @@ export const ctaData = {
     },
     announcement: {
       title: "베타 서비스 런칭 확정!",
-      subtitle: "6월 6일 목요일, 새로운 엑셀 AI의 시작",
-      highlight: "6월 6일 런칭"
+      subtitle: "6월 9일 목요일, 새로운 엑셀 AI의 시작",
+      highlight: "6월 9일 런칭"
     }
   },
 
   // 메인 헤딩 정보
   header: {
-    badge: "🎉 6.6 베타 런칭 기념 특별 혜택",
-    title: "6월 6일 런칭! 지금 신청하면",
+    badge: "🎉 6.9 베타 런칭 기념 특별 혜택",
+    title: "6월 9일 런칭! 지금 신청하면",
     highlight: "1달 무료 프로 버전!",
     subtitle: "베타 런칭을 기념하여 특별한 기회를 놓치지 마세요"
   },
@@ -92,7 +92,7 @@ export const ctaData = {
   
   // 마감 임박 메시지
   urgency: {
-    message: "⏰ 6.6 런칭 전 베타 신청은",
+    message: "⏰ 6.9 런칭 전 베타 신청은",
     highlight: "선착순 100명",
     suffix: "으로 제한됩니다"
   },
@@ -105,8 +105,8 @@ export const ctaData = {
     "프로 버전 무료",
     "베타 신청",
     "선착순 모집",
-    "6월 6일 런칭",
-    "6.6 베타 출시",
+    "6월 9일 런칭",
+    "6.9 베타 출시",
     "베타 서비스 런칭",
     "엑셀 AI 런칭",
     "베타 런칭 기념"
