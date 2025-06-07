@@ -77,7 +77,6 @@ export const createChatSlice: StateCreator<
             sheetMessages: {},
             activeSheetMessages: [],
             sheetChatIds: {},
-            extendedSheetContext: null,
             hasUploadedFile: false,
             createdAt: new Date(),
             lastAccessedAt: new Date(),
@@ -100,7 +99,6 @@ export const createChatSlice: StateCreator<
             sheetMessages: {},
             activeSheetMessages: [],
             sheetChatIds: {},
-            extendedSheetContext: null,
             currentSpreadsheetId: null,
             spreadsheetMetadata: null
         }));
@@ -141,7 +139,6 @@ export const createChatSlice: StateCreator<
             sheetMessages: session.sheetMessages,
             activeSheetMessages: session.activeSheetMessages,
             sheetChatIds: session.sheetChatIds,
-            extendedSheetContext: session.extendedSheetContext,
             currentSpreadsheetId: session.currentSpreadsheetId,
             spreadsheetMetadata: session.spreadsheetMetadata
         }));
@@ -229,7 +226,6 @@ export const createChatSlice: StateCreator<
                     sheetMessages: targetSession.sheetMessages,
                     activeSheetMessages: targetSession.activeSheetMessages,
                     sheetChatIds: targetSession.sheetChatIds,
-                    extendedSheetContext: targetSession.extendedSheetContext,
                     currentSpreadsheetId: targetSession.currentSpreadsheetId,
                     spreadsheetMetadata: targetSession.spreadsheetMetadata
                 };
@@ -259,7 +255,6 @@ export const createChatSlice: StateCreator<
             sheetMessages: state.sheetMessages,
             activeSheetMessages: state.activeSheetMessages,
             sheetChatIds: state.sheetChatIds,
-            extendedSheetContext: state.extendedSheetContext,
             hasUploadedFile: state.hasUploadedFile,
             createdAt: state.chatSessions[currentChatId]?.createdAt || new Date(),
             lastAccessedAt: new Date(),
