@@ -15,20 +15,6 @@ export interface ChatMessage {
     };
 }
 
-// 헤더 정보 인터페이스
-export interface HeaderInfo {
-    column: string; // 열 식별자 (A, B, C 등)
-    name: string; // 열 이름
-}
-
-// 데이터 범위 인터페이스
-export interface DataRange {
-    startRow: string; // 시작 행
-    endRow: string; // 끝 행
-    startColumn: string; // 시작 열
-    endColumn: string; // 끝 열
-}
-
 // 수식 적용 인터페이스
 export interface FormulaApplication {
     formula: string; // 수식 문자열
@@ -50,15 +36,10 @@ export interface ArtifactCode {
 export interface SheetData {
     sheetId?: string; // Firebase에서 생성된 시트 ID
     sheetName: string;
-    headers: string[]; // 유효한 헤더만 (공백 제외)
-    data: string[][]; // 헤더에 맞춰 정리된 데이터
     rawData?: string[][]; // 원본 데이터 (공백 포함)
     metadata?: {
         rowCount: number;
         columnCount: number;
-        headerRow: number; // 헤더가 위치한 행 번호
-        headerRowData?: string[]; // 원본 헤더 행 (공백 포함)
-        headerMap?: { [index: number]: number }; // 원본 인덱스 -> 헤더 인덱스 매핑
         dataRange: {
             startRow: number;
             endRow: number;
@@ -78,18 +59,6 @@ export interface XLSXData {
     sheets: SheetData[];
     activeSheetIndex: number; // 현재 활성 시트
     spreadsheetId?: string; // Firebase에서 생성된 스프레드시트 ID
-}
-
-// 확장된 시트 컨텍스트
-export interface ExtendedSheetContext {
-    sheetName: string;
-    sheetIndex: number;
-    headers: HeaderInfo[];
-    dataRange: DataRange;
-    sampleData?: Record<string, string>[];
-    totalSheets: number; // 전체 시트 개수
-    sheetList: string[]; // 시트 이름 목록
-    spreadsheetId?: string; // 스프레드시트 ID
 }
 
 // 다중 시트 수식 적용 인터페이스
@@ -118,7 +87,6 @@ export interface ChatSession {
     sheetMessages: { [sheetIndex: number]: ChatMessage[] };
     activeSheetMessages: ChatMessage[];
     sheetChatIds: { [sheetIndex: number]: string };
-    extendedSheetContext: ExtendedSheetContext | null;
     hasUploadedFile: boolean;
     createdAt: Date;
     lastAccessedAt: Date;

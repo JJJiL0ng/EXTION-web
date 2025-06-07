@@ -16,6 +16,8 @@ import { getSpreadsheetData } from '@/services/firebase/spreadsheetService';
 import ChatSidebar from './chat/ChatSidebar';
 import Image from 'next/image';
 import { EnhancedFormulaPlugin, EnhancedFormulaPluginTranslations } from '@/utils/EnhancedFormulaPlugin';
+import { getHotTableSettings } from '@/config/handsontableSettings';
+import { HandsontableStyles } from '@/config/handsontableStyles';
 
 
 import 'handsontable/styles/handsontable.css';
@@ -24,479 +26,6 @@ import 'handsontable/styles/ht-theme-horizon.css';
 
 // Handsontable z-index 문제 해결을 위한 스타일
 import { createGlobalStyle } from 'styled-components';
-
-const HandsontableStyles = createGlobalStyle`
-  /* 모달이 열렸을 때 Handsontable의 z-index 조정 */
-  .modal-open .handsontable {
-    z-index: 0 !important;
-  }
-  
-  .modal-open .ht_master {  
-    z-index: 0 !important;
-  }
-  
-  .modal-open .ht_clone_top,
-  .modal-open .ht_clone_left,
-  .modal-open .ht_clone_top_left_corner,
-  .modal-open .ht_clone_bottom,
-  .modal-open .ht_clone_bottom_left_corner,
-  .modal-open .ht_clone_right {
-    z-index: 0 !important;
-  }
-
-  /* 내보내기 드롭다운 관련 스타일 추가 */
-  .export-dropdown {
-    z-index: 9999 !important; /* 높은 z-index 설정 */
-    position: absolute;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-
-  .xlsx-sheet-selector {
-    z-index: 9999 !important; /* 높은 z-index 설정 */
-    position: absolute;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-
-  /* 핸드온테이블의 z-index 조정 */
-  .handsontable {
-    z-index: 50;
-  }
-
-  .ht_master {
-    z-index: 50 !important;
-  }
-
-  .ht_clone_top,
-  .ht_clone_left,
-  .ht_clone_top_left_corner {
-    z-index: 51 !important;
-  }
-
-  /* 시트 선택 드롭다운 스타일 */
-  .sheet-selector {
-    z-index: 9999;
-  }
-
-  .sheet-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    max-height: 240px;
-    overflow-y: auto;
-    margin-top: 0.5rem;
-  }
-
-  .sheet-dropdown-item {
-    padding: 0.85rem 1.2rem;
-    cursor: pointer;
-    border-bottom: 1px solid #f3f4f6;
-    transition: all 0.2s ease;
-  }
-
-  .sheet-dropdown-item:hover {
-    background-color: #F9F9F7;
-  }
-
-  .sheet-dropdown-item.active {
-    background-color: rgba(0, 93, 233, 0.08);
-    color: #005DE9;
-    font-weight: 500;
-  }
-
-  /* 핸즈온테이블 테마 커스터마이징 - 엑셀 스타일 */
-  .handsontable {
-    font-family: 'Calibri', 'Segoe UI', 'Inter', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 11px; /* 엑셀 기본 폰트 크기 */
-    line-height: 1.2;
-  }
-
-  /* 헤더 스타일 - 엑셀과 유사하게 */
-  .handsontable th {
-    background-color: #F9F9F7 !important;
-    color: #333 !important;
-    font-weight: 400 !important;
-    border-color: rgba(0, 0, 0, 0.08) !important;
-    padding: 2px 4px !important; /* 엑셀과 유사한 패딩 */
-    height: 20px !important; /* 엑셀 기본 행 높이 */
-    font-size: 11px !important;
-    text-align: center !important;
-  }
-
-  /* 행/열 헤더 텍스트 굵기 조정 */
-  .handsontable .ht_clone_left th,
-  .handsontable .ht_clone_top th,
-  .handsontable .ht_clone_top_left_corner th {
-    font-weight: 400 !important;
-    width: 50px !important; /* 엑셀 기본 열 너비 - 더 컴팩트하게 */
-    min-width: 50px !important;
-  }
-
-  /* 행 헤더 너비 조정 */
-  .handsontable .ht_clone_left th {
-    width: 32px !important; /* 엑셀 행 헤더 너비 - 더 컴팩트하게 */
-    min-width: 32px !important;
-  }
-
-  /* 활성 헤더 스타일 */
-  .handsontable th.ht__active_highlight {
-    background-color: rgba(0, 93, 233, 0.08) !important;
-    color: #005DE9 !important;
-    font-weight: 400 !important;
-  }
-
-  /* 셀 스타일 - 엑셀과 유사하게 */
-  .handsontable td {
-    border-color: rgba(0, 0, 0, 0.05) !important;
-    padding: 2px 6px !important; /* 엑셀과 유사한 패딩 */
-    height: 20px !important; /* 엑셀 기본 행 높이 */
-    font-size: 11px !important;
-    line-height: 16px !important;
-    vertical-align: middle !important;
-    transition: background-color 0.2s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* 기본 열 너비 설정 */
-  .handsontable col {
-    width: 64px !important; /* 엑셀 기본 열 너비 */
-  }
-
-  /* 선택된 셀 스타일 */
-  .handsontable .ht__selection {
-    background-color: rgba(0, 93, 233, 0.16) !important;
-  }
-
-  /* 선택된 셀 테두리 */
-  .handsontable .ht__selection--highlight {
-    border: 2px solid #005DE9 !important;
-  }
-
-  /* 행/열 헤더 하이라이트 */
-  .handsontable th.ht__highlight {
-    background-color: rgba(0, 93, 233, 0.08) !important;
-    font-weight: 400 !important;
-  }
-
-  /* 컨텍스트 메뉴 */
-  .htContextMenu.handsontable {
-    border-radius: 0.75rem !important;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
-    padding: 0.5rem 0 !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    min-width: 200px !important; /* 컨텍스트 메뉴 최소 너비를 확보하여 텍스트 깨짐 방지 */
-  }
-
-  .htContextMenu.handsontable .ht_master .wtHolder {
-    background-color: white !important;
-  }
-
-  .htContextMenu.handsontable table tbody tr td {
-    padding: 0.75rem 1.2rem !important;
-    border: none !important;
-  }
-
-  .htContextMenu.handsontable table tbody tr td:hover {
-    background-color: #F9F9F7 !important;
-  }
-
-  .htContextMenu.handsontable table tbody tr td.htDisabled:hover {
-    background-color: #f8f8f8 !important;
-  }
-
-  .htContextMenu.handsontable table tbody tr td.htSeparator {
-    height: 1px !important;
-    background-color: rgba(0, 0, 0, 0.08) !important;
-  }
-
-  /* 포뮬러가 있는 셀 스타일 */
-  .handsontable td.formula {
-    background-color: rgba(0, 93, 233, 0.05) !important;
-  }
-
-  /* 텍스트 정렬 스타일 */
-  .handsontable td.htLeft {
-    text-align: left !important;
-  }
-
-  .handsontable td.htCenter {
-    text-align: center !important;
-  }
-
-  .handsontable td.htRight {
-    text-align: right !important;
-  }
-
-  /* 숫자 셀 기본 우측 정렬 */
-  .handsontable td.htNumeric {
-    text-align: right !important;
-  }
-
-  /* 시트 탭 바 스타일 */
-  .sheet-tabs-container {
-    display: flex;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    position: relative;
-    background-color: #F9F9F7;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 0 0.5rem;
-    flex-grow: 1;
-    min-height: 3rem;
-    scroll-behavior: smooth;
-  }
-
-  .sheet-tabs-container::-webkit-scrollbar {
-    display: none;
-  }
-
-  .sheet-tab {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem 1.25rem;
-    white-space: nowrap;
-    cursor: pointer;
-    border: 1px solid transparent;
-    border-bottom: none;
-    border-radius: 0.5rem 0.5rem 0 0;
-    margin-right: 0.25rem;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-    position: relative;
-    top: 1px;
-  }
-
-  .sheet-tab:hover {
-    background-color: rgba(0, 93, 233, 0.04);
-  }
-
-  .sheet-tab.active {
-    background-color: white;
-    border-color: rgba(0, 0, 0, 0.08);
-    color: #005DE9;
-    font-weight: 500;
-  }
-
-  .sheet-tab .sheet-info {
-    margin-left: 0.5rem;
-    padding: 0.125rem 0.5rem;
-    font-size: 0.7rem;
-    border-radius: 1rem;
-    background-color: rgba(0, 0, 0, 0.05);
-    color: rgba(0, 0, 0, 0.5);
-  }
-
-  .sheet-tab.active .sheet-info {
-    background-color: rgba(0, 93, 233, 0.08);
-    color: rgba(0, 93, 233, 0.7);
-  }
-
-  .sheet-add-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.75rem;
-    border-radius: 0.5rem 0.5rem 0 0;
-    border: 1px dashed rgba(0, 0, 0, 0.2);
-    border-bottom: none;
-    background-color: rgba(255, 255, 255, 0.7);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    position: relative;
-    top: 1px;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
-  }
-
-  .sheet-add-button:hover {
-    background-color: rgba(0, 93, 233, 0.08);
-    border-color: rgba(0, 93, 233, 0.3);
-    color: #005DE9;
-  }
-
-  .empty-sheet-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem 1rem;
-    color: rgba(0, 0, 0, 0.5);
-    font-size: 0.875rem;
-  }
-
-  .empty-sheet-text {
-    margin-right: 0.75rem;
-  }
-
-  /* 시트 생성 모달 */
-  .sheet-create-modal {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 0.5rem;
-    background-color: white;
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 1rem;
-    width: 300px;
-    z-index: 1000;
-  }
-
-  .sheet-create-modal input {
-    width: 100%;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    margin-bottom: 0.75rem;
-    font-size: 0.875rem;
-  }
-
-  .sheet-create-modal input:focus {
-    outline: none;
-    border-color: #005DE9;
-    box-shadow: 0 0 0 2px rgba(0, 93, 233, 0.2);
-  }
-
-  .sheet-create-modal-buttons {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-  }
-
-  .sheet-create-modal button {
-    padding: 0.6rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .sheet-create-modal .cancel-button {
-    background-color: white;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    color: rgba(0, 0, 0, 0.7);
-  }
-
-  .sheet-create-modal .cancel-button:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
-
-  .sheet-create-modal .create-button {
-    background-color: #005DE9;
-    border: 1px solid #005DE9;
-    color: white;
-  }
-
-  .sheet-create-modal .create-button:hover {
-    background-color: #004ab8;
-  }
-
-  .sheet-create-modal .create-button:disabled {
-    background-color: rgba(0, 93, 233, 0.5);
-    cursor: not-allowed;
-  }
-
-  /* 가상 스크롤바 */
-  .tab-scrollbar-container {
-    position: relative;
-    height: 8px;
-    background-color: #f1f1f1;
-    border-radius: 4px;
-    margin: 4px 8px 4px 8px;
-    cursor: pointer;
-    transition: opacity 0.3s;
-    opacity: 0.7;
-  }
-
-  .tab-scrollbar-container:hover {
-    opacity: 1;
-  }
-
-  .tab-scrollbar-thumb {
-    position: absolute;
-    height: 100%;
-    background-color: #c1c1c1;
-    border-radius: 4px;
-    min-width: 30px;
-    transition: background-color 0.2s;
-  }
-
-  .tab-scrollbar-thumb:hover,
-  .tab-scrollbar-thumb.dragging {
-    background-color: #a1a1a1;
-  }
-
-  /* 스크롤바 숨기기 - 중복 스크롤바 방지 */
-  .spreadsheet-main-container {
-    overflow: hidden;
-  }
-
-  .spreadsheet-main-container::-webkit-scrollbar {
-    display: none;
-  }
-
-  .spreadsheet-main-container {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  /* 스프레드시트 컨테이너 독립적인 스크롤 */
-  .spreadsheet-container {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* 스프레드시트 영역만 스크롤 가능하도록 설정 */
-  .spreadsheet-area {
-    flex: 1;
-    position: relative;
-    min-height: 0;
-    background-color: white;
-  }
-
-  .spreadsheet-area .handsontable {
-    height: 100% !important;
-    width: 100% !important;
-  }
-
-  /* 반응형 디자인 개선 */
-  @media (max-width: 1024px) {
-    .sheet-tabs-container {
-      padding: 0 0.25rem;
-    }
-    
-    .sheet-tab {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.8rem;
-    }
-    
-    .sheet-tab .sheet-info {
-      font-size: 0.65rem;
-      padding: 0.1rem 0.4rem;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .example-controls-container {
-      padding: 0.5rem;
-    }
-    
-    .example-controls-container .flex {
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-  }
-`;
 
 registerAllModules();
 
@@ -558,7 +87,6 @@ const MainSpreadSheet: React.FC = () => {
   const {
     xlsxData,
     activeSheetData,
-    extendedSheetContext,
     loadingStates,
     errors,
     computedSheetData,
@@ -591,13 +119,13 @@ const MainSpreadSheet: React.FC = () => {
   const [formulasConfig] = useState<DetailedSettings>({
     engine: hyperformulaInstance,
     namedExpressions: [],
-    sheetName: extendedSheetContext?.sheetName || 'Sheet1',
+    sheetName: activeSheetData?.sheetName || 'Sheet',
   });
 
   // 초기 표시할 데이터 준비 - 한번만 생성하고 이후 업데이트는 Handsontable을 통해서만
   const [initialDisplayData, setInitialDisplayData] = useState<any[][]>(() => {
     // 시트가 없는 경우 기본 빈 스프레드시트 생성
-    if (!activeSheetData || !activeSheetData.headers || !activeSheetData.data) {
+    if (!activeSheetData || !activeSheetData.rawData) {
       console.log('=== 빈 시트 생성 ===');
       
       // 엑셀처럼 기본 크기의 빈 스프레드시트 생성 (100행 x 26열)
@@ -616,7 +144,7 @@ const MainSpreadSheet: React.FC = () => {
 
     let baseData: any[][] = [];
 
-    // rawData가 있으면 원본 레이아웃 그대로 사용 (Firebase 복원 데이터)
+    // rawData가 있으면 원본 레이아웃 그대로 사용
     if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
         console.log('✅ 원본 rawData 사용:', {
           rows: activeSheetData.rawData.length,
@@ -624,15 +152,6 @@ const MainSpreadSheet: React.FC = () => {
           lastRowPreview: activeSheetData.rawData[activeSheetData.rawData.length - 1]?.slice(0, 3)
         });
         baseData = [...activeSheetData.rawData];
-    } else if (activeSheetData.headers && activeSheetData.data) {
-        // 헤더와 데이터를 결합
-        console.log('✅ 헤더+데이터 결합:', {
-          headers: activeSheetData.headers.length,
-          dataRows: activeSheetData.data.length,
-          headersPreview: activeSheetData.headers.slice(0, 3),
-          firstDataRowPreview: activeSheetData.data[0]?.slice(0, 3)
-        });
-        baseData = [activeSheetData.headers, ...activeSheetData.data];
     }
 
     // 엑셀처럼 추가 빈 행과 열 제공
@@ -767,10 +286,8 @@ const MainSpreadSheet: React.FC = () => {
             if (xlsxData && activeSheetData) {
               const sheetIndex = xlsxData.activeSheetIndex;
               
-              // 헤더 행을 고려한 데이터 행 계산
-              const dataRow = activeSheetData.metadata?.headerRow !== undefined && activeSheetData.metadata.headerRow >= 0 
-                ? Math.max(0, row - activeSheetData.metadata.headerRow - 1)
-                : row;
+              // 헤더 행을 고려하지 않고 바로 업데이트
+              const dataRow = row;
               
               console.log('💾 스토어 업데이트:', {
                 sheetIndex,
@@ -780,12 +297,9 @@ const MainSpreadSheet: React.FC = () => {
                 originalRow: row
               });
               
-              if (dataRow >= 0) {
-                updateActiveSheetCell(dataRow, col, formulaValue);
-                console.log('✅ 스토어 업데이트 완료');
-              } else {
-                console.log('⚠️ 스토어 업데이트 스킵 (헤더 행)');
-              }
+              updateActiveSheetCell(dataRow, col, formulaValue);
+              console.log('✅ 스토어 업데이트 완료');
+
             } else {
               console.log('⚠️ 스토어 업데이트 스킵 (데이터 없음)');
             }
@@ -907,8 +421,7 @@ const MainSpreadSheet: React.FC = () => {
 
     // 기본 빈 데이터로 새 시트 생성
     const emptyData = Array(20).fill(Array(6).fill(''));
-    const emptyHeaders = Array(6).fill('');
-
+    
     if (xlsxData) {
       // 기존 xlsxData가 있는 경우 새 시트 추가
       // 중복되는 시트명 확인
@@ -922,21 +435,19 @@ const MainSpreadSheet: React.FC = () => {
       }
 
       // 새 시트 데이터 생성
-      const newSheet = {
+      const newSheet: SheetData = {
         sheetName: uniqueName,
-        headers: emptyHeaders,
-        data: emptyData,
+        rawData: emptyData,
         metadata: {
           rowCount: emptyData.length,
-          columnCount: emptyHeaders.length,
-          headerRow: 0,
+          columnCount: emptyData[0]?.length || 0,
           dataRange: {
             startRow: 0,
             endRow: emptyData.length - 1,
             startCol: 0,
-            endCol: emptyHeaders.length - 1,
+            endCol: (emptyData[0]?.length || 1) -1,
             startColLetter: 'A',
-            endColLetter: String.fromCharCode(65 + emptyHeaders.length - 1)
+            endColLetter: String.fromCharCode(65 + (emptyData[0]?.length || 1) - 1)
           },
           lastModified: new Date()
         }
@@ -965,17 +476,15 @@ const MainSpreadSheet: React.FC = () => {
         sheets: [
           {
             sheetName: newSheetName,
-            headers: emptyHeaders,
-            data: emptyData,
+            rawData: emptyData,
             metadata: {
               rowCount: emptyData.length,
-              columnCount: emptyHeaders.length,
-              headerRow: 0,
+              columnCount: emptyData[0]?.length || 0,
               dataRange: {
                 startRow: 0,
                 endRow: emptyData.length - 1,
                 startCol: 0,
-                endCol: emptyHeaders.length - 1,
+                endCol: (emptyData[0]?.length || 1) -1,
                 startColLetter: 'A',
                 endColLetter: 'F'
               }
@@ -1131,7 +640,8 @@ const MainSpreadSheet: React.FC = () => {
     if (!activeSheetData) return;
 
     // 현재 시트 데이터 가져오기 (계산된 값 포함)
-    const currentData = getCurrentSheetData() || activeSheetData.data;
+    const currentData = getCurrentSheetData() || activeSheetData.rawData;
+    if (!currentData) return;
 
     try {
       // 파일명에 현재 날짜와 시간 추가
@@ -1139,10 +649,10 @@ const MainSpreadSheet: React.FC = () => {
       const dateStr = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
       const fileName = `${activeSheetData.sheetName}_${dateStr}.csv`;
 
-      // CSV로 내보내기
+      // CSV로 내보내기 (헤더 없이 rawData 전체를 전달)
       exportActiveSheetToCSV({
         sheetName: activeSheetData.sheetName,
-        headers: activeSheetData.headers,
+        headers: [],
         data: currentData
       }, fileName);
 
@@ -1174,8 +684,16 @@ const MainSpreadSheet: React.FC = () => {
         setExportFileName(`${baseFileName}_${dateStr}`);
       } else {
         // 이미 시트가 선택된 상태라면 바로 내보내기
+        const xlsxDataForExport = {
+          ...xlsxData,
+          sheets: xlsxData.sheets.map(sheet => ({
+            sheetName: sheet.sheetName,
+            headers: [],
+            data: sheet.rawData || [[]],
+          }))
+        };
         exportSelectedSheetsToXLSX(
-          xlsxData,
+          xlsxDataForExport,
           selectedSheets,
           exportFileName ? `${exportFileName}.xlsx` : undefined
         );
@@ -1191,82 +709,64 @@ const MainSpreadSheet: React.FC = () => {
       alert('XLSX 파일로 내보내는 중 오류가 발생했습니다.');
     }
   }, [xlsxData, selectedSheets, exportFileName]);
-  // Handsontable 설정 수정 - 원본 구조에 맞게
-  const getHandsontableSettings = useMemo(() => {
-    // 엑셀처럼 충분한 행과 열을 제공하되, 최소한의 크기 보장
-    const minRows = 100;  // 최소 100행
-    const minCols = 26;   // 최소 26열 (A-Z)
-    
-    if (!activeSheetData) {
-      return {
-        minRows,
-        minCols,
-        startRows: minRows,
-        startCols: minCols,
-        maxRows: 10000,  // 최대 10,000행
-        maxCols: 100     // 최대 100열
-      };
-    }
-
-    // 원본 데이터의 크기 확인
-    const rawRows = activeSheetData.rawData?.length || 0;
-    const rawCols = activeSheetData.rawData?.[0]?.length || 0;
-    
-    // 데이터 크기보다 충분히 큰 크기로 설정
-    const calculatedRows = Math.max(minRows, rawRows + 50);  // 데이터 + 50행 여유
-    const calculatedCols = Math.max(minCols, rawCols + 10);  // 데이터 + 10열 여유
-
-    return {
-      minRows: calculatedRows,
-      minCols: calculatedCols,
-      startRows: calculatedRows,
-      startCols: calculatedCols,
-      maxRows: 10000,  // 최대 10,000행
-      maxCols: 100     // 최대 100열
-    };
-  }, [activeSheetData]);
 
   // afterChange 핸들러 수정 - 원본 구조 고려
   const handleAfterChange = useCallback((
     changes: Handsontable.CellChange[] | null,
     source: Handsontable.ChangeSource
   ) => {
-    // 내부 업데이트이거나 로드 시점이면 스킵
-    if (isInternalUpdate || source === 'loadData') {
+    // 내부 업데이트이거나 로드 시점, 또는 변경사항이 없으면 스킵
+    if (isInternalUpdate || source === 'loadData' || !changes) {
       return;
     }
 
-    // 사용자 변경사항을 스토어에 반영
-    if (changes && activeSheetData) {
-      changes.forEach(([row, col, , newValue]) => {
-        if (typeof row === 'number' && typeof col === 'number') {
-          // 원본 데이터 구조를 고려한 업데이트
-          if (activeSheetData.metadata && activeSheetData.metadata.headerRow !== undefined) {
-            const headerRow = activeSheetData.metadata.headerRow;
+    if (xlsxData && activeSheetData) {
+      // 원본 rawData를 복사하여 수정 (불변성 유지)
+      // activeSheetData.rawData가 2차원 배열이므로, 내부 배열도 복사해야 함.
+      const newRawData = (activeSheetData.rawData || []).map(row => [...(row || [])]);
 
-            if (headerRow >= 0 && row > headerRow) {
-              // 헤더 이후의 데이터 행
-              const dataRow = row - headerRow - 1;
-              if (dataRow >= 0) {
-                updateActiveSheetCell(dataRow, col, newValue?.toString() || '');
-              }
-            } else if (headerRow === -1 || row < headerRow) {
-              // 헤더가 없거나 헤더 이전의 행
-              updateActiveSheetCell(row, col, newValue?.toString() || '');
-            }
-            // 헤더 행 자체는 업데이트하지 않음 (추후 헤더 편집 기능 추가 시 변경)
-          } else {
-            // 메타데이터가 없는 경우 그대로 업데이트
-            updateActiveSheetCell(row, col, newValue?.toString() || '');
+      changes.forEach(([row, col, oldValue, newValue]) => {
+        if (typeof row === 'number' && typeof col === 'number') {
+          // 행이 존재하지 않으면 새로 추가
+          while (newRawData.length <= row) {
+            newRawData.push([]);
           }
+          const targetRow = newRawData[row];
+          // 열이 충분하지 않으면 확장
+          // Handsontable은 희소 배열을 잘 처리하지 못하므로, 빈 문자열로 채워줍니다.
+          while (targetRow.length <= col) {
+            targetRow.push('');
+          }
+          // 셀 값 업데이트
+          targetRow[col] = newValue?.toString() || '';
         }
       });
+      
+      // 새 XLSX 데이터 객체 생성
+      const newXlsxData: XLSXData = {
+        ...xlsxData,
+        sheets: xlsxData.sheets.map((sheet, index) => {
+          if (index === xlsxData.activeSheetIndex) {
+            return {
+              ...sheet,
+              rawData: newRawData,
+              // metadata도 업데이트가 필요할 수 있습니다.
+              // 예: rowCount, columnCount 등. 지금은 생략합니다.
+            };
+          }
+          return sheet;
+        }),
+      };
+      
+      // Zustand 스토어를 한 번만 업데이트하여 불필요한 리렌더링 방지
+      setXLSXData(newXlsxData);
     }
 
     if (!isAutosave) {
       return;
     }
-  }, [isInternalUpdate, activeSheetData, updateActiveSheetCell, isAutosave]);
+  }, [isInternalUpdate, xlsxData, activeSheetData, setXLSXData, isAutosave]);
+
   const handleCellSelection = useCallback((row: number, col: number, row2?: number, col2?: number) => {
     if (!hotRef.current?.hotInstance) return;
 
@@ -1274,8 +774,7 @@ const MainSpreadSheet: React.FC = () => {
     
     let value = '';
     let formula = '';
-    let isHeader = false;
-    let actualDataRow = row;
+    const actualDataRow = row; // 헤더 개념이 없으므로 row가 실제 데이터 행
     let sheetName = 'Sheet1'; // 기본 시트명
 
     try {
@@ -1286,44 +785,9 @@ const MainSpreadSheet: React.FC = () => {
         if (xlsxData && activeSheetData) {
             sheetName = activeSheetData.sheetName;
             
-            // rawData를 사용하는 경우
+            // rawData에서 직접 값 가져오기
             if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
-                // 원본 데이터에서 직접 값 가져오기
                 value = activeSheetData.rawData[row]?.[col] || '';
-                
-                // 메타데이터가 있고 헤더 행이 지정된 경우
-                if (activeSheetData.metadata && activeSheetData.metadata.headerRow !== undefined && activeSheetData.metadata.headerRow >= 0) {
-                    const headerRow = activeSheetData.metadata.headerRow;
-                    
-                    // 헤더 행인지 확인
-                    if (row === headerRow) {
-                        isHeader = true;
-                        actualDataRow = -1; // 헤더는 데이터 행이 아님
-                    } else if (row > headerRow) {
-                        // 헤더 이후의 데이터 행
-                        actualDataRow = row - headerRow - 1;
-                    } else {
-                        // 헤더 이전의 행 (빈 행이거나 다른 데이터)
-                        actualDataRow = row;
-                    }
-                } else {
-                    // 헤더가 없거나 자동 생성된 경우
-                    // 모든 행을 데이터로 간주하되, 실제 데이터 범위 확인
-                    const dataRange = activeSheetData.metadata?.dataRange;
-                    if (dataRange && row >= dataRange.startRow) {
-                        actualDataRow = row - dataRange.startRow;
-                    } else {
-                        actualDataRow = row;
-                    }
-                }
-            } else {
-                // rawData가 없는 경우 기존 로직 (헤더가 첫 번째 행)
-                if (row === 0) {
-                    isHeader = true;
-                    actualDataRow = -1;
-                } else {
-                    actualDataRow = row - 1;
-                }
             }
             
             // 수식 확인
@@ -1338,8 +802,6 @@ const MainSpreadSheet: React.FC = () => {
             }
         } else {
             // 시트가 없는 경우 기본 처리
-            actualDataRow = row;
-            isHeader = false;
         }
 
         // 셀 주소 계산 - 엑셀 형식 (A1, B2 등)
@@ -1367,7 +829,6 @@ const MainSpreadSheet: React.FC = () => {
             fullReference,
             value: value || '(empty)',
             formula: formula || 'none',
-            isHeader,
             actualDataRow,
             originalRow: row,
             originalCol: col,
@@ -1380,6 +841,14 @@ const MainSpreadSheet: React.FC = () => {
     }
 }, [xlsxData, activeSheetData]);
 
+  const hotSettings = useMemo(() => getHotTableSettings({
+    activeSheetData,
+    formulasConfig,
+    isInternalUpdate,
+    handleAfterChange,
+    handleCellSelection,
+    hotRef
+  }), [activeSheetData, formulasConfig, isInternalUpdate, handleAfterChange, handleCellSelection, hotRef]);
 
   // XLSX 내보내기 실행 핸들러
   const executeXlsxExport = useCallback(() => {
@@ -1394,8 +863,16 @@ const MainSpreadSheet: React.FC = () => {
         finalFileName = `${finalFileName}_${dateStr}`;
       }
 
+      const xlsxDataForExport = {
+        ...xlsxData,
+        sheets: xlsxData.sheets.map(sheet => ({
+          sheetName: sheet.sheetName,
+          headers: [],
+          data: sheet.rawData || [[]],
+        }))
+      };
       exportSelectedSheetsToXLSX(
-        xlsxData,
+        xlsxDataForExport,
         selectedSheets,
         finalFileName ? `${finalFileName}.xlsx` : undefined
       );
@@ -1555,9 +1032,8 @@ const MainSpreadSheet: React.FC = () => {
           console.log(`📋 시트 ${index}:`, {
             index,
             name: sheet.sheetName,
-            headers: sheet.headers?.length || 0,
-            dataRows: sheet.data?.length || 0,
-            rawDataRows: sheet.rawData?.length || 0,
+            rows: sheet.rawData?.length || 0,
+            cols: sheet.rawData?.[0]?.length || 0,
             isActive: index === (xlsxData.activeSheetIndex || 0)
           });
         });
@@ -1568,6 +1044,9 @@ const MainSpreadSheet: React.FC = () => {
           cols: initialDisplayData[0]?.length || 0,
           isEmpty: true
         });
+      }
+      if (activeSheetData?.rawData) {
+        console.log('✅ 렌더링 후 activeSheetData.rawData:', activeSheetData.rawData);
       }
     }
   }, [xlsxData, activeSheetData, initialDisplayData, currentSpreadsheetId]);
@@ -1581,13 +1060,11 @@ const MainSpreadSheet: React.FC = () => {
         activeSheetName: activeSheetData.sheetName
       });
 
-      // 새 시트 데이터 생성
+      // 새 시트 데이터 생성. rawData를 직접 사용.
       let newSheetData: any[][] = [];
 
       if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
         newSheetData = [...activeSheetData.rawData];
-      } else if (activeSheetData.headers && activeSheetData.data) {
-        newSheetData = [activeSheetData.headers, ...activeSheetData.data];
       }
 
       // 엑셀처럼 추가 빈 행과 열 제공
@@ -1765,7 +1242,7 @@ const MainSpreadSheet: React.FC = () => {
                       >
                         <span>{sheet.sheetName}</span>
                         <span className="text-xs text-gray-500">
-                          {sheet.headers.length}×{sheet.data.length}
+                          {sheet.rawData?.[0]?.length || 0}×{sheet.rawData?.length || 0}
                         </span>
                       </label>
                     </div>
@@ -2056,7 +1533,7 @@ const MainSpreadSheet: React.FC = () => {
                     >
                       <span>{sheet.sheetName}</span>
                       <span className="sheet-info">
-                        {sheet.headers.length}×{sheet.data.length}
+                        {sheet.rawData?.[0]?.length || 0}×{sheet.rawData?.length || 0}
                       </span>
                     </div>
                   ))
@@ -2145,70 +1622,8 @@ const MainSpreadSheet: React.FC = () => {
         <div className="flex-1 bg-white shadow-inner overflow-hidden" style={{ position: 'relative', zIndex: 50 }}>
           <HotTable
             ref={hotRef}
-            rowHeaders={true}
-            colHeaders={true}
-            height="100%"
-            width="100%"
-            autoWrapRow={true}
-            autoWrapCol={true}
             data={initialDisplayData}
-            readOnly={false}
-            fillHandle={true}
-            manualColumnResize={true}
-            manualRowResize={true}
-            stretchH="all"
-            // 엑셀처럼 무제한 확장 가능하도록 설정
-            {...getHandsontableSettings}
-            // 행/열 자동 확장 설정
-            allowInsertRow={true}
-            allowInsertColumn={true}
-            allowRemoveRow={true}
-            allowRemoveColumn={true}
-            // 가상화 설정으로 성능 최적화
-            renderAllRows={false}
-            renderAllColumns={false}
-            viewportRowRenderingOffset={30}
-            viewportColumnRenderingOffset={10}
-            contextMenu={false}
-            licenseKey="non-commercial-and-evaluation"
-            formulas={formulasConfig}
-            beforeChange={(changes, source) => {
-              // 내부 업데이트가 아닌 경우에만 로깅
-              if (!isInternalUpdate && changes && source !== 'loadData') {
-                console.log('Data changing:', changes, 'Source:', source);
-              }
-            }}
-            afterChange={handleAfterChange}
-            // 셀 선택 이벤트 처리
-            afterSelection={(row, col) => {
-              handleCellSelection(row, col);
-            }}
-            afterSelectionEnd={(row, col) => {
-              handleCellSelection(row, col);
-            }}
-            // 셀 값 변경 후 포뮬러 업데이트 훅
-            afterSetDataAtCell={() => {
-              console.log('Data set, recalculating formulas...');
-
-              // 100ms 후에 재렌더링 (포뮬러가 계산될 시간을 줌)
-              setTimeout(() => {
-                const currentHot = hotRef.current?.hotInstance;
-                if (currentHot && !currentHot.isDestroyed) {
-                  try {
-                    currentHot.render();
-                  } catch (error) {
-                    console.warn('afterSetDataAtCell 렌더링 중 오류 (무시됨):', error);
-                  }
-                }
-              }, 100);
-            }}
-            // 행/열 추가 시 자동으로 데이터 확장
-            afterCreateRow={(index, amount) => {
-              console.log(`Added ${amount} rows at index ${index}`);
-            }}
-            afterCreateCol={(index, amount) => {
-              console.log(`Added ${amount} columns at index ${index}`);
-            }}
+            {...(hotSettings as any)}
           />
         </div>
       </div>
