@@ -85,6 +85,7 @@ export interface ArtifactResponse {
     messageId?: string;
     userMessageId?: string;
     aiMessageId?: string;
+    spreadsheetMetadata?: SpreadsheetMetadata;
 }
 
 // === 일반 채팅 응답 인터페이스 - Firebase 필드 추가 ===
@@ -101,20 +102,24 @@ export interface NormalChatResponse {
     spreadsheetMetadata?: SpreadsheetMetadata;
 }
 
-// === 함수 실행(Function) API 응답 인터페이스 ===
+// === 함수 실행(Function) API 응답 인터페이스 - 백엔드 DTO에 맞게 수정 ===
+export interface FunctionDetails {
+    functionType: string;
+    sourceRange: string;
+    targetCell: string;
+    result: string | number | string[][];
+    formula: string;
+}
+
 export interface FunctionResponse {
     success: boolean;
-    formula?: string;             // 생성된 함수
-    cellAddress?: string;         // 함수를 적용할 셀 주소
-    explanation?: string;         // 함수 또는 작업에 대한 설명
-    resultPreview?: string[][];   // 함수 실행 결과 미리보기
-    error?: string;               // 에러 메시지
+    explanation: string;
+    functionDetails: FunctionDetails;
     // Firebase 관련 필드
-    chatId?: string;
-    userMessageId?: string;
-    aiMessageId?: string;
-    timestamp?: string;
-    spreadsheetMetadata?: SpreadsheetMetadata;
+    chatId: string;
+    userMessageId: string;
+    aiMessageId: string;
+    error?: string; // 클라이언트 측 에러 핸들링 용
 }
 
 // === 변경 내역 DTO (백엔드 ChangesDto와 일치)
@@ -667,25 +672,28 @@ export const callFunctionAPI = async (
             false // excludeSpreadsheetId = false
         );
 
+        // function/process 엔드포인트는 `language` 속성을 허용하지 않으므로, 요청 본문에서 제거합니다.
+        const { language, ...functionRequestBody } = requestBody;
+
         console.log('==================== Function API 요청 데이터 시작 ====================');
-        console.log(`사용자 입력: ${requestBody.userInput}`);
-        console.log(`사용자 ID: ${requestBody.userId}`);
-        console.log(`채팅 ID: ${requestBody.chatId}`);
+        console.log(`사용자 입력: ${functionRequestBody.userInput}`);
+        console.log(`사용자 ID: ${functionRequestBody.userId}`);
+        console.log(`채팅 ID: ${functionRequestBody.chatId}`);
         
-        if (requestBody.spreadsheetData.sheets.length > 0) {
-            console.log(`SpreadsheetData - 시트 수: ${requestBody.spreadsheetData.sheets.length}`);
-            console.log(`활성 시트: ${requestBody.spreadsheetData.activeSheet}`);
+        if (functionRequestBody.spreadsheetData.sheets.length > 0) {
+            console.log(`SpreadsheetData - 시트 수: ${functionRequestBody.spreadsheetData.sheets.length}`);
+            console.log(`활성 시트: ${functionRequestBody.spreadsheetData.activeSheet}`);
         }
         
-        console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
+        console.log('전체 요청 본문:', JSON.stringify(functionRequestBody, null, 2));
         console.log('==================== Function API 요청 데이터 끝 ====================');
 
-        const response = await fetch(`${API_BASE_URL}/function/execute`, {
+        const response = await fetch(`${API_BASE_URL}/function/process`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(requestBody),
+            body: JSON.stringify(functionRequestBody),
         });
 
         if (!response.ok) {
@@ -715,7 +723,9 @@ export const callFunctionAPI = async (
         console.log('==================== Function API 응답 데이터 시작 ====================');
         console.log(`성공 여부: ${result.success}`);
         console.log(`설명: ${result.explanation || '없음'}`);
-        console.log(`포뮬러: ${result.formula || '없음'}`);
+        if (result.success && result.functionDetails) {
+            console.log(`함수 상세: ${JSON.stringify(result.functionDetails, null, 2)}`);
+        }
         console.log(`채팅 ID: ${result.chatId || '없음'}`);
         if (result.error) {
             console.log(`오류 메시지: ${result.error}`);

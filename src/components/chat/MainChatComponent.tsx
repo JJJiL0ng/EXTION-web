@@ -4,11 +4,12 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
 import { useUnifiedStore, ChatMessage } from '@/stores';
 import { detectAndDecode } from '../../utils/chatUtils';
-import { callArtifactAPI, callDataGenerationAPI, callNormalChatAPI, callDataFixAPI } from '../../services/api/dataServices';
-import { ChatMode } from '../../app/actions/chatActions';
+import { callArtifactAPI, callDataGenerationAPI, callNormalChatAPI, callDataFixAPI, callFunctionAPI, FunctionDetails } from '../../services/api/dataServices';
+import { ChatMode, determineChatMode } from '../../app/actions/chatActions';
 import { processXLSXFile } from '../../utils/fileProcessing';
 import { saveSpreadsheetToFirebase } from '../../services/api/dataServices';
 import { updateChatTitle } from '@/services/firebase/chatService';
+import { cellAddressToCoords } from '@/stores/store-utils/xlsxUtils';
 
 // 컴포넌트 가져오기
 import MessageDisplay from './MessageDisplay';
@@ -49,6 +50,7 @@ export default function MainChatComponent() {
     const loadingIntervalRef = useRef<TimeoutHandle | null>(null);
     const prevChatIdRef = useRef<string | null>(null);
     const [appliedDataFixes, setAppliedDataFixes] = useState<string[]>([]);
+    const [appliedFunctionResults, setAppliedFunctionResults] = useState<string[]>([]);
 
     // Zustand 스토어 사용
     const {
@@ -823,28 +825,18 @@ export default function MainChatComponent() {
                 return;
             }
 
-            // 시트가 있는 경우 간단한 키워드 기반으로 채팅 모드 결정
-            let mode: ChatMode = 'normal'; // 기본값 설정
+            // 서버 액션을 사용하여 채팅 모드 결정
+            const { mode } = await determineChatMode(currentInput);
             
-            // 임시로 간단한 키워드 기반 모드 결정 (서버 액션 문제 회피)
-            const input = currentInput.toLowerCase();
-            if (input.includes('함수') || input.includes('평균') || input.includes('합계') || input.includes('최대') || input.includes('최소')) {
-                mode = 'function';
-            } else if (input.includes('시각화') || input.includes('차트') || input.includes('그래프') || input.includes('분석')) {
-                mode = 'artifact';
-            } else if (input.includes('추가') || input.includes('변경') || input.includes('수정') || input.includes('변경') || input.includes('삭제')) {
-                mode = 'datafix';
-            } else {
-                mode = 'normal';
-            }
-            
-            console.log(`채팅 모드 결정: "${currentInput}" -> ${mode}`);
+            console.log(`채팅 모드 결정 (서버): "${currentInput}" -> ${mode}`);
             
             // 채팅 모드 설정
             setCurrentMode(mode);
 
             // 해당 모드에 맞는 API 호출
-            if (mode === 'artifact') {
+            if (mode === 'function') {
+                await handleFunctionChat(currentInput, isFirebaseChatActive);
+            } else if (mode === 'artifact') {
                 await handleArtifactChat(currentInput, isFirebaseChatActive);
             } else if (mode === 'datafix') {
                 await handleDataFixChat(currentInput, isFirebaseChatActive);
@@ -898,6 +890,87 @@ export default function MainChatComponent() {
         addMessageToSheet(activeSheetIndex, confirmationMessage);
 
     }, [activeSheetMessages, applyGeneratedData, addMessageToSheet, activeSheetIndex, appliedDataFixes]);
+
+    const handleApplyFunctionResult = useCallback((messageId: string) => {
+        const message = activeSheetMessages.find(m => m.id === messageId) as ChatMessage & { functionData?: any };
+        if (!message || !message.functionData || appliedFunctionResults.includes(messageId)) {
+            return;
+        }
+
+        const { functionDetails } = message.functionData;
+        const { result, targetCell } = functionDetails;
+        
+        if (!xlsxData || !useUnifiedStore.getState().activeSheetData) return;
+
+        try {
+            const { row: startRow, col: startCol } = cellAddressToCoords(targetCell);
+
+            const currentXlsxData = useUnifiedStore.getState().xlsxData;
+            if (!currentXlsxData) return;
+
+            const newSheets = currentXlsxData.sheets.map((sheet, index) => {
+                if (index === currentXlsxData.activeSheetIndex) {
+                    // rawData를 수정하기 위해 깊은 복사 대신 행별로 복사
+                    const newRawData = (sheet.rawData || []).map(row => [...(row || [])]);
+
+                    if (Array.isArray(result)) { // 2D 배열 결과
+                        (result as string[][]).forEach((rowData, rIdx) => {
+                            const targetRowIdx = startRow + rIdx;
+                            while(newRawData.length <= targetRowIdx) newRawData.push([]);
+                            const targetRow = newRawData[targetRowIdx];
+                            rowData.forEach((cellData, cIdx) => {
+                                const targetColIdx = startCol + cIdx;
+                                while(targetRow.length <= targetColIdx) targetRow.push('');
+                                targetRow[targetColIdx] = String(cellData);
+                            });
+                        });
+                    } else { // 단일 값 결과
+                        const targetRowIdx = startRow;
+                        while(newRawData.length <= targetRowIdx) newRawData.push([]);
+                        const targetRow = newRawData[targetRowIdx];
+                        while(targetRow.length <= startCol) targetRow.push('');
+                        targetRow[startCol] = String(result);
+                    }
+                    
+                    const newRowCount = newRawData.length;
+                    const newColumnCount = newRowCount > 0 ? Math.max(...newRawData.map(r => (r || []).length)) : 0;
+
+                    return {
+                        ...sheet,
+                        rawData: newRawData,
+                        metadata: {
+                            ...(sheet.metadata as any), // 기존 메타데이터 유지
+                            rowCount: newRowCount,
+                            columnCount: newColumnCount,
+                            lastModified: new Date() // MainSpreadSheet의 useEffect 트리거
+                        }
+                    };
+                }
+                return sheet;
+            });
+
+            setXLSXData({ ...currentXlsxData, sheets: newSheets });
+            setAppliedFunctionResults(prev => [...prev, messageId]);
+
+            const confirmationMessage: ChatMessage = {
+                id: Date.now().toString(),
+                type: 'Extion ai',
+                content: `<strong>${useUnifiedStore.getState().activeSheetData?.sheetName}</strong> 시트에 함수 결과가 적용되었습니다.`,
+                timestamp: new Date(),
+            };
+            addMessageToSheet(activeSheetIndex, confirmationMessage);
+
+        } catch (error) {
+            console.error('함수 결과 적용 중 오류:', error);
+            const errorMessage: ChatMessage = {
+                id: Date.now().toString(),
+                type: 'Extion ai',
+                content: `함수 결과 적용 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+                timestamp: new Date()
+            };
+            addMessageToSheet(activeSheetIndex, errorMessage);
+        }
+    }, [activeSheetMessages, appliedFunctionResults, xlsxData, setXLSXData, addMessageToSheet, activeSheetIndex]);
 
     const handleArtifactChat = async (userInput: string, isFirebaseChat?: boolean) => {
         try {
@@ -955,6 +1028,48 @@ export default function MainChatComponent() {
                 timestamp: new Date()
             };
 
+            addMessageToSheet(activeSheetIndex, assistantMessage);
+        }
+    };
+
+    const handleFunctionChat = async (userInput: string, isFirebaseChat?: boolean) => {
+        try {
+            setCurrentMode('function');
+            const response = await callFunctionAPI(
+                userInput,
+                null,
+                getDataForGPTAnalysis,
+                {
+                    chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
+                    currentSheetIndex: activeSheetIndex
+                }
+            );
+
+            if (response.success && response.functionDetails) {
+                const assistantMessage: ChatMessage = {
+                    id: (Date.now() + 1).toString(),
+                    type: 'Extion ai',
+                    content: response.explanation,
+                    timestamp: new Date(),
+                    functionData: {
+                        functionDetails: response.functionDetails,
+                        isApplied: false
+                    },
+                    mode: 'function',
+                } as any; // 타입 에러 우회
+
+                addMessageToSheet(activeSheetIndex, assistantMessage);
+            } else {
+                throw new Error(response.error || '함수 실행에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('함수 실행 채팅 오류:', error);
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: `함수 실행 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+                timestamp: new Date()
+            };
             addMessageToSheet(activeSheetIndex, assistantMessage);
         }
     };
@@ -1156,11 +1271,16 @@ export default function MainChatComponent() {
                 )}
 
                 <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-6 min-h-0">
+                    {
+                    // @ts-ignore: MessageDisplay에 onFunctionApply, appliedFunctionResults props 임시 추가
+                    }
                     <MessageDisplay
                         messages={activeSheetMessages}
                         onArtifactClick={handleArtifactClick}
                         onDataFixApply={handleApplyDataFix}
                         appliedDataFixes={appliedDataFixes}
+                        onFunctionApply={handleApplyFunctionResult}
+                        appliedFunctionResults={appliedFunctionResults}
                         isLoading={isLoading}
                     />
 
