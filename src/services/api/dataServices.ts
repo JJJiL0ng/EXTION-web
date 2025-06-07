@@ -56,7 +56,6 @@ export interface DataRange {
 export interface SheetMetadata {
     rowCount: number;
     columnCount: number;
-    headerRow?: number;
     dataRange?: DataRange;
 }
 
@@ -152,7 +151,6 @@ export interface DataGenerationResponse {
 // === 수정된 데이터 DTO (백엔드 EditedDataDto와 일치)
 export interface EditedDataDto {
     sheetName: string;
-    headers: string[];
     data: string[][];
 }
 
@@ -227,9 +225,7 @@ const createRequestBody = (
             const firstSheet = analysisData.sheets[0];
             console.log('첫 번째 시트 정보:');
             console.log('- name:', firstSheet.name);
-            console.log('- headers 수:', firstSheet.metadata?.headers?.length || 0);
             console.log('- fullData 행 수:', firstSheet.metadata?.fullData?.length || 0);
-            console.log('- headers:', firstSheet.metadata?.headers);
             if (firstSheet.metadata?.fullData && firstSheet.metadata.fullData.length > 0) {
                 console.log('- 첫 번째 데이터 행:', firstSheet.metadata.fullData[0]);
             }
@@ -245,19 +241,14 @@ const createRequestBody = (
         if (extendedSheetContext && extendedSheetContext.sampleData) {
             console.log('extendedSheetContext에서 sampleData 발견');
             console.log('- sheetName:', extendedSheetContext.sheetName);
-            console.log('- headers 수:', extendedSheetContext.headers?.length || 0);
             console.log('- sampleData 수:', extendedSheetContext.sampleData?.length || 0);
             
             // extendedSheetContext의 sampleData를 기반으로 기본 데이터 구조 생성
-            const headers = extendedSheetContext.headers?.map((h: any) => h.name || h.column || String(h)) || [];
             const sampleDataRows = extendedSheetContext.sampleData || [];
             
             // sampleData를 2차원 배열로 변환
             const convertedData = sampleDataRows.map((rowObj: any) => {
                 if (Array.isArray(rowObj)) return rowObj;
-                if (typeof rowObj === 'object' && rowObj !== null) {
-                    return headers.map((header: string) => rowObj[header] || '');
-                }
                 return [];
             });
             
@@ -266,9 +257,8 @@ const createRequestBody = (
                     name: extendedSheetContext.sheetName,
                     csv: '', // 필요시 생성
                     metadata: {
-                        headers: headers,
                         rowCount: convertedData.length,
-                        columnCount: headers.length,
+                        columnCount: convertedData[0]?.length || 0,
                         fullData: convertedData,
                         sampleData: convertedData.slice(0, 5),
                         sheetIndex: extendedSheetContext.sheetIndex || 0,
@@ -282,7 +272,6 @@ const createRequestBody = (
             };
             
             console.log('폴백 데이터 생성 완료:');
-            console.log('- headers:', headers);
             console.log('- 변환된 데이터 행 수:', convertedData.length);
             if (convertedData.length > 0) {
                 console.log('- 첫 번째 데이터 행:', convertedData[0]);
@@ -299,12 +288,9 @@ const createRequestBody = (
         activeSheet: analysisData?.activeSheet || 'Sheet1',
         spreadsheetId: excludeSpreadsheetId ? '' : (analysisData?.spreadsheetId || ''),
         sheets: analysisData?.sheets?.map((sheet: any) => {
-            const headers = sheet.metadata?.headers || [];
-            const fullData = sheet.metadata?.fullData || [];
-            const combinedData = headers.length > 0 ? [headers, ...fullData] : fullData;
             return {
                 name: sheet.name,
-                data: combinedData
+                data: sheet.metadata?.fullData || []
             };
         }) || [{
             name: 'Sheet1',

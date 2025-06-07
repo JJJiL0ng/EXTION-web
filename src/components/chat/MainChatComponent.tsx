@@ -48,6 +48,7 @@ export default function MainChatComponent() {
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const loadingIntervalRef = useRef<TimeoutHandle | null>(null);
     const prevChatIdRef = useRef<string | null>(null);
+    const [appliedDataFixes, setAppliedDataFixes] = useState<string[]>([]);
 
     // Zustand 스토어 사용
     const {
@@ -866,6 +867,38 @@ export default function MainChatComponent() {
         }
     };
 
+    const handleApplyDataFix = useCallback((messageId: string) => {
+        const message = activeSheetMessages.find(m => m.id === messageId);
+        if (!message || !message.dataFixData || appliedDataFixes.includes(messageId)) {
+            return;
+        }
+
+        const editedData = message.dataFixData.editedData as any;
+        const newData = (editedData.headers && editedData.headers.length > 0)
+            ? [editedData.headers, ...editedData.data]
+            : editedData.data;
+
+        // 데이터 적용
+        applyGeneratedData({
+            sheetName: editedData.sheetName,
+            data: newData,
+            sheetIndex: message.dataFixData.sheetIndex,
+        });
+
+        // 적용된 메시지 ID 추가
+        setAppliedDataFixes(prev => [...prev, messageId]);
+
+        // 확인 메시지 추가
+        const confirmationMessage: ChatMessage = {
+            id: Date.now().toString(),
+            type: 'Extion ai',
+            content: `<strong>${editedData.sheetName}</strong> 시트의 데이터 수정이 적용되었습니다.`,
+            timestamp: new Date(),
+        };
+        addMessageToSheet(activeSheetIndex, confirmationMessage);
+
+    }, [activeSheetMessages, applyGeneratedData, addMessageToSheet, activeSheetIndex, appliedDataFixes]);
+
     const handleArtifactChat = async (userInput: string, isFirebaseChat?: boolean) => {
         try {
             setCurrentMode('artifact');
@@ -990,27 +1023,24 @@ export default function MainChatComponent() {
             );
 
             if (response.success && response.editedData) {
-                applyGeneratedData({
-                    sheetName: response.editedData.sheetName,
-                    data: response.editedData.data,
-                    sheetIndex: response.sheetIndex || activeSheetIndex
-                });
-
-                const changesText = response.changes 
+                const changesText = response.explanation || (response.changes 
                     ? (typeof response.changes === 'string' 
                         ? response.changes 
                         : JSON.stringify(response.changes))
-                    : '데이터가 수정되었습니다.';
+                    : '데이터 수정을 제안합니다.');
 
                 const assistantMessage: ChatMessage = {
                     id: (Date.now() + 1).toString(),
                     type: 'Extion ai',
-                    content: `데이터가 수정되었습니다!\n\n` +
-                        `시트명: ${response.editedData.sheetName}\n` +
-                        `수정된 행 수: ${response.editedData.data.length}개\n` +
-                        `열 수: ${response.editedData.data[0]?.length || 0}개\n\n` +
-                        `변경 사항:\n${changesText}`,
-                    timestamp: new Date()
+                    content: `데이터 수정 제안\n\n${changesText}`,
+                    timestamp: new Date(),
+                    dataFixData: {
+                        editedData: response.editedData,
+                        sheetIndex: response.sheetIndex !== undefined ? response.sheetIndex : activeSheetIndex,
+                        changes: response.changes,
+                        isApplied: false
+                    },
+                    mode: 'datafix',
                 };
 
                 addMessageToSheet(activeSheetIndex, assistantMessage);
@@ -1129,6 +1159,8 @@ export default function MainChatComponent() {
                     <MessageDisplay
                         messages={activeSheetMessages}
                         onArtifactClick={handleArtifactClick}
+                        onDataFixApply={handleApplyDataFix}
+                        appliedDataFixes={appliedDataFixes}
                         isLoading={isLoading}
                     />
 

@@ -1057,7 +1057,8 @@ const MainSpreadSheet: React.FC = () => {
     if (hot && xlsxData && activeSheetData) {
       console.log('🔄 시트 변경 감지 - 데이터 업데이트:', {
         activeSheetIndex: xlsxData.activeSheetIndex,
-        activeSheetName: activeSheetData.sheetName
+        activeSheetName: activeSheetData.sheetName,
+        lastModified: activeSheetData.metadata?.lastModified,
       });
 
       // 새 시트 데이터 생성. rawData를 직접 사용.
@@ -1108,7 +1109,7 @@ const MainSpreadSheet: React.FC = () => {
         clearTimeout(timeoutId);
       };
     }
-  }, [xlsxData?.activeSheetIndex, activeSheetData?.sheetName]); // 리렌더링 시 데이터 덮어쓰기 방지
+  }, [xlsxData?.activeSheetIndex, activeSheetData?.sheetName, activeSheetData?.metadata?.lastModified]); // 리렌더링 시 데이터 덮어쓰기 방지
 
   // 내보내기 버튼 UI를 상단 컨트롤 패널에 추가
   const renderExportControls = useCallback(() => {

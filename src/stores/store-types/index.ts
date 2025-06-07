@@ -1,4 +1,6 @@
 // 공통 타입 정의
+import { EditedDataDto, ChangesDto } from '@/services/api/dataServices';
+
 export interface ChatMessage {
     id: string;
     type: 'user' | 'Extion ai';
@@ -12,6 +14,12 @@ export interface ChatMessage {
         code?: string;
         artifactId?: string;
         explanation?: string;
+    };
+    dataFixData?: {
+        editedData: EditedDataDto;
+        sheetIndex?: number;
+        changes?: ChangesDto;
+        isApplied?: boolean;
     };
 }
 

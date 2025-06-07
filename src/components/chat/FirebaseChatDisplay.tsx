@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
     FirebaseMessage, 
     FirebaseChat,
@@ -33,9 +33,10 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
     const [inputValue, setInputValue] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [chatData, setChatData] = useState<FirebaseChat | null>(null);
+    const [appliedDataFixes, setAppliedDataFixes] = useState<string[]>([]);
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const { xlsxData, setArtifactCode, openArtifactModal } = useUnifiedStore();
+    const { xlsxData, setArtifactCode, openArtifactModal, applyGeneratedData } = useUnifiedStore();
 
     // 메시지 끝으로 스크롤
     const scrollToBottom = () => {
@@ -103,6 +104,40 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
             unsubscribe();
         };
     }, [chatId]);
+
+    const handleApplyDataFix = useCallback(async (messageId: string) => {
+        const message = messages.find(m => m.id === messageId);
+        if (!message || !message.dataFixData || appliedDataFixes.includes(messageId)) {
+            return;
+        }
+
+        const editedData = message.dataFixData.editedData as any;
+        const newData = (editedData.headers && editedData.headers.length > 0)
+            ? [editedData.headers, ...editedData.data]
+            : editedData.data;
+
+        // 데이터 적용
+        applyGeneratedData({
+            sheetName: editedData.sheetName,
+            data: newData,
+            sheetIndex: message.dataFixData.sheetIndex,
+        });
+
+        // 적용된 메시지 ID 추가
+        setAppliedDataFixes(prev => [...prev, messageId]);
+
+        // 확인 메시지 추가
+        if (chatId) {
+            const confirmationMessage: Omit<FirebaseMessage, 'id' | 'chatId'> = {
+                role: 'Extion ai',
+                content: `✅ <strong>${editedData.sheetName}</strong> 시트의 데이터 수정이 적용되었습니다.`,
+                timestamp: new Date(),
+                type: 'text',
+                mode: 'normal'
+            };
+            await addMessage(chatId, confirmationMessage);
+        }
+    }, [messages, applyGeneratedData, chatId, appliedDataFixes]);
 
     // 메시지 전송
     const handleSendMessage = async () => {
@@ -280,6 +315,8 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
                         <MessageDisplay 
                             messages={messages} 
                             onArtifactClick={handleFirebaseArtifactClick}
+                            onDataFixApply={handleApplyDataFix}
+                            appliedDataFixes={appliedDataFixes}
                         />
                         <div ref={messagesEndRef} />
                     </div>

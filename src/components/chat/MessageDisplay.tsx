@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { formatMessageDate } from '../../utils/chatUtils';
 import { ChatMode } from '../../app/actions/chatActions';
 import { ChatMessage } from '../../stores/store-types';
-import { Loader2, ChevronDown, ChevronUp, BarChart3, Table, FileText, Sparkles } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, BarChart3, Table, FileText, Sparkles, Wand2 } from 'lucide-react';
 
 // Message 인터페이스는 기존과의 호환성을 위해 유지
 export interface Message extends ChatMessage {}
@@ -13,6 +13,8 @@ interface MessageDisplayProps {
     messages: ChatMessage[];
     onArtifactClick: (messageId: string) => void;
     isLoading?: boolean;
+    onDataFixApply: (messageId: string) => void;
+    appliedDataFixes: string[];
 }
 
 // 아티팩트 타입별 아이콘 매핑
@@ -128,17 +130,70 @@ const ArtifactMessage: React.FC<{
     );
 };
 
-export default function MessageDisplay({ messages, onArtifactClick, isLoading = false }: MessageDisplayProps) {
+// 데이터 수정 제안 메시지 컴포넌트
+const DataFixMessage: React.FC<{
+    message: ChatMessage;
+    onDataFixApply: (messageId: string) => void;
+    isApplied: boolean;
+}> = ({ message, onDataFixApply, isApplied }) => {
+    const { dataFixData } = message;
+    if (!dataFixData) return null;
+
+    const { editedData } = dataFixData;
+
+    return (
+        <div className="space-y-4">
+            <div>
+                <div
+                    className="prose prose-sm max-w-none text-gray-800"
+                    dangerouslySetInnerHTML={{
+                        __html: message.content.replace(/\n/g, '<br>')
+                    }}
+                />
+            </div>
+            
+            <div>
+                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <p className="text-sm font-medium text-gray-900">
+                        &quot;{editedData.sheetName}&quot; 시트에 변경사항 적용
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                        {editedData.data.length}개 행, {editedData.data[0]?.length || 0}개 열
+                    </p>
+                    <button
+                        onClick={() => onDataFixApply(message.id)}
+                        disabled={isApplied}
+                        className={`mt-4 w-full text-center px-4 py-2 text-sm font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2
+                            ${isApplied 
+                                ? 'bg-[#e6f0ff] text-[#005de9] cursor-not-allowed' 
+                                : 'bg-[#005de9] text-white hover:bg-[#004bc1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#005de9]'
+                            }`}
+                    >
+                        {isApplied ? (
+                            <>
+                                <span>✓ 적용 완료</span>
+                            </>
+                        ) : (
+                            '변경사항 적용하기'
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function MessageDisplay({ messages, onArtifactClick, isLoading = false, onDataFixApply, appliedDataFixes }: MessageDisplayProps) {
     const getModeIcon = (mode?: ChatMode) => {
         if (!mode || mode === 'normal') return null;
         
         switch (mode) {
             case 'function':
-                return <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-md mr-2">함수</span>;
+                return <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-md mr-2">함수</span>;
             case 'artifact':
-                return <span className="text-xs px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-md mr-2">분석</span>;
+                return <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-md mr-2">시각화</span>;
             case 'datafix':
-                return <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-800 rounded-md mr-2">수정</span>;
+                return <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-md mr-2">자동수정</span>;
             default:
                 return null;
         }
@@ -150,6 +205,7 @@ export default function MessageDisplay({ messages, onArtifactClick, isLoading = 
                 const isUser = message.type === 'user';
                 const isArtifact = message.artifactData && !message.content;
                 const isArtifactWithExplanation = message.artifactData && message.content;
+                const isDataFix = message.dataFixData;
                 
                 return (
                     <div key={message.id} className={`py-6 ${index !== 0 ? 'border-t border-gray-100' : ''}`}>
@@ -159,8 +215,13 @@ export default function MessageDisplay({ messages, onArtifactClick, isLoading = 
                                     {!isUser && getModeIcon(message.mode as any)}
                                 </div>
                                 
-                                {/* 아티팩트 메시지 (설명 포함/미포함) */}
-                                {(isArtifact || isArtifactWithExplanation) ? (
+                                {isDataFix ? (
+                                    <DataFixMessage 
+                                        message={message}
+                                        onDataFixApply={onDataFixApply}
+                                        isApplied={appliedDataFixes.includes(message.id)}
+                                    />
+                                ) : (isArtifact || isArtifactWithExplanation) ? (
                                     <ArtifactMessage 
                                         message={message} 
                                         onArtifactClick={onArtifactClick} 
