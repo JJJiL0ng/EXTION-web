@@ -4,7 +4,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
 import { useUnifiedStore, ChatMessage } from '@/stores';
 import { detectAndDecode } from '../../utils/chatUtils';
-import { callArtifactAPI, callFormulaAPI, callDataGenerationAPI, callNormalChatAPI, callDataFixAPI } from '../../services/api/dataServices';
+import { callArtifactAPI, callDataGenerationAPI, callNormalChatAPI, callDataFixAPI } from '../../services/api/dataServices';
 import { ChatMode } from '../../app/actions/chatActions';
 import { processXLSXFile } from '../../utils/fileProcessing';
 import { saveSpreadsheetToFirebase } from '../../services/api/dataServices';
@@ -57,8 +57,6 @@ export default function MainChatComponent() {
         setXLSXData,
         setLoadingState,
         setError,
-        setPendingFormula,
-        addToFormulaHistory,
         isArtifactModalOpen,
         addToArtifactHistory,
         openArtifactModal,
@@ -829,11 +827,11 @@ export default function MainChatComponent() {
             
             // 임시로 간단한 키워드 기반 모드 결정 (서버 액션 문제 회피)
             const input = currentInput.toLowerCase();
-            if (input.includes('함수') || input.includes('수식') || input.includes('평균') || input.includes('합계') || input.includes('최대') || input.includes('최소')) {
-                mode = 'formula';
+            if (input.includes('함수') || input.includes('평균') || input.includes('합계') || input.includes('최대') || input.includes('최소')) {
+                mode = 'function';
             } else if (input.includes('시각화') || input.includes('차트') || input.includes('그래프') || input.includes('분석')) {
                 mode = 'artifact';
-            } else if (input.includes('정렬') || input.includes('필터') || input.includes('수정') || input.includes('변경') || input.includes('삭제')) {
+            } else if (input.includes('추가') || input.includes('변경') || input.includes('수정') || input.includes('변경') || input.includes('삭제')) {
                 mode = 'datafix';
             } else {
                 mode = 'normal';
@@ -845,9 +843,7 @@ export default function MainChatComponent() {
             setCurrentMode(mode);
 
             // 해당 모드에 맞는 API 호출
-            if (mode === 'formula') {
-                await handleFormulaChat(currentInput, isFirebaseChatActive);
-            } else if (mode === 'artifact') {
+            if (mode === 'artifact') {
                 await handleArtifactChat(currentInput, isFirebaseChatActive);
             } else if (mode === 'datafix') {
                 await handleDataFixChat(currentInput, isFirebaseChatActive);
@@ -870,98 +866,12 @@ export default function MainChatComponent() {
         }
     };
 
-    // 각 채팅 모드별 핸들러 함수
-    const handleFormulaChat = async (userInput: string, isFirebaseChat?: boolean) => {
-        try {
-            setCurrentMode('formula');
-
-            const response = await callFormulaAPI(
-                userInput,
-                null, // extendedSheetContext 제거
-                getDataForGPTAnalysis,
-                {
-                    chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
-                    currentSheetIndex: activeSheetIndex
-                }
-            );
-
-            if (response.success && response.formula) {
-                console.log('🎉 포뮬러 응답 수신:', {
-                    formula: response.formula,
-                    cellAddress: response.cellAddress,
-                    explanation: response.explanation?.korean,
-                    activeSheetIndex
-                });
-
-                const assistantMessage: ChatMessage = {
-                    id: (Date.now() + 1).toString(),
-                    type: 'Extion ai',
-                    content: `수식이 생성되었습니다!\n\n` +
-                        `수식: \`${response.formula}\`\n` +
-                        `설명: ${response.explanation?.korean || '함수가 생성되었습니다.'}\n\n` +
-                        `이 수식을 ${response.cellAddress} 에 적용하였습니다`,
-                    timestamp: new Date()
-                };
-
-                // 현재 활성 시트에 응답 메시지 추가
-                addMessageToSheet(activeSheetIndex, assistantMessage);
-
-                const formulaApplication = {
-                    formula: response.formula,
-                    cellAddress: response.cellAddress || 'E1',
-                    explanation: response.explanation?.korean || '함수가 생성되었습니다.',
-                    timestamp: new Date()
-                };
-
-                console.log('🚀 setPendingFormula 호출 준비:', {
-                    formulaApplication,
-                    sheetIndex: activeSheetIndex,
-                    finalObject: {
-                        ...formulaApplication,
-                        sheetIndex: activeSheetIndex
-                    }
-                });
-
-                setPendingFormula({
-                    ...formulaApplication,
-                    sheetIndex: activeSheetIndex
-                });
-
-                console.log('✅ setPendingFormula 호출 완료');
-
-                addToFormulaHistory({
-                    ...formulaApplication,
-                    sheetIndex: activeSheetIndex
-                });
-            } else {
-                console.error('❌ 포뮬러 응답 실패:', {
-                    success: response.success,
-                    hasFormula: !!response.formula,
-                    error: response.error
-                });
-                throw new Error(response.error || '함수 생성에 실패했습니다.');
-            }
-        } catch (error) {
-            console.error('포뮬러 채팅 오류:', error);
-            const assistantMessage: ChatMessage = {
-                id: (Date.now() + 1).toString(),
-                type: 'Extion ai',
-                content: `포뮬러 생성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
-                timestamp: new Date()
-            };
-
-            // 현재 활성 시트에 오류 메시지 추가
-            addMessageToSheet(activeSheetIndex, assistantMessage);
-        }
-    };
-
     const handleArtifactChat = async (userInput: string, isFirebaseChat?: boolean) => {
         try {
             setCurrentMode('artifact');
 
             const response = await callArtifactAPI(
                 userInput,
-                null, // extendedSheetContext 제거
                 getDataForGPTAnalysis,
                 {
                     chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
@@ -1022,7 +932,7 @@ export default function MainChatComponent() {
 
             const response = await callDataGenerationAPI(
                 userInput,
-                null, // extendedSheetContext 제거
+                null,
                 getDataForGPTAnalysis,
                 {
                     chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
@@ -1071,7 +981,7 @@ export default function MainChatComponent() {
 
             const response = await callDataFixAPI(
                 userInput,
-                null, // extendedSheetContext 제거
+                null,
                 getDataForGPTAnalysis,
                 {
                     chatId: getCurrentFirebaseChatId() || getCurrentChatId(),
@@ -1125,7 +1035,7 @@ export default function MainChatComponent() {
         try {
             const response = await callNormalChatAPI(
                 userInput,
-                null, // extendedSheetContext 제거
+                null,
                 getDataForGPTAnalysis,
                 {
                     chatId: getCurrentFirebaseChatId() || getCurrentChatId(),

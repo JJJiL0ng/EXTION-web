@@ -1,4 +1,67 @@
 import * as XLSX from 'xlsx';
+import { XLSXData, SheetData } from '../store-types';
+
+// XLSX 파일을 파싱하는 헬퍼 함수
+export const parseXLSXFile = async (file: File): Promise<XLSXData> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            try {
+                const arrayBuffer = e.target?.result;
+                if (!arrayBuffer) {
+                    return reject(new Error('파일을 읽을 수 없습니다.'));
+                }
+
+                const data = new Uint8Array(arrayBuffer as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                const sheets: SheetData[] = workbook.SheetNames.map((sheetName: string) => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    // defval: '' 옵션으로 빈 셀을 빈 문자열로 처리
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: '' }) as string[][];
+
+                    const headers = jsonData[0] || [];
+                    const columnCount = headers.length > 0 ? headers.length : (jsonData[0]?.length || 0);
+
+                    return {
+                        sheetName,
+                        rawData: jsonData,
+                        metadata: {
+                            rowCount: jsonData.length,
+                            columnCount: columnCount,
+                            dataRange: {
+                                startRow: 1,
+                                endRow: jsonData.length,
+                                startCol: 0,
+                                endCol: columnCount > 0 ? columnCount - 1 : 0,
+                                startColLetter: 'A',
+                                endColLetter: columnCount > 0 ? String.fromCharCode(64 + columnCount) : 'A'
+                            },
+                            lastModified: new Date()
+                        }
+                    };
+                });
+
+                resolve({
+                    fileName: file.name,
+                    sheets,
+                    activeSheetIndex: 0
+                });
+            } catch (error) {
+                console.error('XLSX 파싱 오류:', error);
+                reject(error);
+            }
+        };
+
+        reader.onerror = (error) => {
+            console.error('파일 리더 오류:', error);
+            reject(new Error('파일 읽기 실패'));
+        };
+        
+        reader.readAsArrayBuffer(file);
+    });
+};
 
 // 시트 참조 문자열 생성 (예: Sheet1!A1)
 export const coordsToSheetReference = (

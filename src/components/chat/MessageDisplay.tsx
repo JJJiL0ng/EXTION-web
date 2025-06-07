@@ -133,8 +133,8 @@ export default function MessageDisplay({ messages, onArtifactClick, isLoading = 
         if (!mode || mode === 'normal') return null;
         
         switch (mode) {
-            case 'formula':
-                return <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-md mr-2">수식</span>;
+            case 'function':
+                return <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-md mr-2">함수</span>;
             case 'artifact':
                 return <span className="text-xs px-1.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-md mr-2">분석</span>;
             case 'datafix':
@@ -156,7 +156,7 @@ export default function MessageDisplay({ messages, onArtifactClick, isLoading = 
                         <div className="flex items-start">
                             <div className="flex-1">
                                 <div className="flex items-center mb-1">
-                                    {!isUser && getModeIcon(message.mode)}
+                                    {!isUser && getModeIcon(message.mode as any)}
                                 </div>
                                 
                                 {/* 아티팩트 메시지 (설명 포함/미포함) */}
