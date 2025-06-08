@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
     FirebaseMessage, 
     FirebaseChat,
@@ -15,6 +15,7 @@ import { ChatMessage } from '@/stores';
 import { Loader2, MessageCircleIcon, AlertCircleIcon, SendIcon } from 'lucide-react';
 import { useUnifiedStore } from '@/stores';
 import { callNormalChatAPI } from '@/services/api/dataServices';
+import { cellAddressToCoords } from '@/stores/store-utils/xlsxUtils';
 
 interface FirebaseChatDisplayProps {
     chatId: string | null;
@@ -33,9 +34,11 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
     const [inputValue, setInputValue] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [chatData, setChatData] = useState<FirebaseChat | null>(null);
+    const [appliedDataFixes, setAppliedDataFixes] = useState<string[]>([]);
+    const [appliedFunctionResults, setAppliedFunctionResults] = useState<string[]>([]);
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const { xlsxData, setArtifactCode, openArtifactModal } = useUnifiedStore();
+    const { xlsxData, setArtifactCode, openArtifactModal, applyGeneratedData, setXLSXData } = useUnifiedStore();
 
     // 메시지 끝으로 스크롤
     const scrollToBottom = () => {
@@ -103,6 +106,114 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
             unsubscribe();
         };
     }, [chatId]);
+
+    const handleApplyDataFix = useCallback(async (messageId: string) => {
+        const message = messages.find(m => m.id === messageId);
+        if (!message || !message.dataFixData || appliedDataFixes.includes(messageId)) {
+            return;
+        }
+
+        const editedData = message.dataFixData.editedData as any;
+        const newData = (editedData.headers && editedData.headers.length > 0)
+            ? [editedData.headers, ...editedData.data]
+            : editedData.data;
+
+        // 데이터 적용
+        applyGeneratedData({
+            sheetName: editedData.sheetName,
+            data: newData,
+            sheetIndex: message.dataFixData.sheetIndex,
+        });
+
+        // 적용된 메시지 ID 추가
+        setAppliedDataFixes(prev => [...prev, messageId]);
+
+        // 확인 메시지 추가
+        if (chatId) {
+            const confirmationMessage: Omit<FirebaseMessage, 'id' | 'chatId'> = {
+                role: 'Extion ai',
+                content: `✅ <strong>${editedData.sheetName}</strong> 시트의 데이터 수정이 적용되었습니다.`,
+                timestamp: new Date(),
+                type: 'text',
+                mode: 'normal'
+            };
+            await addMessage(chatId, confirmationMessage);
+        }
+    }, [messages, applyGeneratedData, chatId, appliedDataFixes]);
+
+    const handleFunctionApply = useCallback(async (messageId: string) => {
+        const message = messages.find(m => m.id === messageId) as ChatMessage & { functionData?: any };
+        if (!message || !message.functionData || appliedFunctionResults.includes(messageId)) {
+            return;
+        }
+
+        const { functionDetails } = message.functionData;
+        const { result, targetCell } = functionDetails;
+        
+        const { xlsxData: currentXlsxData, activeSheetData } = useUnifiedStore.getState();
+
+        if (!currentXlsxData || !activeSheetData) return;
+
+        try {
+            const { row: startRow, col: startCol } = cellAddressToCoords(targetCell);
+            
+            const newSheets = currentXlsxData.sheets.map((sheet, index) => {
+                if (index === currentXlsxData.activeSheetIndex) {
+                    const newRawData = (sheet.rawData || []).map(row => [...(row || [])]);
+
+                    if (Array.isArray(result)) {
+                        (result as string[][]).forEach((rowData, rIdx) => {
+                            const targetRowIdx = startRow + rIdx;
+                            while(newRawData.length <= targetRowIdx) newRawData.push([]);
+                            const targetRow = newRawData[targetRowIdx];
+                            rowData.forEach((cellData, cIdx) => {
+                                const targetColIdx = startCol + cIdx;
+                                while(targetRow.length <= targetColIdx) targetRow.push('');
+                                targetRow[targetColIdx] = String(cellData);
+                            });
+                        });
+                    } else {
+                        const targetRowIdx = startRow;
+                        while(newRawData.length <= targetRowIdx) newRawData.push([]);
+                        const targetRow = newRawData[targetRowIdx];
+                        while(targetRow.length <= startCol) targetRow.push('');
+                        targetRow[startCol] = String(result);
+                    }
+                    
+                    const newRowCount = newRawData.length;
+                    const newColumnCount = newRowCount > 0 ? Math.max(...newRawData.map(r => (r || []).length)) : 0;
+
+                    return {
+                        ...sheet,
+                        rawData: newRawData,
+                        metadata: {
+                            ...(sheet.metadata as any),
+                            rowCount: newRowCount,
+                            columnCount: newColumnCount,
+                            lastModified: new Date()
+                        }
+                    };
+                }
+                return sheet;
+            });
+
+            setXLSXData({ ...currentXlsxData, sheets: newSheets });
+            setAppliedFunctionResults(prev => [...prev, messageId]);
+
+            if (chatId) {
+                await addMessage(chatId, {
+                    role: 'Extion ai',
+                    content: `✅ 함수 결과가 시트에 적용되었습니다.`,
+                    timestamp: new Date(),
+                    type: 'text',
+                    mode: 'normal'
+                });
+            }
+        } catch (error) {
+            console.error('Error applying function result:', error);
+            setError('함수 결과 적용 중 오류가 발생했습니다.');
+        }
+    }, [messages, appliedFunctionResults, chatId, setXLSXData]);
 
     // 메시지 전송
     const handleSendMessage = async () => {
@@ -280,6 +391,10 @@ const FirebaseChatDisplay: React.FC<FirebaseChatDisplayProps> = ({
                         <MessageDisplay 
                             messages={messages} 
                             onArtifactClick={handleFirebaseArtifactClick}
+                            onDataFixApply={handleApplyDataFix}
+                            appliedDataFixes={appliedDataFixes}
+                            onFunctionApply={handleFunctionApply}
+                            appliedFunctionResults={appliedFunctionResults}
                         />
                         <div ref={messagesEndRef} />
                     </div>

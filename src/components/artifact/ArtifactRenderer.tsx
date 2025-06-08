@@ -5,26 +5,7 @@ import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import { useUnifiedStore } from '@/stores';
 import { AlertCircle, Loader2, RefreshCw, Code, Layers, Cloud, HardDrive, Database } from 'lucide-react';
 import * as Recharts from 'recharts';
-
-// XLSX 데이터 타입 정의 (다중 시트 지원)
-interface XlsxData {
-  fileName: string;
-  sheets: Array<{
-    sheetName: string;
-    headers: string[];
-    data: string[][];
-    metadata?: any;
-  }>;
-  activeSheetIndex: number;
-}
-
-// 단일 시트 데이터 타입
-interface SheetData {
-  sheetName: string;
-  headers: string[];
-  data: string[][];
-  metadata?: any;
-}
+import * as Babel from '@babel/standalone';
 
 // 동적 컴포넌트 렌더링을 위한 안전한 실행 환경
 const createSafeExecutionContext = () => {
@@ -55,6 +36,7 @@ const createSafeExecutionContext = () => {
     Pie: Recharts.Pie,
     Cell: Recharts.Cell,
     Area: Recharts.Area,
+    ResponsiveContainer: Recharts.ResponsiveContainer,
     
     console: {
       log: (...args: unknown[]) => console.log('[Artifact]', ...args),
@@ -64,92 +46,54 @@ const createSafeExecutionContext = () => {
   };
 };
 
-// 코드 실행 및 컴포넌트 생성 - XLSX 데이터 지원으로 업데이트
-const executeArtifactCode = (
-  code: string, 
-  xlsxData: XlsxData,
-  activeSheetData: SheetData,
-  allSheetsData?: Array<SheetData>,
-  dataSource?: 'cloud' | 'local'
-): React.ComponentType | null => {
+// 코드 실행 및 컴포넌트 생성 - 독립적인 React 컴포넌트 코드 지원
+const executeArtifactCode = (code: string): React.ComponentType | null => {
   try {
-    console.log('Executing artifact code with data:', {
-      fileName: xlsxData?.fileName,
-      totalSheets: xlsxData?.sheets?.length,
-      activeSheet: activeSheetData?.sheetName,
-      activeHeaders: activeSheetData?.headers,
-      activeRowCount: activeSheetData?.data?.length,
-      dataSource: dataSource || 'unknown'
-    });
+    // 1. JSX를 일반 JavaScript로 변환 (Babel 사용)
+    const transformedCode = Babel.transform(code, {
+      presets: ['react'],
+    }).code;
 
-    // 실행 컨텍스트 생성
+    if (!transformedCode) {
+      throw new Error('Babel transformation failed: generated code is empty.');
+    }
+
     const context = createSafeExecutionContext();
     
-    // 코드를 함수로 래핑 - 다중 시트 데이터 지원
+    // import 및 export 구문 제거 (Babel이 처리하지만 안전장치로 남겨둘 수 있음)
+    const processedCode = transformedCode
+      .replace(/^import .*?from '.*?';/gm, '')
+      .replace(/export default .*/g, '');
+
     const functionBody = `
-      // React와 Recharts의 모든 컴포넌트를 전역으로 사용 가능하게 설정
-      const React = arguments[4].React;
-      const { useState, useEffect, useMemo, useCallback, useRef, Fragment } = React;
-      const { 
-        BarChart, LineChart, PieChart, ScatterChart, AreaChart,
-        XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-        Bar, Line, Pie, Cell, Area
-      } = arguments[4];
+      // React와 Recharts 컴포넌트를 스코프 내에서 사용 가능하게 함
+      const {
+        React, useState, useEffect, useMemo, useCallback, useRef, Fragment,
+        BarChart, LineChart, PieChart, ScatterChart, AreaChart, XAxis, YAxis,
+        CartesianGrid, Tooltip, Legend, Bar, Line, Pie, Cell, Area, ResponsiveContainer
+      } = arguments[0];
       
-      // 다중 시트 데이터를 전역에서 사용 가능하게 설정
-      const xlsxData = arguments[0];
-      const activeSheetData = arguments[1];
-      const allSheetsData = arguments[2] || xlsxData?.sheets || [];
-      const dataSource = arguments[3] || 'unknown';
+      // 사용자 코드 실행
+      ${processedCode}
       
-      // 백워드 호환성을 위한 csvData (기존 단일 시트 코드 지원)
-      const csvData = {
-        headers: activeSheetData?.headers || [],
-        data: activeSheetData?.data || [],
-        fileName: xlsxData?.fileName || 'unknown.xlsx',
-        sheetName: activeSheetData?.sheetName || 'Sheet1',
-        source: dataSource
-      };
-      
-      // 시트별 데이터 접근을 위한 헬퍼 함수
-      const getSheetByName = (name) => {
-        return allSheetsData.find(sheet => sheet.sheetName === name);
-      };
-      
-      const getSheetByIndex = (index) => {
-        return allSheetsData[index];
-      };
-      
-      // 데이터 소스 확인 함수
-      const isCloudData = () => dataSource === 'cloud';
-      const isLocalData = () => dataSource === 'local';
-      
-      // 백엔드 코드 실행
-      ${code}
-      
-      // ComponentToRender가 정의되었는지 확인하고 반환
-      if (typeof ComponentToRender === 'function') {
-        return ComponentToRender;
-      }
-      
-      // 만약 ComponentToRender가 없다면 다른 가능한 이름들을 확인
-      const possibleNames = ['App', 'Chart', 'Dashboard', 'DataVisualization', 'Visualization', 'Component'];
+      // 생성된 컴포넌트를 이름으로 찾기
+      const possibleNames = ['SalesDashboard', 'ComponentToRender', 'App', 'Chart', 'Dashboard', 'DataVisualization', 'Visualization', 'Component'];
       for (const name of possibleNames) {
         try {
           if (typeof eval(name) === 'function') {
             return eval(name);
           }
         } catch (e) {
-          // 해당 이름이 정의되지 않았으면 계속 진행
+          // 이름이 없으면 계속 진행
         }
       }
       
-      throw new Error('No valid React component found. Please ensure you define ComponentToRender.');
+      throw new Error('No valid React component found. Please ensure you define a component like ComponentToRender, Dashboard, or SalesDashboard.');
     `;
 
     // 함수 생성 및 실행
     const componentFactory = new Function(functionBody);
-    const Component = componentFactory(xlsxData, activeSheetData, allSheetsData, dataSource, context);
+    const Component = componentFactory(context);
     
     // 컴포넌트가 유효한지 확인
     if (typeof Component !== 'function') {
@@ -251,13 +195,9 @@ function ArtifactRenderer() {
   const {
     xlsxData,
     activeSheetData,
-    extendedSheetContext,
-    computedSheetData,
     artifactCode,
     loadingStates,
     errors,
-    getCurrentSheetData,
-    getDataForGPTAnalysis,
     currentSpreadsheetId,
     currentChatId
   } = useUnifiedStore();
@@ -271,13 +211,13 @@ function ArtifactRenderer() {
     setMounted(true);
   }, []);
 
-  // 데이터가 변경될 때마다 렌더링 키 업데이트
+  // 아티팩트 코드가 변경될 때마다 렌더링 키 업데이트
   useEffect(() => {
-    if (mounted && (computedSheetData || xlsxData)) {
+    if (mounted && artifactCode) {
       setRenderKey(prev => prev + 1);
       setRenderError(null);
     }
-  }, [mounted, computedSheetData, xlsxData, activeSheetData]);
+  }, [mounted, artifactCode]);
 
   // 클라우드 채팅인지 확인
   const isCloudChat = useCallback(() => {
@@ -293,66 +233,21 @@ function ArtifactRenderer() {
 
   // 렌더링할 컴포넌트 메모이제이션
   const RenderedComponent = useMemo(() => {
-    if (!mounted || !artifactCode || !xlsxData || !activeSheetData) return null;
+    if (!mounted || !artifactCode) return null;
     
     try {
       setRenderError(null);
       
-      // 최신 데이터 준비 (포뮬러 계산 결과 포함)
-      const currentActiveSheetData = getCurrentSheetData() || activeSheetData.data;
-      
-      // 활성 시트 데이터 업데이트
-      const updatedActiveSheetData = {
-        ...activeSheetData,
-        data: currentActiveSheetData
-      };
-      
-      // 모든 시트 데이터 준비 (computed data 포함)
-      const allSheetsData = xlsxData.sheets.map((sheet, index) => {
-        if (index === xlsxData.activeSheetIndex) {
-          return updatedActiveSheetData;
-        }
-        
-        // 다른 시트의 computed data도 가져오기
-        const sheetComputedData = computedSheetData[index];
-        if (sheetComputedData) {
-          return {
-            ...sheet,
-            data: sheetComputedData
-          };
-        }
-        
-        return sheet;
-      });
-      
-      // XLSX 데이터 구성
-      const xlsxDataForArtifact = {
-        ...xlsxData,
-        sheets: allSheetsData
-      };
-
-      // 데이터 소스 정보
       const dataSource = getDataSourceInfo();
       
-      console.log('Rendering artifact with data:', {
-        fileName: xlsxDataForArtifact.fileName,
-        totalSheets: xlsxDataForArtifact.sheets.length,
-        activeSheet: updatedActiveSheetData.sheetName,
-        activeHeaders: updatedActiveSheetData.headers,
-        activeRowCount: updatedActiveSheetData.data.length,
+      console.log('Rendering artifact with code:', {
         codeLength: artifactCode.code.length,
         type: artifactCode.type,
         dataSource: dataSource.type
       });
       
       // 컴포넌트 생성
-      const Component = executeArtifactCode(
-        artifactCode.code, 
-        xlsxDataForArtifact,
-        updatedActiveSheetData,
-        allSheetsData,
-        dataSource.type
-      );
+      const Component = executeArtifactCode(artifactCode.code);
       
       if (!Component) {
         throw new Error('Failed to create component');
@@ -365,7 +260,7 @@ function ArtifactRenderer() {
       console.error('Failed to render artifact:', error);
       return null;
     }
-  }, [mounted, artifactCode, xlsxData, activeSheetData, computedSheetData, getCurrentSheetData, getDataSourceInfo]);
+  }, [mounted, artifactCode, getDataSourceInfo]);
 
   // 새로고침 핸들러
   const handleRefresh = () => {

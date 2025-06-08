@@ -293,13 +293,10 @@ export const getSpreadsheetData = async (spreadsheetId: string): Promise<XLSXDat
                 // 빈 시트라도 구조는 유지
                 const sheet: SheetData = {
                     sheetName: sheetMeta.sheetName,
-                    headers: sheetMeta.headers || [],
-                    data: [],
-                    rawData: [sheetMeta.headers || []],
+                    rawData: [],
                     metadata: {
                         rowCount: 0,
                         columnCount: sheetMeta.headers?.length || 0,
-                        headerRow: sheetMeta.metadata.headerRow,
                         dataRange: sheetMeta.metadata.dataRange,
                         lastModified: sheetMeta.metadata.lastModified,
                         preserveOriginalStructure: true
@@ -334,13 +331,10 @@ export const getSpreadsheetData = async (spreadsheetId: string): Promise<XLSXDat
 
             const sheet: SheetData = {
                 sheetName: sheetMeta.sheetName,
-                headers,
-                data,
                 rawData,
                 metadata: {
                     rowCount: data.length,
                     columnCount: headers.length,
-                    headerRow: sheetMeta.metadata.headerRow,
                     dataRange: sheetMeta.metadata.dataRange,
                     lastModified: sheetMeta.metadata.lastModified,
                     preserveOriginalStructure: true

@@ -25,7 +25,6 @@ const ArtifactModal: React.FC<ArtifactModalProps> = ({ isOpen, onClose }) => {
     // 확장된 스토어 기능들
     xlsxData, 
     activeSheetData,
-    extendedSheetContext,
     currentSpreadsheetId,
     currentChatId
   } = useUnifiedStore();
@@ -155,12 +154,7 @@ const ArtifactModal: React.FC<ArtifactModalProps> = ({ isOpen, onClose }) => {
           </div>
           
           <div className="flex items-center space-x-2">
-            {/* 데이터 요약 정보 */}
-            {activeSheetData && (
-              <div className="text-xs text-gray-500 mr-2 hidden md:block">
-                {activeSheetData.headers.length}열 × {activeSheetData.data.length}행
-              </div>
-            )}
+            {/* 데이터 요약 정보 - 속성 변경으로 일시 제거 */}
             
             {/* 액션 버튼 그룹 */}
             <div className="flex items-center gap-1">
@@ -202,13 +196,8 @@ const ArtifactModal: React.FC<ArtifactModalProps> = ({ isOpen, onClose }) => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between text-xs text-gray-500 gap-2">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <span className="font-medium">파일: <span className="text-indigo-600">{xlsxData.fileName}</span></span>
-                {extendedSheetContext && (
-                  <>
-                    <span className="font-medium">시트: <span className="text-indigo-600">{extendedSheetContext.sheetName}</span></span>
-                    <span className="hidden md:inline-block">
-                      헤더 범위: {extendedSheetContext.dataRange.startColumn}1 ~ {extendedSheetContext.dataRange.endColumn}1
-                    </span>
-                  </>
+                {activeSheetData && (
+                  <span className="font-medium">시트: <span className="text-indigo-600">{activeSheetData.sheetName}</span></span>
                 )}
                 {/* 데이터 소스 정보 */}
                 <span className={`flex items-center gap-1 font-medium ${dataSource.color.split(' ')[0]}`}>

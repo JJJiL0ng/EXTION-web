@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { XLSXData, SheetData, ExtendedSheetContext, HeaderInfo, DataRange } from '../store-types';
+import { XLSXData, SheetData } from '../store-types';
 
 // XLSX 파일을 파싱하는 헬퍼 함수
 export const parseXLSXFile = async (file: File): Promise<XLSXData> => {
@@ -8,53 +8,35 @@ export const parseXLSXFile = async (file: File): Promise<XLSXData> => {
 
         reader.onload = (e) => {
             try {
-                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const arrayBuffer = e.target?.result;
+                if (!arrayBuffer) {
+                    return reject(new Error('파일을 읽을 수 없습니다.'));
+                }
+
+                const data = new Uint8Array(arrayBuffer as ArrayBuffer);
                 const workbook = XLSX.read(data, { type: 'array' });
 
-                const sheets: SheetData[] = workbook.SheetNames.map((sheetName: string, index: number) => {
+                const sheets: SheetData[] = workbook.SheetNames.map((sheetName: string) => {
                     const worksheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
-
-                    // 빈 배열 처리
-                    if (jsonData.length === 0) {
-                        return {
-                            sheetName,
-                            headers: [],
-                            data: [],
-                            metadata: {
-                                rowCount: 0,
-                                columnCount: 0,
-                                headerRow: 0,
-                                dataRange: {
-                                    startRow: 0,
-                                    endRow: 0,
-                                    startCol: 0,
-                                    endCol: 0,
-                                    startColLetter: 'A',
-                                    endColLetter: 'A'
-                                }
-                            }
-                        };
-                    }
+                    // defval: '' 옵션으로 빈 셀을 빈 문자열로 처리
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: '' }) as string[][];
 
                     const headers = jsonData[0] || [];
-                    const data = jsonData.slice(1);
+                    const columnCount = headers.length > 0 ? headers.length : (jsonData[0]?.length || 0);
 
                     return {
                         sheetName,
-                        headers,
-                        data,
+                        rawData: jsonData,
                         metadata: {
-                            rowCount: data.length,
-                            columnCount: headers.length,
-                            headerRow: 0,
+                            rowCount: jsonData.length,
+                            columnCount: columnCount,
                             dataRange: {
                                 startRow: 1,
-                                endRow: data.length,
+                                endRow: jsonData.length,
                                 startCol: 0,
-                                endCol: headers.length - 1,
+                                endCol: columnCount > 0 ? columnCount - 1 : 0,
                                 startColLetter: 'A',
-                                endColLetter: String.fromCharCode(65 + headers.length - 1)
+                                endColLetter: columnCount > 0 ? String.fromCharCode(64 + columnCount) : 'A'
                             },
                             lastModified: new Date()
                         }
@@ -67,102 +49,18 @@ export const parseXLSXFile = async (file: File): Promise<XLSXData> => {
                     activeSheetIndex: 0
                 });
             } catch (error) {
+                console.error('XLSX 파싱 오류:', error);
                 reject(error);
             }
         };
 
-        reader.onerror = () => reject(new Error('파일 읽기 실패'));
+        reader.onerror = (error) => {
+            console.error('파일 리더 오류:', error);
+            reject(new Error('파일 읽기 실패'));
+        };
+        
         reader.readAsArrayBuffer(file);
     });
-};
-
-// 확장된 시트 컨텍스트 생성
-export const generateExtendedSheetContext = (xlsxData: XLSXData, spreadsheetId?: string): ExtendedSheetContext => {
-    const activeSheet = xlsxData.sheets[xlsxData.activeSheetIndex];
-
-    if (!activeSheet) {
-        throw new Error('활성 시트가 없습니다');
-    }
-
-    console.log('ExtendedSheetContext 생성 중:', {
-        sheetName: activeSheet.sheetName,
-        headersLength: activeSheet.headers?.length || 0,
-        headers: activeSheet.headers,
-        dataLength: activeSheet.data?.length || 0,
-        rawDataLength: activeSheet.rawData?.length || 0,
-        isFirebaseData: !!spreadsheetId
-    });
-
-    // Firebase 복원 데이터의 경우 헤더 처리
-    let validHeaders: string[] = [];
-    
-    if (activeSheet.headers && activeSheet.headers.length > 0) {
-        // 기존 헤더가 있는 경우
-        validHeaders = activeSheet.headers.filter(h => h && h.trim() !== '');
-    } else if (activeSheet.rawData && activeSheet.rawData.length > 0) {
-        // rawData에서 첫 번째 행을 헤더로 사용
-        const firstRow = activeSheet.rawData[0];
-        if (firstRow && firstRow.length > 0) {
-            validHeaders = firstRow.filter(h => h && h.trim() !== '');
-            console.log('rawData에서 헤더 추출:', validHeaders);
-        }
-    } else if (activeSheet.data && activeSheet.data.length > 0) {
-        // data가 있지만 헤더가 없는 경우 자동 생성
-        const firstDataRow = activeSheet.data[0];
-        if (firstDataRow && firstDataRow.length > 0) {
-            validHeaders = firstDataRow.map((_, index) => `Column ${String.fromCharCode(65 + index)}`);
-            console.log('자동 생성된 헤더:', validHeaders);
-        }
-    }
-
-    // 여전히 헤더가 없는 경우 기본 헤더 생성
-    if (validHeaders.length === 0) {
-        validHeaders = ['Column A', 'Column B', 'Column C', 'Column D', 'Column E', 'Column F'];
-        console.warn('기본 헤더 사용:', validHeaders);
-    }
-
-    const headers: HeaderInfo[] = validHeaders.map((header, index) => ({
-        column: String.fromCharCode(65 + index),
-        name: String(header)
-    }));
-
-    // 데이터 범위 계산
-    const dataRowCount = activeSheet.data?.length || 0;
-    const dataRange: DataRange = {
-        startRow: '2',
-        endRow: (dataRowCount + 1).toString(),
-        startColumn: 'A',
-        endColumn: String.fromCharCode(64 + validHeaders.length)
-    };
-
-    // 샘플 데이터 생성
-    const sampleData = (activeSheet.data || []).slice(0, 3).map(row => {
-        const rowData: Record<string, string> = {};
-        validHeaders.forEach((header, index) => {
-            rowData[String(header)] = String(row[index] || '');
-        });
-        return rowData;
-    });
-
-    const context = {
-        sheetName: activeSheet.sheetName,
-        sheetIndex: xlsxData.activeSheetIndex,
-        headers,
-        dataRange,
-        sampleData,
-        totalSheets: xlsxData.sheets.length,
-        sheetList: xlsxData.sheets.map(sheet => sheet.sheetName),
-        spreadsheetId: spreadsheetId
-    };
-
-    console.log('ExtendedSheetContext 생성 완료:', {
-        sheetName: context.sheetName,
-        headersCount: context.headers.length,
-        headerNames: context.headers.map(h => h.name),
-        sampleDataCount: context.sampleData?.length || 0
-    });
-
-    return context;
 };
 
 // 시트 참조 문자열 생성 (예: Sheet1!A1)

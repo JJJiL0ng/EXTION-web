@@ -4,7 +4,7 @@ import { createSpreadsheetSlice, SpreadsheetSlice } from './slices/spreadsheetSl
 import { createChatSlice, ChatSlice } from './slices/chatSlice';
 import { createUISlice, UISlice } from './slices/uiSlice';
 import { parseXLSXFile, coordsToSheetReference, cellAddressToCoords } from './store-utils/xlsxUtils';
-import { SheetData } from './store-types';
+import { SheetData, XLSXData } from './store-types';
 
 // 전체 스토어 타입 (resetAllStores 함수 포함)
 type UnifiedStore = SpreadsheetSlice & ChatSlice & UISlice & {
@@ -31,7 +31,6 @@ export const useUnifiedStore = create<UnifiedStore>()(
                     xlsxData: null,
                     activeSheetData: null,
                     computedSheetData: {},
-                    extendedSheetContext: null,
                     currentSpreadsheetId: null,
                     spreadsheetMetadata: null,
                     hasUploadedFile: false, // 파일 업로드 상태 초기화
@@ -79,4 +78,4 @@ export { parseXLSXFile, coordsToSheetReference, cellAddressToCoords };
 
 // 타입들 export
 export * from './store-types';
-export type { SpreadsheetSlice, ChatSlice, UISlice, UnifiedStore }; 
+export type { SpreadsheetSlice, ChatSlice, UISlice, UnifiedStore, XLSXData }; 

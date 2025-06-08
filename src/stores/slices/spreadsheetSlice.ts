@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
-import { XLSXData, SheetData, ExtendedSheetContext, SpreadsheetMetadata, LoadingStates, ErrorStates } from '../store-types';
-import { generateExtendedSheetContext, coordsToSheetReference, cellAddressToCoords } from '../store-utils/xlsxUtils';
+import { XLSXData, SheetData, SpreadsheetMetadata, LoadingStates, ErrorStates } from '../store-types';
+import { coordsToSheetReference, cellAddressToCoords } from '../store-utils/xlsxUtils';
 
 // 스프레드시트 슬라이스 상태
 export interface SpreadsheetSlice {
@@ -8,7 +8,6 @@ export interface SpreadsheetSlice {
     xlsxData: XLSXData | null;
     activeSheetData: SheetData | null;
     computedSheetData: { [sheetIndex: number]: string[][] };
-    extendedSheetContext: ExtendedSheetContext | null;
     
     // === 스프레드시트 메타데이터 ===
     currentSpreadsheetId: string | null;
@@ -48,7 +47,6 @@ export interface SpreadsheetSlice {
     canUploadFile: () => boolean;
     
     // 유틸리티
-    updateExtendedSheetContext: () => void;
     cellAddressToCoords: (cellAddress: string) => { row: number; col: number };
     coordsToSheetReference: (sheetIndex: number, row: number, col: number) => string;
     
@@ -80,7 +78,6 @@ export interface SpreadsheetSlice {
     // 데이터 생성 결과 적용
     applyGeneratedData: (generatedData: { 
         sheetName: string; 
-        headers: string[]; 
         data: string[][]; 
         sheetIndex?: number 
     }) => void;
@@ -97,7 +94,6 @@ export const createSpreadsheetSlice: StateCreator<
     xlsxData: null,
     activeSheetData: null,
     computedSheetData: {},
-    extendedSheetContext: null,
     currentSpreadsheetId: null,
     spreadsheetMetadata: null,
     hasUploadedFile: false,
@@ -111,7 +107,6 @@ export const createSpreadsheetSlice: StateCreator<
                     xlsxData: null,
                     activeSheetData: null,
                     computedSheetData: {},
-                    extendedSheetContext: null
                 };
             }
 
@@ -121,32 +116,9 @@ export const createSpreadsheetSlice: StateCreator<
             // 각 시트에 대한 computed data 초기화
             data.sheets.forEach((sheet, index) => {
                 if (!newComputedData[index]) {
-                    newComputedData[index] = [...(sheet.data || [])];
+                    newComputedData[index] = [...(sheet.rawData || [])];
                 }
             });
-
-            // extendedSheetContext 생성
-            let extendedSheetContext = null;
-            try {
-                extendedSheetContext = generateExtendedSheetContext(data, state.currentSpreadsheetId || data.spreadsheetId || undefined);
-            } catch (error) {
-                console.error('ExtendedSheetContext 생성 실패:', error);
-                // 기본 헤더로 재시도
-                try {
-                    const fallbackData = {
-                        ...data,
-                        sheets: data.sheets.map(sheet => ({
-                            ...sheet,
-                            headers: sheet.headers && sheet.headers.length > 0 
-                                ? sheet.headers 
-                                : ['Column A', 'Column B', 'Column C', 'Column D', 'Column E', 'Column F']
-                        }))
-                    };
-                    extendedSheetContext = generateExtendedSheetContext(fallbackData, state.currentSpreadsheetId || data.spreadsheetId || undefined);
-                } catch (fallbackError) {
-                    console.error('폴백 ExtendedSheetContext 생성도 실패:', fallbackError);
-                }
-            }
 
             return {
                 ...state,
@@ -154,7 +126,6 @@ export const createSpreadsheetSlice: StateCreator<
                 hasUploadedFile: true,
                 activeSheetData: activeSheet,
                 computedSheetData: newComputedData,
-                extendedSheetContext
             };
         });
     },
@@ -176,7 +147,6 @@ export const createSpreadsheetSlice: StateCreator<
                 ...state,
                 xlsxData: newXlsxData,
                 activeSheetData: activeSheet,
-                extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined)
             };
         });
     },
@@ -218,7 +188,7 @@ export const createSpreadsheetSlice: StateCreator<
         if (!xlsxData) return null;
 
         const activeIndex = xlsxData.activeSheetIndex;
-        return computedSheetData[activeIndex] || xlsxData.sheets[activeIndex]?.data || null;
+        return computedSheetData[activeIndex] || xlsxData.sheets[activeIndex]?.rawData || null;
     },
 
     updateCellDataInSheet: (sheetIndex, row, col, value) => {
@@ -227,13 +197,19 @@ export const createSpreadsheetSlice: StateCreator<
                 return state;
             }
 
-            // xlsxData 업데이트
+            // xlsxData의 rawData 업데이트
             const newXlsxData = { ...state.xlsxData };
             const targetSheet = { ...newXlsxData.sheets[sheetIndex] };
-
-            if (targetSheet.data[row]) {
-                targetSheet.data[row] = [...targetSheet.data[row]];
-                targetSheet.data[row][col] = value;
+            
+            if (targetSheet.rawData) {
+                targetSheet.rawData = targetSheet.rawData.map((r, rowIndex) => {
+                    if (rowIndex === row) {
+                        const newRow = [...r];
+                        newRow[col] = value;
+                        return newRow;
+                    }
+                    return r;
+                });
             }
 
             newXlsxData.sheets = [...newXlsxData.sheets];
@@ -254,7 +230,6 @@ export const createSpreadsheetSlice: StateCreator<
                 xlsxData: newXlsxData,
                 computedSheetData: newComputedData,
                 activeSheetData: sheetIndex === state.xlsxData.activeSheetIndex ? targetSheet : state.activeSheetData,
-                extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined)
             };
         });
     },
@@ -308,33 +283,6 @@ export const createSpreadsheetSlice: StateCreator<
     canUploadFile: () => !get().hasUploadedFile,
 
     // === 유틸리티 ===
-    updateExtendedSheetContext: () => {
-        const { xlsxData, currentSpreadsheetId } = get();
-        if (xlsxData) {
-            try {
-                const newContext = generateExtendedSheetContext(xlsxData, currentSpreadsheetId || xlsxData.spreadsheetId || undefined);
-                set({ extendedSheetContext: newContext });
-            } catch (error) {
-                console.error('ExtendedSheetContext 업데이트 실패:', error);
-                try {
-                    const fallbackData = {
-                        ...xlsxData,
-                        sheets: xlsxData.sheets.map(sheet => ({
-                            ...sheet,
-                            headers: sheet.headers && sheet.headers.length > 0 
-                                ? sheet.headers 
-                                : ['Column A', 'Column B', 'Column C', 'Column D', 'Column E', 'Column F']
-                        }))
-                    };
-                    const fallbackContext = generateExtendedSheetContext(fallbackData, currentSpreadsheetId || xlsxData.spreadsheetId || undefined);
-                    set({ extendedSheetContext: fallbackContext });
-                } catch (fallbackError) {
-                    console.error('폴백 ExtendedSheetContext 업데이트도 실패:', fallbackError);
-                }
-            }
-        }
-    },
-
     cellAddressToCoords: (cellAddress) => cellAddressToCoords(cellAddress),
 
     coordsToSheetReference: (sheetIndex, row, col) => {
@@ -425,13 +373,9 @@ export const createSpreadsheetSlice: StateCreator<
             if (!sheet) continue;
 
             const sheetIdx = xlsxData.sheets.indexOf(sheet);
-            const currentData = computedSheetData[sheetIdx] || sheet.data;
+            const currentData = computedSheetData[sheetIdx] || sheet.rawData || [];
 
-            // 안전한 CSV 생성 - undefined나 배열이 아닌 경우 처리
-            const safeHeaders = Array.isArray(sheet.headers) ? sheet.headers : [];
-            const safeCurrentData = Array.isArray(currentData) ? currentData : [];
-            
-            const csv = [safeHeaders, ...safeCurrentData]
+            const csv = currentData
                 .map(row => {
                     if (!Array.isArray(row)) {
                         return ''; // 배열이 아닌 경우 빈 문자열 반환
@@ -440,15 +384,13 @@ export const createSpreadsheetSlice: StateCreator<
                 })
                 .join('\n');
 
-            const validHeaders = Array.isArray(sheet.headers)
-                ? sheet.headers.map(h => String(h))
-                : [];
+            const validHeaders: string[] = []; // No headers
 
-            const fullData = safeCurrentData.map(row =>
+            const fullData = currentData.map(row =>
                 Array.isArray(row) ? row.map(cell => String(cell || '')) : []
             );
 
-            const sampleData = safeCurrentData.slice(0, 5).map(row =>
+            const sampleData = currentData.slice(0, 5).map(row =>
                 Array.isArray(row) ? row.map(cell => String(cell || '')) : []
             );
 
@@ -478,35 +420,32 @@ export const createSpreadsheetSlice: StateCreator<
     },
 
     // === 데이터 생성 결과 적용 ===
-    applyGeneratedData: (generatedData) => {
+    applyGeneratedData: (generatedData: { 
+        sheetName: string; 
+        data: string[][]; 
+        sheetIndex?: number 
+    }) => {
         const { xlsxData } = get();
+        const newRawData = generatedData.data;
 
         // 파일이 없는 경우 새 파일 생성
         if (!xlsxData) {
-            const newXlsxData = {
+            const newXlsxData: XLSXData = {
                 fileName: 'generated_data.xlsx',
                 sheets: [{
                     sheetName: generatedData.sheetName || 'Sheet1',
-                    headers: generatedData.headers,
-                    data: generatedData.data,
-                    rawData: [generatedData.headers, ...generatedData.data],
+                    rawData: newRawData,
                     metadata: {
-                        rowCount: generatedData.data.length,
-                        columnCount: generatedData.headers.length,
-                        headerRow: 0,
+                        rowCount: newRawData.length,
+                        columnCount: newRawData[0]?.length || 0,
                         dataRange: {
-                            startRow: 1,
-                            endRow: generatedData.data.length,
+                            startRow: 0,
+                            endRow: newRawData.length -1,
                             startCol: 0,
-                            endCol: generatedData.headers.length - 1,
+                            endCol: (newRawData[0]?.length || 1) - 1,
                             startColLetter: 'A',
-                            endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
+                            endColLetter: String.fromCharCode(65 + (newRawData[0]?.length || 1) - 1)
                         },
-                        headerRowData: generatedData.headers,
-                        headerMap: generatedData.headers.reduce((acc: Record<number, number>, header, idx) => {
-                            acc[idx] = idx;
-                            return acc;
-                        }, {}),
                         preserveOriginalStructure: true,
                         lastModified: new Date()
                     }
@@ -519,8 +458,7 @@ export const createSpreadsheetSlice: StateCreator<
                     ...state,
                     xlsxData: newXlsxData,
                     activeSheetData: newXlsxData.sheets[0],
-                    computedSheetData: { 0: [...generatedData.data] },
-                    extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined)
+                    computedSheetData: { 0: [...newRawData] },
                 };
             });
 
@@ -537,47 +475,35 @@ export const createSpreadsheetSlice: StateCreator<
             const newXlsxData = { ...xlsxData };
             const targetSheet = { ...newXlsxData.sheets[sheetIndex] };
 
-            targetSheet.headers = generatedData.headers;
-            targetSheet.data = generatedData.data;
-            targetSheet.rawData = [generatedData.headers, ...generatedData.data];
+            targetSheet.rawData = newRawData;
 
             if (!targetSheet.metadata) {
                 targetSheet.metadata = {
-                    rowCount: generatedData.data.length,
-                    columnCount: generatedData.headers.length,
-                    headerRow: 0,
+                    rowCount: newRawData.length,
+                    columnCount: newRawData[0]?.length || 0,
                     dataRange: {
-                        startRow: 1,
-                        endRow: generatedData.data.length,
+                        startRow: 0,
+                        endRow: newRawData.length -1,
                         startCol: 0,
-                        endCol: generatedData.headers.length - 1,
+                        endCol: (newRawData[0]?.length || 1) - 1,
                         startColLetter: 'A',
-                        endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
+                        endColLetter: String.fromCharCode(65 + (newRawData[0]?.length || 1) - 1)
                     },
-                    headerRowData: generatedData.headers,
-                    headerMap: generatedData.headers.reduce((acc: Record<number, number>, header, idx) => {
-                        acc[idx] = idx;
-                        return acc;
-                    }, {}),
                     preserveOriginalStructure: true,
                     lastModified: new Date()
                 };
             } else {
                 targetSheet.metadata = {
                     ...targetSheet.metadata,
-                    rowCount: generatedData.data.length,
-                    columnCount: generatedData.headers.length,
-                    headerRow: 0,
-                    headerRowData: generatedData.headers,
-                    headerMap: generatedData.headers.reduce((acc: Record<number, number>, header, idx) => {
-                        acc[idx] = idx;
-                        return acc;
-                    }, {}),
+                    rowCount: newRawData.length,
+                    columnCount: newRawData[0]?.length || 0,
                     dataRange: {
                         ...targetSheet.metadata.dataRange,
-                        endRow: generatedData.data.length,
-                        endCol: generatedData.headers.length - 1,
-                        endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
+                        startRow: 0,
+                        endRow: newRawData.length -1,
+                        startCol: 0,
+                        endCol: (newRawData[0]?.length || 1) - 1,
+                        endColLetter: String.fromCharCode(65 + (newRawData[0]?.length || 1) - 1)
                     },
                     lastModified: new Date()
                 };
@@ -592,35 +518,26 @@ export const createSpreadsheetSlice: StateCreator<
                     activeSheetData: sheetIndex === newXlsxData.activeSheetIndex ? targetSheet : state.activeSheetData,
                     computedSheetData: {
                         ...state.computedSheetData,
-                        [sheetIndex]: [...generatedData.data]
+                        [sheetIndex]: [...newRawData]
                     },
-                    extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined)
                 };
             });
         } else {
             // 새 시트 추가
-            const newSheet = {
+            const newSheet: SheetData = {
                 sheetName: generatedData.sheetName || `Sheet${xlsxData.sheets.length + 1}`,
-                headers: generatedData.headers,
-                data: generatedData.data,
-                rawData: [generatedData.headers, ...generatedData.data],
+                rawData: newRawData,
                 metadata: {
-                    rowCount: generatedData.data.length,
-                    columnCount: generatedData.headers.length,
-                    headerRow: 0,
+                    rowCount: newRawData.length,
+                    columnCount: newRawData[0]?.length || 0,
                     dataRange: {
-                        startRow: 1,
-                        endRow: generatedData.data.length,
+                        startRow: 0,
+                        endRow: newRawData.length - 1,
                         startCol: 0,
-                        endCol: generatedData.headers.length - 1,
+                        endCol: (newRawData[0]?.length || 1) - 1,
                         startColLetter: 'A',
-                        endColLetter: String.fromCharCode(65 + generatedData.headers.length - 1)
+                        endColLetter: String.fromCharCode(65 + (newRawData[0]?.length || 1) - 1)
                     },
-                    headerRowData: generatedData.headers,
-                    headerMap: generatedData.headers.reduce((acc: Record<number, number>, header, idx) => {
-                        acc[idx] = idx;
-                        return acc;
-                    }, {}),
                     preserveOriginalStructure: true,
                     lastModified: new Date()
                 }
@@ -639,9 +556,8 @@ export const createSpreadsheetSlice: StateCreator<
                     activeSheetData: newSheet,
                     computedSheetData: {
                         ...state.computedSheetData,
-                        [xlsxData.sheets.length]: [...generatedData.data]
+                        [xlsxData.sheets.length]: [...newRawData]
                     },
-                    extendedSheetContext: generateExtendedSheetContext(newXlsxData, state.currentSpreadsheetId || undefined)
                 };
             });
         }

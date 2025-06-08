@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import { Send, Paperclip } from 'lucide-react';
 
 interface ChatInputProps {
-    currentMode: 'normal' | 'formula' | 'artifact' | 'datafix';
+    currentMode: 'normal' | 'function' | 'artifact' | 'datafix';
     inputValue: string;
     isDragOver: boolean;
     isLoading: boolean;
