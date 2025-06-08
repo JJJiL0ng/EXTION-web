@@ -18,6 +18,7 @@ import Image from 'next/image';
 import { EnhancedFormulaPlugin, EnhancedFormulaPluginTranslations } from '@/utils/EnhancedFormulaPlugin';
 import { getHotTableSettings } from '@/config/handsontableSettings';
 import { HandsontableStyles } from '@/config/handsontableStyles';
+import { useAutosave } from '@/hooks/useAutosave';
 
 
 import 'handsontable/styles/handsontable.css';
@@ -69,6 +70,9 @@ const MainSpreadSheet: React.FC = () => {
   const [cellEditValue, setCellEditValue] = useState('');
   const [isCellEditing, setIsCellEditing] = useState(false);
 
+  // 자동 저장 훅 호출
+  useAutosave();
+
   // 스크롤바 관련 상태
   const [scrollThumbPosition, setScrollThumbPosition] = useState(0);
   const [scrollThumbWidth, setScrollThumbWidth] = useState(30);
@@ -104,13 +108,14 @@ const MainSpreadSheet: React.FC = () => {
     pendingFormula,
     setPendingFormula,
     applyPendingFormulaToSheet,
-    setError
+    setError,
+    saveStatus,
   } = useUnifiedStore();
 
   // 추가 상태 관리
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
 
-  const [isAutosave] = useState<boolean>(false);
+  const [isAutosave] = useState<boolean>(true);
 
   // 현재 활성 시트 인덱스 계산 (시트가 없을 때는 0)
   const activeSheetIndex = xlsxData?.activeSheetIndex ?? 0;
@@ -721,51 +726,14 @@ const MainSpreadSheet: React.FC = () => {
     }
 
     if (xlsxData && activeSheetData) {
-      // 원본 rawData를 복사하여 수정 (불변성 유지)
-      // activeSheetData.rawData가 2차원 배열이므로, 내부 배열도 복사해야 함.
-      const newRawData = (activeSheetData.rawData || []).map(row => [...(row || [])]);
-
-      changes.forEach(([row, col, oldValue, newValue]) => {
-        if (typeof row === 'number' && typeof col === 'number') {
-          // 행이 존재하지 않으면 새로 추가
-          while (newRawData.length <= row) {
-            newRawData.push([]);
-          }
-          const targetRow = newRawData[row];
-          // 열이 충분하지 않으면 확장
-          // Handsontable은 희소 배열을 잘 처리하지 못하므로, 빈 문자열로 채워줍니다.
-          while (targetRow.length <= col) {
-            targetRow.push('');
-          }
-          // 셀 값 업데이트
-          targetRow[col] = newValue?.toString() || '';
-        }
-      });
-      
-      // 새 XLSX 데이터 객체 생성
-      const newXlsxData: XLSXData = {
-        ...xlsxData,
-        sheets: xlsxData.sheets.map((sheet, index) => {
-          if (index === xlsxData.activeSheetIndex) {
-            return {
-              ...sheet,
-              rawData: newRawData,
-              // metadata도 업데이트가 필요할 수 있습니다.
-              // 예: rowCount, columnCount 등. 지금은 생략합니다.
-            };
-          }
-          return sheet;
-        }),
-      };
-      
-      // Zustand 스토어를 한 번만 업데이트하여 불필요한 리렌더링 방지
-      setXLSXData(newXlsxData);
+        // 변경된 셀마다 스토어 업데이트 액션 호출
+        changes.forEach(([row, col, oldValue, newValue]) => {
+            if (typeof row === 'number' && typeof col === 'number') {
+                updateActiveSheetCell(row, col, newValue?.toString() || '');
+            }
+        });
     }
-
-    if (!isAutosave) {
-      return;
-    }
-  }, [isInternalUpdate, xlsxData, activeSheetData, setXLSXData, isAutosave]);
+  }, [isInternalUpdate, xlsxData, activeSheetData, updateActiveSheetCell]);
 
   const handleCellSelection = useCallback((row: number, col: number, row2?: number, col2?: number) => {
     if (!hotRef.current?.hotInstance) return;
@@ -1010,6 +978,41 @@ const MainSpreadSheet: React.FC = () => {
   // 사이드바 토글 함수
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  // 저장 상태를 표시하는 UI 렌더링 함수
+  const renderSaveStatus = () => {
+    if (!currentSpreadsheetId) return null; // 파일이 없을 때는 표시 안함
+
+    let statusText = '';
+    let textColor = 'text-gray-500';
+
+    switch (saveStatus) {
+        case 'modified':
+            statusText = '저장되지 않은 변경사항이 있습니다.';
+            textColor = 'text-yellow-600';
+            break;
+        case 'saving':
+            statusText = '저장 중...';
+            textColor = 'text-blue-600';
+            break;
+        case 'synced':
+            statusText = '모든 변경사항이 저장되었습니다.';
+            textColor = 'text-green-600';
+            break;
+        case 'error':
+            statusText = '저장에 실패했습니다.';
+            textColor = 'text-red-600';
+            break;
+    }
+
+    if (!statusText) return null;
+
+    return (
+        <div className="flex items-center space-x-2 text-sm mr-4">
+            <span className={textColor}>{statusText}</span>
+        </div>
+    );
   };
 
   // 개발 환경에서 상태 디버깅
@@ -1291,7 +1294,7 @@ const MainSpreadSheet: React.FC = () => {
         )}
       </div>
     );
-  }, [isExportDropdownOpen, isXlsxSelectorOpen, xlsxData, activeSheetData, exportFileName, selectedSheets, handleExportToCSV, handleExportToXLSX, executeXlsxExport, toggleAllSheets, toggleSheetSelection]);
+  }, [isExportDropdownOpen, isXlsxSelectorOpen, xlsxData, selectedSheets, exportFileName, handleExportToCSV, handleExportToXLSX, executeXlsxExport, toggleAllSheets]);
 
   // 셀 클릭 시 포뮬러 적용 버튼 표시
   const handleCellClick = useCallback((row: number, col: number) => {
@@ -1368,7 +1371,7 @@ const MainSpreadSheet: React.FC = () => {
               
               <button
                 onClick={toggleSidebar}
-                className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200 flex-shrink-0"
+                className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200"
                 aria-label={isSidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
                 style={{ minWidth: '40px', height: '40px' }}
               >
@@ -1474,6 +1477,7 @@ const MainSpreadSheet: React.FC = () => {
 
             {/* 오른쪽 버튼 그룹 */}
             <div className="flex items-center ml-auto space-x-2">
+              {renderSaveStatus()}
               {/* 개발자와 소통하기 버튼 */}
               <a
                 href="https://open.kakao.com/o/gB4EkaAh"
