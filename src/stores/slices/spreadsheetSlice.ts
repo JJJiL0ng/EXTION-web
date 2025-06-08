@@ -10,7 +10,6 @@ export interface SpreadsheetSlice {
     computedSheetData: { [sheetIndex: number]: string[][] };
     
     // === 스프레드시트 메타데이터 ===
-    currentSpreadsheetId: string | null;
     spreadsheetMetadata: SpreadsheetMetadata | null;
     hasUploadedFile: boolean;
     
@@ -39,8 +38,6 @@ export interface SpreadsheetSlice {
     getComputedDataForSheet: (sheetIndex: number) => string[][] | null;
     
     // 스프레드시트 메타데이터 관리
-    setCurrentSpreadsheetId: (spreadsheetId: string | null) => void;
-    getCurrentSpreadsheetId: () => string | null;
     setSpreadsheetMetadata: (metadata: SpreadsheetMetadata | null) => void;
     getSpreadsheetMetadata: () => SpreadsheetMetadata | null;
     markAsSaved: (spreadsheetId: string) => void;
@@ -89,7 +86,7 @@ export interface SpreadsheetSlice {
 
 // 스프레드시트 슬라이스 생성자
 export const createSpreadsheetSlice: StateCreator<
-    SpreadsheetSlice & { loadingStates: LoadingStates; errors: ErrorStates; setLoadingState: any; setError: any },
+    SpreadsheetSlice & { loadingStates: LoadingStates; errors: ErrorStates; setLoadingState: any; setError: any; currentSpreadsheetId: string | null },
     [],
     [],
     SpreadsheetSlice
@@ -98,7 +95,6 @@ export const createSpreadsheetSlice: StateCreator<
     xlsxData: null,
     activeSheetData: null,
     computedSheetData: {},
-    currentSpreadsheetId: null,
     spreadsheetMetadata: null,
     hasUploadedFile: false,
     saveStatus: 'synced',
@@ -276,13 +272,10 @@ export const createSpreadsheetSlice: StateCreator<
     },
 
     // === 스프레드시트 메타데이터 관리 ===
-    setCurrentSpreadsheetId: (spreadsheetId) => set({ currentSpreadsheetId: spreadsheetId }),
-    getCurrentSpreadsheetId: () => get().currentSpreadsheetId,
     setSpreadsheetMetadata: (metadata) => set({ spreadsheetMetadata: metadata }),
     getSpreadsheetMetadata: () => get().spreadsheetMetadata,
     markAsSaved: (spreadsheetId) => set((state) => ({
         ...state,
-        currentSpreadsheetId: spreadsheetId,
         spreadsheetMetadata: state.spreadsheetMetadata ? { 
             ...state.spreadsheetMetadata, 
             isSaved: true,

@@ -19,6 +19,7 @@ import { EnhancedFormulaPlugin, EnhancedFormulaPluginTranslations } from '@/util
 import { getHotTableSettings } from '@/config/handsontableSettings';
 import { HandsontableStyles } from '@/config/handsontableStyles';
 import { useAutosave } from '@/hooks/useAutosave';
+import { AlertCircle, Loader2, CheckCircle, XCircle } from 'lucide-react';
 
 
 import 'handsontable/styles/handsontable.css';
@@ -40,6 +41,43 @@ const hyperformulaInstance = HyperFormula.buildEmpty({
   useArrayArithmetic: true,
   useColumnIndex: true,
 });
+
+// Handsontable에 표시할 데이터를 준비하는 헬퍼 함수
+const prepareDisplayData = (sheetData: SheetData | null): any[][] => {
+    // 시트 데이터가 없으면 기본 빈 시트 생성 (100행 x 26열)
+    if (!sheetData || !sheetData.rawData || sheetData.rawData.length === 0) {
+        const defaultRows = 100;
+        const defaultCols = 26; // A-Z
+        return Array(defaultRows).fill(null).map(() => Array(defaultCols).fill(''));
+    }
+
+    const baseData = sheetData.rawData;
+
+    // 엑셀처럼 추가적인 빈 행과 열을 제공하여 사용성 개선
+    const currentRows = baseData.length;
+    // 현재 데이터의 최대 열 개수 계산 (빈 배열 방지)
+    const currentCols = Math.max(0, ...baseData.map(row => (row || []).length));
+    
+    // 최소 100행, 26열(A-Z)을 보장하고, 현재 데이터보다 50행, 10열을 더 추가
+    const targetRows = Math.max(100, currentRows + 50);
+    const targetCols = Math.max(26, currentCols + 10);
+
+    // 기존 데이터의 각 행을 목표 열 수만큼 확장
+    const expandedData = baseData.map(row => {
+        const expandedRow = [...(row || [])];
+        while (expandedRow.length < targetCols) {
+            expandedRow.push('');
+        }
+        return expandedRow;
+    });
+
+    // 목표 행 수만큼 추가 빈 행 생성
+    while (expandedData.length < targetRows) {
+        expandedData.push(Array(targetCols).fill(''));
+    }
+
+    return expandedData;
+};
 
 // CSV 데이터가 없을 때의 기본 설정
 const defaultData = Array(100).fill(null).map(() => Array(26).fill(''));
@@ -127,71 +165,11 @@ const MainSpreadSheet: React.FC = () => {
     sheetName: activeSheetData?.sheetName || 'Sheet',
   });
 
-  // 초기 표시할 데이터 준비 - 한번만 생성하고 이후 업데이트는 Handsontable을 통해서만
-  const [initialDisplayData, setInitialDisplayData] = useState<any[][]>(() => {
-    // 시트가 없는 경우 기본 빈 스프레드시트 생성
-    if (!activeSheetData || !activeSheetData.rawData) {
-      console.log('=== 빈 시트 생성 ===');
-      
-      // 엑셀처럼 기본 크기의 빈 스프레드시트 생성 (100행 x 26열)
-      const defaultRows = 100;
-      const defaultCols = 26; // A-Z
-
-      const emptyData = Array(defaultRows).fill(null).map(() => Array(defaultCols).fill(''));
-      
-      console.log('빈 스프레드시트 생성:', {
-        rows: emptyData.length,
-        cols: emptyData[0]?.length || 0
-      });
-
-      return emptyData;
-    }
-
-    let baseData: any[][] = [];
-
-    // rawData가 있으면 원본 레이아웃 그대로 사용
-    if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
-        console.log('✅ 원본 rawData 사용:', {
-          rows: activeSheetData.rawData.length,
-          firstRowPreview: activeSheetData.rawData[0]?.slice(0, 3),
-          lastRowPreview: activeSheetData.rawData[activeSheetData.rawData.length - 1]?.slice(0, 3)
-        });
-        baseData = [...activeSheetData.rawData];
-    }
-
-    // 엑셀처럼 추가 빈 행과 열 제공
-    const currentRows = baseData.length;
-    const currentCols = Math.max(...baseData.map(row => row?.length || 0));
-    
-    // 최소 100행, 26열(A-Z) 보장하되 현재 데이터보다 50행, 10열 더 추가
-    const targetRows = Math.max(100, currentRows + 50);
-    const targetCols = Math.max(26, currentCols + 10);
-
-    // 기존 데이터의 각 행을 목표 열 수만큼 확장
-    const expandedData = baseData.map(row => {
-      const expandedRow = [...(row || [])];
-      while (expandedRow.length < targetCols) {
-        expandedRow.push('');
-      }
-      return expandedRow;
-    });
-
-    // 추가 빈 행들 생성
-    while (expandedData.length < targetRows) {
-      expandedData.push(Array(targetCols).fill(''));
-    }
-
-    console.log('📊 확장된 데이터:', {
-      originalRows: currentRows,
-      originalCols: currentCols,
-      expandedRows: expandedData.length,
-      expandedCols: targetCols,
-      addedRows: expandedData.length - currentRows,
-      addedCols: targetCols - currentCols
-    });
-
-    return expandedData;
-  });
+  // Handsontable에 표시할 데이터를 준비. activeSheetData가 변경될 때만 다시 계산.
+  const displayData = useMemo(() => {
+    console.log('🔄 시트 데이터 변경으로 displayData 다시 계산:', activeSheetData?.sheetName);
+    return prepareDisplayData(activeSheetData);
+  }, [activeSheetData]);
 
   // 시트 전환 핸들러
   const handleSheetChange = useCallback(async (sheetIndex: number) => {
@@ -984,33 +962,33 @@ const MainSpreadSheet: React.FC = () => {
   const renderSaveStatus = () => {
     if (!currentSpreadsheetId) return null; // 파일이 없을 때는 표시 안함
 
-    let statusText = '';
-    let textColor = 'text-gray-500';
+    let icon = null;
+    let iconColor = 'text-gray-500';
 
     switch (saveStatus) {
         case 'modified':
-            statusText = '저장되지 않은 변경사항이 있습니다.';
-            textColor = 'text-yellow-600';
+            icon = <AlertCircle className="h-4 w-4" />;
+            iconColor = 'text-yellow-600';
             break;
         case 'saving':
-            statusText = '저장 중...';
-            textColor = 'text-blue-600';
+            icon = <Loader2 className="h-4 w-4 animate-spin" />;
+            iconColor = 'text-blue-600';
             break;
         case 'synced':
-            statusText = '모든 변경사항이 저장되었습니다.';
-            textColor = 'text-green-600';
+            icon = <CheckCircle className="h-4 w-4" />;
+            iconColor = 'text-green-600';
             break;
         case 'error':
-            statusText = '저장에 실패했습니다.';
-            textColor = 'text-red-600';
+            icon = <XCircle className="h-4 w-4" />;
+            iconColor = 'text-red-600';
             break;
     }
 
-    if (!statusText) return null;
+    if (!icon) return null;
 
     return (
-        <div className="flex items-center space-x-2 text-sm mr-4">
-            <span className={textColor}>{statusText}</span>
+        <div className="flex items-center mr-4">
+            <div className={iconColor}>{icon}</div>
         </div>
     );
   };
@@ -1026,7 +1004,7 @@ const MainSpreadSheet: React.FC = () => {
         activeSheetName: xlsxData?.sheets?.[xlsxData?.activeSheetIndex || 0]?.sheetName || '시트 (default)',
         currentSpreadsheetId: currentSpreadsheetId || 'None',
         hasActiveSheetData: !!activeSheetData,
-        initialDisplayDataLength: initialDisplayData.length,
+        displayDataLength: displayData.length,
         isEmptySpreadsheet: !xlsxData && !activeSheetData
       });
 
@@ -1043,8 +1021,8 @@ const MainSpreadSheet: React.FC = () => {
       } else {
         console.log('📋 기본 빈 시트 표시 중:', {
           sheetName: '시트',
-          rows: initialDisplayData.length,
-          cols: initialDisplayData[0]?.length || 0,
+          rows: displayData.length,
+          cols: displayData[0]?.length || 0,
           isEmpty: true
         });
       }
@@ -1052,7 +1030,7 @@ const MainSpreadSheet: React.FC = () => {
         console.log('✅ 렌더링 후 activeSheetData.rawData:', activeSheetData.rawData);
       }
     }
-  }, [xlsxData, activeSheetData, initialDisplayData, currentSpreadsheetId]);
+  }, [xlsxData, activeSheetData, displayData, currentSpreadsheetId]);
 
   // 시트 변경 시에만 Handsontable 데이터 업데이트
   useEffect(() => {
@@ -1093,7 +1071,6 @@ const MainSpreadSheet: React.FC = () => {
 
       // Handsontable에 새 데이터 로드 (시트 변경 시에만)
       hot.loadData(expandedData);
-      setInitialDisplayData(expandedData);
       
       // 추가 렌더링으로 확실하게 업데이트
       const timeoutId = setTimeout(() => {
@@ -1650,7 +1627,7 @@ const MainSpreadSheet: React.FC = () => {
         <div className="flex-1 bg-white shadow-inner overflow-hidden" style={{ position: 'relative', zIndex: 50 }}>
           <HotTable
             ref={hotRef}
-            data={initialDisplayData}
+            data={displayData}
             {...(hotSettings as any)}
           />
         </div>

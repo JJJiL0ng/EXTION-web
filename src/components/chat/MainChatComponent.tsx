@@ -10,6 +10,7 @@ import { processXLSXFile } from '../../utils/fileProcessing';
 import { saveSpreadsheetToFirebase } from '../../services/api/dataServices';
 import { updateChatTitle } from '@/services/firebase/chatService';
 import { cellAddressToCoords } from '@/stores/store-utils/xlsxUtils';
+import { auth } from '@/services/firebase';
 
 // 컴포넌트 가져오기
 import MessageDisplay from './MessageDisplay';
@@ -287,7 +288,9 @@ export default function MainChatComponent() {
                                 fileType: 'xlsx'
                             },
                             {
-                                chatId: getCurrentChatId?.() // 현재 채팅 ID 가져오기 (구현 필요)
+                                chatId: getCurrentFirebaseChatId() || undefined,
+                                userId: auth.currentUser?.uid,
+                                spreadsheetId: currentSpreadsheetId || undefined
                             }
                         );
 
@@ -377,7 +380,9 @@ export default function MainChatComponent() {
                                 fileType: 'xlsx'
                             },
                             {
-                                chatId: getCurrentChatId?.() // 현재 채팅 ID 가져오기 (구현 필요)
+                                chatId: getCurrentFirebaseChatId() || undefined,
+                                userId: auth.currentUser?.uid,
+                                spreadsheetId: currentSpreadsheetId || undefined
                             }
                         );
 
@@ -497,7 +502,9 @@ export default function MainChatComponent() {
                                                 fileType: 'csv'
                                             },
                                             {
-                                                chatId: getCurrentChatId?.() // 현재 채팅 ID 가져오기 (구현 필요)
+                                                chatId: getCurrentFirebaseChatId() || undefined,
+                                                userId: auth.currentUser?.uid,
+                                                spreadsheetId: currentSpreadsheetId || undefined
                                             }
                                         );
 
@@ -569,7 +576,9 @@ export default function MainChatComponent() {
                                                 fileType: 'csv'
                                             },
                                             {
-                                                chatId: getCurrentChatId?.() // 현재 채팅 ID 가져오기 (구현 필요)
+                                                chatId: getCurrentFirebaseChatId() || undefined,
+                                                userId: auth.currentUser?.uid,
+                                                spreadsheetId: currentSpreadsheetId || undefined
                                             }
                                         );
 

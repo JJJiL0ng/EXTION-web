@@ -889,6 +889,7 @@ export const saveSpreadsheetToFirebase = async (
     options?: {
         chatId?: string;
         userId?: string;
+        spreadsheetId?: string;
     }
 ): Promise<{
     success: boolean;
@@ -914,6 +915,7 @@ export const saveSpreadsheetToFirebase = async (
         const requestBody = {
             userId: options?.userId || currentUser.uid,
             chatId: options?.chatId,
+            spreadsheetId: options?.spreadsheetId,
             fileName: parsedData.fileName,
             originalFileName: fileInfo.originalFileName,
             fileSize: fileInfo.fileSize,

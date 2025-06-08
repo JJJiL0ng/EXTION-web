@@ -31,10 +31,12 @@ import {
     convertFirebaseMessageToChatMessage
 } from '@/services/firebase/chatService';
 import { 
-    getSpreadsheetByChatId 
+    getSpreadsheetByChatId,
+    getSpreadsheetData
 } from '@/services/firebase/spreadsheetService';
 import { auth } from '@/services/firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
+import { XLSXData } from '@/stores/store-types';
 
 interface ChatSidebarProps {
     isOpen: boolean;
@@ -66,6 +68,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<'all' | 'spreadsheet' | 'chat'>('all');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+    const [loadingChatId, setLoadingChatId] = useState<string | null>(null);
 
     const {
         chatSessions,
@@ -85,7 +88,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         saveCurrentSessionToStore,
         setCurrentSpreadsheetId,
         addMessageToSheet,
-        clearAllMessages
+        clearAllMessages,
+        setCurrentChatMeta
     } = useUnifiedStore();
 
     const router = useRouter();
@@ -141,6 +145,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         setSelectedChatId(chatId);
     }, [searchParams]);
 
+    // 채팅 전환 시 데이터 로딩 완료 후 로딩 애니메이션 중지
+    useEffect(() => {
+        if (loadingChatId && selectedChatId === loadingChatId) {
+            setLoadingChatId(null);
+        }
+    }, [selectedChatId, xlsxData, loadingChatId]);
+
     // 클라우드 채팅 목록 생성 및 필터링
     const getCloudChatList = (): CloudChatItem[] => {
         const cloudChats: CloudChatItem[] = [];
@@ -187,15 +198,58 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
 
     // Firebase 채팅 선택 및 복원
     const handleSelectFirebaseChat = async (chat: FirebaseChat) => {
+        if (selectedChatId === chat.id) return;
+    
+        setLoadingChatId(chat.id);
         try {
             console.log('=== Firebase 채팅 선택 ===', chat.id);
             
-            // URL 업데이트만 수행 - 실제 데이터 로드는 페이지에서 처리
+            // 1. 상태 초기화
+            resetAllStores();
+
+            // 2. 새 채팅 ID 및 메타데이터 설정
+            setCurrentChatId(chat.id);
+            setCurrentSpreadsheetId(chat.spreadsheetId || null);
+            setCurrentChatMeta(chat);
+            
+            // 3. 스프레드시트 데이터 로드
+            let loadedXlsxData: XLSXData | null = null;
+            if (chat.spreadsheetId) {
+                console.log(`- 스프레드시트 ID 발견: ${chat.spreadsheetId}. 데이터 로드 시작.`);
+                const spreadsheetData = await getSpreadsheetData(chat.spreadsheetId);
+                if (spreadsheetData) {
+                    loadedXlsxData = spreadsheetData as XLSXData;
+                    console.log(`- 스프레드시트 데이터 로드 완료.`);
+                } else {
+                    console.log(`- 스프레드시트 데이터를 찾을 수 없음. 빈 시트를 표시합니다.`);
+                }
+            } else {
+                console.log('- 스프레드시트 ID 없음. 빈 시트를 표시합니다.');
+                setCurrentSpreadsheetId(null);
+            }
+            setXLSXData(loadedXlsxData);
+            
+            // 4. 채팅 메시지 로드 및 상태 업데이트
+            console.log(`- 채팅 메시지 로드 시작 for chat ${chat.id}`);
+            const firebaseMessages = await getChatMessages(chat.id);
+            const chatMessages = firebaseMessages.map(convertFirebaseMessageToChatMessage);
+            
+            // `resetAllStores`가 메시지를 비웠으므로 바로 추가합니다.
+            // 메시지는 활성 시트(기본값 0)에 연결됩니다.
+            const activeSheetIndex = loadedXlsxData?.activeSheetIndex ?? 0;
+            chatMessages.forEach(message => {
+                addMessageToSheet(activeSheetIndex, message);
+            });
+            console.log(`- 채팅 메시지 ${chatMessages.length}개 로드 완료.`);
+
+            // 5. URL 업데이트
             router.push(`/ai?chatId=${chat.id}`);
             console.log('URL 업데이트:', `/ai?chatId=${chat.id}`);
             
         } catch (error) {
             console.error('❌ Firebase 채팅 선택 실패:', error);
+            resetAllStores();
+            setLoadingChatId(null); // 실패 시 로딩 상태 해제
         }
     };
 
@@ -209,15 +263,22 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             console.log('🧹 새 채팅 시작 - 기존 데이터 초기화');
             resetAllStores();
             
-            const chatTitle = `새 채팅 ${new Date().toLocaleString('ko-KR')}`;
-            const newChatId = await createChat(chatTitle, user.uid);
+            const chatTitle = `채팅 ${new Date().toLocaleString('ko-KR')}`;
+            // 새 spreadsheetId 생성
+            const newSpreadsheetId = crypto.randomUUID();
             
-            console.log('새 Firebase 채팅 생성됨:', newChatId);
+            const newChatId = await createChat(chatTitle, user.uid, newSpreadsheetId);
+            
+            console.log('새 Firebase 채팅 생성됨:', newChatId, '연결된 spreadsheetId:', newSpreadsheetId);
             
             // 2. 채팅 목록 새로고침
             await loadFirebaseChats();
+
+            // 3. 새 채팅 상태 설정
+            setCurrentChatId(newChatId);
+            setCurrentSpreadsheetId(newSpreadsheetId);
             
-            // 3. 새 채팅으로 URL 이동
+            // 4. 새 채팅으로 URL 이동
             router.push(`/ai?chatId=${newChatId}`);
             
         } catch (error) {
@@ -229,6 +290,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
 
     // 채팅 선택 핸들러
     const handleSelectChat = async (chatItem: CloudChatItem) => {
+        if (chatItem.isActive || loadingChatId) {
+            return;
+        }
+
         const firebaseChat = firebaseChats.find(chat => chat.id === chatItem.id);
         if (firebaseChat) {
             await handleSelectFirebaseChat(firebaseChat);
@@ -450,7 +515,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                             </div>
                                             
                                             {/* 액션 버튼 */}
-                                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                            {/* <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                                 <button
                                                     onClick={(e) => handleDeleteChat(chatItem, e)}
                                                     className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200"
@@ -458,13 +523,20 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                                 >
                                                     <TrashIcon className="h-4 w-4" />
                                                 </button>
-                                            </div>
+                                            </div> */}
                                         </div>
                                         
                                         {/* 현재 활성 채팅 표시 */}
                                         {chatItem.isActive && (
                                             <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 rounded-r"
                                                  style={{ backgroundColor: '#005DE9' }}></div>
+                                        )}
+
+                                        {/* 채팅 로딩 오버레이 */}
+                                        {loadingChatId === chatItem.id && (
+                                            <div className="absolute inset-0 bg-white/70 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                                <Loader2Icon className="h-6 w-6 animate-spin" style={{ color: '#005DE9' }} />
+                                            </div>
                                         )}
                                     </div>
                                 ))}
