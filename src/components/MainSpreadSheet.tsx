@@ -775,7 +775,7 @@ const MainSpreadSheet: React.FC = () => {
     let value = '';
     let formula = '';
     const actualDataRow = row; // 헤더 개념이 없으므로 row가 실제 데이터 행
-    let sheetName = 'Sheet1'; // 기본 시트명
+    let sheetName = '시트'; // 기본 시트명
 
     try {
         // 셀 값 가져오기
@@ -1020,7 +1020,7 @@ const MainSpreadSheet: React.FC = () => {
         fileName: xlsxData?.fileName || 'No file',
         sheetsCount: xlsxData?.sheets?.length || 0,
         activeSheetIndex: xlsxData?.activeSheetIndex ?? 0,
-        activeSheetName: xlsxData?.sheets?.[xlsxData?.activeSheetIndex || 0]?.sheetName || 'Sheet1 (default)',
+        activeSheetName: xlsxData?.sheets?.[xlsxData?.activeSheetIndex || 0]?.sheetName || '시트 (default)',
         currentSpreadsheetId: currentSpreadsheetId || 'None',
         hasActiveSheetData: !!activeSheetData,
         initialDisplayDataLength: initialDisplayData.length,
@@ -1039,7 +1039,7 @@ const MainSpreadSheet: React.FC = () => {
         });
       } else {
         console.log('📋 기본 빈 시트 표시 중:', {
-          sheetName: 'Sheet1',
+          sheetName: '시트',
           rows: initialDisplayData.length,
           cols: initialDisplayData[0]?.length || 0,
           isEmpty: true
@@ -1114,7 +1114,7 @@ const MainSpreadSheet: React.FC = () => {
   // 내보내기 버튼 UI를 상단 컨트롤 패널에 추가
   const renderExportControls = useCallback(() => {
     return (
-      <div className="relative ml-auto" style={{ zIndex: 9999 }}>
+      <div className="relative" style={{ zIndex: 9999 }}>
         <button
           className="export-button flex items-center space-x-1.5 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm transition-colors duration-200"
           onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
@@ -1360,12 +1360,12 @@ const MainSpreadSheet: React.FC = () => {
         <HandsontableStyles />
 
         {/* 상단 컨트롤 패널 */}
-        <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm flex-shrink-0" style={{ position: 'relative', zIndex: 9000 }}>
-          <div className="flex items-center justify-between">
+        <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm flex-shrink-0 " style={{ position: 'relative', zIndex: 9000 }}>
+          <div className="flex items-center justify-between space-x-2">
             {/* 사이드바 토글 버튼과 로고 */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               {/* 햄버거 버튼 주석처리 */}
-              {/*
+              
               <button
                 onClick={toggleSidebar}
                 className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200 flex-shrink-0"
@@ -1390,7 +1390,7 @@ const MainSpreadSheet: React.FC = () => {
                   />
                 </div>
               </button>
-              */}
+             
               
               {/* EXTION 텍스트 로고 */}
               <h1 className="text-xl font-bold text-gray-800" style={{ color: '#005DE9' }}>
@@ -1472,8 +1472,31 @@ const MainSpreadSheet: React.FC = () => {
               </div>
             )}
 
-            {/* 내보내기 버튼 추가 */}
-            {renderExportControls()}
+            {/* 오른쪽 버튼 그룹 */}
+            <div className="flex items-center ml-auto space-x-2">
+              {/* 개발자와 소통하기 버튼 */}
+              <a
+                href="https://open.kakao.com/o/gB4EkaAh"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1.5 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm transition-colors duration-200"
+                style={{
+                  borderColor: '#005DE9',
+                  color: '#005DE9'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 93, 233, 0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
+              >
+                <MessageCircleIcon size={16} />
+                <span>개발자와 소통하기</span>
+              </a>
+              {/* 내보내기 버튼 추가 */}
+              {renderExportControls()}
+            </div>
           </div>
 
           {/* 포뮬러 적용 대기 알림 */}
@@ -1541,7 +1564,7 @@ const MainSpreadSheet: React.FC = () => {
                 ) : (
                   /* 시트가 없는 경우 기본 시트 탭 표시 */
                   <div className="sheet-tab active">
-                    <span>Sheet1</span>
+                    <span>시트</span>
                     <span className="sheet-info">
                       26×100
                     </span>
