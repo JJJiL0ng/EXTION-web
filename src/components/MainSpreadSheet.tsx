@@ -20,6 +20,8 @@ import { getHotTableSettings } from '@/config/handsontableSettings';
 import { HandsontableStyles } from '@/config/handsontableStyles';
 import { useAutosave } from '@/hooks/useAutosave';
 import { AlertCircle, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import 'handsontable/languages/ko-KR'; // 한국어 언어팩 import
+
 
 
 import 'handsontable/styles/handsontable.css';
@@ -44,39 +46,39 @@ const hyperformulaInstance = HyperFormula.buildEmpty({
 
 // Handsontable에 표시할 데이터를 준비하는 헬퍼 함수
 const prepareDisplayData = (sheetData: SheetData | null): any[][] => {
-    // 시트 데이터가 없으면 기본 빈 시트 생성 (100행 x 26열)
-    if (!sheetData || !sheetData.rawData || sheetData.rawData.length === 0) {
-        const defaultRows = 100;
-        const defaultCols = 26; // A-Z
-        return Array(defaultRows).fill(null).map(() => Array(defaultCols).fill(''));
+  // 시트 데이터가 없으면 기본 빈 시트 생성 (100행 x 26열)
+  if (!sheetData || !sheetData.rawData || sheetData.rawData.length === 0) {
+    const defaultRows = 100;
+    const defaultCols = 26; // A-Z
+    return Array(defaultRows).fill(null).map(() => Array(defaultCols).fill(''));
+  }
+
+  const baseData = sheetData.rawData;
+
+  // 엑셀처럼 추가적인 빈 행과 열을 제공하여 사용성 개선
+  const currentRows = baseData.length;
+  // 현재 데이터의 최대 열 개수 계산 (빈 배열 방지)
+  const currentCols = Math.max(0, ...baseData.map(row => (row || []).length));
+
+  // 최소 100행, 26열(A-Z)을 보장하고, 현재 데이터보다 50행, 10열을 더 추가
+  const targetRows = Math.max(100, currentRows + 50);
+  const targetCols = Math.max(26, currentCols + 10);
+
+  // 기존 데이터의 각 행을 목표 열 수만큼 확장
+  const expandedData = baseData.map(row => {
+    const expandedRow = [...(row || [])];
+    while (expandedRow.length < targetCols) {
+      expandedRow.push('');
     }
+    return expandedRow;
+  });
 
-    const baseData = sheetData.rawData;
+  // 목표 행 수만큼 추가 빈 행 생성
+  while (expandedData.length < targetRows) {
+    expandedData.push(Array(targetCols).fill(''));
+  }
 
-    // 엑셀처럼 추가적인 빈 행과 열을 제공하여 사용성 개선
-    const currentRows = baseData.length;
-    // 현재 데이터의 최대 열 개수 계산 (빈 배열 방지)
-    const currentCols = Math.max(0, ...baseData.map(row => (row || []).length));
-    
-    // 최소 100행, 26열(A-Z)을 보장하고, 현재 데이터보다 50행, 10열을 더 추가
-    const targetRows = Math.max(100, currentRows + 50);
-    const targetCols = Math.max(26, currentCols + 10);
-
-    // 기존 데이터의 각 행을 목표 열 수만큼 확장
-    const expandedData = baseData.map(row => {
-        const expandedRow = [...(row || [])];
-        while (expandedRow.length < targetCols) {
-            expandedRow.push('');
-        }
-        return expandedRow;
-    });
-
-    // 목표 행 수만큼 추가 빈 행 생성
-    while (expandedData.length < targetRows) {
-        expandedData.push(Array(targetCols).fill(''));
-    }
-
-    return expandedData;
+  return expandedData;
 };
 
 // CSV 데이터가 없을 때의 기본 설정
@@ -100,10 +102,10 @@ const MainSpreadSheet: React.FC = () => {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [isCreateSheetModalOpen, setIsCreateSheetModalOpen] = useState(false);
   const [newSheetName, setNewSheetName] = useState('');
-  
+
   // 사이드바 상태 추가
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+
   // 셀 편집을 위한 상태 추가
   const [cellEditValue, setCellEditValue] = useState('');
   const [isCellEditing, setIsCellEditing] = useState(false);
@@ -216,7 +218,7 @@ const MainSpreadSheet: React.FC = () => {
   // 셀에 함수를 적용하는 함수
   const applyFormulaToCell = useCallback((formula: string, cellAddress: string) => {
     console.log('🚀 applyFormulaToCell 시작:', { formula, cellAddress });
-    
+
     const hot = hotRef.current?.hotInstance;
     if (!hot) {
       console.error('❌ Handsontable 인스턴스를 찾을 수 없습니다.');
@@ -227,35 +229,35 @@ const MainSpreadSheet: React.FC = () => {
 
     try {
       console.log('🔄 포뮬러 적용 시작:', { formula, cellAddress });
-      
+
       // 셀 주소를 좌표로 변환
       const { row, col } = cellAddressToCoords(cellAddress);
       console.log('🎯 변환된 좌표:', { row, col, from: cellAddress });
-      
+
       // 현재 셀 값 확인
       const currentValue = hot.getDataAtCell(row, col);
       console.log('📋 현재 셀 값:', currentValue);
-      
+
       // 포뮬러가 =로 시작하지 않으면 추가
       const formulaValue = formula.startsWith('=') ? formula : `=${formula}`;
       console.log('📝 적용할 포뮬러:', formulaValue);
-      
+
       // Handsontable에 포뮬러 적용
       console.log('⚡ Handsontable에 데이터 설정 중...');
       hot.setDataAtCell(row, col, formulaValue);
-      
+
       // 적용 후 값 확인
       setTimeout(() => {
         const afterValue = hot.getDataAtCell(row, col);
         console.log('🔍 적용 후 셀 값:', afterValue);
       }, 50);
-      
+
       console.log('✅ 포뮬러 적용 완료:', {
         cellAddress,
         coordinates: `${row},${col}`,
         formula: formulaValue
       });
-      
+
       // 포뮬러 적용 후 재계산 및 스토어 업데이트
       setTimeout(() => {
         const currentHot = hotRef.current?.hotInstance;
@@ -264,14 +266,14 @@ const MainSpreadSheet: React.FC = () => {
             console.log('🔄 Handsontable 렌더링 시작...');
             currentHot.render();
             console.log('✅ Handsontable 렌더링 완료');
-            
+
             // 스토어에 변경사항 반영
             if (xlsxData && activeSheetData) {
               const sheetIndex = xlsxData.activeSheetIndex;
-              
+
               // 헤더 행을 고려하지 않고 바로 업데이트
               const dataRow = row;
-              
+
               console.log('💾 스토어 업데이트:', {
                 sheetIndex,
                 dataRow,
@@ -279,14 +281,14 @@ const MainSpreadSheet: React.FC = () => {
                 formula: formulaValue,
                 originalRow: row
               });
-              
+
               updateActiveSheetCell(dataRow, col, formulaValue);
               console.log('✅ 스토어 업데이트 완료');
 
             } else {
               console.log('⚠️ 스토어 업데이트 스킵 (데이터 없음)');
             }
-            
+
             console.log('🎉 포뮬러 적용 및 스토어 업데이트 완료');
           } catch (error) {
             console.warn('포뮬러 적용 후 렌더링 중 오류 (무시됨):', error);
@@ -295,10 +297,10 @@ const MainSpreadSheet: React.FC = () => {
           console.warn('⚠️ Handsontable 인스턴스가 파괴됨');
         }
       }, 200);
-      
+
     } catch (error) {
       console.error('❌ 포뮬러 적용 중 오류:', error);
-      
+
       // 에러 발생 시 사용자에게 알림
       if (error instanceof Error) {
         console.error('에러 상세:', error.message);
@@ -376,21 +378,21 @@ const MainSpreadSheet: React.FC = () => {
 
     try {
       console.log('Using named expression approach for formula:', formula);
-      
+
       // 임시 해결책: 수식을 직접 셀에 적용
       const { row, col } = cellAddressToCoords(cellAddress);
       const formulaValue = formula.startsWith('=') ? formula : `=${formula}`;
       hot.setDataAtCell(row + 1, col, formulaValue);
-      
+
       // 포뮬러 상태 초기화
       if (setPendingFormula) {
         setPendingFormula(null);
       }
-      
+
       console.log('Named expression approach applied successfully');
     } catch (error) {
       console.error('Named expression approach failed:', error);
-      
+
       // 최종 대안: 기본 셀 값 설정
       if (setPendingFormula) {
         setPendingFormula(null);
@@ -404,7 +406,7 @@ const MainSpreadSheet: React.FC = () => {
 
     // 기본 빈 데이터로 새 시트 생성
     const emptyData = Array(20).fill(Array(6).fill(''));
-    
+
     if (xlsxData) {
       // 기존 xlsxData가 있는 경우 새 시트 추가
       // 중복되는 시트명 확인
@@ -428,7 +430,7 @@ const MainSpreadSheet: React.FC = () => {
             startRow: 0,
             endRow: emptyData.length - 1,
             startCol: 0,
-            endCol: (emptyData[0]?.length || 1) -1,
+            endCol: (emptyData[0]?.length || 1) - 1,
             startColLetter: 'A',
             endColLetter: String.fromCharCode(65 + (emptyData[0]?.length || 1) - 1)
           },
@@ -467,7 +469,7 @@ const MainSpreadSheet: React.FC = () => {
                 startRow: 0,
                 endRow: emptyData.length - 1,
                 startCol: 0,
-                endCol: (emptyData[0]?.length || 1) -1,
+                endCol: (emptyData[0]?.length || 1) - 1,
                 startColLetter: 'A',
                 endColLetter: 'F'
               }
@@ -704,12 +706,12 @@ const MainSpreadSheet: React.FC = () => {
     }
 
     if (xlsxData && activeSheetData) {
-        // 변경된 셀마다 스토어 업데이트 액션 호출
-        changes.forEach(([row, col, oldValue, newValue]) => {
-            if (typeof row === 'number' && typeof col === 'number') {
-                updateActiveSheetCell(row, col, newValue?.toString() || '');
-            }
-        });
+      // 변경된 셀마다 스토어 업데이트 액션 호출
+      changes.forEach(([row, col, oldValue, newValue]) => {
+        if (typeof row === 'number' && typeof col === 'number') {
+          updateActiveSheetCell(row, col, newValue?.toString() || '');
+        }
+      });
     }
   }, [isInternalUpdate, xlsxData, activeSheetData, updateActiveSheetCell]);
 
@@ -717,75 +719,75 @@ const MainSpreadSheet: React.FC = () => {
     if (!hotRef.current?.hotInstance) return;
 
     const hot = hotRef.current.hotInstance;
-    
+
     let value = '';
     let formula = '';
     const actualDataRow = row; // 헤더 개념이 없으므로 row가 실제 데이터 행
     let sheetName = '시트'; // 기본 시트명
 
     try {
-        // 셀 값 가져오기
-        value = hot.getDataAtCell(row, col) || '';
-        
-        // 시트가 있는 경우
-        if (xlsxData && activeSheetData) {
-            sheetName = activeSheetData.sheetName;
-            
-            // rawData에서 직접 값 가져오기
-            if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
-                value = activeSheetData.rawData[row]?.[col] || '';
-            }
-            
-            // 수식 확인
-            const formulasPlugin = hot.getPlugin('formulas');
-            if (formulasPlugin && formulasPlugin.engine) {
-                const cellCoord = { row, col, sheet: 0 };
-                const cellFormula = formulasPlugin.engine.getCellFormula(cellCoord);
-                
-                if (cellFormula && cellFormula.startsWith('=')) {
-                    formula = cellFormula;
-                }
-            }
-        } else {
-            // 시트가 없는 경우 기본 처리
+      // 셀 값 가져오기
+      value = hot.getDataAtCell(row, col) || '';
+
+      // 시트가 있는 경우
+      if (xlsxData && activeSheetData) {
+        sheetName = activeSheetData.sheetName;
+
+        // rawData에서 직접 값 가져오기
+        if (activeSheetData.rawData && activeSheetData.rawData.length > 0) {
+          value = activeSheetData.rawData[row]?.[col] || '';
         }
 
-        // 셀 주소 계산 - 엑셀 형식 (A1, B2 등)
-        const colLetter = String.fromCharCode(65 + col);
-        const cellAddress = `${colLetter}${row + 1}`;
+        // 수식 확인
+        const formulasPlugin = hot.getPlugin('formulas');
+        if (formulasPlugin && formulasPlugin.engine) {
+          const cellCoord = { row, col, sheet: 0 };
+          const cellFormula = formulasPlugin.engine.getCellFormula(cellCoord);
 
-        // 시트 참조 포함된 주소 - 간단한 셀 주소 생성
-        const fullReference = `${sheetName}!${cellAddress}`;
+          if (cellFormula && cellFormula.startsWith('=')) {
+            formula = cellFormula;
+          }
+        }
+      } else {
+        // 시트가 없는 경우 기본 처리
+      }
 
-        const cellInfo: SelectedCellInfo = {
-            row: actualDataRow,
-            col,
-            cellAddress,
-            value,
-            formula: formula || undefined,
-            sheetIndex: xlsxData?.activeSheetIndex ?? 0,
-            timestamp: new Date()
-        };
+      // 셀 주소 계산 - 엑셀 형식 (A1, B2 등)
+      const colLetter = String.fromCharCode(65 + col);
+      const cellAddress = `${colLetter}${row + 1}`;
 
-        setSelectedCellInfo(cellInfo);
-        
-        // 디버그 정보
-        console.log('Selected cell:', {
-            address: cellAddress,
-            fullReference,
-            value: value || '(empty)',
-            formula: formula || 'none',
-            actualDataRow,
-            originalRow: row,
-            originalCol: col,
-            sheetName,
-            hasXlsxData: !!xlsxData,
-            hasActiveSheetData: !!activeSheetData
-        });
+      // 시트 참조 포함된 주소 - 간단한 셀 주소 생성
+      const fullReference = `${sheetName}!${cellAddress}`;
+
+      const cellInfo: SelectedCellInfo = {
+        row: actualDataRow,
+        col,
+        cellAddress,
+        value,
+        formula: formula || undefined,
+        sheetIndex: xlsxData?.activeSheetIndex ?? 0,
+        timestamp: new Date()
+      };
+
+      setSelectedCellInfo(cellInfo);
+
+      // 디버그 정보
+      console.log('Selected cell:', {
+        address: cellAddress,
+        fullReference,
+        value: value || '(empty)',
+        formula: formula || 'none',
+        actualDataRow,
+        originalRow: row,
+        originalCol: col,
+        sheetName,
+        hasXlsxData: !!xlsxData,
+        hasActiveSheetData: !!activeSheetData
+      });
     } catch (error) {
-        console.error('Error getting cell info:', error);
+      console.error('Error getting cell info:', error);
     }
-}, [xlsxData, activeSheetData]);
+  }, [xlsxData, activeSheetData]);
 
   const hotSettings = useMemo(() => getHotTableSettings({
     activeSheetData,
@@ -909,16 +911,14 @@ const MainSpreadSheet: React.FC = () => {
     if (!selectedCellInfo || !hotRef.current?.hotInstance) return;
 
     const hot = hotRef.current.hotInstance;
-    
+
     try {
-      // 셀 값 업데이트
-      const actualRow = selectedCellInfo.row >= 0 ? selectedCellInfo.row + 1 : 0; // 헤더 고려
+      // 헤더가 없으므로 그대로 사용
+      const actualRow = selectedCellInfo.row; // +1 제거
       hot.setDataAtCell(actualRow, selectedCellInfo.col, cellEditValue);
-      
-      // 편집 모드 종료
+
       setIsCellEditing(false);
-      
-      // 강제 재렌더링
+
       setTimeout(() => {
         hot.render();
       }, 100);
@@ -927,6 +927,18 @@ const MainSpreadSheet: React.FC = () => {
     }
   }, [selectedCellInfo, cellEditValue]);
 
+
+  useEffect(() => {
+    // Handsontable 언어 설정
+    if (typeof window !== 'undefined') {
+      const hot = hotRef.current?.hotInstance;
+      if (hot) {
+        hot.updateSettings({
+          language: 'ko-KR' // 한국어 설정
+        });
+      }
+    }
+  }, []);
   const handleCellEditCancel = useCallback(() => {
     // 원래 값으로 복원
     if (selectedCellInfo) {
@@ -966,30 +978,30 @@ const MainSpreadSheet: React.FC = () => {
     let iconColor = 'text-gray-500';
 
     switch (saveStatus) {
-        case 'modified':
-            icon = <AlertCircle className="h-4 w-4" />;
-            iconColor = 'text-yellow-600';
-            break;
-        case 'saving':
-            icon = <Loader2 className="h-4 w-4 animate-spin" />;
-            iconColor = 'text-blue-600';
-            break;
-        case 'synced':
-            icon = <CheckCircle className="h-4 w-4" />;
-            iconColor = 'text-green-600';
-            break;
-        case 'error':
-            icon = <XCircle className="h-4 w-4" />;
-            iconColor = 'text-red-600';
-            break;
+      case 'modified':
+        icon = <AlertCircle className="h-4 w-4" />;
+        iconColor = 'text-yellow-600';
+        break;
+      case 'saving':
+        icon = <Loader2 className="h-4 w-4 animate-spin" />;
+        iconColor = 'text-blue-600';
+        break;
+      case 'synced':
+        icon = <CheckCircle className="h-4 w-4" />;
+        iconColor = 'text-green-600';
+        break;
+      case 'error':
+        icon = <XCircle className="h-4 w-4" />;
+        iconColor = 'text-red-600';
+        break;
     }
 
     if (!icon) return null;
 
     return (
-        <div className="flex items-center mr-4">
-            <div className={iconColor}>{icon}</div>
-        </div>
+      <div className="flex items-center mr-4">
+        <div className={iconColor}>{icon}</div>
+      </div>
     );
   };
 
@@ -1052,7 +1064,7 @@ const MainSpreadSheet: React.FC = () => {
       // 엑셀처럼 추가 빈 행과 열 제공
       const currentRows = newSheetData.length;
       const currentCols = Math.max(...newSheetData.map(row => row?.length || 0));
-      
+
       const targetRows = Math.max(100, currentRows + 50);
       const targetCols = Math.max(26, currentCols + 10);
 
@@ -1071,7 +1083,7 @@ const MainSpreadSheet: React.FC = () => {
 
       // Handsontable에 새 데이터 로드 (시트 변경 시에만)
       hot.loadData(expandedData);
-      
+
       // 추가 렌더링으로 확실하게 업데이트
       const timeoutId = setTimeout(() => {
         const currentHot = hotRef.current?.hotInstance;
@@ -1277,7 +1289,7 @@ const MainSpreadSheet: React.FC = () => {
   const handleCellClick = useCallback((row: number, col: number) => {
     if (pendingFormula) {
       console.log('Pending formula detected, showing application prompt');
-      
+
       // 포뮬러가 있는 경우 확인 창 표시
       const colLetter = String.fromCharCode(65 + col);
       const cellAddress = `${colLetter}${row + 1}`;
@@ -1300,7 +1312,7 @@ const MainSpreadSheet: React.FC = () => {
     // 시트가 없고 채팅이 가능한 상태에서 기본 시트 컨텍스트 설정
     if (!xlsxData && !activeSheetData && !loadingStates.fileUpload) {
       console.log('🔧 빈 시트 상태에서 기본 컨텍스트 초기화');
-      
+
       // 현재 사용자가 채팅을 시작할 수 있도록 빈 시트 환경 준비
       // 실제 XLSX 데이터가 없어도 채팅은 가능하도록 설정
       console.log('빈 스프레드시트 환경 준비 완료');
@@ -1331,11 +1343,10 @@ const MainSpreadSheet: React.FC = () => {
     <div className="h-full flex relative spreadsheet-main-container">
       {/* 사이드바 */}
       <ChatSidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
-      
+
       {/* 메인 스프레드시트 영역 - 사이드바 상태에 따른 마진 조정 */}
-      <div className={`h-full flex flex-col flex-1 min-w-0 spreadsheet-container transition-all duration-300 ease-in-out ${
-        isSidebarOpen ? 'ml-80' : 'ml-0'
-      }`}>
+      <div className={`h-full flex flex-col flex-1 min-w-0 spreadsheet-container transition-all duration-300 ease-in-out ${isSidebarOpen ? 'ml-80' : 'ml-0'
+        }`}>
         {/* Handsontable z-index 문제 해결을 위한 스타일 */}
         <HandsontableStyles />
 
@@ -1345,7 +1356,7 @@ const MainSpreadSheet: React.FC = () => {
             {/* 사이드바 토글 버튼과 로고 */}
             <div className="flex items-center space-x-2">
               {/* 햄버거 버튼 주석처리 */}
-              
+
               <button
                 onClick={toggleSidebar}
                 className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200"
@@ -1353,25 +1364,22 @@ const MainSpreadSheet: React.FC = () => {
                 style={{ minWidth: '40px', height: '40px' }}
               >
                 <div className="flex flex-col space-y-1">
-                  <div 
-                    className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${
-                      isSidebarOpen ? 'rotate-45 translate-y-1.5' : ''
-                    }`}
+                  <div
+                    className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${isSidebarOpen ? 'rotate-45 translate-y-1.5' : ''
+                      }`}
                   />
-                  <div 
-                    className={`w-5 h-0.5 bg-gray-600 transition-opacity duration-300 ${
-                      isSidebarOpen ? 'opacity-0' : 'opacity-100'
-                    }`}
+                  <div
+                    className={`w-5 h-0.5 bg-gray-600 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-0' : 'opacity-100'
+                      }`}
                   />
-                  <div 
-                    className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${
-                      isSidebarOpen ? '-rotate-45 -translate-y-1.5' : ''
-                    }`}
+                  <div
+                    className={`w-5 h-0.5 bg-gray-600 transition-transform duration-300 ${isSidebarOpen ? '-rotate-45 -translate-y-1.5' : ''
+                      }`}
                   />
                 </div>
               </button>
-             
-              
+
+
               {/* EXTION 텍스트 로고 */}
               <h1 className="text-xl font-bold text-gray-800" style={{ color: '#005DE9' }}>
                 EXTION
@@ -1386,7 +1394,7 @@ const MainSpreadSheet: React.FC = () => {
                     {selectedCellInfo.cellAddress}
                   </span>
                 </div>
-                
+
                 {/* 편집 가능한 셀 값 입력 필드 */}
                 <div className="flex items-center space-x-2 flex-1 max-w-md min-w-0">
                   <span className="font-medium flex-shrink-0">Fx:</span>
@@ -1418,7 +1426,7 @@ const MainSpreadSheet: React.FC = () => {
                       }}
                       placeholder="값 또는 수식 입력 (예: =SUM(A1:A5))"
                     />
-                    
+
                     {/* 편집 모드일 때 확인/취소 버튼 표시 */}
                     {isCellEditing && (
                       <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex space-x-1">
@@ -1482,12 +1490,12 @@ const MainSpreadSheet: React.FC = () => {
 
           {/* 포뮬러 적용 대기 알림 */}
           {pendingFormula && (
-            <div className="rounded-xl p-4 mt-4" 
-                 style={{ 
-                   backgroundColor: 'rgba(0, 93, 233, 0.08)', 
-                   borderColor: 'rgba(0, 93, 233, 0.2)',
-                   border: '1px solid'
-                 }}>
+            <div className="rounded-xl p-4 mt-4"
+              style={{
+                backgroundColor: 'rgba(0, 93, 233, 0.08)',
+                borderColor: 'rgba(0, 93, 233, 0.2)',
+                border: '1px solid'
+              }}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#005DE9' }}>
@@ -1503,7 +1511,7 @@ const MainSpreadSheet: React.FC = () => {
                 <button
                   onClick={() => setPendingFormula(null)}
                   className="text-sm bg-white px-3 py-1.5 rounded-lg border transition-colors duration-200"
-                  style={{ 
+                  style={{
                     color: '#005DE9',
                     borderColor: 'rgba(0, 93, 233, 0.2)'
                   }}
