@@ -91,8 +91,8 @@ export default function Footer() {
                 © {currentYear} Extion by Palacers. All rights reserved.
               </p>
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-sm text-gray-500">서비스 배포 준비중</span>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-500">서비스 정상 운영중</span>
               </div>
             </div>
             

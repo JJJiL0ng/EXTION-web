@@ -1,12 +1,17 @@
 import { StateCreator } from 'zustand';
 import { ChatMessage, ChatSession } from '../store-types';
+import { FirebaseChat } from '../../services/firebase/chatService';
 
 // 채팅 슬라이스 상태
 export interface ChatSlice {
     // === 채팅 세션 관리 ===
     chatSessions: { [chatId: string]: ChatSession };
     currentChatId: string | null;
+    currentSpreadsheetId: string | null;
     chatHistory: string[];
+    
+    // === 현재 채팅 메타데이터 ===
+    currentChatMeta: Partial<FirebaseChat> | null;
     
     // === 시트별 채팅 메시지 ===
     sheetMessages: { [sheetIndex: number]: ChatMessage[] };
@@ -48,11 +53,17 @@ export interface ChatSlice {
     generateNewChatIdForSheet: (sheetIndex: number, chatTitle?: string) => string;
     getCurrentSheetChatId: () => string | null;
     initializeSheetChatIds: () => void;
+
+    // === 채팅 메타데이터 액션 ===
+    setCurrentChatMeta: (meta: Partial<FirebaseChat> | null) => void;
+
+    // === 스프레드시트 ID 액션 ===
+    setCurrentSpreadsheetId: (spreadsheetId: string | null) => void;
 }
 
 // 채팅 슬라이스 생성자
 export const createChatSlice: StateCreator<
-    ChatSlice & { xlsxData: any; currentSpreadsheetId: any; [key: string]: any },
+    ChatSlice & { xlsxData: any; [key: string]: any },
     [],
     [],
     ChatSlice
@@ -60,7 +71,9 @@ export const createChatSlice: StateCreator<
     // === 초기 상태 ===
     chatSessions: {},
     currentChatId: null,
+    currentSpreadsheetId: null,
     chatHistory: [],
+    currentChatMeta: null,
     sheetMessages: {},
     activeSheetMessages: [],
     sheetChatIds: {},
@@ -105,6 +118,8 @@ export const createChatSlice: StateCreator<
 
         return newChatId;
     },
+
+    setCurrentChatMeta: (meta) => set({ currentChatMeta: meta }),
 
     switchToChatSession: (chatId: string) => {
         const { chatSessions } = get();
@@ -316,6 +331,8 @@ export const createChatSlice: StateCreator<
             localStorage.setItem('currentChatId', chatId);
         }
     },
+
+    setCurrentSpreadsheetId: (spreadsheetId) => set({ currentSpreadsheetId: spreadsheetId }),
 
     getCurrentChatId: () => {
         const { xlsxData, getCurrentSheetChatId } = get();

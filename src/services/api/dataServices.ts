@@ -889,6 +889,7 @@ export const saveSpreadsheetToFirebase = async (
     options?: {
         chatId?: string;
         userId?: string;
+        spreadsheetId?: string;
     }
 ): Promise<{
     success: boolean;
@@ -914,18 +915,15 @@ export const saveSpreadsheetToFirebase = async (
         const requestBody = {
             userId: options?.userId || currentUser.uid,
             chatId: options?.chatId,
+            spreadsheetId: options?.spreadsheetId,
             fileName: parsedData.fileName,
             originalFileName: fileInfo.originalFileName,
             fileSize: fileInfo.fileSize,
             fileType: fileInfo.fileType,
             activeSheetIndex: parsedData.activeSheetIndex || 0,
             sheets: parsedData.sheets.map((sheet: any, index: number) => {
-                const headers = sheet.headers || [];
-                const dataRows = sheet.data || [];
-                // rawData가 있으면 그대로 사용, 없으면 headers와 dataRows를 합쳐서 생성
-                const rawData = (sheet.rawData && sheet.rawData.length > 0)
-                    ? sheet.rawData
-                    : (headers.length > 0 ? [headers, ...dataRows] : dataRows);
+                // 헤더를 전송하는 로직을 제거하고, 시트의 rawData를 직접 사용합니다.
+                const rawData = sheet.rawData || [];
 
                 return {
                     sheetName: sheet.sheetName,
@@ -963,6 +961,76 @@ export const saveSpreadsheetToFirebase = async (
         
     } catch (error) {
         console.error('Save Spreadsheet API Call Error:', error);
+        throw error;
+    }
+};
+
+// === 스프레드시트 전체 교체 DTO ===
+export interface ReplaceSpreadsheetDto {
+    sheets: Array<{
+        sheetName: string;
+        sheetIndex: number;
+        data: any[][];
+        computedData?: any[][];
+        formulas?: any[][];
+    }>;
+    description?: string;
+}
+
+// === 스프레드시트 교체 응답 인터페이스 ===
+export interface ReplaceSpreadsheetResponse {
+    success: boolean;
+    message: string;
+    spreadsheetId: string;
+    sheetsCount: number;
+    description?: string;
+    replacedAt: string;
+    sheets: Array<{
+        sheetId: string;
+        sheetIndex: number;
+        sheetName: string;
+        rowCount: number;
+        hasFormulas: boolean;
+        hasComputedData: boolean;
+    }>;
+    error?: string;
+}
+
+// === 스프레드시트 교체 API 호출 ===
+export const replaceSpreadsheet = async (
+    spreadsheetId: string,
+    replaceData: ReplaceSpreadsheetDto,
+    userId: string,
+): Promise<ReplaceSpreadsheetResponse> => {
+    try {
+        if (!userId) {
+            throw new Error('User ID is required for replacing spreadsheet.');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/spreadsheet/${spreadsheetId}/replace?userId=${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(replaceData),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Replace Spreadsheet API Error Details:', {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText
+            });
+            throw new Error(`API 오류: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log('Replace Spreadsheet API Response:', result);
+        return result;
+
+    } catch (error) {
+        console.error('Replace Spreadsheet API Call Error:', error);
         throw error;
     }
 };

@@ -298,7 +298,7 @@ export const subscribeToChatMessages = (
 };
 
 // 새 채팅 생성
-export const createChat = async (title: string, userId?: string): Promise<string> => {
+export const createChat = async (title: string, userId?: string, spreadsheetId?: string): Promise<string> => {
     try {
         const currentUser = auth.currentUser;
         const targetUserId = userId || currentUser?.uid;
@@ -307,9 +307,11 @@ export const createChat = async (title: string, userId?: string): Promise<string
             throw new Error('사용자 인증이 필요합니다.');
         }
 
-        const chatData = {
+        const chatsRef = collection(db, 'chats');
+        
+        const newChatData = {
             userId: targetUserId,
-            title,
+            title: title,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
             messageCount: 0,
@@ -319,12 +321,11 @@ export const createChat = async (title: string, userId?: string): Promise<string
                 artifactCount: 0,
                 dataGenerationCount: 0,
                 dataFixCount: 0
-            }
+            },
+            spreadsheetId: spreadsheetId || null, // 전달된 spreadsheetId 저장
         };
 
-        const chatsRef = collection(db, 'chats');
-        const docRef = await addDoc(chatsRef, chatData);
-        
+        const docRef = await addDoc(chatsRef, newChatData);
         return docRef.id;
     } catch (error) {
         console.error('채팅 생성 오류:', error);

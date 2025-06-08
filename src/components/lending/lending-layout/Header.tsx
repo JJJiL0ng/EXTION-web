@@ -4,10 +4,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 import { scrollToElement } from '@/lending-libs/lending-utils'
+import { useRouter } from 'next/navigation'
 
 export default function Header() {
+  const router = useRouter()
+
   const handleBetaClick = () => {
-    scrollToElement('cta-section', 80)
+    router.push('/ai')
     
     // 이벤트 트래킹
     if (typeof window !== 'undefined' && (window as any).gtag) {
@@ -55,7 +58,7 @@ export default function Header() {
             onClick={handleBetaClick}
           >
             <span className="flex items-center gap-2">
-              베타 체험 신청
+              무료로 시작하기
             </span>
           </Button>
         </div>

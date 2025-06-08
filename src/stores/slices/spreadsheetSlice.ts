@@ -10,9 +10,12 @@ export interface SpreadsheetSlice {
     computedSheetData: { [sheetIndex: number]: string[][] };
     
     // === 스프레드시트 메타데이터 ===
-    currentSpreadsheetId: string | null;
     spreadsheetMetadata: SpreadsheetMetadata | null;
     hasUploadedFile: boolean;
+    
+    // === 시트 저장 상태 ===
+    saveStatus: 'synced' | 'modified' | 'saving' | 'error';
+    setSaveStatus: (status: 'synced' | 'modified' | 'saving' | 'error') => void;
     
     // === 액션들 ===
     // XLSX 데이터 관리
@@ -35,8 +38,6 @@ export interface SpreadsheetSlice {
     getComputedDataForSheet: (sheetIndex: number) => string[][] | null;
     
     // 스프레드시트 메타데이터 관리
-    setCurrentSpreadsheetId: (spreadsheetId: string | null) => void;
-    getCurrentSpreadsheetId: () => string | null;
     setSpreadsheetMetadata: (metadata: SpreadsheetMetadata | null) => void;
     getSpreadsheetMetadata: () => SpreadsheetMetadata | null;
     markAsSaved: (spreadsheetId: string) => void;
@@ -85,7 +86,7 @@ export interface SpreadsheetSlice {
 
 // 스프레드시트 슬라이스 생성자
 export const createSpreadsheetSlice: StateCreator<
-    SpreadsheetSlice & { loadingStates: LoadingStates; errors: ErrorStates; setLoadingState: any; setError: any },
+    SpreadsheetSlice & { loadingStates: LoadingStates; errors: ErrorStates; setLoadingState: any; setError: any; currentSpreadsheetId: string | null },
     [],
     [],
     SpreadsheetSlice
@@ -94,10 +95,13 @@ export const createSpreadsheetSlice: StateCreator<
     xlsxData: null,
     activeSheetData: null,
     computedSheetData: {},
-    currentSpreadsheetId: null,
     spreadsheetMetadata: null,
     hasUploadedFile: false,
+    saveStatus: 'synced',
     
+    // === 시트 저장 상태 액션 ===
+    setSaveStatus: (status) => set({ saveStatus: status }),
+
     // === XLSX 데이터 액션들 ===
     setXLSXData: (data) => {
         set((state) => {
@@ -201,35 +205,46 @@ export const createSpreadsheetSlice: StateCreator<
             const newXlsxData = { ...state.xlsxData };
             const targetSheet = { ...newXlsxData.sheets[sheetIndex] };
             
-            if (targetSheet.rawData) {
-                targetSheet.rawData = targetSheet.rawData.map((r, rowIndex) => {
-                    if (rowIndex === row) {
-                        const newRow = [...r];
-                        newRow[col] = value;
-                        return newRow;
-                    }
-                    return r;
-                });
-            }
+            // rawData를 깊은 복사하여 불변성 유지
+            const newRawData = (targetSheet.rawData || []).map(r => [...(r || [])]);
 
+            // 행과 열이 범위를 벗어날 경우 확장
+            while (newRawData.length <= row) {
+                newRawData.push([]);
+            }
+            const targetRow = newRawData[row];
+            while (targetRow.length <= col) {
+                targetRow.push('');
+            }
+            targetRow[col] = value;
+
+            targetSheet.rawData = newRawData;
             newXlsxData.sheets = [...newXlsxData.sheets];
             newXlsxData.sheets[sheetIndex] = targetSheet;
 
-            // computedSheetData 업데이트
+            // computedSheetData도 동일하게 업데이트 (수식 계산은 Handsontable에서 처리)
             const newComputedData = { ...state.computedSheetData };
             if (newComputedData[sheetIndex]) {
-                newComputedData[sheetIndex] = [...newComputedData[sheetIndex]];
-                if (newComputedData[sheetIndex][row]) {
-                    newComputedData[sheetIndex][row] = [...newComputedData[sheetIndex][row]];
-                    newComputedData[sheetIndex][row][col] = value;
+                const newSheetComputedData = (newComputedData[sheetIndex] || []).map(r => [...(r || [])]);
+                 while (newSheetComputedData.length <= row) {
+                    newSheetComputedData.push([]);
                 }
+                const targetComputedRow = newSheetComputedData[row];
+                while(targetComputedRow.length <= col) {
+                    targetComputedRow.push('');
+                }
+                targetComputedRow[col] = value;
+                newComputedData[sheetIndex] = newSheetComputedData;
             }
+
+            console.log(`[SpreadsheetSlice] Cell updated at sheet ${sheetIndex} [${row}, ${col}]. Setting saveStatus to 'modified'.`);
 
             return {
                 ...state,
                 xlsxData: newXlsxData,
                 computedSheetData: newComputedData,
                 activeSheetData: sheetIndex === state.xlsxData.activeSheetIndex ? targetSheet : state.activeSheetData,
+                saveStatus: 'modified', // 변경사항이 있음을 표시
             };
         });
     },
@@ -257,13 +272,10 @@ export const createSpreadsheetSlice: StateCreator<
     },
 
     // === 스프레드시트 메타데이터 관리 ===
-    setCurrentSpreadsheetId: (spreadsheetId) => set({ currentSpreadsheetId: spreadsheetId }),
-    getCurrentSpreadsheetId: () => get().currentSpreadsheetId,
     setSpreadsheetMetadata: (metadata) => set({ spreadsheetMetadata: metadata }),
     getSpreadsheetMetadata: () => get().spreadsheetMetadata,
     markAsSaved: (spreadsheetId) => set((state) => ({
         ...state,
-        currentSpreadsheetId: spreadsheetId,
         spreadsheetMetadata: state.spreadsheetMetadata ? { 
             ...state.spreadsheetMetadata, 
             isSaved: true,
@@ -384,8 +396,6 @@ export const createSpreadsheetSlice: StateCreator<
                 })
                 .join('\n');
 
-            const validHeaders: string[] = []; // No headers
-
             const fullData = currentData.map(row =>
                 Array.isArray(row) ? row.map(cell => String(cell || '')) : []
             );
@@ -398,9 +408,8 @@ export const createSpreadsheetSlice: StateCreator<
                 name: sheet.sheetName,
                 csv,
                 metadata: {
-                    headers: validHeaders,
                     rowCount: currentData.length,
-                    columnCount: validHeaders.length,
+                    columnCount: currentData[0]?.length || 0,
                     fullData: fullData,
                     sampleData: sampleData,
                     sheetIndex: sheetIdx,
@@ -459,6 +468,7 @@ export const createSpreadsheetSlice: StateCreator<
                     xlsxData: newXlsxData,
                     activeSheetData: newXlsxData.sheets[0],
                     computedSheetData: { 0: [...newRawData] },
+                    saveStatus: 'modified',
                 };
             });
 
@@ -520,6 +530,7 @@ export const createSpreadsheetSlice: StateCreator<
                         ...state.computedSheetData,
                         [sheetIndex]: [...newRawData]
                     },
+                    saveStatus: 'modified',
                 };
             });
         } else {
@@ -558,6 +569,7 @@ export const createSpreadsheetSlice: StateCreator<
                         ...state.computedSheetData,
                         [xlsxData.sheets.length]: [...newRawData]
                     },
+                    saveStatus: 'modified',
                 };
             });
         }
