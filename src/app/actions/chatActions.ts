@@ -1,11 +1,9 @@
 'use server'
 
-import { OpenAI } from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// OpenAI API 설정
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Google AI API 설정
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // 채팅 모드 타입 정의
 export type ChatMode = 'normal' | 'function' | 'datafix' | 'artifact';
@@ -28,18 +26,14 @@ export async function determineChatMode(
       사용자의 핵심 의도를 파악하여, 가장 적합한 모드 하나를 영어 소문자로만 응답하세요. 다른 설명은 붙이지 마세요.
     `;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage }
-      ],
-      temperature: 0.1,
-      max_tokens: 10 // 짧은 응답만 필요
+    const model = genAI.getGenerativeModel({ 
+        model: "gemini-2.0-flash",
+        systemInstruction: systemPrompt,
     });
 
-    // GPT 응답에서 모드 추출
-    const gptResponse = response.choices[0].message.content?.trim().toLowerCase() ?? 'normal';
+    const result = await model.generateContent(userMessage);
+    const response = await result.response;
+    const gptResponse = response.text().trim().toLowerCase() ?? 'normal';
     
     console.log('GPT 응답:', gptResponse);
 
