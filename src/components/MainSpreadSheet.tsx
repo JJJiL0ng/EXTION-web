@@ -1357,7 +1357,7 @@ const MainSpreadSheet: React.FC = () => {
             <div className="flex items-center space-x-2">
               {/* 햄버거 버튼 주석처리 */}
 
-              <button
+              {/* <button
                 onClick={toggleSidebar}
                 className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200"
                 aria-label={isSidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
@@ -1377,7 +1377,7 @@ const MainSpreadSheet: React.FC = () => {
                       }`}
                   />
                 </div>
-              </button>
+              </button> */}
 
 
               {/* EXTION 텍스트 로고 */}
