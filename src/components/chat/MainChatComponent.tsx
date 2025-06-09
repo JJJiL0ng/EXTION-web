@@ -276,13 +276,6 @@ export default function MainChatComponent() {
 
                     // Firebase에 업데이트된 스프레드시트 저장
                     try {
-                        let chatIdToUse = getCurrentFirebaseChatId();
-                        if (!chatIdToUse) {
-                            const newChatId = generateNewChatId();
-                            setCurrentChatId(newChatId);
-                            setFirebaseChatId(newChatId);
-                            chatIdToUse = newChatId;
-                        }
                         const saveResult = await saveSpreadsheetToFirebase(
                             {
                                 fileName: newXlsxData.fileName,
@@ -295,7 +288,7 @@ export default function MainChatComponent() {
                                 fileType: 'xlsx'
                             },
                             {
-                                chatId: chatIdToUse,
+                                chatId: getCurrentFirebaseChatId() || undefined,
                                 userId: auth.currentUser?.uid,
                                 spreadsheetId: currentSpreadsheetId || undefined
                             }
@@ -375,13 +368,6 @@ export default function MainChatComponent() {
 
                     // Firebase에 새 스프레드시트 저장
                     try {
-                        let chatIdToUse = getCurrentFirebaseChatId();
-                        if (!chatIdToUse) {
-                            const newChatId = generateNewChatId();
-                            setCurrentChatId(newChatId);
-                            setFirebaseChatId(newChatId);
-                            chatIdToUse = newChatId;
-                        }
                         const saveResult = await saveSpreadsheetToFirebase(
                             {
                                 fileName: xlsxData.fileName,
@@ -394,7 +380,7 @@ export default function MainChatComponent() {
                                 fileType: 'xlsx'
                             },
                             {
-                                chatId: chatIdToUse,
+                                chatId: getCurrentFirebaseChatId() || undefined,
                                 userId: auth.currentUser?.uid,
                                 spreadsheetId: currentSpreadsheetId || undefined
                             }
@@ -504,13 +490,6 @@ export default function MainChatComponent() {
                                 // Firebase에 업데이트된 스프레드시트 저장
                                 (async () => {
                                     try {
-                                        let chatIdToUse = getCurrentFirebaseChatId();
-                                        if (!chatIdToUse) {
-                                            const newChatId = generateNewChatId();
-                                            setCurrentChatId(newChatId);
-                                            setFirebaseChatId(newChatId);
-                                            chatIdToUse = newChatId;
-                                        }
                                         const saveResult = await saveSpreadsheetToFirebase(
                                             {
                                                 fileName: newXlsxData.fileName,
@@ -523,7 +502,7 @@ export default function MainChatComponent() {
                                                 fileType: 'csv'
                                             },
                                             {
-                                                chatId: chatIdToUse,
+                                                chatId: getCurrentFirebaseChatId() || undefined,
                                                 userId: auth.currentUser?.uid,
                                                 spreadsheetId: currentSpreadsheetId || undefined
                                             }
@@ -585,13 +564,6 @@ export default function MainChatComponent() {
                                 // Firebase에 새 스프레드시트 저장
                                 (async () => {
                                     try {
-                                        let chatIdToUse = getCurrentFirebaseChatId();
-                                        if (!chatIdToUse) {
-                                            const newChatId = generateNewChatId();
-                                            setCurrentChatId(newChatId);
-                                            setFirebaseChatId(newChatId);
-                                            chatIdToUse = newChatId;
-                                        }
                                         const saveResult = await saveSpreadsheetToFirebase(
                                             {
                                                 fileName: xlsxData.fileName,
@@ -604,7 +576,7 @@ export default function MainChatComponent() {
                                                 fileType: 'csv'
                                             },
                                             {
-                                                chatId: chatIdToUse,
+                                                chatId: getCurrentFirebaseChatId() || undefined,
                                                 userId: auth.currentUser?.uid,
                                                 spreadsheetId: currentSpreadsheetId || undefined
                                             }
@@ -702,9 +674,7 @@ export default function MainChatComponent() {
         setCurrentSpreadsheetId, 
         setSpreadsheetMetadata, 
         markAsSaved,
-        updateChatTitleWithFileName,
-        generateNewChatId,
-        setFirebaseChatId,
+        updateChatTitleWithFileName
     ]);
 
     // === 채팅 세션 관리 Effect ===
