@@ -30,7 +30,7 @@ export default function LoginPage() {
       setError(null);
       await signInWithGoogle();
       // 로그인 성공 시 메인 페이지로 이동
-      router.push('/');
+      router.push('/ai');
     } catch (err) {
       console.error('로그인 실패:', err);
       setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
