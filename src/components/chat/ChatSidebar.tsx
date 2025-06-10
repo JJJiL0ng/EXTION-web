@@ -21,7 +21,9 @@ import {
     ClockIcon,
     Layers
 } from 'lucide-react';
+import GoogleIcon from '@/components/icons/GoogleIcon';
 import { useUnifiedStore } from '@/stores';
+import { useAuthStore } from '@/stores/authStore';
 import { 
     getUserChats, 
     deleteChat, 
@@ -34,8 +36,7 @@ import {
     getSpreadsheetByChatId,
     getSpreadsheetData
 } from '@/services/firebase/spreadsheetService';
-import { auth } from '@/services/firebase';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { signInWithGoogle } from '@/services/firebase/authService';
 import { XLSXData } from '@/stores/store-types';
 
 interface ChatSidebarProps {
@@ -59,8 +60,7 @@ interface CloudChatItem {
 }
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { user, loading } = useAuthStore();
     const [firebaseChats, setFirebaseChats] = useState<FirebaseChat[]>([]);
     const [isLoadingChats, setIsLoadingChats] = useState(false);
     const [isCreatingChat, setIsCreatingChat] = useState(false);
@@ -94,16 +94,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
 
     const router = useRouter();
     const searchParams = useSearchParams();
-
-    // Firebase 인증 상태 감지
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setUser(user);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
 
     // Firebase 채팅 목록 로드
     const loadFirebaseChats = useCallback(async () => {
@@ -151,6 +141,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             setLoadingChatId(null);
         }
     }, [selectedChatId, xlsxData, loadingChatId]);
+
+    const handleLogin = async () => {
+        try {
+            await signInWithGoogle();
+        } catch (error) {
+            console.error('Login failed:', error);
+        }
+    };
 
     // 클라우드 채팅 목록 생성 및 필터링
     const getCloudChatList = (): CloudChatItem[] => {
@@ -383,13 +381,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                 className="w-auto"
                             />
                         </div>
-                        {/* <button
-                            onClick={onToggle}
-                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-white/50 rounded-lg transition-all duration-200 backdrop-blur-sm"
-                            aria-label="사이드바 닫기"
-                        >
-                            <ChevronLeftIcon className="h-5 w-5" />
-                        </button> */}
+                        {!loading && !user && (
+                            <button
+                                onClick={handleLogin}
+                                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                <GoogleIcon className="w-4 h-4" />
+                                <span>구글로 로그인</span>
+                            </button>
+                        )}
                     </div>
 
                     {/* 검색 및 필터 */}
