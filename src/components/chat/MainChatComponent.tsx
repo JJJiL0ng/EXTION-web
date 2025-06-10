@@ -11,6 +11,7 @@ import { saveSpreadsheetToFirebase } from '../../services/api/dataServices';
 import { updateChatTitle } from '@/services/firebase/chatService';
 import { cellAddressToCoords } from '@/stores/store-utils/xlsxUtils';
 import { auth } from '@/services/firebase';
+import { useAuthStore } from '@/stores/authStore';
 
 // 컴포넌트 가져오기
 import MessageDisplay from './MessageDisplay';
@@ -52,6 +53,7 @@ export default function MainChatComponent() {
     const prevChatIdRef = useRef<string | null>(null);
     const [appliedDataFixes, setAppliedDataFixes] = useState<string[]>([]);
     const [appliedFunctionResults, setAppliedFunctionResults] = useState<string[]>([]);
+    const { user } = useAuthStore();
 
     // Zustand 스토어 사용
     const {
@@ -801,6 +803,12 @@ export default function MainChatComponent() {
         if (!inputValue.trim()) return;
 
         setIsLoading(true);
+
+        // 비로그인 상태이고 현재 채팅 ID가 없을 때 새 로컬 채팅 ID 생성
+        if (!getCurrentChatId() && !user) {
+            const newChatId = generateNewChatId();
+            setCurrentChatId(newChatId);
+        }
 
         // 먼저 사용자 메시지 추가
         const userMessage: ChatMessage = {
