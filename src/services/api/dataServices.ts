@@ -36,7 +36,7 @@ export interface ProcessDataRequestDTO {
     userInput: string;           // 사용자 입력 메시지
     spreadsheetData: SpreadsheetData;  // 스프레드시트 데이터
     language?: string;           // 언어 설정 (기본값: 'ko')
-    userId: string;              // 사용자 ID
+    userId?: string;              // 사용자 ID
     chatId: string;              // 채팅 ID
     chatTitle?: string;          // 채팅 제목 (선택사항)
     messageId?: string;          // 메시지 ID (선택사항)
@@ -203,9 +203,10 @@ const createRequestBody = (
         console.warn('Auth state is still loading. API call might fail if user is not yet available.');
     }
 
-    if (!currentUser) {
-        throw new Error('로그인이 필요합니다. (currentUser is null in createRequestBody)');
-    }
+    // 비로그인 사용자도 API를 사용할 수 있도록 주석 처리
+    // if (!currentUser) {
+    //     throw new Error('로그인이 필요합니다. (currentUser is null in createRequestBody)');
+    // }
 
     if (!chatId) {
         throw new Error('채팅 ID가 필요합니다.');
@@ -309,7 +310,7 @@ const createRequestBody = (
         language: 'ko',
         
         // === Firebase 필드 ===
-        userId: currentUser.uid,
+        userId: currentUser?.uid,
         chatId: chatId,
         
         // === 스프레드시트 데이터 ===
@@ -908,12 +909,13 @@ export const saveSpreadsheetToFirebase = async (
     try {
         const { user: currentUser } = useAuthStore.getState();
         
-        if (!currentUser) {
-            throw new Error('로그인이 필요합니다.');
-        }
+        // 비로그인 사용자를 지원하기 위해 주석 처리. userId는 options에서 오거나 없을 수 있음.
+        // if (!currentUser) {
+        //     throw new Error('로그인이 필요합니다.');
+        // }
 
         const requestBody = {
-            userId: options?.userId || currentUser.uid,
+            userId: options?.userId || currentUser?.uid,
             chatId: options?.chatId,
             spreadsheetId: options?.spreadsheetId,
             fileName: parsedData.fileName,
