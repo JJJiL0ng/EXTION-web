@@ -37,12 +37,21 @@ export async function determineChatMode(
     
     console.log('GPT 응답:', gptResponse);
 
+    // 키워드 기반 추가 판별: GPT가 artifact로 분류하지 못했을 때 보정
+    const artifactKeywordRegex = /(시각화|그래프|chart|차트|plot|막대그래프|파이차트|bar chart|pie chart|line chart|scatter|산점도)/i;
+
     // 유효한 모드로 변환
     let mode: ChatMode = 'normal';
     const validModes: ChatMode[] = ['normal', 'function', 'datafix', 'artifact'];
     
     if (validModes.includes(gptResponse as ChatMode)) {
         mode = gptResponse as ChatMode;
+    }
+
+    // GPT 결과가 artifact가 아니지만, 메시지에 시각화 관련 키워드가 포함된 경우 artifact로 보정
+    if (mode === 'normal' && artifactKeywordRegex.test(userMessage)) {
+        console.log('🔍 시각화 키워드 감지 – 모드를 artifact로 보정합니다.');
+        mode = 'artifact';
     }
 
     console.log('선택된 채팅 모드:', mode);
