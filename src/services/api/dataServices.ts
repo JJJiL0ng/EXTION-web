@@ -894,52 +894,41 @@ export const saveSpreadsheetToFirebase = async (
     }
 ): Promise<{
     success: boolean;
-    spreadsheetId: string;
-    chatId: string;
-    fileName: string;
-    sheets: Array<{
-        sheetId: string;
-        sheetIndex: number;
-        sheetName: string;
-        headers: string[];
-        rowCount: number;
-    }>;
+    data: any;
+    message?: string;
     error?: string;
 }> => {
     try {
         const { user: currentUser } = useAuthStore.getState();
         
-        // 비로그인 사용자를 지원하기 위해 주석 처리. userId는 options에서 오거나 없을 수 있음.
-        // if (!currentUser) {
-        //     throw new Error('로그인이 필요합니다.');
-        // }
+        const userId = options?.userId || currentUser?.uid;
+
+        if (!userId) {
+            throw new Error('사용자 ID가 없어 스프레드시트를 저장할 수 없습니다. 로그인이 필요합니다.');
+        }
 
         const requestBody = {
-            userId: options?.userId || currentUser?.uid,
+            userId: userId,
             chatId: options?.chatId,
-            spreadsheetId: options?.spreadsheetId,
             fileName: parsedData.fileName,
             originalFileName: fileInfo.originalFileName,
             fileSize: fileInfo.fileSize,
             fileType: fileInfo.fileType,
             activeSheetIndex: parsedData.activeSheetIndex || 0,
             sheets: parsedData.sheets.map((sheet: any, index: number) => {
-                // 헤더를 전송하는 로직을 제거하고, 시트의 rawData를 직접 사용합니다.
                 const rawData = sheet.rawData || [];
 
                 return {
-                    sheetName: sheet.sheetName,
-                    sheetIndex: sheet.sheetIndex !== undefined ? sheet.sheetIndex : index,
+                    name: sheet.sheetName,
+                    index: sheet.sheetIndex !== undefined ? sheet.sheetIndex : index,
                     data: rawData,
-                    computedData: sheet.computedData,
-                    formulas: sheet.formulas
                 };
             })
         };
 
         console.log('Save Spreadsheet Request Body:', JSON.stringify(requestBody, null, 2));
 
-        const response = await fetch(`${API_BASE_URL}/spreadsheet/save`, {
+        const response = await fetch(`${API_BASE_URL}/spreadsheet/data/save`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
