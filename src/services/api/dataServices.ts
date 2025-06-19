@@ -203,7 +203,7 @@ export interface OrchestratorChatRequestDto {
 // 오케스트레이터 채팅 응답 DTO
 export interface OrchestratorChatResponseDto {
     success: boolean;
-    chatType: 'normal' | 'artifact' | 'datafix' | 'function' | 'datageneration' | null;
+    chatType: 'normal' | 'artifact' | 'datafix' | 'function' | 'datageneration' | 'general-chat' | 'visualization-chat' | null;
     
     // 일반 채팅 응답 필드들
     message?: string;

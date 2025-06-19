@@ -1087,8 +1087,13 @@ export default function MainChatComponent() {
             await handleDataFixResponse(response);
         } else if (chatType === 'datageneration') {
             await handleDataGenerationResponse(response);
+        } else if (chatType === 'normal' || chatType === 'general-chat') {
+            // 일반 채팅 응답 처리
+            console.log('💬 일반 채팅으로 처리:', chatType);
+            await handleNormalResponse(response);
         } else {
-            // normal이나 기타 타입들은 일반 응답으로 처리
+            // 기타 타입들은 일반 응답으로 처리
+            console.log('💬 알 수 없는 타입을 일반 채팅으로 처리:', chatType);
             await handleNormalResponse(response);
         }
     };
@@ -1317,11 +1322,46 @@ export default function MainChatComponent() {
         }
     };
 
-    // 일반 채팅 응답 처리
+    // 일반 채팅 응답 처리 (normal, general-chat 등)
     const handleNormalResponse = async (response: OrchestratorChatResponseDto) => {
         console.log('💬 일반 채팅 응답 처리 시작:', response);
         
-        const messageContent = response.message || '응답을 받았습니다.';
+        // orchestrator의 다양한 응답 구조 지원
+        let messageContent = '';
+        
+        // 직접 message 필드가 있는 경우
+        if (response.message) {
+            messageContent = response.message;
+            console.log('📍 response.message에서 메시지 추출');
+        }
+        // data.message가 있는 경우 (orchestrator의 새로운 구조)
+        else if ((response as any).data?.message) {
+            messageContent = (response as any).data.message;
+            console.log('📍 response.data.message에서 메시지 추출');
+        }
+        // data.content가 있는 경우
+        else if ((response as any).data?.content) {
+            messageContent = (response as any).data.content;
+            console.log('📍 response.data.content에서 메시지 추출');
+        }
+        // 백엔드 응답에서 직접 content를 찾는 경우
+        else if ((response as any).content) {
+            messageContent = (response as any).content;
+            console.log('📍 response.content에서 메시지 추출');
+        }
+        // 기본 메시지
+        else {
+            messageContent = '응답을 받았습니다.';
+            console.log('📍 기본 메시지 사용');
+        }
+        
+        console.log('📝 추출된 메시지 길이:', messageContent.length);
+        console.log('📝 추출된 메시지 미리보기:', messageContent.substring(0, 100) + (messageContent.length > 100 ? '...' : ''));
+        
+        if (!messageContent || messageContent.trim() === '') {
+            console.error('❌ 메시지 내용이 비어있습니다. 전체 응답:', JSON.stringify(response, null, 2));
+            messageContent = '응답을 받았지만 내용을 표시할 수 없습니다.';
+        }
         
         const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
@@ -1330,7 +1370,13 @@ export default function MainChatComponent() {
             timestamp: new Date()
         };
 
-        console.log('✅ 일반 메시지 추가:', assistantMessage);
+        console.log('✅ 일반 메시지 추가:', {
+            id: assistantMessage.id,
+            contentLength: messageContent.length,
+            chatType: response.chatType,
+            hasContent: !!messageContent
+        });
+        
         addMessageToSheet(activeSheetIndex, assistantMessage);
     };
 
