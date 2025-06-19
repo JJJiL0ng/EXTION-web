@@ -1109,7 +1109,7 @@ export default function MainChatComponent() {
             await handleDataFixResponse(response);
         } else if (chatType === 'dataedit' || chatType === 'data-edit' || chatType === 'edit-chat') {
             await handleDataEditResponse(response);
-        } else if (chatType === 'datageneration') {
+        } else if (chatType === 'datageneration' || chatType === 'generate-chat') {
             await handleDataGenerationResponse(response);
         } else if (chatType === 'normal' || chatType === 'general-chat') {
             // 일반 채팅 응답 처리
@@ -1391,20 +1391,31 @@ export default function MainChatComponent() {
     const handleDataGenerationResponse = async (response: OrchestratorChatResponseDto) => {
         console.log('📊 데이터 생성 응답 처리 시작:', response);
         
-        if (response.editedData) {
-            const targetSheetIndex = response.sheetIndex || activeSheetIndex;
+        // generate-chat과 datageneration 모두 지원하도록 editedData 추출
+        const editedData = response.editedData || (response as any).data?.editedData;
+        const sheetIndex = response.sheetIndex !== undefined ? response.sheetIndex : (response as any).data?.sheetIndex;
+        const explanation = response.message || (response as any).data?.explanation;
+        
+        console.log('📊 추출된 데이터:', {
+            hasEditedData: !!editedData,
+            sheetIndex,
+            explanation: explanation?.substring(0, 50) + '...'
+        });
+        
+        if (editedData) {
+            const targetSheetIndex = sheetIndex !== undefined ? sheetIndex : activeSheetIndex;
             
             // 데이터를 스프레드시트에 즉시 적용
             applyGeneratedData({
-                sheetName: response.editedData.sheetName,
-                data: response.editedData.data,
+                sheetName: editedData.sheetName,
+                data: editedData.data,
                 sheetIndex: targetSheetIndex
             });
 
-            const messageContent = (response.message || '데이터가 생성되었습니다!') +
-                `\n\n시트명: ${response.editedData.sheetName}\n` +
-                `생성된 행 수: ${response.editedData.data.length}개\n` +
-                `열 수: ${response.editedData.data[0]?.length || 0}개\n\n` +
+            const messageContent = (explanation || response.message || '데이터가 생성되었습니다!') +
+                `\n\n시트명: ${editedData.sheetName}\n` +
+                `생성된 행 수: ${editedData.data.length}개\n` +
+                `열 수: ${editedData.data[0]?.length || 0}개\n\n` +
                 `새로운 데이터가 스프레드시트에 자동으로 추가되었습니다.`;
 
             const assistantMessage: ChatMessage = {
@@ -1414,7 +1425,12 @@ export default function MainChatComponent() {
                 timestamp: new Date()
             };
 
-            console.log('✅ 데이터 생성 메시지 추가:', assistantMessage);
+            console.log('✅ 데이터 생성 메시지 추가:', {
+                messageId: assistantMessage.id,
+                sheetName: editedData.sheetName,
+                dataRows: editedData.data.length,
+                targetSheetIndex
+            });
             addMessageToSheet(activeSheetIndex, assistantMessage);
 
             // 생성된 시트로 자동 전환 (다른 시트에 생성된 경우)
@@ -1425,16 +1441,17 @@ export default function MainChatComponent() {
             }
         } else {
             console.warn('⚠️ 데이터 생성 응답에 editedData가 없습니다.');
+            console.warn('전체 응답 구조:', JSON.stringify(response, null, 2));
+            
             // editedData가 없어도 메시지가 있으면 표시
-            if (response.message) {
-                const assistantMessage: ChatMessage = {
-                    id: (Date.now() + 1).toString(),
-                    type: 'Extion ai',
-                    content: response.message,
-                    timestamp: new Date()
-                };
-                addMessageToSheet(activeSheetIndex, assistantMessage);
-            }
+            const fallbackMessage = explanation || response.message || '데이터 생성 요청을 처리했습니다.';
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: fallbackMessage,
+                timestamp: new Date()
+            };
+            addMessageToSheet(activeSheetIndex, assistantMessage);
         }
     };
 

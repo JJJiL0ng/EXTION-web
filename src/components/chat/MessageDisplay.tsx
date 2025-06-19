@@ -279,15 +279,15 @@ export default function MessageDisplay({
                 const isDataFix = !!(message as any).dataFixData;
                 const isFunctionResult = !!(message as any).functionData;
                 
-                console.log('🎨 메시지 렌더링:', {
-                    id: message.id,
-                    type: message.type,
-                    hasContent: !!message.content,
-                    hasArtifactData,
-                    isDataFix,
-                    isFunctionResult,
-                    mode: (message as any).mode
-                });
+                // console.log('🎨 메시지 렌더링:', {
+                //     id: message.id,
+                //     type: message.type,
+                //     hasContent: !!message.content,
+                //     hasArtifactData,
+                //     isDataFix,
+                //     isFunctionResult,
+                //     mode: (message as any).mode
+                // });
                 
                 return (
                     <div key={message.id} className={`py-6 ${index !== 0 ? 'border-t border-gray-100' : ''}`}>
