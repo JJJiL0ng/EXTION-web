@@ -894,52 +894,41 @@ export const saveSpreadsheetToFirebase = async (
     }
 ): Promise<{
     success: boolean;
-    spreadsheetId: string;
-    chatId: string;
-    fileName: string;
-    sheets: Array<{
-        sheetId: string;
-        sheetIndex: number;
-        sheetName: string;
-        headers: string[];
-        rowCount: number;
-    }>;
+    data: any;
+    message?: string;
     error?: string;
 }> => {
     try {
         const { user: currentUser } = useAuthStore.getState();
         
-        // 비로그인 사용자를 지원하기 위해 주석 처리. userId는 options에서 오거나 없을 수 있음.
-        // if (!currentUser) {
-        //     throw new Error('로그인이 필요합니다.');
-        // }
+        const userId = options?.userId || currentUser?.uid;
+
+        if (!userId) {
+            throw new Error('사용자 ID가 없어 스프레드시트를 저장할 수 없습니다. 로그인이 필요합니다.');
+        }
 
         const requestBody = {
-            userId: options?.userId || currentUser?.uid,
+            userId: userId,
             chatId: options?.chatId,
-            spreadsheetId: options?.spreadsheetId,
             fileName: parsedData.fileName,
             originalFileName: fileInfo.originalFileName,
             fileSize: fileInfo.fileSize,
             fileType: fileInfo.fileType,
             activeSheetIndex: parsedData.activeSheetIndex || 0,
             sheets: parsedData.sheets.map((sheet: any, index: number) => {
-                // 헤더를 전송하는 로직을 제거하고, 시트의 rawData를 직접 사용합니다.
                 const rawData = sheet.rawData || [];
 
                 return {
-                    sheetName: sheet.sheetName,
-                    sheetIndex: sheet.sheetIndex !== undefined ? sheet.sheetIndex : index,
+                    name: sheet.sheetName,
+                    index: sheet.sheetIndex !== undefined ? sheet.sheetIndex : index,
                     data: rawData,
-                    computedData: sheet.computedData,
-                    formulas: sheet.formulas
                 };
             })
         };
 
         console.log('Save Spreadsheet Request Body:', JSON.stringify(requestBody, null, 2));
 
-        const response = await fetch(`${API_BASE_URL}/spreadsheet/save`, {
+        const response = await fetch(`${API_BASE_URL}/spreadsheet/data/save`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1033,6 +1022,301 @@ export const replaceSpreadsheet = async (
 
     } catch (error) {
         console.error('Replace Spreadsheet API Call Error:', error);
+        throw error;
+    }
+};
+
+// === 새로운 통합 오케스트레이터 채팅 API 인터페이스 ===
+
+// 오케스트레이터 채팅 요청 DTO (백엔드와 일치)
+export interface OrchestratorChatRequestDto {
+    message: string;
+    sheetId?: string;
+    chatId?: string;
+    userId: string;
+    countryCode: string; // ISO 3166-1 alpha-2 국가 코드 ('KR', 'US', 'JP', 'CN', 'DE', 'FR', 'GB', 'ES', 'IT', 'BR', 'IN', 'RU')
+    language?: string; // ISO 639-1 언어 코드 ('ko', 'en', 'ja', 'zh', 'de', 'fr', 'es', 'it', 'pt', 'hi', 'ru')
+    timezone?: string; // IANA 시간대 (예: 'Asia/Seoul', 'America/New_York')
+    timestamp: string; // ISO 8601 날짜 문자열
+}
+
+// 오케스트레이터 채팅 응답 DTO
+export interface OrchestratorChatResponseDto {
+    success: boolean;
+    chatType: 'normal' | 'artifact' | 'datafix' | 'function' | 'datageneration' | null;
+    
+    // 일반 채팅 응답 필드들
+    message?: string;
+    
+    // 아티팩트 응답 필드들
+    code?: string;
+    type?: 'chart' | 'table' | 'analysis';
+    explanation?: {
+        korean: string;
+    };
+    title?: string;
+    
+    // 데이터 수정 응답 필드들
+    editedData?: EditedDataDto;
+    sheetIndex?: number;
+    changes?: ChangesDto;
+    changeLog?: any[];
+    
+    // 함수 실행 응답 필드들
+    functionDetails?: FunctionDetails;
+    
+    // 공통 필드들
+    error?: string;
+    chatId?: string;
+    messageId?: string;
+    userMessageId?: string;
+    aiMessageId?: string;
+    timestamp?: string;
+    spreadsheetMetadata?: SpreadsheetMetadata;
+}
+
+// 국가별 시간대 매핑 (기본값)
+const COUNTRY_TIMEZONE_MAP: Record<string, string> = {
+    'KR': 'Asia/Seoul',
+    'US': 'America/New_York',
+    'JP': 'Asia/Tokyo',
+    'CN': 'Asia/Shanghai',
+    'DE': 'Europe/Berlin',
+    'FR': 'Europe/Paris',
+    'GB': 'Europe/London',
+    'ES': 'Europe/Madrid',
+    'IT': 'Europe/Rome',
+    'BR': 'America/Sao_Paulo',
+    'IN': 'Asia/Kolkata',
+    'RU': 'Europe/Moscow'
+};
+
+// 국가별 언어 매핑 (기본값)
+const COUNTRY_LANGUAGE_MAP: Record<string, string> = {
+    'KR': 'ko',
+    'US': 'en',
+    'JP': 'ja',
+    'CN': 'zh',
+    'DE': 'de',
+    'FR': 'fr',
+    'GB': 'en',
+    'ES': 'es',
+    'IT': 'it',
+    'BR': 'pt',
+    'IN': 'hi',
+    'RU': 'ru'
+};
+
+// 사용자의 국가 코드 감지 함수 (기본값: 'KR')
+const detectUserCountryCode = (): string => {
+    try {
+        // 브라우저의 언어/지역 설정에서 국가 코드 추출
+        const locale = navigator.language || navigator.languages?.[0] || 'ko-KR';
+        const countryMatch = locale.match(/-([A-Z]{2})$/);
+        if (countryMatch) {
+            const countryCode = countryMatch[1];
+            // 지원하는 국가 코드인지 확인
+            if (Object.keys(COUNTRY_TIMEZONE_MAP).includes(countryCode)) {
+                return countryCode;
+            }
+        }
+        
+        // 언어 코드만 있는 경우 매핑
+        const langCode = locale.split('-')[0];
+        const countryFromLang: Record<string, string> = {
+            'ko': 'KR',
+            'en': 'US',
+            'ja': 'JP',
+            'zh': 'CN',
+            'de': 'DE',
+            'fr': 'FR',
+            'es': 'ES',
+            'it': 'IT',
+            'pt': 'BR',
+            'hi': 'IN',
+            'ru': 'RU'
+        };
+        
+        return countryFromLang[langCode] || 'KR';
+    } catch (error) {
+        console.warn('국가 코드 감지 실패, 기본값 KR 사용:', error);
+        return 'KR';
+    }
+};
+
+// 사용자의 시간대 감지 함수
+const detectUserTimezone = (): string => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch (error) {
+        console.warn('시간대 감지 실패, 기본값 사용:', error);
+        return 'Asia/Seoul';
+    }
+};
+
+// === 통합 오케스트레이터 채팅 API 호출 ===
+export const callOrchestratorChatAPI = async (
+    message: string,
+    extendedSheetContext: any | null,
+    getDataForGPTAnalysis?: (sheetIndex?: number, includeAllSheets?: boolean) => any,
+    options?: {
+        chatId?: string;
+        messageId?: string;
+        currentSheetIndex?: number;
+        countryCode?: string;
+        language?: string;
+        timezone?: string;
+    }
+): Promise<OrchestratorChatResponseDto> => {
+    try {
+        const { user: currentUser, loading: authLoading } = useAuthStore.getState();
+        
+        if (authLoading) {
+            console.warn('Auth state is still loading. API call might fail if user is not yet available.');
+        }
+
+        if (!currentUser) {
+            throw new Error('로그인이 필요합니다.');
+        }
+
+        if (!options?.chatId) {
+            throw new Error('채팅 ID가 필요합니다.');
+        }
+
+        // 스프레드시트 데이터 처리 (기존 createRequestBody 로직 재사용)
+        let analysisData = null;
+        if (getDataForGPTAnalysis) {
+            analysisData = getDataForGPTAnalysis(options.currentSheetIndex, false);
+        }
+
+        // 폴백: extendedSheetContext에서 데이터 추출
+        if (!analysisData || !analysisData.sheets || analysisData.sheets.length === 0) {
+            if (extendedSheetContext && extendedSheetContext.sampleData) {
+                const sampleDataRows = extendedSheetContext.sampleData || [];
+                const convertedData = sampleDataRows.map((rowObj: any) => {
+                    if (Array.isArray(rowObj)) return rowObj;
+                    return [];
+                });
+                
+                analysisData = {
+                    sheets: [{
+                        name: extendedSheetContext.sheetName,
+                        csv: '',
+                        metadata: {
+                            rowCount: convertedData.length,
+                            columnCount: convertedData[0]?.length || 0,
+                            fullData: convertedData,
+                            sampleData: convertedData.slice(0, 5),
+                            sheetIndex: extendedSheetContext.sheetIndex || 0,
+                            originalMetadata: null
+                        }
+                    }],
+                    activeSheet: extendedSheetContext.sheetName,
+                    totalSheets: extendedSheetContext.totalSheets || 1,
+                    fileName: `${extendedSheetContext.sheetName}.xlsx`,
+                    spreadsheetId: extendedSheetContext.spreadsheetId
+                };
+            }
+        }
+
+        // 국가/언어/시간대 정보 설정
+        const countryCode = options.countryCode || detectUserCountryCode();
+        const language = options.language || COUNTRY_LANGUAGE_MAP[countryCode] || 'ko';
+        const timezone = options.timezone || detectUserTimezone();
+
+        // 오케스트레이터 요청 DTO 구성
+        const requestBody: OrchestratorChatRequestDto = {
+            message: message,
+            chatId: options.chatId,
+            userId: currentUser.uid,
+            countryCode: countryCode,
+            language: language,
+            timezone: timezone,
+            timestamp: new Date().toISOString(),
+            // sheetId는 스프레드시트 데이터가 있을 때만 포함
+            ...(analysisData?.spreadsheetId && { sheetId: analysisData.spreadsheetId })
+        };
+
+        console.log('==================== Orchestrator Chat API 요청 데이터 시작 ====================');
+        console.log(`메시지: ${requestBody.message}`);
+        console.log(`사용자 ID: ${requestBody.userId}`);
+        console.log(`채팅 ID: ${requestBody.chatId}`);
+        console.log(`시트 ID: ${requestBody.sheetId || '없음'}`);
+        console.log(`국가 코드: ${requestBody.countryCode}`);
+        console.log(`언어: ${requestBody.language}`);
+        console.log(`시간대: ${requestBody.timezone}`);
+        console.log(`타임스탬프: ${requestBody.timestamp}`);
+        
+        if (analysisData?.sheets && analysisData.sheets.length > 0) {
+            console.log(`스프레드시트 데이터 - 시트 수: ${analysisData.sheets.length}`);
+            console.log(`활성 시트: ${analysisData.activeSheet}`);
+        }
+        
+        console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
+        console.log('==================== Orchestrator Chat API 요청 데이터 끝 ====================');
+
+        const response = await fetch(`${API_BASE_URL}/orchestrator-chat/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('==================== Orchestrator Chat API 오류 상세 정보 ====================');
+            console.error('Status:', response.status);
+            console.error('Status Text:', response.statusText);
+            console.error('Error Body:', errorText);
+            console.error('==================== Orchestrator Chat API 오류 정보 끝 ====================');
+            
+            let errorMessage = `API 오류: ${response.status} - ${response.statusText}`;
+            try {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.message) {
+                    errorMessage = Array.isArray(errorJson.message) ? errorJson.message.join(', ') : errorJson.message;
+                } else if (errorText) {
+                    errorMessage = errorText;
+                }
+            } catch (e) {
+                if (errorText) errorMessage = errorText;
+            }
+            throw new Error(errorMessage);
+        }
+
+        const result = await response.json() as OrchestratorChatResponseDto;
+        
+        console.log('==================== Orchestrator Chat API 응답 데이터 시작 ====================');
+        console.log(`성공 여부: ${result.success}`);
+        console.log(`채팅 타입: ${result.chatType || '없음'}`);
+        console.log(`메시지: ${result.message || '없음'}`);
+        console.log(`채팅 ID: ${result.chatId || '없음'}`);
+        console.log(`사용자 메시지 ID: ${result.userMessageId || '없음'}`);
+        console.log(`AI 메시지 ID: ${result.aiMessageId || '없음'}`);
+        console.log(`타임스탬프: ${result.timestamp || '없음'}`);
+        if (result.error) {
+            console.log(`오류 메시지: ${result.error}`);
+        }
+        if (result.code) {
+            console.log(`아티팩트 코드 길이: ${result.code.length}자`);
+        }
+        if (result.editedData) {
+            console.log(`수정된 데이터 - 시트명: ${result.editedData.sheetName}, 행 수: ${result.editedData.data?.length || 0}`);
+        }
+        if (result.functionDetails) {
+            console.log(`함수 실행 - 타입: ${result.functionDetails.functionType}, 대상: ${result.functionDetails.targetCell}`);
+        }
+        console.log('전체 응답:', JSON.stringify(result, null, 2));
+        console.log('==================== Orchestrator Chat API 응답 데이터 끝 ====================');
+        
+        return result;
+        
+    } catch (error) {
+        console.error('==================== Orchestrator Chat API 호출 오류 ====================');
+        console.error('Error Message:', error instanceof Error ? error.message : String(error));
+        console.error('Error Stack:', error instanceof Error ? error.stack : 'No stack trace');
+        console.error('==================== Orchestrator Chat API 오류 끝 ====================');
         throw error;
     }
 };

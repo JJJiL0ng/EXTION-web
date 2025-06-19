@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, signInWithGoogle } from '@/services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { registerUser, checkUserExistsByUid, UserRegistrationData } from '@/services/api/authService';
 // Image 컴포넌트는 현재 사용되지 않으므로 주석 처리하거나 삭제할 수 있습니다.
 // import Image from 'next/image';
 
@@ -28,7 +29,44 @@ export default function LoginPage() {
     try {
       setLoading(true);
       setError(null);
-      await signInWithGoogle();
+      
+      const user = await signInWithGoogle();
+      
+      // 로그인 성공 후 사용자 등록 처리
+      if (user && user.uid) {
+        try {
+          // Firebase uid로 기존 사용자인지 확인
+          const userExists = await checkUserExistsByUid(user.uid);
+          
+          if (!userExists) {
+            // 최초 회원가입인 경우 사용자 등록 API 호출
+            const userData: UserRegistrationData = {
+              userId: user.uid, // Firebase uid를 userId로 전송
+              email: user.email || '',
+              displayName: user.displayName || '익명 사용자',
+              photoURL: user.photoURL || '',
+              isGuest: false,
+              preferences: {},
+              statistics: {}
+            };
+
+            const registrationSuccess = await registerUser(userData);
+            
+            if (registrationSuccess) {
+              console.log('신규 사용자 등록이 완료되었습니다:', user.uid, user.email);
+            } else {
+              console.warn('신규 사용자 등록에 실패했습니다:', user.uid, user.email);
+              // 등록 실패해도 로그인은 계속 진행
+            }
+          } else {
+            console.log('기존 사용자입니다:', user.uid, user.email);
+          }
+        } catch (regError) {
+          console.error('사용자 등록 처리 중 오류:', regError);
+          // 등록 오류가 발생해도 로그인은 계속 진행
+        }
+      }
+      
       // 로그인 성공 시 메인 페이지로 이동
       router.push('/ai');
     } catch (err) {
