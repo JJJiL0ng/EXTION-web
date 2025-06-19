@@ -747,6 +747,7 @@ export const saveSpreadsheetToFirebase = async (
             throw new Error('사용자 ID를 생성할 수 없습니다.');
         }
 
+        // 백엔드 스키마에 맞는 형식으로 데이터 변환
         const requestBody = {
             userId: userId,
             chatId: options?.chatId,
@@ -756,11 +757,27 @@ export const saveSpreadsheetToFirebase = async (
             fileType: fileInfo.fileType,
             activeSheetIndex: parsedData.activeSheetIndex || 0,
             sheets: parsedData.sheets.map((sheet: any, index: number) => {
-                const rawData = sheet.rawData || [];
+                // 다양한 시트 데이터 형식 지원
+                let sheetName: string;
+                let rawData: any[][];
+                
+                if (sheet.sheetName) {
+                    // 기존 형식: { sheetName, rawData, ... }
+                    sheetName = sheet.sheetName;
+                    rawData = sheet.rawData || sheet.data || [];
+                } else if (sheet.name) {
+                    // 백엔드 형식: { name, data, ... }
+                    sheetName = sheet.name;
+                    rawData = sheet.data || [];
+                } else {
+                    // 기본값
+                    sheetName = `Sheet${index + 1}`;
+                    rawData = sheet.data || sheet.rawData || [];
+                }
 
                 return {
-                    name: sheet.sheetName,
-                    index: sheet.sheetIndex !== undefined ? sheet.sheetIndex : index,
+                    name: sheetName,
+                    index: sheet.index !== undefined ? sheet.index : index,
                     data: rawData,
                 };
             })
