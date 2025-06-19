@@ -115,6 +115,11 @@ export const getSpreadsheetData = async (spreadsheetId: string): Promise<Spreads
  */
 export const saveSpreadsheet = async (spreadsheetDto: CreateSpreadsheetDto): Promise<SpreadsheetData> => {
   try {
+    console.log('==================== Save Spreadsheet API 요청 시작 ====================');
+    console.log('요청 URL:', `${API_BASE_URL}/spreadsheet/data/save`);
+    console.log('요청 데이터:', JSON.stringify(spreadsheetDto, null, 2));
+    console.log('==================== Save Spreadsheet API 요청 데이터 끝 ====================');
+
     const response = await fetch(
       `${API_BASE_URL}/spreadsheet/data/save`,
       {
@@ -127,10 +132,33 @@ export const saveSpreadsheet = async (spreadsheetDto: CreateSpreadsheetDto): Pro
     );
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('==================== Save Spreadsheet API 오류 상세 정보 ====================');
+      console.error('Status:', response.status);
+      console.error('Status Text:', response.statusText);
+      console.error('Error Body:', errorText);
+      console.error('Request Body was:', JSON.stringify(spreadsheetDto, null, 2));
+      console.error('==================== Save Spreadsheet API 오류 정보 끝 ====================');
+      
+      let errorMessage = `API 오류: ${response.status} - ${response.statusText}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.message) {
+          errorMessage = Array.isArray(errorJson.message) ? errorJson.message.join(', ') : errorJson.message;
+        } else if (errorText) {
+          errorMessage = errorText;
+        }
+      } catch (e) {
+        if (errorText) errorMessage = errorText;
+      }
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
+    
+    console.log('==================== Save Spreadsheet API 응답 ====================');
+    console.log('응답 데이터:', JSON.stringify(result, null, 2));
+    console.log('==================== Save Spreadsheet API 응답 끝 ====================');
     
     if (!result.success) {
       throw new Error(result.message || '스프레드시트 저장에 실패했습니다.');

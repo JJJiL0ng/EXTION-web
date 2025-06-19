@@ -6,7 +6,8 @@ import { useUnifiedStore, ChatMessage } from '@/stores';
 import { detectAndDecode } from '../../utils/chatUtils';
 import { callOrchestratorChatAPI, OrchestratorChatResponseDto, FunctionDetails, getCurrentUserId } from '../../services/api/dataServices';
 import { processXLSXFile } from '../../utils/fileProcessing';
-import { saveSpreadsheet, convertSpreadsheetDataToXLSXData, SpreadsheetData } from '@/services/api/spreadsheetService';
+import { convertSpreadsheetDataToXLSXData, SpreadsheetData } from '@/services/api/spreadsheetService';
+import { saveSpreadsheetToFirebase } from '@/services/api/dataServices';
 import { updateChatTitle as originalUpdateChatTitle } from '@/services/api/chatService';
 import { cellAddressToCoords } from '@/stores/store-utils/xlsxUtils';
 import { auth } from '@/services/firebase';
@@ -300,23 +301,25 @@ export default function MainChatComponent() {
 
                     // 새 API로 스프레드시트 저장
                     try {
-                        const saveResult = await saveSpreadsheet({
-                            userId: getCurrentUserId(),
-                            chatId: getCurrentFirebaseChatId() || undefined,
-                            fileName: newXlsxData.fileName,
-                            originalFileName: file.name,
-                            fileSize: file.size,
-                            fileType: 'xlsx',
-                            activeSheetIndex: newXlsxData.activeSheetIndex,
-                            sheets: newXlsxData.sheets.map(sheet => ({
-                                name: sheet.sheetName,
-                                index: newXlsxData.sheets.indexOf(sheet),
-                                data: sheet.rawData || []
-                            }))
-                        });
+                        const saveResult = await saveSpreadsheetToFirebase(
+                            {
+                                fileName: newXlsxData.fileName,
+                                sheets: newXlsxData.sheets,
+                                activeSheetIndex: newXlsxData.activeSheetIndex,
+                            },
+                            {
+                                originalFileName: file.name,
+                                fileSize: file.size,
+                                fileType: 'xlsx',
+                            },
+                            {
+                                chatId: getCurrentFirebaseChatId() || undefined,
+                                userId: getCurrentUserId(),
+                            }
+                        );
 
-                        const spreadsheetId = saveResult.id;
-                        const chatId = saveResult.chatId;
+                        const spreadsheetId = saveResult.data?.id;
+                        const chatId = saveResult.data?.chatId;
 
                         console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
 
@@ -415,23 +418,25 @@ export default function MainChatComponent() {
 
                     // 새 API로 스프레드시트 저장
                     try {
-                        const saveResult = await saveSpreadsheet({
-                            userId: auth.currentUser?.uid || '',
-                            chatId: getCurrentFirebaseChatId() || undefined,
-                            fileName: xlsxData.fileName,
-                            originalFileName: file.name,
-                            fileSize: file.size,
-                            fileType: 'xlsx',
-                            activeSheetIndex: xlsxData.activeSheetIndex,
-                            sheets: xlsxData.sheets.map(sheet => ({
-                                name: sheet.sheetName,
-                                index: xlsxData.sheets.indexOf(sheet),
-                                data: sheet.rawData || []
-                            }))
-                        });
+                        const saveResult = await saveSpreadsheetToFirebase(
+                            {
+                                fileName: xlsxData.fileName,
+                                sheets: xlsxData.sheets,
+                                activeSheetIndex: xlsxData.activeSheetIndex,
+                            },
+                            {
+                                originalFileName: file.name,
+                                fileSize: file.size,
+                                fileType: 'xlsx',
+                            },
+                            {
+                                chatId: getCurrentFirebaseChatId() || undefined,
+                                userId: auth.currentUser?.uid || '',
+                            }
+                        );
 
-                        const spreadsheetId = saveResult.id;
-                        const chatId = saveResult.chatId;
+                        const spreadsheetId = saveResult.data?.id;
+                        const chatId = saveResult.data?.chatId;
 
                         console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
 
@@ -547,23 +552,25 @@ export default function MainChatComponent() {
                                 // 새 API로 스프레드시트 저장
                                 (async () => {
                                     try {
-                                        const saveResult = await saveSpreadsheet({
-                                            userId: auth.currentUser?.uid || '',
-                                            chatId: getCurrentFirebaseChatId() || undefined,
-                                            fileName: newXlsxData.fileName,
-                                            originalFileName: file.name,
-                                            fileSize: file.size,
-                                            fileType: 'csv',
-                                            activeSheetIndex: newXlsxData.activeSheetIndex,
-                                            sheets: newXlsxData.sheets.map(sheet => ({
-                                                name: sheet.sheetName,
-                                                index: newXlsxData.sheets.indexOf(sheet),
-                                                data: sheet.rawData || []
-                                            }))
-                                        });
+                                        const saveResult = await saveSpreadsheetToFirebase(
+                                            {
+                                                fileName: newXlsxData.fileName,
+                                                sheets: newXlsxData.sheets,
+                                                activeSheetIndex: newXlsxData.activeSheetIndex,
+                                            },
+                                            {
+                                                originalFileName: file.name,
+                                                fileSize: file.size,
+                                                fileType: 'csv',
+                                            },
+                                            {
+                                                chatId: getCurrentFirebaseChatId() || undefined,
+                                                userId: auth.currentUser?.uid || '',
+                                            }
+                                        );
 
-                                        const spreadsheetId = saveResult.id;
-                                        const chatId = saveResult.chatId;
+                                        const spreadsheetId = saveResult.data?.id;
+                                        const chatId = saveResult.data?.chatId;
 
                                         console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
 
@@ -631,23 +638,25 @@ export default function MainChatComponent() {
                                 // 새 API로 스프레드시트 저장
                                 (async () => {
                                     try {
-                                        const saveResult = await saveSpreadsheet({
-                                            userId: getCurrentUserId(),
-                                            chatId: getCurrentFirebaseChatId() || undefined,
-                                            fileName: xlsxData.fileName,
-                                            originalFileName: file.name,
-                                            fileSize: file.size,
-                                            fileType: 'csv',
-                                            activeSheetIndex: xlsxData.activeSheetIndex,
-                                            sheets: xlsxData.sheets.map(sheet => ({
-                                                name: sheet.sheetName,
-                                                index: xlsxData.sheets.indexOf(sheet),
-                                                data: sheet.rawData || []
-                                            }))
-                                        });
+                                        const saveResult = await saveSpreadsheetToFirebase(
+                                            {
+                                                fileName: xlsxData.fileName,
+                                                sheets: xlsxData.sheets,
+                                                activeSheetIndex: xlsxData.activeSheetIndex,
+                                            },
+                                            {
+                                                originalFileName: file.name,
+                                                fileSize: file.size,
+                                                fileType: 'csv',
+                                            },
+                                            {
+                                                chatId: getCurrentFirebaseChatId() || undefined,
+                                                userId: getCurrentUserId(),
+                                            }
+                                        );
 
-                                        const spreadsheetId = saveResult.id;
-                                        const chatId = saveResult.chatId;
+                                        const spreadsheetId = saveResult.data?.id;
+                                        const chatId = saveResult.data?.chatId;
 
                                         console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
 
