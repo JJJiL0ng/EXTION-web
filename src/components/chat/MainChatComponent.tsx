@@ -6,8 +6,8 @@ import { useUnifiedStore, ChatMessage } from '@/stores';
 import { detectAndDecode } from '../../utils/chatUtils';
 import { callOrchestratorChatAPI, OrchestratorChatResponseDto, FunctionDetails } from '../../services/api/dataServices';
 import { processXLSXFile } from '../../utils/fileProcessing';
-import { saveSpreadsheetToFirebase } from '../../services/api/dataServices';
-import { updateChatTitle } from '@/services/firebase/chatService';
+import { saveSpreadsheet, convertSpreadsheetDataToXLSXData, SpreadsheetData } from '@/services/api/spreadsheetService';
+import { updateChatTitle as originalUpdateChatTitle } from '@/services/api/chatService';
 import { cellAddressToCoords } from '@/stores/store-utils/xlsxUtils';
 import { auth } from '@/services/firebase';
 import { useAuthStore } from '@/stores/authStore';
@@ -88,6 +88,7 @@ export default function MainChatComponent() {
         canUploadFile,
         saveCurrentSessionToStore,
         loadChatSessionsFromStorage,
+        refreshChatList,
     } = useUnifiedStore();
 
     // Firebase 채팅 ID 상태 추가
@@ -165,12 +166,18 @@ export default function MainChatComponent() {
         return null;
     }, [firebaseChatId, getCurrentChatId, isFirebaseChat]);
 
+    // updateChatTitle 래핑 함수 - 자동으로 refreshChatList 호출
+    const updateChatTitle = useCallback(async (chatId: string, title: string, userId: string) => {
+        await originalUpdateChatTitle(chatId, title, userId);
+        refreshChatList();
+    }, [refreshChatList]);
+
     // 채팅 제목을 파일명으로 업데이트하는 함수
     const updateChatTitleWithFileName = useCallback(async (fileName: string) => {
         try {
             const chatId = getCurrentFirebaseChatId();
-            if (!chatId) {
-                console.log('Firebase 채팅이 아니므로 제목 업데이트를 스킵합니다.');
+            if (!chatId || !user) {
+                console.log('채팅 ID 또는 사용자 정보가 없어 제목 업데이트를 스킵합니다.');
                 return;
             }
 
@@ -180,15 +187,19 @@ export default function MainChatComponent() {
             console.log('채팅 제목 업데이트 시도:', {
                 chatId,
                 originalFileName: fileName,
-                newTitle: cleanFileName
+                newTitle: cleanFileName,
+                userId: user.uid
             });
 
-            await updateChatTitle(chatId, cleanFileName);
+            await updateChatTitle(chatId, cleanFileName, user.uid);
             console.log('✅ 채팅 제목이 파일명으로 업데이트되었습니다:', cleanFileName);
+            
+            // 사이드바의 채팅 목록 새로고침
+            refreshChatList();
         } catch (error) {
             console.error('❌ 채팅 제목 업데이트 실패:', error);
         }
-    }, [getCurrentFirebaseChatId]);
+    }, [getCurrentFirebaseChatId, user, refreshChatList]);
 
     // 파일이 로드되었는지 확인
     const file = xlsxData ? { name: xlsxData.fileName } : null;
@@ -287,62 +298,65 @@ export default function MainChatComponent() {
                     newXlsxData.sheets = [...newXlsxData.sheets, ...newSheets];
                     setXLSXData(newXlsxData);
 
-                    // Firebase에 업데이트된 스프레드시트 저장
+                    // 새 API로 스프레드시트 저장
                     try {
-                        const saveResult = await saveSpreadsheetToFirebase(
-                            {
+                        const saveResult = await saveSpreadsheet({
+                            userId: auth.currentUser?.uid || '',
+                            chatId: getCurrentFirebaseChatId() || undefined,
+                            fileName: newXlsxData.fileName,
+                            originalFileName: file.name,
+                            fileSize: file.size,
+                            fileType: 'xlsx',
+                            activeSheetIndex: newXlsxData.activeSheetIndex,
+                            sheets: newXlsxData.sheets.map(sheet => ({
+                                name: sheet.sheetName,
+                                index: newXlsxData.sheets.indexOf(sheet),
+                                data: sheet.rawData || []
+                            }))
+                        });
+
+                        const spreadsheetId = saveResult.id;
+                        const chatId = saveResult.chatId;
+
+                        console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
+
+                        // 저장된 spreadsheetId를 데이터에 추가
+                        const updatedXlsxData = {
+                            ...newXlsxData,
+                            spreadsheetId: spreadsheetId
+                        };
+                        setXLSXData(updatedXlsxData);
+
+                        // 스토어에 chatId와 spreadsheetId 저장
+                        if (chatId) {
+                            setCurrentChatId(chatId);
+                        }
+                    
+                        if (spreadsheetId) {
+                            setCurrentSpreadsheetId(spreadsheetId);
+                            setSpreadsheetMetadata({
                                 fileName: newXlsxData.fileName,
-                                sheets: newXlsxData.sheets,
-                                activeSheetIndex: newXlsxData.activeSheetIndex
-                            },
-                            {
                                 originalFileName: file.name,
                                 fileSize: file.size,
-                                fileType: 'xlsx'
-                            },
-                            {
-                                chatId: getCurrentFirebaseChatId() || undefined,
-                                userId: auth.currentUser?.uid,
-                                spreadsheetId: currentSpreadsheetId || undefined
+                                fileType: 'xlsx',
+                                isSaved: true,
+                                lastSaved: new Date()
+                            });
+                            markAsSaved(spreadsheetId);
+                        }
+
+                        // 응답에서 chatTitle이 있으면 채팅 제목 업데이트 (스프레드시트 API가 chatTitle을 반환하는 경우)
+                        if ((saveResult as any).chatTitle && chatId && auth.currentUser?.uid) {
+                            try {
+                                await updateChatTitle(chatId, (saveResult as any).chatTitle, auth.currentUser.uid);
+                                console.log('✅ 채팅 제목이 업데이트되었습니다:', (saveResult as any).chatTitle);
+                            } catch (titleError) {
+                                console.error('❌ 채팅 제목 업데이트 실패:', titleError);
                             }
-                        );
-
-                        if (saveResult.success && saveResult.data) {
-                            const spreadsheetId = saveResult.data.id;
-                            const chatId = saveResult.data.chatId;
-
-                            console.log('스프레드시트가 Firebase에 저장되었습니다:', spreadsheetId);
-
-                            // 저장된 spreadsheetId를 데이터에 추가
-                            const updatedXlsxData = {
-                                ...newXlsxData,
-                                spreadsheetId: spreadsheetId
-                            };
-                            setXLSXData(updatedXlsxData);
-
-                            // 스토어에 chatId와 spreadsheetId 저장
-                            if (chatId) {
-                                setCurrentChatId(chatId);
-                            }
-                        
-                            if (spreadsheetId) {
-                                setCurrentSpreadsheetId(spreadsheetId);
-                                setSpreadsheetMetadata({
-                                    fileName: newXlsxData.fileName,
-                                    originalFileName: file.name,
-                                    fileSize: file.size,
-                                    fileType: 'xlsx',
-                                    isSaved: true,
-                                    lastSaved: new Date()
-                                });
-                                markAsSaved(spreadsheetId);
-                            }
-                        } else {
-                            console.error('Firebase 저장 실패:', saveResult.message || saveResult.error);
                         }
 
                     } catch (saveError) {
-                        console.error('Firebase 저장 실패:', saveError);
+                        console.error('스프레드시트 저장 실패:', saveError);
                     }
 
                     const successMessage: ChatMessage = {
@@ -399,62 +413,65 @@ export default function MainChatComponent() {
 
                     setXLSXData(xlsxData);
 
-                    // Firebase에 새 스프레드시트 저장
+                    // 새 API로 스프레드시트 저장
                     try {
-                        const saveResult = await saveSpreadsheetToFirebase(
-                            {
+                        const saveResult = await saveSpreadsheet({
+                            userId: auth.currentUser?.uid || '',
+                            chatId: getCurrentFirebaseChatId() || undefined,
+                            fileName: xlsxData.fileName,
+                            originalFileName: file.name,
+                            fileSize: file.size,
+                            fileType: 'xlsx',
+                            activeSheetIndex: xlsxData.activeSheetIndex,
+                            sheets: xlsxData.sheets.map(sheet => ({
+                                name: sheet.sheetName,
+                                index: xlsxData.sheets.indexOf(sheet),
+                                data: sheet.rawData || []
+                            }))
+                        });
+
+                        const spreadsheetId = saveResult.id;
+                        const chatId = saveResult.chatId;
+
+                        console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
+
+                        // 저장된 spreadsheetId를 데이터에 추가
+                        const updatedXlsxData = {
+                            ...xlsxData,
+                            spreadsheetId: spreadsheetId
+                        };
+                        setXLSXData(updatedXlsxData);
+
+                        // 스토어에 chatId와 spreadsheetId 저장
+                        if (chatId) {
+                            setCurrentChatId(chatId);
+                        }
+                    
+                        if (spreadsheetId) {
+                            setCurrentSpreadsheetId(spreadsheetId);
+                            setSpreadsheetMetadata({
                                 fileName: xlsxData.fileName,
-                                sheets: xlsxData.sheets,
-                                activeSheetIndex: xlsxData.activeSheetIndex
-                            },
-                            {
                                 originalFileName: file.name,
                                 fileSize: file.size,
-                                fileType: 'xlsx'
-                            },
-                            {
-                                chatId: getCurrentFirebaseChatId() || undefined,
-                                userId: auth.currentUser?.uid,
-                                spreadsheetId: currentSpreadsheetId || undefined
+                                fileType: 'xlsx',
+                                isSaved: true,
+                                lastSaved: new Date()
+                            });
+                            markAsSaved(spreadsheetId);
+                        }
+
+                        // 응답에서 chatTitle이 있으면 채팅 제목 업데이트 (스프레드시트 API가 chatTitle을 반환하는 경우)
+                        if ((saveResult as any).chatTitle && chatId && auth.currentUser?.uid) {
+                            try {
+                                await updateChatTitle(chatId, (saveResult as any).chatTitle, auth.currentUser.uid);
+                                console.log('✅ 채팅 제목이 업데이트되었습니다:', (saveResult as any).chatTitle);
+                            } catch (titleError) {
+                                console.error('❌ 채팅 제목 업데이트 실패:', titleError);
                             }
-                        );
-
-                        if (saveResult.success && saveResult.data) {
-                            const spreadsheetId = saveResult.data.id;
-                            const chatId = saveResult.data.chatId;
-
-                            console.log('스프레드시트가 Firebase에 저장되었습니다:', spreadsheetId);
-
-                            // 저장된 spreadsheetId를 데이터에 추가
-                            const updatedXlsxData = {
-                                ...xlsxData,
-                                spreadsheetId: spreadsheetId
-                            };
-                            setXLSXData(updatedXlsxData);
-
-                            // 스토어에 chatId와 spreadsheetId 저장
-                            if (chatId) {
-                                setCurrentChatId(chatId);
-                            }
-                        
-                            if (spreadsheetId) {
-                                setCurrentSpreadsheetId(spreadsheetId);
-                                setSpreadsheetMetadata({
-                                    fileName: xlsxData.fileName,
-                                    originalFileName: file.name,
-                                    fileSize: file.size,
-                                    fileType: 'xlsx',
-                                    isSaved: true,
-                                    lastSaved: new Date()
-                                });
-                                markAsSaved(spreadsheetId);
-                            }
-                        } else {
-                            console.error('Firebase 저장 실패:', saveResult.message || saveResult.error);
                         }
 
                     } catch (saveError) {
-                        console.error('Firebase 저장 실패:', saveError);
+                        console.error('스프레드시트 저장 실패:', saveError);
                     }
 
                     // 파일 업로드 성공 시 채팅 제목을 파일명으로 업데이트
@@ -527,63 +544,66 @@ export default function MainChatComponent() {
                                 newXlsxData.sheets = [...newXlsxData.sheets, newSheetData];
                                 setXLSXData(newXlsxData);
 
-                                // Firebase에 업데이트된 스프레드시트 저장
+                                // 새 API로 스프레드시트 저장
                                 (async () => {
                                     try {
-                                        const saveResult = await saveSpreadsheetToFirebase(
-                                            {
+                                        const saveResult = await saveSpreadsheet({
+                                            userId: auth.currentUser?.uid || '',
+                                            chatId: getCurrentFirebaseChatId() || undefined,
+                                            fileName: newXlsxData.fileName,
+                                            originalFileName: file.name,
+                                            fileSize: file.size,
+                                            fileType: 'csv',
+                                            activeSheetIndex: newXlsxData.activeSheetIndex,
+                                            sheets: newXlsxData.sheets.map(sheet => ({
+                                                name: sheet.sheetName,
+                                                index: newXlsxData.sheets.indexOf(sheet),
+                                                data: sheet.rawData || []
+                                            }))
+                                        });
+
+                                        const spreadsheetId = saveResult.id;
+                                        const chatId = saveResult.chatId;
+
+                                        console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
+
+                                        // 저장된 spreadsheetId를 데이터에 추가
+                                        const updatedXlsxData = {
+                                            ...newXlsxData,
+                                            spreadsheetId: spreadsheetId
+                                        };
+                                        setXLSXData(updatedXlsxData);
+
+                                        // 스토어에 chatId와 spreadsheetId 저장
+                                        if (chatId) {
+                                            setCurrentChatId(chatId);
+                                        }
+                                        
+                                        if (spreadsheetId) {
+                                            setCurrentSpreadsheetId(spreadsheetId);
+                                            setSpreadsheetMetadata({
                                                 fileName: newXlsxData.fileName,
-                                                sheets: newXlsxData.sheets,
-                                                activeSheetIndex: newXlsxData.activeSheetIndex
-                                            },
-                                            {
                                                 originalFileName: file.name,
                                                 fileSize: file.size,
-                                                fileType: 'csv'
-                                            },
-                                            {
-                                                chatId: getCurrentFirebaseChatId() || undefined,
-                                                userId: auth.currentUser?.uid,
-                                                spreadsheetId: currentSpreadsheetId || undefined
-                                            }
-                                        );
+                                                fileType: 'csv',
+                                                isSaved: true,
+                                                lastSaved: new Date()
+                                            });
+                                            markAsSaved(spreadsheetId);
+                                        }
 
-                                        if (saveResult.success && saveResult.data) {
-                                            const spreadsheetId = saveResult.data.id;
-                                            const chatId = saveResult.data.chatId;
-
-                                            console.log('스프레드시트가 Firebase에 저장되었습니다:', spreadsheetId);
-    
-                                            // 저장된 spreadsheetId를 데이터에 추가
-                                            const updatedXlsxData = {
-                                                ...newXlsxData,
-                                                spreadsheetId: spreadsheetId
-                                            };
-                                            setXLSXData(updatedXlsxData);
-    
-                                            // 스토어에 chatId와 spreadsheetId 저장
-                                            if (chatId) {
-                                                setCurrentChatId(chatId);
+                                        // 응답에서 chatTitle이 있으면 채팅 제목 업데이트 (스프레드시트 API가 chatTitle을 반환하는 경우)
+                                        if ((saveResult as any).chatTitle && chatId && auth.currentUser?.uid) {
+                                            try {
+                                                await updateChatTitle(chatId, (saveResult as any).chatTitle, auth.currentUser.uid);
+                                                console.log('✅ 채팅 제목이 업데이트되었습니다:', (saveResult as any).chatTitle);
+                                            } catch (titleError) {
+                                                console.error('❌ 채팅 제목 업데이트 실패:', titleError);
                                             }
-                                            
-                                            if (spreadsheetId) {
-                                                setCurrentSpreadsheetId(spreadsheetId);
-                                                setSpreadsheetMetadata({
-                                                    fileName: newXlsxData.fileName,
-                                                    originalFileName: file.name,
-                                                    fileSize: file.size,
-                                                    fileType: 'csv',
-                                                    isSaved: true,
-                                                    lastSaved: new Date()
-                                                });
-                                                markAsSaved(spreadsheetId);
-                                            }
-                                        } else {
-                                            console.error('Firebase 저장 실패:', saveResult.message || saveResult.error);
                                         }
 
                                     } catch (saveError) {
-                                        console.error('db 저장 실패:', saveError);
+                                        console.error('스프레드시트 저장 실패:', saveError);
                                     }
                                 })();
 
@@ -608,67 +628,72 @@ export default function MainChatComponent() {
 
                                 setXLSXData(xlsxData);
 
-                                // Firebase에 새 스프레드시트 저장
+                                // 새 API로 스프레드시트 저장
                                 (async () => {
                                     try {
-                                        const saveResult = await saveSpreadsheetToFirebase(
-                                            {
+                                        const saveResult = await saveSpreadsheet({
+                                            userId: auth.currentUser?.uid || '',
+                                            chatId: getCurrentFirebaseChatId() || undefined,
+                                            fileName: xlsxData.fileName,
+                                            originalFileName: file.name,
+                                            fileSize: file.size,
+                                            fileType: 'csv',
+                                            activeSheetIndex: xlsxData.activeSheetIndex,
+                                            sheets: xlsxData.sheets.map(sheet => ({
+                                                name: sheet.sheetName,
+                                                index: xlsxData.sheets.indexOf(sheet),
+                                                data: sheet.rawData || []
+                                            }))
+                                        });
+
+                                        const spreadsheetId = saveResult.id;
+                                        const chatId = saveResult.chatId;
+
+                                        console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
+
+                                        // 저장된 spreadsheetId를 데이터에 추가
+                                        const updatedXlsxData = {
+                                            ...xlsxData,
+                                            spreadsheetId: spreadsheetId
+                                        };
+                                        setXLSXData(updatedXlsxData);
+
+                                        // 스토어에 chatId와 spreadsheetId 저장
+                                        if (chatId) {
+                                            setCurrentChatId(chatId);
+                                        }
+                                        
+                                        if (spreadsheetId) {
+                                            setCurrentSpreadsheetId(spreadsheetId);
+                                            setSpreadsheetMetadata({
                                                 fileName: xlsxData.fileName,
-                                                sheets: xlsxData.sheets,
-                                                activeSheetIndex: xlsxData.activeSheetIndex
-                                            },
-                                            {
                                                 originalFileName: file.name,
                                                 fileSize: file.size,
-                                                fileType: 'csv'
-                                            },
-                                            {
-                                                chatId: getCurrentFirebaseChatId() || undefined,
-                                                userId: auth.currentUser?.uid,
-                                                spreadsheetId: currentSpreadsheetId || undefined
-                                            }
-                                        );
+                                                fileType: 'csv',
+                                                isSaved: true,
+                                                lastSaved: new Date()
+                                            });
+                                            markAsSaved(spreadsheetId);
+                                        }
 
-                                        if (saveResult.success && saveResult.data) {
-                                            const spreadsheetId = saveResult.data.id;
-                                            const chatId = saveResult.data.chatId;
-
-                                            console.log('스프레드시트가 Firebase에 저장되었습니다:', spreadsheetId);
-    
-                                            // 저장된 spreadsheetId를 데이터에 추가
-                                            const updatedXlsxData = {
-                                                ...xlsxData,
-                                                spreadsheetId: spreadsheetId
-                                            };
-                                            setXLSXData(updatedXlsxData);
-    
-                                            // 스토어에 chatId와 spreadsheetId 저장
-                                            if (chatId) {
-                                                setCurrentChatId(chatId);
-                                            }
-                                            
-                                            if (spreadsheetId) {
-                                                setCurrentSpreadsheetId(spreadsheetId);
-                                                setSpreadsheetMetadata({
-                                                    fileName: xlsxData.fileName,
-                                                    originalFileName: file.name,
-                                                    fileSize: file.size,
-                                                    fileType: 'csv',
-                                                    isSaved: true,
-                                                    lastSaved: new Date()
-                                                });
-                                                markAsSaved(spreadsheetId);
+                                        // 응답에서 chatTitle이 있으면 채팅 제목 업데이트 (스프레드시트 API가 chatTitle을 반환하는 경우)
+                                        if ((saveResult as any).chatTitle && chatId && auth.currentUser?.uid) {
+                                            try {
+                                                await updateChatTitle(chatId, (saveResult as any).chatTitle, auth.currentUser.uid);
+                                                console.log('✅ 채팅 제목이 업데이트되었습니다:', (saveResult as any).chatTitle);
+                                            } catch (titleError) {
+                                                console.error('❌ 채팅 제목 업데이트 실패:', titleError);
                                             }
                                         } else {
-                                            console.error('Firebase 저장 실패:', saveResult.message || saveResult.error);
+                                            // chatTitle이 응답에 없으면 파일명으로 업데이트
+                                            await updateChatTitleWithFileName(file.name);
                                         }
 
                                     } catch (saveError) {
-                                        console.error('Firebase 저장 실패:', saveError);
+                                        console.error('스프레드시트 저장 실패:', saveError);
+                                        // 저장 실패해도 파일명으로 채팅 제목 업데이트 시도
+                                        await updateChatTitleWithFileName(file.name);
                                     }
-                                    
-                                    // 파일 업로드 성공 시 채팅 제목을 파일명으로 업데이트
-                                    await updateChatTitleWithFileName(file.name);
                                 })();
 
                                 const successMessage: ChatMessage = {
