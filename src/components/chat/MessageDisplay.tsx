@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react';
 import { formatMessageDate } from '../../utils/chatUtils';
-import { ChatMode } from '../../app/actions/chatActions';
 import { ChatMessage } from '../../stores/store-types';
 import { Loader2, ChevronDown, ChevronUp, BarChart3, Table, FileText, Sparkles, Wand2 } from 'lucide-react';
+
+// ChatMode 타입 정의
+type ChatMode = 'normal' | 'artifact' | 'datafix' | 'dataedit' | 'data-edit' | 'edit-chat' | 'function' | 'function-chat' | 'datageneration';
 
 // Message 인터페이스는 기존과의 호환성을 위해 유지
 export interface Message extends ChatMessage {}
@@ -273,40 +275,66 @@ export default function MessageDisplay({
         <div className="w-full max-w-3xl mx-auto">
             {messages.map((message, index) => {
                 const isUser = message.type === 'user';
-                const isArtifact = message.artifactData && !message.content;
-                const isArtifactWithExplanation = message.artifactData && message.content;
-                const isDataFix = (message as any).dataFixData;
-                const isFunctionResult = (message as any).functionData;
+                const hasArtifactData = !!(message as any).artifactData;
+                const isDataFix = !!(message as any).dataFixData;
+                const isFunctionResult = !!(message as any).functionData;
+                
+                // console.log('🎨 메시지 렌더링:', {
+                //     id: message.id,
+                //     type: message.type,
+                //     hasContent: !!message.content,
+                //     hasArtifactData,
+                //     isDataFix,
+                //     isFunctionResult,
+                //     mode: (message as any).mode
+                // });
                 
                 return (
                     <div key={message.id} className={`py-6 ${index !== 0 ? 'border-t border-gray-100' : ''}`}>
                         <div className="flex items-start">
+                            {/* AI 메시지 아바타 */}
+                            {!isUser && (
+                                <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3 mt-1">
+                                    <span className="text-white text-sm font-medium">AI</span>
+                                </div>
+                            )}
+                            
                             <div className="flex-1">
                                 <div className="flex items-center mb-1">
-                                    {!isUser && getModeIcon(message.mode as any)}
+                                    {!isUser && getModeIcon((message as any).mode)}
                                 </div>
                                 
+                                {/* 함수 실행 결과 메시지 */}
                                 {isFunctionResult ? (
                                     <FunctionResultMessage
                                         message={message}
                                         onFunctionApply={onFunctionApply}
                                         isApplied={appliedFunctionResults.includes(message.id)}
                                     />
-                                ) : isDataFix ? (
+                                ) : 
+                                /* 데이터 수정 메시지 */
+                                isDataFix ? (
                                     <DataFixMessage 
                                         message={message}
                                         onDataFixApply={onDataFixApply}
                                         isApplied={appliedDataFixes.includes(message.id)}
                                     />
-                                ) : (isArtifact || isArtifactWithExplanation) ? (
+                                ) : 
+                                /* 아티팩트 메시지 */
+                                hasArtifactData ? (
                                     <ArtifactMessage 
                                         message={message} 
                                         onArtifactClick={onArtifactClick} 
                                     />
-                                ) : message.content ? (
-                                    /* 일반 텍스트 메시지 */
+                                ) : 
+                                /* 일반 텍스트 메시지 (사용자 + AI) */
+                                message.content ? (
                                     <div
-                                        className={`prose prose-sm max-w-none ${isUser ? 'bg-gray-50 p-3 rounded-lg border border-gray-200 flex items-center' : ''}`}
+                                        className={`prose prose-sm max-w-none ${
+                                            isUser 
+                                                ? 'bg-gray-50 p-3 rounded-lg border border-gray-200 flex items-center' 
+                                                : 'text-gray-800'
+                                        }`}
                                     >
                                         {isUser && (
                                             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center mr-3">
@@ -319,7 +347,13 @@ export default function MessageDisplay({
                                             }}
                                         />
                                     </div>
-                                ) : null}
+                                ) : 
+                                /* 콘텐츠가 없는 경우 */
+                                (
+                                    <div className="text-gray-500 italic">
+                                        (메시지 내용이 없습니다)
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

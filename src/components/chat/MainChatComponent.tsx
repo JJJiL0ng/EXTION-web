@@ -6,8 +6,8 @@ import { useUnifiedStore, ChatMessage } from '@/stores';
 import { detectAndDecode } from '../../utils/chatUtils';
 import { callOrchestratorChatAPI, OrchestratorChatResponseDto, FunctionDetails } from '../../services/api/dataServices';
 import { processXLSXFile } from '../../utils/fileProcessing';
-import { saveSpreadsheetToFirebase } from '../../services/api/dataServices';
-import { updateChatTitle } from '@/services/firebase/chatService';
+import { saveSpreadsheet, convertSpreadsheetDataToXLSXData, SpreadsheetData } from '@/services/api/spreadsheetService';
+import { updateChatTitle as originalUpdateChatTitle } from '@/services/api/chatService';
 import { cellAddressToCoords } from '@/stores/store-utils/xlsxUtils';
 import { auth } from '@/services/firebase';
 import { useAuthStore } from '@/stores/authStore';
@@ -25,7 +25,7 @@ declare global {
 }
 
 // 채팅 모드 타입 정의 (통합 API 응답과 일치)
-type ChatMode = 'normal' | 'artifact' | 'datafix' | 'function';
+type ChatMode = 'normal' | 'artifact' | 'datafix' | 'dataedit' | 'data-edit' | 'edit-chat' | 'function' | 'function-chat' | 'datageneration';
 
 // 로딩 힌트 메시지 배열
 const loadingHints = [
@@ -88,6 +88,7 @@ export default function MainChatComponent() {
         canUploadFile,
         saveCurrentSessionToStore,
         loadChatSessionsFromStorage,
+        refreshChatList,
     } = useUnifiedStore();
 
     // Firebase 채팅 ID 상태 추가
@@ -165,12 +166,18 @@ export default function MainChatComponent() {
         return null;
     }, [firebaseChatId, getCurrentChatId, isFirebaseChat]);
 
+    // updateChatTitle 래핑 함수 - 자동으로 refreshChatList 호출
+    const updateChatTitle = useCallback(async (chatId: string, title: string, userId: string) => {
+        await originalUpdateChatTitle(chatId, title, userId);
+        refreshChatList();
+    }, [refreshChatList]);
+
     // 채팅 제목을 파일명으로 업데이트하는 함수
     const updateChatTitleWithFileName = useCallback(async (fileName: string) => {
         try {
             const chatId = getCurrentFirebaseChatId();
-            if (!chatId) {
-                console.log('Firebase 채팅이 아니므로 제목 업데이트를 스킵합니다.');
+            if (!chatId || !user) {
+                console.log('채팅 ID 또는 사용자 정보가 없어 제목 업데이트를 스킵합니다.');
                 return;
             }
 
@@ -180,15 +187,19 @@ export default function MainChatComponent() {
             console.log('채팅 제목 업데이트 시도:', {
                 chatId,
                 originalFileName: fileName,
-                newTitle: cleanFileName
+                newTitle: cleanFileName,
+                userId: user.uid
             });
 
-            await updateChatTitle(chatId, cleanFileName);
+            await updateChatTitle(chatId, cleanFileName, user.uid);
             console.log('✅ 채팅 제목이 파일명으로 업데이트되었습니다:', cleanFileName);
+            
+            // 사이드바의 채팅 목록 새로고침
+            refreshChatList();
         } catch (error) {
             console.error('❌ 채팅 제목 업데이트 실패:', error);
         }
-    }, [getCurrentFirebaseChatId]);
+    }, [getCurrentFirebaseChatId, user, refreshChatList]);
 
     // 파일이 로드되었는지 확인
     const file = xlsxData ? { name: xlsxData.fileName } : null;
@@ -240,21 +251,30 @@ export default function MainChatComponent() {
 
                     // 각 시트의 데이터 확인
                     const newSheets = result.sheets.map(sheet => {
-                        console.log(`시트 처리: ${sheet.sheetName}, rawData 행: ${sheet.rawData.length}`);
+                        const firstRowCols = sheet.rawData?.[0]?.length || 0;
+                        const maxCols = Math.max(0, ...sheet.rawData.map(row => (row || []).length));
+                        console.log(`📋 시트 처리: ${sheet.sheetName}`, {
+                            rawDataRows: sheet.rawData.length,
+                            firstRowCols,
+                            maxCols,
+                            hasDataBeyond34: maxCols > 34,
+                            sampleFirstRow: sheet.rawData?.[0]?.slice(0, 5),
+                            sampleColumnsAroundCol34: sheet.rawData?.[0]?.slice(32, 37) // 33-37열 샘플
+                        });
 
                         return {
                             sheetName: sheet.sheetName,
                             rawData: sheet.rawData,
                             metadata: {
                                 rowCount: sheet.rawData.length,
-                                columnCount: sheet.rawData[0]?.length || 0,
+                                columnCount: maxCols, // firstRowCols 대신 maxCols 사용
                                 dataRange: {
                                     startRow: sheet.metadata?.dataRange?.startRow || 0,
                                     endRow: sheet.metadata?.dataRange?.endRow || sheet.rawData.length -1,
                                     startCol: sheet.metadata?.dataRange?.startCol || 0,
-                                    endCol: sheet.metadata?.dataRange?.endCol || (sheet.rawData[0]?.length || 1) - 1,
+                                    endCol: sheet.metadata?.dataRange?.endCol || (maxCols || 1) - 1,
                                     startColLetter: sheet.metadata?.dataRange?.startColLetter || 'A',
-                                    endColLetter: sheet.metadata?.dataRange?.endColLetter || columnIndexToLetter((sheet.rawData[0]?.length || 1) - 1)
+                                    endColLetter: sheet.metadata?.dataRange?.endColLetter || columnIndexToLetter((maxCols || 1) - 1)
                                 },
                                 preserveOriginalStructure: true,
                                 lastModified: new Date()
@@ -278,62 +298,65 @@ export default function MainChatComponent() {
                     newXlsxData.sheets = [...newXlsxData.sheets, ...newSheets];
                     setXLSXData(newXlsxData);
 
-                    // Firebase에 업데이트된 스프레드시트 저장
+                    // 새 API로 스프레드시트 저장
                     try {
-                        const saveResult = await saveSpreadsheetToFirebase(
-                            {
+                        const saveResult = await saveSpreadsheet({
+                            userId: auth.currentUser?.uid || '',
+                            chatId: getCurrentFirebaseChatId() || undefined,
+                            fileName: newXlsxData.fileName,
+                            originalFileName: file.name,
+                            fileSize: file.size,
+                            fileType: 'xlsx',
+                            activeSheetIndex: newXlsxData.activeSheetIndex,
+                            sheets: newXlsxData.sheets.map(sheet => ({
+                                name: sheet.sheetName,
+                                index: newXlsxData.sheets.indexOf(sheet),
+                                data: sheet.rawData || []
+                            }))
+                        });
+
+                        const spreadsheetId = saveResult.id;
+                        const chatId = saveResult.chatId;
+
+                        console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
+
+                        // 저장된 spreadsheetId를 데이터에 추가
+                        const updatedXlsxData = {
+                            ...newXlsxData,
+                            spreadsheetId: spreadsheetId
+                        };
+                        setXLSXData(updatedXlsxData);
+
+                        // 스토어에 chatId와 spreadsheetId 저장
+                        if (chatId) {
+                            setCurrentChatId(chatId);
+                        }
+                    
+                        if (spreadsheetId) {
+                            setCurrentSpreadsheetId(spreadsheetId);
+                            setSpreadsheetMetadata({
                                 fileName: newXlsxData.fileName,
-                                sheets: newXlsxData.sheets,
-                                activeSheetIndex: newXlsxData.activeSheetIndex
-                            },
-                            {
                                 originalFileName: file.name,
                                 fileSize: file.size,
-                                fileType: 'xlsx'
-                            },
-                            {
-                                chatId: getCurrentFirebaseChatId() || undefined,
-                                userId: auth.currentUser?.uid,
-                                spreadsheetId: currentSpreadsheetId || undefined
+                                fileType: 'xlsx',
+                                isSaved: true,
+                                lastSaved: new Date()
+                            });
+                            markAsSaved(spreadsheetId);
+                        }
+
+                        // 응답에서 chatTitle이 있으면 채팅 제목 업데이트 (스프레드시트 API가 chatTitle을 반환하는 경우)
+                        if ((saveResult as any).chatTitle && chatId && auth.currentUser?.uid) {
+                            try {
+                                await updateChatTitle(chatId, (saveResult as any).chatTitle, auth.currentUser.uid);
+                                console.log('✅ 채팅 제목이 업데이트되었습니다:', (saveResult as any).chatTitle);
+                            } catch (titleError) {
+                                console.error('❌ 채팅 제목 업데이트 실패:', titleError);
                             }
-                        );
-
-                        if (saveResult.success && saveResult.data) {
-                            const spreadsheetId = saveResult.data.id;
-                            const chatId = saveResult.data.chatId;
-
-                            console.log('스프레드시트가 Firebase에 저장되었습니다:', spreadsheetId);
-
-                            // 저장된 spreadsheetId를 데이터에 추가
-                            const updatedXlsxData = {
-                                ...newXlsxData,
-                                spreadsheetId: spreadsheetId
-                            };
-                            setXLSXData(updatedXlsxData);
-
-                            // 스토어에 chatId와 spreadsheetId 저장
-                            if (chatId) {
-                                setCurrentChatId(chatId);
-                            }
-                        
-                            if (spreadsheetId) {
-                                setCurrentSpreadsheetId(spreadsheetId);
-                                setSpreadsheetMetadata({
-                                    fileName: newXlsxData.fileName,
-                                    originalFileName: file.name,
-                                    fileSize: file.size,
-                                    fileType: 'xlsx',
-                                    isSaved: true,
-                                    lastSaved: new Date()
-                                });
-                                markAsSaved(spreadsheetId);
-                            }
-                        } else {
-                            console.error('Firebase 저장 실패:', saveResult.message || saveResult.error);
                         }
 
                     } catch (saveError) {
-                        console.error('Firebase 저장 실패:', saveError);
+                        console.error('스프레드시트 저장 실패:', saveError);
                     }
 
                     const successMessage: ChatMessage = {
@@ -354,85 +377,101 @@ export default function MainChatComponent() {
                     // xlsxData가 없는 경우 새로 생성
                     const xlsxData = {
                         fileName: result.fileName,
-                        sheets: result.sheets.map(sheet => ({
-                            sheetName: sheet.sheetName,
-                            rawData: sheet.rawData,
-                            metadata: {
-                                rowCount: sheet.rawData.length,
-                                columnCount: sheet.rawData[0]?.length || 0,
-                                dataRange: {
-                                    startRow: sheet.metadata?.dataRange?.startRow || 0,
-                                    endRow: sheet.metadata?.dataRange?.endRow || sheet.rawData.length - 1,
-                                    startCol: sheet.metadata?.dataRange?.startCol || 0,
-                                    endCol: sheet.metadata?.dataRange?.endCol || (sheet.rawData[0]?.length || 1) - 1,
-                                    startColLetter: sheet.metadata?.dataRange?.startColLetter || 'A',
-                                    endColLetter: sheet.metadata?.dataRange?.endColLetter || columnIndexToLetter((sheet.rawData[0]?.length || 1) - 1)
-                                },
-                                preserveOriginalStructure: true,
-                                lastModified: new Date()
-                            }
-                        })),
+                        sheets: result.sheets.map(sheet => {
+                            const firstRowCols = sheet.rawData?.[0]?.length || 0;
+                            const maxCols = Math.max(0, ...sheet.rawData.map(row => (row || []).length));
+                            console.log(`📋 새 파일 시트 처리: ${sheet.sheetName}`, {
+                                rawDataRows: sheet.rawData.length,
+                                firstRowCols,
+                                maxCols,
+                                hasDataBeyond34: maxCols > 34,
+                                sampleFirstRow: sheet.rawData?.[0]?.slice(0, 5),
+                                sampleColumnsAroundCol34: sheet.rawData?.[0]?.slice(32, 37) // 33-37열 샘플
+                            });
+
+                            return {
+                                sheetName: sheet.sheetName,
+                                rawData: sheet.rawData,
+                                metadata: {
+                                    rowCount: sheet.rawData.length,
+                                    columnCount: maxCols, // firstRowCols 대신 maxCols 사용
+                                    dataRange: {
+                                        startRow: sheet.metadata?.dataRange?.startRow || 0,
+                                        endRow: sheet.metadata?.dataRange?.endRow || sheet.rawData.length - 1,
+                                        startCol: sheet.metadata?.dataRange?.startCol || 0,
+                                        endCol: sheet.metadata?.dataRange?.endCol || (maxCols || 1) - 1,
+                                        startColLetter: sheet.metadata?.dataRange?.startColLetter || 'A',
+                                        endColLetter: sheet.metadata?.dataRange?.endColLetter || columnIndexToLetter((maxCols || 1) - 1)
+                                    },
+                                    preserveOriginalStructure: true,
+                                    lastModified: new Date()
+                                }
+                            };
+                        }),
                         activeSheetIndex: 0
                     };
 
                     setXLSXData(xlsxData);
 
-                    // Firebase에 새 스프레드시트 저장
+                    // 새 API로 스프레드시트 저장
                     try {
-                        const saveResult = await saveSpreadsheetToFirebase(
-                            {
+                        const saveResult = await saveSpreadsheet({
+                            userId: auth.currentUser?.uid || '',
+                            chatId: getCurrentFirebaseChatId() || undefined,
+                            fileName: xlsxData.fileName,
+                            originalFileName: file.name,
+                            fileSize: file.size,
+                            fileType: 'xlsx',
+                            activeSheetIndex: xlsxData.activeSheetIndex,
+                            sheets: xlsxData.sheets.map(sheet => ({
+                                name: sheet.sheetName,
+                                index: xlsxData.sheets.indexOf(sheet),
+                                data: sheet.rawData || []
+                            }))
+                        });
+
+                        const spreadsheetId = saveResult.id;
+                        const chatId = saveResult.chatId;
+
+                        console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
+
+                        // 저장된 spreadsheetId를 데이터에 추가
+                        const updatedXlsxData = {
+                            ...xlsxData,
+                            spreadsheetId: spreadsheetId
+                        };
+                        setXLSXData(updatedXlsxData);
+
+                        // 스토어에 chatId와 spreadsheetId 저장
+                        if (chatId) {
+                            setCurrentChatId(chatId);
+                        }
+                    
+                        if (spreadsheetId) {
+                            setCurrentSpreadsheetId(spreadsheetId);
+                            setSpreadsheetMetadata({
                                 fileName: xlsxData.fileName,
-                                sheets: xlsxData.sheets,
-                                activeSheetIndex: xlsxData.activeSheetIndex
-                            },
-                            {
                                 originalFileName: file.name,
                                 fileSize: file.size,
-                                fileType: 'xlsx'
-                            },
-                            {
-                                chatId: getCurrentFirebaseChatId() || undefined,
-                                userId: auth.currentUser?.uid,
-                                spreadsheetId: currentSpreadsheetId || undefined
+                                fileType: 'xlsx',
+                                isSaved: true,
+                                lastSaved: new Date()
+                            });
+                            markAsSaved(spreadsheetId);
+                        }
+
+                        // 응답에서 chatTitle이 있으면 채팅 제목 업데이트 (스프레드시트 API가 chatTitle을 반환하는 경우)
+                        if ((saveResult as any).chatTitle && chatId && auth.currentUser?.uid) {
+                            try {
+                                await updateChatTitle(chatId, (saveResult as any).chatTitle, auth.currentUser.uid);
+                                console.log('✅ 채팅 제목이 업데이트되었습니다:', (saveResult as any).chatTitle);
+                            } catch (titleError) {
+                                console.error('❌ 채팅 제목 업데이트 실패:', titleError);
                             }
-                        );
-
-                        if (saveResult.success && saveResult.data) {
-                            const spreadsheetId = saveResult.data.id;
-                            const chatId = saveResult.data.chatId;
-
-                            console.log('스프레드시트가 Firebase에 저장되었습니다:', spreadsheetId);
-
-                            // 저장된 spreadsheetId를 데이터에 추가
-                            const updatedXlsxData = {
-                                ...xlsxData,
-                                spreadsheetId: spreadsheetId
-                            };
-                            setXLSXData(updatedXlsxData);
-
-                            // 스토어에 chatId와 spreadsheetId 저장
-                            if (chatId) {
-                                setCurrentChatId(chatId);
-                            }
-                        
-                            if (spreadsheetId) {
-                                setCurrentSpreadsheetId(spreadsheetId);
-                                setSpreadsheetMetadata({
-                                    fileName: xlsxData.fileName,
-                                    originalFileName: file.name,
-                                    fileSize: file.size,
-                                    fileType: 'xlsx',
-                                    isSaved: true,
-                                    lastSaved: new Date()
-                                });
-                                markAsSaved(spreadsheetId);
-                            }
-                        } else {
-                            console.error('Firebase 저장 실패:', saveResult.message || saveResult.error);
                         }
 
                     } catch (saveError) {
-                        console.error('Firebase 저장 실패:', saveError);
+                        console.error('스프레드시트 저장 실패:', saveError);
                     }
 
                     // 파일 업로드 성공 시 채팅 제목을 파일명으로 업데이트
@@ -505,63 +544,66 @@ export default function MainChatComponent() {
                                 newXlsxData.sheets = [...newXlsxData.sheets, newSheetData];
                                 setXLSXData(newXlsxData);
 
-                                // Firebase에 업데이트된 스프레드시트 저장
+                                // 새 API로 스프레드시트 저장
                                 (async () => {
                                     try {
-                                        const saveResult = await saveSpreadsheetToFirebase(
-                                            {
+                                        const saveResult = await saveSpreadsheet({
+                                            userId: auth.currentUser?.uid || '',
+                                            chatId: getCurrentFirebaseChatId() || undefined,
+                                            fileName: newXlsxData.fileName,
+                                            originalFileName: file.name,
+                                            fileSize: file.size,
+                                            fileType: 'csv',
+                                            activeSheetIndex: newXlsxData.activeSheetIndex,
+                                            sheets: newXlsxData.sheets.map(sheet => ({
+                                                name: sheet.sheetName,
+                                                index: newXlsxData.sheets.indexOf(sheet),
+                                                data: sheet.rawData || []
+                                            }))
+                                        });
+
+                                        const spreadsheetId = saveResult.id;
+                                        const chatId = saveResult.chatId;
+
+                                        console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
+
+                                        // 저장된 spreadsheetId를 데이터에 추가
+                                        const updatedXlsxData = {
+                                            ...newXlsxData,
+                                            spreadsheetId: spreadsheetId
+                                        };
+                                        setXLSXData(updatedXlsxData);
+
+                                        // 스토어에 chatId와 spreadsheetId 저장
+                                        if (chatId) {
+                                            setCurrentChatId(chatId);
+                                        }
+                                        
+                                        if (spreadsheetId) {
+                                            setCurrentSpreadsheetId(spreadsheetId);
+                                            setSpreadsheetMetadata({
                                                 fileName: newXlsxData.fileName,
-                                                sheets: newXlsxData.sheets,
-                                                activeSheetIndex: newXlsxData.activeSheetIndex
-                                            },
-                                            {
                                                 originalFileName: file.name,
                                                 fileSize: file.size,
-                                                fileType: 'csv'
-                                            },
-                                            {
-                                                chatId: getCurrentFirebaseChatId() || undefined,
-                                                userId: auth.currentUser?.uid,
-                                                spreadsheetId: currentSpreadsheetId || undefined
-                                            }
-                                        );
+                                                fileType: 'csv',
+                                                isSaved: true,
+                                                lastSaved: new Date()
+                                            });
+                                            markAsSaved(spreadsheetId);
+                                        }
 
-                                        if (saveResult.success && saveResult.data) {
-                                            const spreadsheetId = saveResult.data.id;
-                                            const chatId = saveResult.data.chatId;
-
-                                            console.log('스프레드시트가 Firebase에 저장되었습니다:', spreadsheetId);
-    
-                                            // 저장된 spreadsheetId를 데이터에 추가
-                                            const updatedXlsxData = {
-                                                ...newXlsxData,
-                                                spreadsheetId: spreadsheetId
-                                            };
-                                            setXLSXData(updatedXlsxData);
-    
-                                            // 스토어에 chatId와 spreadsheetId 저장
-                                            if (chatId) {
-                                                setCurrentChatId(chatId);
+                                        // 응답에서 chatTitle이 있으면 채팅 제목 업데이트 (스프레드시트 API가 chatTitle을 반환하는 경우)
+                                        if ((saveResult as any).chatTitle && chatId && auth.currentUser?.uid) {
+                                            try {
+                                                await updateChatTitle(chatId, (saveResult as any).chatTitle, auth.currentUser.uid);
+                                                console.log('✅ 채팅 제목이 업데이트되었습니다:', (saveResult as any).chatTitle);
+                                            } catch (titleError) {
+                                                console.error('❌ 채팅 제목 업데이트 실패:', titleError);
                                             }
-                                            
-                                            if (spreadsheetId) {
-                                                setCurrentSpreadsheetId(spreadsheetId);
-                                                setSpreadsheetMetadata({
-                                                    fileName: newXlsxData.fileName,
-                                                    originalFileName: file.name,
-                                                    fileSize: file.size,
-                                                    fileType: 'csv',
-                                                    isSaved: true,
-                                                    lastSaved: new Date()
-                                                });
-                                                markAsSaved(spreadsheetId);
-                                            }
-                                        } else {
-                                            console.error('Firebase 저장 실패:', saveResult.message || saveResult.error);
                                         }
 
                                     } catch (saveError) {
-                                        console.error('db 저장 실패:', saveError);
+                                        console.error('스프레드시트 저장 실패:', saveError);
                                     }
                                 })();
 
@@ -586,67 +628,72 @@ export default function MainChatComponent() {
 
                                 setXLSXData(xlsxData);
 
-                                // Firebase에 새 스프레드시트 저장
+                                // 새 API로 스프레드시트 저장
                                 (async () => {
                                     try {
-                                        const saveResult = await saveSpreadsheetToFirebase(
-                                            {
+                                        const saveResult = await saveSpreadsheet({
+                                            userId: auth.currentUser?.uid || '',
+                                            chatId: getCurrentFirebaseChatId() || undefined,
+                                            fileName: xlsxData.fileName,
+                                            originalFileName: file.name,
+                                            fileSize: file.size,
+                                            fileType: 'csv',
+                                            activeSheetIndex: xlsxData.activeSheetIndex,
+                                            sheets: xlsxData.sheets.map(sheet => ({
+                                                name: sheet.sheetName,
+                                                index: xlsxData.sheets.indexOf(sheet),
+                                                data: sheet.rawData || []
+                                            }))
+                                        });
+
+                                        const spreadsheetId = saveResult.id;
+                                        const chatId = saveResult.chatId;
+
+                                        console.log('스프레드시트가 저장되었습니다:', spreadsheetId);
+
+                                        // 저장된 spreadsheetId를 데이터에 추가
+                                        const updatedXlsxData = {
+                                            ...xlsxData,
+                                            spreadsheetId: spreadsheetId
+                                        };
+                                        setXLSXData(updatedXlsxData);
+
+                                        // 스토어에 chatId와 spreadsheetId 저장
+                                        if (chatId) {
+                                            setCurrentChatId(chatId);
+                                        }
+                                        
+                                        if (spreadsheetId) {
+                                            setCurrentSpreadsheetId(spreadsheetId);
+                                            setSpreadsheetMetadata({
                                                 fileName: xlsxData.fileName,
-                                                sheets: xlsxData.sheets,
-                                                activeSheetIndex: xlsxData.activeSheetIndex
-                                            },
-                                            {
                                                 originalFileName: file.name,
                                                 fileSize: file.size,
-                                                fileType: 'csv'
-                                            },
-                                            {
-                                                chatId: getCurrentFirebaseChatId() || undefined,
-                                                userId: auth.currentUser?.uid,
-                                                spreadsheetId: currentSpreadsheetId || undefined
-                                            }
-                                        );
+                                                fileType: 'csv',
+                                                isSaved: true,
+                                                lastSaved: new Date()
+                                            });
+                                            markAsSaved(spreadsheetId);
+                                        }
 
-                                        if (saveResult.success && saveResult.data) {
-                                            const spreadsheetId = saveResult.data.id;
-                                            const chatId = saveResult.data.chatId;
-
-                                            console.log('스프레드시트가 Firebase에 저장되었습니다:', spreadsheetId);
-    
-                                            // 저장된 spreadsheetId를 데이터에 추가
-                                            const updatedXlsxData = {
-                                                ...xlsxData,
-                                                spreadsheetId: spreadsheetId
-                                            };
-                                            setXLSXData(updatedXlsxData);
-    
-                                            // 스토어에 chatId와 spreadsheetId 저장
-                                            if (chatId) {
-                                                setCurrentChatId(chatId);
-                                            }
-                                            
-                                            if (spreadsheetId) {
-                                                setCurrentSpreadsheetId(spreadsheetId);
-                                                setSpreadsheetMetadata({
-                                                    fileName: xlsxData.fileName,
-                                                    originalFileName: file.name,
-                                                    fileSize: file.size,
-                                                    fileType: 'csv',
-                                                    isSaved: true,
-                                                    lastSaved: new Date()
-                                                });
-                                                markAsSaved(spreadsheetId);
+                                        // 응답에서 chatTitle이 있으면 채팅 제목 업데이트 (스프레드시트 API가 chatTitle을 반환하는 경우)
+                                        if ((saveResult as any).chatTitle && chatId && auth.currentUser?.uid) {
+                                            try {
+                                                await updateChatTitle(chatId, (saveResult as any).chatTitle, auth.currentUser.uid);
+                                                console.log('✅ 채팅 제목이 업데이트되었습니다:', (saveResult as any).chatTitle);
+                                            } catch (titleError) {
+                                                console.error('❌ 채팅 제목 업데이트 실패:', titleError);
                                             }
                                         } else {
-                                            console.error('Firebase 저장 실패:', saveResult.message || saveResult.error);
+                                            // chatTitle이 응답에 없으면 파일명으로 업데이트
+                                            await updateChatTitleWithFileName(file.name);
                                         }
 
                                     } catch (saveError) {
-                                        console.error('Firebase 저장 실패:', saveError);
+                                        console.error('스프레드시트 저장 실패:', saveError);
+                                        // 저장 실패해도 파일명으로 채팅 제목 업데이트 시도
+                                        await updateChatTitleWithFileName(file.name);
                                     }
-                                    
-                                    // 파일 업로드 성공 시 채팅 제목을 파일명으로 업데이트
-                                    await updateChatTitleWithFileName(file.name);
                                 })();
 
                                 const successMessage: ChatMessage = {
@@ -876,15 +923,23 @@ export default function MainChatComponent() {
                 }
             );
 
+            console.log('=== API 응답 수신 ===');
+            console.log('성공 여부:', response.success);
+            console.log('응답 타입:', response.chatType);
+
             if (response.success) {
                 // 백엔드에서 반환된 chatId가 있으면 스토어에 업데이트
                 if (response.chatId) {
+                    console.log('📝 백엔드에서 받은 chatId로 업데이트:', response.chatId);
                     setCurrentChatId(response.chatId);
                 }
 
                 // 채팅 타입에 따라 적절한 핸들러 호출
                 await handleUnifiedChatResponse(response);
+                
+                console.log('✅ 메시지 처리 완료');
             } else {
+                console.error('❌ API 응답 실패:', response.error);
                 throw new Error(response.error || '응답 생성에 실패했습니다.');
             }
         } catch (error) {
@@ -904,20 +959,33 @@ export default function MainChatComponent() {
     };
 
     const handleApplyDataFix = useCallback((messageId: string) => {
+        console.log('🔧 데이터 수정 적용 시작:', messageId);
+        
         const message = activeSheetMessages.find(m => m.id === messageId);
         if (!message || !message.dataFixData || appliedDataFixes.includes(messageId)) {
+            console.warn('⚠️ 데이터 수정 적용 조건 미충족:', { 
+                hasMessage: !!message, 
+                hasDataFixData: !!message?.dataFixData, 
+                alreadyApplied: appliedDataFixes.includes(messageId) 
+            });
             return;
         }
 
-        const editedData = message.dataFixData.editedData as any;
-        const newData = (editedData.headers && editedData.headers.length > 0)
-            ? [editedData.headers, ...editedData.data]
-            : editedData.data;
+        const editedData = message.dataFixData.editedData;
+        console.log('📊 수정할 데이터:', editedData);
 
-        // 데이터 적용
+        // 데이터가 올바른 형태인지 확인
+        if (!editedData || !editedData.data) {
+            console.error('❌ 수정할 데이터가 올바르지 않습니다:', editedData);
+            return;
+        }
+
+        // 데이터 적용 - orchestrator API는 이미 올바른 구조로 데이터를 제공
+        const dataToApply = editedData.data;
+
         applyGeneratedData({
             sheetName: editedData.sheetName,
-            data: newData,
+            data: dataToApply,
             sheetIndex: message.dataFixData.sheetIndex,
         });
 
@@ -928,36 +996,57 @@ export default function MainChatComponent() {
         const confirmationMessage: ChatMessage = {
             id: Date.now().toString(),
             type: 'Extion ai',
-            content: `<strong>${editedData.sheetName}</strong> 시트의 데이터 수정이 적용되었습니다.`,
+            content: `**${editedData.sheetName}** 시트의 데이터 수정이 적용되었습니다.\n\n` +
+                `• 수정된 행 수: ${dataToApply.length}개\n` +
+                `• 열 수: ${dataToApply[0]?.length || 0}개`,
             timestamp: new Date(),
         };
         addMessageToSheet(activeSheetIndex, confirmationMessage);
+        
+        console.log('✅ 데이터 수정 적용 완료');
 
     }, [activeSheetMessages, applyGeneratedData, addMessageToSheet, activeSheetIndex, appliedDataFixes]);
 
     const handleApplyFunctionResult = useCallback((messageId: string) => {
+        console.log('⚡ 함수 결과 적용 시작:', messageId);
+        
         const message = activeSheetMessages.find(m => m.id === messageId) as ChatMessage & { functionData?: any };
         if (!message || !message.functionData || appliedFunctionResults.includes(messageId)) {
+            console.warn('⚠️ 함수 결과 적용 조건 미충족:', { 
+                hasMessage: !!message, 
+                hasFunctionData: !!message?.functionData, 
+                alreadyApplied: appliedFunctionResults.includes(messageId) 
+            });
             return;
         }
 
         const { functionDetails } = message.functionData;
-        const { result, targetCell } = functionDetails;
+        const { result, targetCell, functionType, formula } = functionDetails;
         
-        if (!xlsxData || !useUnifiedStore.getState().activeSheetData) return;
+        console.log('📊 적용할 함수 결과:', { result, targetCell, functionType, formula });
+        
+        if (!xlsxData || !useUnifiedStore.getState().activeSheetData) {
+            console.error('❌ 스프레드시트 데이터가 없습니다.');
+            return;
+        }
 
         try {
             const { row: startRow, col: startCol } = cellAddressToCoords(targetCell);
+            console.log('🎯 대상 셀 좌표:', { startRow, startCol, targetCell });
 
             const currentXlsxData = useUnifiedStore.getState().xlsxData;
-            if (!currentXlsxData) return;
+            if (!currentXlsxData) {
+                console.error('❌ 현재 스프레드시트 데이터를 가져올 수 없습니다.');
+                return;
+            }
 
             const newSheets = currentXlsxData.sheets.map((sheet, index) => {
                 if (index === currentXlsxData.activeSheetIndex) {
-                    // rawData를 수정하기 위해 깊은 복사 대신 행별로 복사
+                    // rawData를 수정하기 위해 깊은 복사
                     const newRawData = (sheet.rawData || []).map(row => [...(row || [])]);
 
                     if (Array.isArray(result)) { // 2D 배열 결과
+                        console.log('📋 2차원 배열 결과 적용:', result);
                         (result as string[][]).forEach((rowData, rIdx) => {
                             const targetRowIdx = startRow + rIdx;
                             while(newRawData.length <= targetRowIdx) newRawData.push([]);
@@ -969,6 +1058,7 @@ export default function MainChatComponent() {
                             });
                         });
                     } else { // 단일 값 결과
+                        console.log('📄 단일 값 결과 적용:', result);
                         const targetRowIdx = startRow;
                         while(newRawData.length <= targetRowIdx) newRawData.push([]);
                         const targetRow = newRawData[targetRowIdx];
@@ -996,16 +1086,23 @@ export default function MainChatComponent() {
             setXLSXData({ ...currentXlsxData, sheets: newSheets });
             setAppliedFunctionResults(prev => [...prev, messageId]);
 
+            const sheetName = useUnifiedStore.getState().activeSheetData?.sheetName || '시트';
             const confirmationMessage: ChatMessage = {
                 id: Date.now().toString(),
                 type: 'Extion ai',
-                content: `<strong>${useUnifiedStore.getState().activeSheetData?.sheetName}</strong> 시트에 함수 결과가 적용되었습니다.`,
+                content: `**${sheetName}** 시트에 함수 결과가 적용되었습니다.\n\n` +
+                    `• 함수 타입: ${functionType}\n` +
+                    `• 대상 셀: ${targetCell}\n` +
+                    `• 수식: ${formula}\n` +
+                    `• 결과: ${Array.isArray(result) ? `${result.length}개 행의 데이터` : result}`,
                 timestamp: new Date(),
             };
             addMessageToSheet(activeSheetIndex, confirmationMessage);
+            
+            console.log('✅ 함수 결과 적용 완료');
 
         } catch (error) {
-            console.error('함수 결과 적용 중 오류:', error);
+            console.error('❌ 함수 결과 적용 중 오류:', error);
             const errorMessage: ChatMessage = {
                 id: Date.now().toString(),
                 type: 'Extion ai',
@@ -1018,141 +1115,449 @@ export default function MainChatComponent() {
 
     // 통합 응답 처리 함수
     const handleUnifiedChatResponse = async (response: OrchestratorChatResponseDto) => {
+        console.log('=== 통합 응답 처리 시작 ===');
+        console.log('응답 타입:', response.chatType);
+        console.log('응답 데이터:', response);
+
         // 채팅 타입에 따라 currentMode 설정
         if (response.chatType) {
-            setCurrentMode(response.chatType as any);
+            setCurrentMode(response.chatType as ChatMode);
         }
 
-        switch (response.chatType) {
-            case 'artifact':
-                await handleArtifactResponse(response);
-                break;
-            case 'function':
-                await handleFunctionResponse(response);
-                break;
-            case 'datafix':
-                await handleDataFixResponse(response);
-                break;
-            case 'datageneration':
-                await handleDataGenerationResponse(response);
-                break;
-            case 'normal':
-            default:
-                await handleNormalResponse(response);
-                break;
+        // 채팅 타입별 처리 (orchestrator의 다양한 응답 타입 지원)
+        const chatType = response.chatType as string;
+        if (chatType === 'artifact' || chatType === 'visualization-chat') {
+            await handleArtifactResponse(response);
+        } else if (chatType === 'function' || chatType === 'function-chat') {
+            await handleFunctionResponse(response);
+        } else if (chatType === 'datafix') {
+            await handleDataFixResponse(response);
+        } else if (chatType === 'dataedit' || chatType === 'data-edit' || chatType === 'edit-chat') {
+            await handleDataEditResponse(response);
+        } else if (chatType === 'datageneration' || chatType === 'generate-chat') {
+            await handleDataGenerationResponse(response);
+        } else if (chatType === 'normal' || chatType === 'general-chat') {
+            // 일반 채팅 응답 처리
+            console.log('💬 일반 채팅으로 처리:', chatType);
+            await handleNormalResponse(response);
+        } else {
+            // 기타 타입들은 일반 응답으로 처리
+            console.log('💬 알 수 없는 타입을 일반 채팅으로 처리:', chatType);
+            console.log('💬 전체 응답 구조:', JSON.stringify(response, null, 2));
+            await handleNormalResponse(response);
         }
     };
 
-    // 아티팩트 응답 처리
+    // 아티팩트 응답 처리 (기존 artifact와 새로운 visualization-chat 모두 지원)
     const handleArtifactResponse = async (response: OrchestratorChatResponseDto) => {
-        if (response.code) {
+        console.log('🎨 아티팩트 응답 처리 시작:', response);
+        
+        // orchestrator의 visualization-chat 응답 구조 지원
+        const artifactCode = response.code || (response as any).data?.code;
+        const artifactType = response.type || (response as any).data?.type;
+        const artifactTitle = response.title || (response as any).data?.title;
+        const artifactExplanation = response.explanation || (response as any).data?.explanation;
+        
+        console.log('🔍 아티팩트 데이터 추출:', {
+            hasCode: !!artifactCode,
+            type: artifactType,
+            title: artifactTitle,
+            hasExplanation: !!artifactExplanation
+        });
+        
+        if (artifactCode) {
+            const artifactId = (Date.now() + 1).toString();
+            
             const artifactData = {
-                type: response.type || 'analysis',
-                title: response.title || `${response.type} 분석`,
+                type: artifactType || 'analysis',
+                title: artifactTitle || `${artifactType || 'Chart'} 분석`,
                 timestamp: new Date(),
-                code: response.code,
-                messageId: (Date.now() + 1).toString()
+                code: artifactCode,
+                messageId: artifactId
             };
 
+            // 아티팩트 히스토리에 추가
             addToArtifactHistory(artifactData);
 
-            const explanation = typeof response.explanation === 'string' 
-                ? response.explanation 
-                : response.explanation?.korean || '';
+            // explanation 처리 - 다양한 형태 지원
+            let explanationText = '';
+            if (typeof artifactExplanation === 'string') {
+                explanationText = artifactExplanation;
+            } else if (artifactExplanation && typeof artifactExplanation === 'object') {
+                explanationText = artifactExplanation.korean || '';
+            } else if (response.message) {
+                explanationText = response.message;
+            } else {
+                explanationText = `${artifactType || 'Chart'} 분석이 완료되었습니다.`;
+            }
+            
+            console.log('📝 설명 텍스트:', explanationText.substring(0, 100) + '...');
             
             const assistantMessage: ChatMessage = {
-                id: (Date.now() + 1).toString(),
+                id: artifactId,
                 type: 'Extion ai',
-                content: explanation,
+                content: explanationText,
                 timestamp: new Date(),
                 artifactData: {
-                    type: response.type || 'analysis',
-                    title: response.title || `${response.type} 분석`,
+                    type: artifactType || 'analysis',
+                    title: artifactTitle || `${artifactType || 'Chart'} 분석`,
                     timestamp: new Date(),
-                    code: response.code,
-                    artifactId: (Date.now() + 1).toString()
+                    code: artifactCode,
+                    artifactId: artifactId
                 }
             };
 
+            console.log('✅ 아티팩트 메시지 추가:', {
+                id: assistantMessage.id,
+                hasContent: !!assistantMessage.content,
+                hasArtifactData: !!assistantMessage.artifactData,
+                codeLength: artifactCode.length
+            });
             addMessageToSheet(activeSheetIndex, assistantMessage);
+        } else {
+            console.warn('⚠️ 아티팩트 응답에 코드가 없습니다.');
+            // 코드가 없어도 메시지가 있으면 표시
+            if (response.message) {
+                const assistantMessage: ChatMessage = {
+                    id: (Date.now() + 1).toString(),
+                    type: 'Extion ai',
+                    content: response.message,
+                    timestamp: new Date()
+                };
+                addMessageToSheet(activeSheetIndex, assistantMessage);
+            }
         }
     };
 
     // 함수 실행 응답 처리
     const handleFunctionResponse = async (response: OrchestratorChatResponseDto) => {
-        if (response.functionDetails) {
+        console.log('⚡ 함수 응답 처리 시작:', response);
+        
+        // 중첩된 데이터 구조 처리: response.data.functionDetails 또는 response.functionDetails
+        const functionDetails = response.functionDetails || (response as any).data?.functionDetails;
+        const explanation = response.message || (response as any).data?.explanation;
+        
+        console.log('🔧 추출된 함수 데이터:', {
+            hasFunctionDetails: !!functionDetails,
+            explanation,
+            functionType: functionDetails?.functionType,
+            targetCell: functionDetails?.targetCell
+        });
+        
+        if (functionDetails) {
+            const messageContent = explanation || 
+                `함수가 실행되었습니다.\n\n` +
+                `• 함수 타입: ${functionDetails.functionType}\n` +
+                `• 대상 셀: ${functionDetails.targetCell}\n` +
+                `• 수식: ${functionDetails.formula}\n` +
+                `• 결과: ${Array.isArray(functionDetails.result) ? 
+                    `${functionDetails.result.length}개 행의 데이터` : 
+                    functionDetails.result}`;
+
             const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
-                content: response.message || '함수가 실행되었습니다.',
+                content: messageContent,
                 timestamp: new Date(),
                 functionData: {
-                    functionDetails: response.functionDetails,
+                    functionDetails: functionDetails,
                     isApplied: false
                 },
-                mode: 'function',
+                mode: 'function'
             } as any;
 
+            console.log('✅ 함수 메시지 추가:', {
+                messageId: assistantMessage.id,
+                functionType: functionDetails.functionType,
+                targetCell: functionDetails.targetCell,
+                result: functionDetails.result
+            });
+            addMessageToSheet(activeSheetIndex, assistantMessage);
+        } else {
+            console.warn('⚠️ 함수 응답에 functionDetails가 없습니다.');
+            console.warn('전체 응답 구조:', JSON.stringify(response, null, 2));
+            
+            // functionDetails가 없어도 메시지가 있으면 표시
+            const fallbackMessage = explanation || response.message || '함수 실행 요청을 처리했습니다.';
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: fallbackMessage,
+                timestamp: new Date()
+            };
             addMessageToSheet(activeSheetIndex, assistantMessage);
         }
     };
 
     // 데이터 수정 응답 처리
     const handleDataFixResponse = async (response: OrchestratorChatResponseDto) => {
+        console.log('🔧 데이터 수정 응답 처리 시작:', response);
+        
         if (response.editedData) {
-            const changesText = response.message || '데이터 수정을 제안합니다.';
+            const targetSheetIndex = response.sheetIndex !== undefined ? response.sheetIndex : activeSheetIndex;
+            
+            // 변경 사항 설명 생성
+            let changesDescription = '';
+            if (response.changes) {
+                changesDescription = `\n\n변경 내용:\n• 유형: ${response.changes.type}\n• 세부사항: ${response.changes.details}`;
+            }
+            
+            const messageContent = (response.message || '데이터 수정을 제안합니다.') + changesDescription +
+                `\n\n수정된 시트: ${response.editedData.sheetName}\n` +
+                `수정된 행 수: ${response.editedData.data.length}개\n` +
+                `열 수: ${response.editedData.data[0]?.length || 0}개`;
 
             const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
-                content: `데이터 수정 제안\n\n${changesText}`,
+                content: messageContent,
                 timestamp: new Date(),
                 dataFixData: {
                     editedData: response.editedData,
-                    sheetIndex: response.sheetIndex !== undefined ? response.sheetIndex : activeSheetIndex,
+                    sheetIndex: targetSheetIndex,
                     changes: response.changes,
                     isApplied: false
                 },
-                mode: 'datafix',
+                mode: 'datafix'
             };
 
+            console.log('✅ 데이터 수정 메시지 추가:', assistantMessage);
+            addMessageToSheet(activeSheetIndex, assistantMessage);
+        } else {
+            console.warn('⚠️ 데이터 수정 응답에 editedData가 없습니다.');
+            // editedData가 없어도 메시지가 있으면 표시
+            if (response.message) {
+                const assistantMessage: ChatMessage = {
+                    id: (Date.now() + 1).toString(),
+                    type: 'Extion ai',
+                    content: response.message,
+                    timestamp: new Date()
+                };
+                addMessageToSheet(activeSheetIndex, assistantMessage);
+            }
+        }
+    };
+
+    // 데이터 편집 응답 처리 (datafix와 유사하게 처리)
+    const handleDataEditResponse = async (response: OrchestratorChatResponseDto) => {
+        console.log('📝 데이터 편집 응답 처리 시작:', response);
+        
+        // 중첩된 데이터 구조 처리: response.data.editedData 또는 response.editedData
+        const editedData = response.editedData || (response as any).data?.editedData;
+        const sheetIndex = response.sheetIndex !== undefined ? response.sheetIndex : (response as any).data?.sheetIndex;
+        const changes = response.changes || (response as any).data?.changes;
+        const explanation = response.message || (response as any).data?.explanation;
+        
+        console.log('📊 추출된 데이터:', {
+            hasEditedData: !!editedData,
+            sheetIndex,
+            hasChanges: !!changes,
+            explanation
+        });
+        
+        if (editedData) {
+            const targetSheetIndex = sheetIndex !== undefined ? sheetIndex : activeSheetIndex;
+            
+            // 변경 사항 설명 생성
+            let changesDescription = '';
+            if (changes) {
+                changesDescription = `\n\n변경 내용:\n• 유형: ${changes.type}\n• 세부사항: ${changes.details}`;
+            }
+            
+            // 편집된 데이터에서 headers 제외하고 data만 사용
+            const dataToProcess = editedData.data || editedData;
+            
+            const messageContent = (explanation || '데이터 편집을 제안합니다.') + changesDescription +
+                `\n\n편집된 시트: ${editedData.sheetName}\n` +
+                `편집된 행 수: ${dataToProcess.length}개\n` +
+                `열 수: ${dataToProcess[0]?.length || 0}개`;
+
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: messageContent,
+                timestamp: new Date(),
+                dataFixData: {
+                    editedData: {
+                        sheetName: editedData.sheetName,
+                        data: dataToProcess // headers를 제외한 실제 데이터만 전달
+                    },
+                    sheetIndex: targetSheetIndex,
+                    changes: changes,
+                    isApplied: false
+                },
+                mode: 'datafix' // datafix 모드로 설정하여 기존 UI 재사용
+            };
+
+            console.log('✅ 데이터 편집 메시지 추가:', {
+                messageId: assistantMessage.id,
+                sheetName: editedData.sheetName,
+                dataRows: dataToProcess.length,
+                targetSheetIndex
+            });
+            addMessageToSheet(activeSheetIndex, assistantMessage);
+        } else {
+            console.warn('⚠️ 데이터 편집 응답에 editedData가 없습니다.');
+            console.warn('전체 응답 구조:', JSON.stringify(response, null, 2));
+            
+            // editedData가 없어도 메시지가 있으면 표시
+            const fallbackMessage = explanation || response.message || '데이터 편집 요청을 처리했습니다.';
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: fallbackMessage,
+                timestamp: new Date()
+            };
             addMessageToSheet(activeSheetIndex, assistantMessage);
         }
     };
 
     // 데이터 생성 응답 처리
     const handleDataGenerationResponse = async (response: OrchestratorChatResponseDto) => {
-        if (response.editedData) {
+        console.log('📊 데이터 생성 응답 처리 시작:', response);
+        
+        // generate-chat과 datageneration 모두 지원하도록 editedData 추출
+        const editedData = response.editedData || (response as any).data?.editedData;
+        const sheetIndex = response.sheetIndex !== undefined ? response.sheetIndex : (response as any).data?.sheetIndex;
+        const explanation = response.message || (response as any).data?.explanation;
+        
+        console.log('📊 추출된 데이터:', {
+            hasEditedData: !!editedData,
+            sheetIndex,
+            explanation: explanation?.substring(0, 50) + '...'
+        });
+        
+        if (editedData) {
+            const targetSheetIndex = sheetIndex !== undefined ? sheetIndex : activeSheetIndex;
+            
+            // 데이터를 스프레드시트에 즉시 적용
             applyGeneratedData({
-                sheetName: response.editedData.sheetName,
-                data: response.editedData.data,
-                sheetIndex: response.sheetIndex || activeSheetIndex
+                sheetName: editedData.sheetName,
+                data: editedData.data,
+                sheetIndex: targetSheetIndex
             });
+
+            const messageContent = (explanation || response.message || '데이터가 생성되었습니다!') +
+                `\n\n시트명: ${editedData.sheetName}\n` +
+                `생성된 행 수: ${editedData.data.length}개\n` +
+                `열 수: ${editedData.data[0]?.length || 0}개\n\n` +
+                `새로운 데이터가 스프레드시트에 자동으로 추가되었습니다.`;
 
             const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 type: 'Extion ai',
-                content: `데이터가 생성되었습니다!\n\n` +
-                    `시트명: ${response.editedData.sheetName}\n` +
-                    `생성된 행 수: ${response.editedData.data.length}개\n` +
-                    `열 수: ${response.editedData.data[0]?.length || 0}개\n\n` +
-                    `새로운 데이터가 스프레드시트에 추가되었습니다.`,
+                content: messageContent,
                 timestamp: new Date()
             };
 
+            console.log('✅ 데이터 생성 메시지 추가:', {
+                messageId: assistantMessage.id,
+                sheetName: editedData.sheetName,
+                dataRows: editedData.data.length,
+                targetSheetIndex
+            });
+            addMessageToSheet(activeSheetIndex, assistantMessage);
+
+            // 생성된 시트로 자동 전환 (다른 시트에 생성된 경우)
+            if (targetSheetIndex !== activeSheetIndex && xlsxData && xlsxData.sheets[targetSheetIndex]) {
+                setTimeout(() => {
+                    switchToSheet(targetSheetIndex);
+                }, 1000);
+            }
+        } else {
+            console.warn('⚠️ 데이터 생성 응답에 editedData가 없습니다.');
+            console.warn('전체 응답 구조:', JSON.stringify(response, null, 2));
+            
+            // editedData가 없어도 메시지가 있으면 표시
+            const fallbackMessage = explanation || response.message || '데이터 생성 요청을 처리했습니다.';
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: fallbackMessage,
+                timestamp: new Date()
+            };
             addMessageToSheet(activeSheetIndex, assistantMessage);
         }
     };
 
-    // 일반 채팅 응답 처리
+    // 일반 채팅 응답 처리 (normal, general-chat 등)
     const handleNormalResponse = async (response: OrchestratorChatResponseDto) => {
+        console.log('💬 일반 채팅 응답 처리 시작:', response);
+        
+        // orchestrator의 다양한 응답 구조 지원
+        let messageContent = '';
+        
+        // 1. 직접 message 필드가 있는 경우
+        if (response.message && typeof response.message === 'string') {
+            messageContent = response.message;
+            console.log('📍 response.message에서 메시지 추출');
+        }
+        // 2. explanation.korean이 있는 경우 (일부 응답에서 사용)
+        else if (response.explanation && typeof response.explanation === 'object' && (response.explanation as any).korean) {
+            messageContent = (response.explanation as any).korean;
+            console.log('📍 response.explanation.korean에서 메시지 추출');
+        }
+        // 3. data.message가 있는 경우 (orchestrator의 새로운 구조)
+        else if ((response as any).data?.message) {
+            messageContent = (response as any).data.message;
+            console.log('📍 response.data.message에서 메시지 추출');
+        }
+        // 4. data.content가 있는 경우
+        else if ((response as any).data?.content) {
+            messageContent = (response as any).data.content;
+            console.log('📍 response.data.content에서 메시지 추출');
+        }
+        // 5. 백엔드 응답에서 직접 content를 찾는 경우
+        else if ((response as any).content) {
+            messageContent = (response as any).content;
+            console.log('📍 response.content에서 메시지 추출');
+        }
+        // 6. title만 있는 경우
+        else if (response.title) {
+            messageContent = response.title;
+            console.log('📍 response.title에서 메시지 추출');
+        }
+        // 7. 오류 메시지가 있는 경우
+        else if (response.error) {
+            messageContent = `오류가 발생했습니다: ${response.error}`;
+            console.log('📍 response.error에서 메시지 추출');
+        }
+        // 8. 성공 상태이지만 메시지가 없는 경우
+        else if (response.success) {
+            messageContent = '요청이 성공적으로 처리되었습니다.';
+            console.log('📍 기본 성공 메시지 사용');
+        }
+        // 9. 기본 메시지
+        else {
+            console.warn('⚠️ 응답에서 메시지를 찾을 수 없어 기본 메시지 사용');
+            console.warn('전체 응답 구조:', JSON.stringify(response, null, 2));
+            messageContent = '응답을 받았지만 내용을 표시할 수 없습니다.';
+        }
+        
+        console.log('📝 추출된 메시지 길이:', messageContent.length);
+        console.log('📝 추출된 메시지 미리보기:', messageContent.substring(0, 100) + (messageContent.length > 100 ? '...' : ''));
+        
+        // 최종 검증
+        if (!messageContent || messageContent.trim() === '') {
+            console.error('❌ 메시지 내용이 비어있습니다. 전체 응답:', JSON.stringify(response, null, 2));
+            messageContent = '응답을 받았지만 내용을 표시할 수 없습니다.';
+        }
+        
         const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'Extion ai',
-            content: response.message || '',
+            content: messageContent,
             timestamp: new Date()
         };
 
+        console.log('✅ 일반 메시지 추가:', {
+            id: assistantMessage.id,
+            contentLength: messageContent.length,
+            chatType: response.chatType,
+            hasContent: !!messageContent,
+            responseKeys: Object.keys(response)
+        });
+        
         addMessageToSheet(activeSheetIndex, assistantMessage);
     };
 

@@ -20,6 +20,9 @@ export interface ChatSlice {
     // === 시트별 채팅 ID 관리 ===
     sheetChatIds: { [sheetIndex: number]: string };
     
+    // === 채팅 목록 새로고침 트리거 ===
+    chatListRefreshTrigger?: number;
+    
     // === 액션들 ===
     // 채팅 세션 관리
     createNewChatSession: () => string;
@@ -59,6 +62,9 @@ export interface ChatSlice {
 
     // === 스프레드시트 ID 액션 ===
     setCurrentSpreadsheetId: (spreadsheetId: string | null) => void;
+
+    // === 채팅 목록 새로고침 액션 ===
+    refreshChatList: () => void;
 }
 
 // 채팅 슬라이스 생성자
@@ -77,6 +83,7 @@ export const createChatSlice: StateCreator<
     sheetMessages: {},
     activeSheetMessages: [],
     sheetChatIds: {},
+    chatListRefreshTrigger: undefined,
     
     // === 채팅 세션 관리 액션 ===
     createNewChatSession: () => {
@@ -528,5 +535,16 @@ export const createChatSlice: StateCreator<
         sheets.forEach((sheet: any, index: number) => {
             get().setChatIdForSheet(index, '');
         });
+    },
+
+    // === 채팅 목록 새로고침 액션 ===
+    refreshChatList: () => {
+        // 이 함수는 ChatSidebar에서 채팅 목록을 새로고침하기 위한 트리거 역할
+        // 실제 구현은 ChatSidebar에서 이 함수를 감지하여 loadFirebaseChats를 호출
+        set((state) => ({
+            ...state,
+            // 트리거를 위한 임의의 timestamp 업데이트
+            chatListRefreshTrigger: Date.now()
+        }));
     }
 }); 
