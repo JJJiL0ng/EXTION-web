@@ -25,7 +25,7 @@ declare global {
 }
 
 // 채팅 모드 타입 정의 (통합 API 응답과 일치)
-type ChatMode = 'normal' | 'artifact' | 'datafix' | 'dataedit' | 'data-edit' | 'edit-chat' | 'function' | 'datageneration';
+type ChatMode = 'normal' | 'artifact' | 'datafix' | 'dataedit' | 'data-edit' | 'edit-chat' | 'function' | 'function-chat' | 'datageneration';
 
 // 로딩 힌트 메시지 배열
 const loadingHints = [
@@ -240,21 +240,30 @@ export default function MainChatComponent() {
 
                     // 각 시트의 데이터 확인
                     const newSheets = result.sheets.map(sheet => {
-                        console.log(`시트 처리: ${sheet.sheetName}, rawData 행: ${sheet.rawData.length}`);
+                        const firstRowCols = sheet.rawData?.[0]?.length || 0;
+                        const maxCols = Math.max(0, ...sheet.rawData.map(row => (row || []).length));
+                        console.log(`📋 시트 처리: ${sheet.sheetName}`, {
+                            rawDataRows: sheet.rawData.length,
+                            firstRowCols,
+                            maxCols,
+                            hasDataBeyond34: maxCols > 34,
+                            sampleFirstRow: sheet.rawData?.[0]?.slice(0, 5),
+                            sampleColumnsAroundCol34: sheet.rawData?.[0]?.slice(32, 37) // 33-37열 샘플
+                        });
 
                         return {
                             sheetName: sheet.sheetName,
                             rawData: sheet.rawData,
                             metadata: {
                                 rowCount: sheet.rawData.length,
-                                columnCount: sheet.rawData[0]?.length || 0,
+                                columnCount: maxCols, // firstRowCols 대신 maxCols 사용
                                 dataRange: {
                                     startRow: sheet.metadata?.dataRange?.startRow || 0,
                                     endRow: sheet.metadata?.dataRange?.endRow || sheet.rawData.length -1,
                                     startCol: sheet.metadata?.dataRange?.startCol || 0,
-                                    endCol: sheet.metadata?.dataRange?.endCol || (sheet.rawData[0]?.length || 1) - 1,
+                                    endCol: sheet.metadata?.dataRange?.endCol || (maxCols || 1) - 1,
                                     startColLetter: sheet.metadata?.dataRange?.startColLetter || 'A',
-                                    endColLetter: sheet.metadata?.dataRange?.endColLetter || columnIndexToLetter((sheet.rawData[0]?.length || 1) - 1)
+                                    endColLetter: sheet.metadata?.dataRange?.endColLetter || columnIndexToLetter((maxCols || 1) - 1)
                                 },
                                 preserveOriginalStructure: true,
                                 lastModified: new Date()
@@ -354,24 +363,37 @@ export default function MainChatComponent() {
                     // xlsxData가 없는 경우 새로 생성
                     const xlsxData = {
                         fileName: result.fileName,
-                        sheets: result.sheets.map(sheet => ({
-                            sheetName: sheet.sheetName,
-                            rawData: sheet.rawData,
-                            metadata: {
-                                rowCount: sheet.rawData.length,
-                                columnCount: sheet.rawData[0]?.length || 0,
-                                dataRange: {
-                                    startRow: sheet.metadata?.dataRange?.startRow || 0,
-                                    endRow: sheet.metadata?.dataRange?.endRow || sheet.rawData.length - 1,
-                                    startCol: sheet.metadata?.dataRange?.startCol || 0,
-                                    endCol: sheet.metadata?.dataRange?.endCol || (sheet.rawData[0]?.length || 1) - 1,
-                                    startColLetter: sheet.metadata?.dataRange?.startColLetter || 'A',
-                                    endColLetter: sheet.metadata?.dataRange?.endColLetter || columnIndexToLetter((sheet.rawData[0]?.length || 1) - 1)
-                                },
-                                preserveOriginalStructure: true,
-                                lastModified: new Date()
-                            }
-                        })),
+                        sheets: result.sheets.map(sheet => {
+                            const firstRowCols = sheet.rawData?.[0]?.length || 0;
+                            const maxCols = Math.max(0, ...sheet.rawData.map(row => (row || []).length));
+                            console.log(`📋 새 파일 시트 처리: ${sheet.sheetName}`, {
+                                rawDataRows: sheet.rawData.length,
+                                firstRowCols,
+                                maxCols,
+                                hasDataBeyond34: maxCols > 34,
+                                sampleFirstRow: sheet.rawData?.[0]?.slice(0, 5),
+                                sampleColumnsAroundCol34: sheet.rawData?.[0]?.slice(32, 37) // 33-37열 샘플
+                            });
+
+                            return {
+                                sheetName: sheet.sheetName,
+                                rawData: sheet.rawData,
+                                metadata: {
+                                    rowCount: sheet.rawData.length,
+                                    columnCount: maxCols, // firstRowCols 대신 maxCols 사용
+                                    dataRange: {
+                                        startRow: sheet.metadata?.dataRange?.startRow || 0,
+                                        endRow: sheet.metadata?.dataRange?.endRow || sheet.rawData.length - 1,
+                                        startCol: sheet.metadata?.dataRange?.startCol || 0,
+                                        endCol: sheet.metadata?.dataRange?.endCol || (maxCols || 1) - 1,
+                                        startColLetter: sheet.metadata?.dataRange?.startColLetter || 'A',
+                                        endColLetter: sheet.metadata?.dataRange?.endColLetter || columnIndexToLetter((maxCols || 1) - 1)
+                                    },
+                                    preserveOriginalStructure: true,
+                                    lastModified: new Date()
+                                }
+                            };
+                        }),
                         activeSheetIndex: 0
                     };
 
@@ -1081,7 +1103,7 @@ export default function MainChatComponent() {
         const chatType = response.chatType as string;
         if (chatType === 'artifact' || chatType === 'visualization-chat') {
             await handleArtifactResponse(response);
-        } else if (chatType === 'function') {
+        } else if (chatType === 'function' || chatType === 'function-chat') {
             await handleFunctionResponse(response);
         } else if (chatType === 'datafix') {
             await handleDataFixResponse(response);
@@ -1186,15 +1208,26 @@ export default function MainChatComponent() {
     const handleFunctionResponse = async (response: OrchestratorChatResponseDto) => {
         console.log('⚡ 함수 응답 처리 시작:', response);
         
-        if (response.functionDetails) {
-            const messageContent = response.message || 
+        // 중첩된 데이터 구조 처리: response.data.functionDetails 또는 response.functionDetails
+        const functionDetails = response.functionDetails || (response as any).data?.functionDetails;
+        const explanation = response.message || (response as any).data?.explanation;
+        
+        console.log('🔧 추출된 함수 데이터:', {
+            hasFunctionDetails: !!functionDetails,
+            explanation,
+            functionType: functionDetails?.functionType,
+            targetCell: functionDetails?.targetCell
+        });
+        
+        if (functionDetails) {
+            const messageContent = explanation || 
                 `함수가 실행되었습니다.\n\n` +
-                `• 함수 타입: ${response.functionDetails.functionType}\n` +
-                `• 대상 셀: ${response.functionDetails.targetCell}\n` +
-                `• 수식: ${response.functionDetails.formula}\n` +
-                `• 결과: ${Array.isArray(response.functionDetails.result) ? 
-                    `${response.functionDetails.result.length}개 행의 데이터` : 
-                    response.functionDetails.result}`;
+                `• 함수 타입: ${functionDetails.functionType}\n` +
+                `• 대상 셀: ${functionDetails.targetCell}\n` +
+                `• 수식: ${functionDetails.formula}\n` +
+                `• 결과: ${Array.isArray(functionDetails.result) ? 
+                    `${functionDetails.result.length}개 행의 데이터` : 
+                    functionDetails.result}`;
 
             const assistantMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
@@ -1202,26 +1235,32 @@ export default function MainChatComponent() {
                 content: messageContent,
                 timestamp: new Date(),
                 functionData: {
-                    functionDetails: response.functionDetails,
+                    functionDetails: functionDetails,
                     isApplied: false
                 },
                 mode: 'function'
             } as any;
 
-            console.log('✅ 함수 메시지 추가:', assistantMessage);
+            console.log('✅ 함수 메시지 추가:', {
+                messageId: assistantMessage.id,
+                functionType: functionDetails.functionType,
+                targetCell: functionDetails.targetCell,
+                result: functionDetails.result
+            });
             addMessageToSheet(activeSheetIndex, assistantMessage);
         } else {
             console.warn('⚠️ 함수 응답에 functionDetails가 없습니다.');
+            console.warn('전체 응답 구조:', JSON.stringify(response, null, 2));
+            
             // functionDetails가 없어도 메시지가 있으면 표시
-            if (response.message) {
-                const assistantMessage: ChatMessage = {
-                    id: (Date.now() + 1).toString(),
-                    type: 'Extion ai',
-                    content: response.message,
-                    timestamp: new Date()
-                };
-                addMessageToSheet(activeSheetIndex, assistantMessage);
-            }
+            const fallbackMessage = explanation || response.message || '함수 실행 요청을 처리했습니다.';
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: fallbackMessage,
+                timestamp: new Date()
+            };
+            addMessageToSheet(activeSheetIndex, assistantMessage);
         }
     };
 

@@ -13,37 +13,52 @@ interface HotSettingsProps {
 }
 
 const getSizingSettings = (activeSheetData: SheetData | null) => {
-  const minRows = 100;
-  const minCols = 26;
+  console.log('📏 getSizingSettings 호출:', {
+    hasActiveSheetData: !!activeSheetData,
+    hasRawData: !!(activeSheetData?.rawData),
+    rawDataLength: activeSheetData?.rawData?.length || 0,
+    firstRowLength: activeSheetData?.rawData?.[0]?.length || 0
+  });
 
-  if (!activeSheetData) {
+  // 동적으로 데이터 크기에 맞춰 설정
+  if (activeSheetData?.rawData && activeSheetData.rawData.length > 0) {
+    const rawRows = activeSheetData.rawData.length;
+    const rawCols = Math.max(0, ...activeSheetData.rawData.map(row => (row || []).length));
+    
+    // 데이터보다 충분한 여백 제공
+    const calculatedRows = Math.max(100, rawRows + 50);
+    const calculatedCols = Math.max(26, rawCols + 10);
+    
+    console.log('📏 동적 크기 계산:', {
+      rawRows,
+      rawCols,
+      calculatedRows,
+      calculatedCols
+    });
+    
     return {
-      minRows,
-      minCols,
-      startRows: minRows,
-      startCols: minCols,
+      minRows: calculatedRows,
+      minCols: calculatedCols,
+      startRows: calculatedRows,
+      startCols: calculatedCols,
       maxRows: 10000,
       maxCols: 1000,
-      minSpareRows: 10,
-      minSpareCols: 5
+      minSpareRows: 50,
+      minSpareCols: 10
     };
   }
-
-  const rawRows = activeSheetData.rawData?.length || 0;
-  const rawCols = activeSheetData.rawData?.[0]?.length || 0;
-
-  const calculatedRows = Math.max(minRows, rawRows + 50);
-  const calculatedCols = Math.max(minCols, rawCols + 10);
-
+  
+  // 기본값 (데이터가 없을 때)
+  console.log('📏 기본 크기 설정 사용');
   return {
-    minRows: calculatedRows,
-    minCols: calculatedCols,
-    startRows: calculatedRows,
-    startCols: calculatedCols,
+    minRows: 100,
+    minCols: 26,
+    startRows: 100,
+    startCols: 26,
     maxRows: 10000,
     maxCols: 1000,
-    minSpareRows: 10,
-    minSpareCols: 5
+    minSpareRows: 50,
+    minSpareCols: 10
   };
 };
 
@@ -103,7 +118,7 @@ export const getHotTableSettings = ({
     // ===== 기본 기능들 =====
     readOnly: false,
     fillHandle: true,
-    stretchH: "all",
+    stretchH: "none", // "all"에서 "none"으로 변경하여 열 너비 제한 해제
 
     // 행/열 관리
     allowInsertRow: true,
@@ -175,8 +190,8 @@ export const getHotTableSettings = ({
     // 워드 랩 비활성화 (성능 향상)
     wordWrap: false,
 
-    // 오버플로우 방지
-    preventOverflow: 'horizontal',
+    // 오버플로우 방지 제거 (모든 열을 표시하기 위해)
+    // preventOverflow: 'horizontal', // 주석 처리하여 수평 스크롤 허용
 
     // ===== 라이센스 =====
     licenseKey: "non-commercial-and-evaluation",
