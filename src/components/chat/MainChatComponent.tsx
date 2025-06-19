@@ -25,7 +25,7 @@ declare global {
 }
 
 // 채팅 모드 타입 정의 (통합 API 응답과 일치)
-type ChatMode = 'normal' | 'artifact' | 'datafix' | 'function';
+type ChatMode = 'normal' | 'artifact' | 'datafix' | 'dataedit' | 'data-edit' | 'edit-chat' | 'function' | 'datageneration';
 
 // 로딩 힌트 메시지 배열
 const loadingHints = [
@@ -1074,7 +1074,7 @@ export default function MainChatComponent() {
 
         // 채팅 타입에 따라 currentMode 설정
         if (response.chatType) {
-            setCurrentMode(response.chatType as any);
+            setCurrentMode(response.chatType as ChatMode);
         }
 
         // 채팅 타입별 처리 (orchestrator의 다양한 응답 타입 지원)
@@ -1085,6 +1085,8 @@ export default function MainChatComponent() {
             await handleFunctionResponse(response);
         } else if (chatType === 'datafix') {
             await handleDataFixResponse(response);
+        } else if (chatType === 'dataedit' || chatType === 'data-edit' || chatType === 'edit-chat') {
+            await handleDataEditResponse(response);
         } else if (chatType === 'datageneration') {
             await handleDataGenerationResponse(response);
         } else if (chatType === 'normal' || chatType === 'general-chat') {
@@ -1094,6 +1096,7 @@ export default function MainChatComponent() {
         } else {
             // 기타 타입들은 일반 응답으로 처리
             console.log('💬 알 수 없는 타입을 일반 채팅으로 처리:', chatType);
+            console.log('💬 전체 응답 구조:', JSON.stringify(response, null, 2));
             await handleNormalResponse(response);
         }
     };
@@ -1271,6 +1274,80 @@ export default function MainChatComponent() {
         }
     };
 
+    // 데이터 편집 응답 처리 (datafix와 유사하게 처리)
+    const handleDataEditResponse = async (response: OrchestratorChatResponseDto) => {
+        console.log('📝 데이터 편집 응답 처리 시작:', response);
+        
+        // 중첩된 데이터 구조 처리: response.data.editedData 또는 response.editedData
+        const editedData = response.editedData || (response as any).data?.editedData;
+        const sheetIndex = response.sheetIndex !== undefined ? response.sheetIndex : (response as any).data?.sheetIndex;
+        const changes = response.changes || (response as any).data?.changes;
+        const explanation = response.message || (response as any).data?.explanation;
+        
+        console.log('📊 추출된 데이터:', {
+            hasEditedData: !!editedData,
+            sheetIndex,
+            hasChanges: !!changes,
+            explanation
+        });
+        
+        if (editedData) {
+            const targetSheetIndex = sheetIndex !== undefined ? sheetIndex : activeSheetIndex;
+            
+            // 변경 사항 설명 생성
+            let changesDescription = '';
+            if (changes) {
+                changesDescription = `\n\n변경 내용:\n• 유형: ${changes.type}\n• 세부사항: ${changes.details}`;
+            }
+            
+            // 편집된 데이터에서 headers 제외하고 data만 사용
+            const dataToProcess = editedData.data || editedData;
+            
+            const messageContent = (explanation || '데이터 편집을 제안합니다.') + changesDescription +
+                `\n\n편집된 시트: ${editedData.sheetName}\n` +
+                `편집된 행 수: ${dataToProcess.length}개\n` +
+                `열 수: ${dataToProcess[0]?.length || 0}개`;
+
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: messageContent,
+                timestamp: new Date(),
+                dataFixData: {
+                    editedData: {
+                        sheetName: editedData.sheetName,
+                        data: dataToProcess // headers를 제외한 실제 데이터만 전달
+                    },
+                    sheetIndex: targetSheetIndex,
+                    changes: changes,
+                    isApplied: false
+                },
+                mode: 'datafix' // datafix 모드로 설정하여 기존 UI 재사용
+            };
+
+            console.log('✅ 데이터 편집 메시지 추가:', {
+                messageId: assistantMessage.id,
+                sheetName: editedData.sheetName,
+                dataRows: dataToProcess.length,
+                targetSheetIndex
+            });
+            addMessageToSheet(activeSheetIndex, assistantMessage);
+        } else {
+            console.warn('⚠️ 데이터 편집 응답에 editedData가 없습니다.');
+            console.warn('전체 응답 구조:', JSON.stringify(response, null, 2));
+            
+            // editedData가 없어도 메시지가 있으면 표시
+            const fallbackMessage = explanation || response.message || '데이터 편집 요청을 처리했습니다.';
+            const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'Extion ai',
+                content: fallbackMessage,
+                timestamp: new Date()
+            };
+            addMessageToSheet(activeSheetIndex, assistantMessage);
+        }
+    };
+
     // 데이터 생성 응답 처리
     const handleDataGenerationResponse = async (response: OrchestratorChatResponseDto) => {
         console.log('📊 데이터 생성 응답 처리 시작:', response);
@@ -1329,35 +1406,57 @@ export default function MainChatComponent() {
         // orchestrator의 다양한 응답 구조 지원
         let messageContent = '';
         
-        // 직접 message 필드가 있는 경우
-        if (response.message) {
+        // 1. 직접 message 필드가 있는 경우
+        if (response.message && typeof response.message === 'string') {
             messageContent = response.message;
             console.log('📍 response.message에서 메시지 추출');
         }
-        // data.message가 있는 경우 (orchestrator의 새로운 구조)
+        // 2. explanation.korean이 있는 경우 (일부 응답에서 사용)
+        else if (response.explanation && typeof response.explanation === 'object' && (response.explanation as any).korean) {
+            messageContent = (response.explanation as any).korean;
+            console.log('📍 response.explanation.korean에서 메시지 추출');
+        }
+        // 3. data.message가 있는 경우 (orchestrator의 새로운 구조)
         else if ((response as any).data?.message) {
             messageContent = (response as any).data.message;
             console.log('📍 response.data.message에서 메시지 추출');
         }
-        // data.content가 있는 경우
+        // 4. data.content가 있는 경우
         else if ((response as any).data?.content) {
             messageContent = (response as any).data.content;
             console.log('📍 response.data.content에서 메시지 추출');
         }
-        // 백엔드 응답에서 직접 content를 찾는 경우
+        // 5. 백엔드 응답에서 직접 content를 찾는 경우
         else if ((response as any).content) {
             messageContent = (response as any).content;
             console.log('📍 response.content에서 메시지 추출');
         }
-        // 기본 메시지
+        // 6. title만 있는 경우
+        else if (response.title) {
+            messageContent = response.title;
+            console.log('📍 response.title에서 메시지 추출');
+        }
+        // 7. 오류 메시지가 있는 경우
+        else if (response.error) {
+            messageContent = `오류가 발생했습니다: ${response.error}`;
+            console.log('📍 response.error에서 메시지 추출');
+        }
+        // 8. 성공 상태이지만 메시지가 없는 경우
+        else if (response.success) {
+            messageContent = '요청이 성공적으로 처리되었습니다.';
+            console.log('📍 기본 성공 메시지 사용');
+        }
+        // 9. 기본 메시지
         else {
-            messageContent = '응답을 받았습니다.';
-            console.log('📍 기본 메시지 사용');
+            console.warn('⚠️ 응답에서 메시지를 찾을 수 없어 기본 메시지 사용');
+            console.warn('전체 응답 구조:', JSON.stringify(response, null, 2));
+            messageContent = '응답을 받았지만 내용을 표시할 수 없습니다.';
         }
         
         console.log('📝 추출된 메시지 길이:', messageContent.length);
         console.log('📝 추출된 메시지 미리보기:', messageContent.substring(0, 100) + (messageContent.length > 100 ? '...' : ''));
         
+        // 최종 검증
         if (!messageContent || messageContent.trim() === '') {
             console.error('❌ 메시지 내용이 비어있습니다. 전체 응답:', JSON.stringify(response, null, 2));
             messageContent = '응답을 받았지만 내용을 표시할 수 없습니다.';
@@ -1374,7 +1473,8 @@ export default function MainChatComponent() {
             id: assistantMessage.id,
             contentLength: messageContent.length,
             chatType: response.chatType,
-            hasContent: !!messageContent
+            hasContent: !!messageContent,
+            responseKeys: Object.keys(response)
         });
         
         addMessageToSheet(activeSheetIndex, assistantMessage);
