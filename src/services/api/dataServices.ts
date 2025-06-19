@@ -1,6 +1,6 @@
 // API 서비스 모듈 - Firebase 연동 버전
 import { validateExtendedSheetContext } from '../../utils/chatUtils';
-import { useAuthStore } from '@/stores/authStore';
+// import { useAuthStore } from '@/stores/authStore'; // 선택적 import로 변경
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -12,6 +12,66 @@ export interface FirebaseUser {
   displayName: string | null;
   photoURL: string | null;
 }
+
+// === 게스트 사용자 관련 유틸리티 추가 ===
+
+// 게스트 사용자 ID 생성 함수
+const generateGuestUserId = (): string => {
+    // 브라우저의 fingerprint 기반으로 일관된 ID 생성
+    const fingerprint = [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + 'x' + screen.height,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        new Date().getTimezoneOffset().toString()
+    ].join('|');
+    
+    // 간단한 해시 함수 (실제로는 더 복잡한 해시를 사용할 수 있음)
+    let hash = 0;
+    for (let i = 0; i < fingerprint.length; i++) {
+        const char = fingerprint.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // 32bit 정수로 변환
+    }
+    
+    return `guest_${Math.abs(hash)}_${Date.now()}`;
+};
+
+// 현재 사용자 ID 가져오기 (로그인/게스트 모두 지원)
+export const getCurrentUserId = (): string => {
+    try {
+        // 먼저 로그인된 사용자 확인 (authStore가 사용 가능한 경우)
+        if (typeof window !== 'undefined') {
+            // authStore 동적 import 시도
+            try {
+                const { useAuthStore } = require('@/stores/authStore');
+                const { user } = useAuthStore.getState();
+                if (user?.uid) {
+                    return user.uid;
+                }
+            } catch (error) {
+                console.log('authStore를 사용할 수 없습니다. 게스트 모드로 진행합니다.');
+            }
+            
+            // 로컬 스토리지에서 기존 게스트 ID 확인
+            const existingGuestId = localStorage.getItem('guest_user_id');
+            if (existingGuestId) {
+                return existingGuestId;
+            }
+            
+            // 새 게스트 ID 생성 및 저장
+            const guestId = generateGuestUserId();
+            localStorage.setItem('guest_user_id', guestId);
+            return guestId;
+        }
+        
+        // 서버 사이드에서는 임시 ID 반환
+        return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    } catch (error) {
+        console.warn('사용자 ID 생성 실패, 기본 게스트 ID 사용:', error);
+        return `guest_default_${Date.now()}`;
+    }
+};
 
 // === 백엔드 명세서에 맞는 새로운 인터페이스 정의 ===
 
@@ -175,13 +235,17 @@ export interface DataFixResponse {
     spreadsheetMetadata?: SpreadsheetMetadata;
 }
 
-// === Firebase 사용자 정보 가져오기 유틸리티 ===
+// === Firebase 사용자 정보 가져오기 유틸리티 (수정) ===
 export const getCurrentUser = (): FirebaseUser | null => {
-    // Firebase Auth에서 현재 사용자 정보 가져오기
-    // 이 부분은 Firebase Auth 설정에 따라 달라질 수 있음
+    // Firebase Auth에서 현재 사용자 정보 가져오기 (선택적)
     if (typeof window !== 'undefined') {
-        const user = localStorage.getItem('firebase_user');
-        return user ? JSON.parse(user) : null;
+        try {
+            const user = localStorage.getItem('firebase_user');
+            return user ? JSON.parse(user) : null;
+        } catch (error) {
+            console.log('Firebase 사용자 정보를 가져올 수 없습니다:', error);
+            return null;
+        }
     }
     return null;
 };
@@ -315,7 +379,7 @@ const detectUserTimezone = (): string => {
 };
 
 // ======================================
-// 🚀 **권장 API**: 통합 오케스트레이터 채팅 API
+// 🚀 **권장 API**: 통합 오케스트레이터 채팅 API (수정)
 // ======================================
 // 이 API는 모든 채팅 타입(normal, artifact, datafix, function, datageneration)을 
 // 자동으로 판단하여 처리하는 통합 엔드포인트입니다.
@@ -332,17 +396,23 @@ export const callOrchestratorChatAPI = async (
         countryCode?: string;
         language?: string;
         timezone?: string;
+        userId?: string; // 외부에서 userId 전달 가능
     }
 ): Promise<OrchestratorChatResponseDto> => {
     try {
-        const { user: currentUser, loading: authLoading } = useAuthStore.getState();
+        // 사용자 ID 가져오기 (로그인/게스트 모두 지원)
+        let currentUserId: string;
         
-        if (authLoading) {
-            console.warn('Auth state is still loading. API call might fail if user is not yet available.');
+        if (options?.userId) {
+            // 외부에서 userId가 제공된 경우 사용
+            currentUserId = options.userId;
+        } else {
+            // 자동으로 사용자 ID 가져오기 (로그인 또는 게스트)
+            currentUserId = getCurrentUserId();
         }
 
-        if (!currentUser) {
-            throw new Error('로그인이 필요합니다.');
+        if (!currentUserId) {
+            throw new Error('사용자 ID를 생성할 수 없습니다.');
         }
 
         if (!options?.chatId) {
@@ -394,7 +464,7 @@ export const callOrchestratorChatAPI = async (
         const requestBody: OrchestratorChatRequestDto = {
             message: message,
             chatId: options.chatId,
-            userId: currentUser.uid,
+            userId: currentUserId, // 수정된 부분
             countryCode: countryCode,
             language: language,
             timezone: timezone,
@@ -405,7 +475,7 @@ export const callOrchestratorChatAPI = async (
 
         console.log('==================== Orchestrator Chat API 요청 데이터 시작 ====================');
         console.log(`메시지: ${requestBody.message}`);
-        console.log(`사용자 ID: ${requestBody.userId}`);
+        console.log(`사용자 ID: ${requestBody.userId} (${currentUserId.startsWith('guest_') ? '게스트' : '로그인'})`);
         console.log(`채팅 ID: ${requestBody.chatId}`);
         console.log(`시트 ID: ${requestBody.sheetId || '없음'}`);
         console.log(`국가 코드: ${requestBody.countryCode}`);
@@ -531,7 +601,7 @@ export interface AutoSaveStatusResponse {
     };
 }
 
-// === 자동저장 큐에 추가 ===
+// === 자동저장 큐에 추가 (수정) ===
 export const queueAutoSave = async (data: AutoSaveSpreadsheetDto): Promise<AutoSaveResponse> => {
     try {
         console.log('==================== Auto Save Queue API 요청 시작 ====================');
@@ -569,7 +639,7 @@ export const queueAutoSave = async (data: AutoSaveSpreadsheetDto): Promise<AutoS
     }
 };
 
-// === 자동저장 상태 확인 ===
+// === 자동저장 상태 확인 (수정) ===
 export const getAutoSaveStatus = async (userId: string, spreadsheetId: string): Promise<AutoSaveStatusResponse> => {
     try {
         console.log('==================== Auto Save Status API 요청 시작 ====================');
@@ -604,7 +674,7 @@ export const getAutoSaveStatus = async (userId: string, spreadsheetId: string): 
     }
 };
 
-// === 강제 자동저장 실행 ===
+// === 강제 자동저장 실행 (수정) ===
 export const forceAutoSave = async (userId: string, spreadsheetId: string): Promise<AutoSaveResponse> => {
     try {
         console.log('==================== Force Auto Save API 요청 시작 ====================');
@@ -640,7 +710,7 @@ export const forceAutoSave = async (userId: string, spreadsheetId: string): Prom
     }
 };
 
-// === 스프레드시트 저장 API 호출 - Firebase 연동 버전 ===
+// === 스프레드시트 저장 API 호출 - Firebase 연동 버전 (수정) ===
 export const saveSpreadsheetToFirebase = async (
     parsedData: {
         fileName: string;
@@ -664,12 +734,17 @@ export const saveSpreadsheetToFirebase = async (
     error?: string;
 }> => {
     try {
-        const { user: currentUser } = useAuthStore.getState();
+        // 사용자 ID 결정 (옵션에서 제공되거나 자동 생성)
+        let userId: string;
         
-        const userId = options?.userId || currentUser?.uid;
+        if (options?.userId) {
+            userId = options.userId;
+        } else {
+            userId = getCurrentUserId();
+        }
 
         if (!userId) {
-            throw new Error('사용자 ID가 없어 스프레드시트를 저장할 수 없습니다. 로그인이 필요합니다.');
+            throw new Error('사용자 ID를 생성할 수 없습니다.');
         }
 
         const requestBody = {
@@ -692,6 +767,7 @@ export const saveSpreadsheetToFirebase = async (
         };
 
         console.log('Save Spreadsheet Request Body:', JSON.stringify(requestBody, null, 2));
+        console.log(`사용자 타입: ${userId.startsWith('guest_') ? '게스트' : '로그인'}`);
 
         const response = await fetch(`${API_BASE_URL}/spreadsheet/data/save`, {
             method: 'POST',
@@ -721,9 +797,115 @@ export const saveSpreadsheetToFirebase = async (
     }
 };
 
-// // ======================================
-// // ⚠️ **DEPRECATED APIs**: 레거시 호환성을 위한 Wrapper 함수들
-// // ======================================
-// // 아래 함수들은 더 이상 권장되지 않습니다. 
-// // 새로운 개발에서는 위의 callOrchestratorChatAPI를 사용하세요.
-// // 이 함수들은 내부적으로 orchestrator API를 호출합니다.
+// === 델타 자동저장 API 추가 ===
+
+// 델타 자동저장 DTO 인터페이스
+export interface DeltaAutoSaveDto {
+    userId: string;
+    spreadsheetId: string;
+    cellChanges?: Array<{
+        sheetIndex: number;
+        row: number;
+        col: number;
+        value: any;
+        oldValue?: any;
+    }>;
+    metaChanges?: Array<{
+        sheetIndex: number;
+        name?: string;
+        activeSheetIndex?: number;
+    }>;
+    newSheets?: any[];
+    deletedSheets?: number[];
+}
+
+// 델타 자동저장 응답 인터페이스
+export interface DeltaAutoSaveResponse {
+    success: boolean;
+    message: string;
+    data: {
+        queuedAt?: string;
+        changesBreakdown?: {
+            cellChanges: number;
+            metaChanges: number;
+            newSheets: number;
+            deletedSheets: number;
+        };
+    };
+}
+
+// === 델타 자동저장 큐에 추가 ===
+export const queueDeltaAutoSave = async (
+    deltaData: Omit<DeltaAutoSaveDto, 'userId'>,
+    userId?: string
+): Promise<DeltaAutoSaveResponse> => {
+    try {
+        // 사용자 ID 결정
+        const finalUserId = userId || getCurrentUserId();
+        
+        if (!finalUserId) {
+            throw new Error('사용자 ID를 생성할 수 없습니다.');
+        }
+
+        const requestBody: DeltaAutoSaveDto = {
+            ...deltaData,
+            userId: finalUserId
+        };
+
+        const totalChanges = (deltaData.cellChanges?.length ?? 0) + 
+                           (deltaData.metaChanges?.length ?? 0) + 
+                           (deltaData.newSheets?.length ?? 0) + 
+                           (deltaData.deletedSheets?.length ?? 0);
+
+        console.log('==================== Delta Auto Save API 요청 시작 ====================');
+        console.log(`사용자 ID: ${finalUserId} (${finalUserId.startsWith('guest_') ? '게스트' : '로그인'})`);
+        console.log(`스프레드시트 ID: ${deltaData.spreadsheetId}`);
+        console.log(`총 변경사항: ${totalChanges}개`);
+        console.log(`- 셀 변경: ${deltaData.cellChanges?.length ?? 0}개`);
+        console.log(`- 메타 변경: ${deltaData.metaChanges?.length ?? 0}개`);
+        console.log(`- 새 시트: ${deltaData.newSheets?.length ?? 0}개`);
+        console.log(`- 삭제된 시트: ${deltaData.deletedSheets?.length ?? 0}개`);
+
+        const response = await fetch(`${API_BASE_URL}/spreadsheet/auto-save/delta`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Delta Auto Save API 오류:', {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText
+            });
+            throw new Error(`API 오류: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log('Delta Auto Save API 응답:', result);
+        console.log('==================== Delta Auto Save API 완료 ====================');
+        
+        return result;
+    } catch (error) {
+        console.error('Delta Auto Save API 호출 오류:', error);
+        throw error;
+    }
+};
+
+// === 유틸리티 함수: 게스트 사용자 정리 ===
+// 로컬 스토리지의 게스트 사용자 데이터 정리 (선택적)
+export const clearGuestUserData = (): void => {
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem('guest_user_id');
+        console.log('게스트 사용자 데이터가 정리되었습니다.');
+    }
+};
+
+// 현재 사용자가 게스트인지 확인
+export const isGuestUser = (userId?: string): boolean => {
+    const id = userId || getCurrentUserId();
+    return id.startsWith('guest_') || id.startsWith('temp_');
+};
