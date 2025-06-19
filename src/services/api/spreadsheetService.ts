@@ -63,7 +63,7 @@ export interface AutoSaveStatusDto {
   spreadsheetId: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 /**
  * 스프레드시트 데이터 로드
