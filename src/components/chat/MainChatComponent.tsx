@@ -4,7 +4,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
 import { useUnifiedStore, ChatMessage } from '@/stores';
 import { detectAndDecode } from '../../utils/chatUtils';
-import { callOrchestratorChatAPI, OrchestratorChatResponseDto, FunctionDetails } from '../../services/api/dataServices';
+import { callOrchestratorChatAPI, OrchestratorChatResponseDto, FunctionDetails, getCurrentUserId } from '../../services/api/dataServices';
 import { processXLSXFile } from '../../utils/fileProcessing';
 import { saveSpreadsheet, convertSpreadsheetDataToXLSXData, SpreadsheetData } from '@/services/api/spreadsheetService';
 import { updateChatTitle as originalUpdateChatTitle } from '@/services/api/chatService';
@@ -301,7 +301,7 @@ export default function MainChatComponent() {
                     // 새 API로 스프레드시트 저장
                     try {
                         const saveResult = await saveSpreadsheet({
-                            userId: auth.currentUser?.uid || '',
+                            userId: getCurrentUserId(),
                             chatId: getCurrentFirebaseChatId() || undefined,
                             fileName: newXlsxData.fileName,
                             originalFileName: file.name,
@@ -632,7 +632,7 @@ export default function MainChatComponent() {
                                 (async () => {
                                     try {
                                         const saveResult = await saveSpreadsheet({
-                                            userId: auth.currentUser?.uid || '',
+                                            userId: getCurrentUserId(),
                                             chatId: getCurrentFirebaseChatId() || undefined,
                                             fileName: xlsxData.fileName,
                                             originalFileName: file.name,
