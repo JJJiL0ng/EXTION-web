@@ -267,7 +267,7 @@ export interface OrchestratorChatRequestDto {
 // 오케스트레이터 채팅 응답 DTO
 export interface OrchestratorChatResponseDto {
     success: boolean;
-    chatType: 'normal' | 'artifact' | 'datafix' | 'dataedit' | 'data-edit' | 'edit-chat' | 'function' | 'function-chat' | 'datageneration' | 'general-chat' | 'visualization-chat' | null;
+    chatType: 'normal' | 'artifact' | 'datafix' | 'dataedit' | 'data-edit' | 'edit-chat' | 'function' | 'function-chat' | 'datageneration' | 'general-chat' | 'visualization-chat' | 'generate-chat' | null;
     
     // 일반 채팅 응답 필드들
     message?: string;
@@ -297,6 +297,20 @@ export interface OrchestratorChatResponseDto {
     aiMessageId?: string;
     timestamp?: string;
     spreadsheetMetadata?: SpreadsheetMetadata;
+    
+    // === SheetId 추가 ===
+    sheetId?: string; // 백엔드에서 반환하는 스프레드시트 ID (최상위 레벨)
+    
+    // === 데이터 필드 (백엔드 응답에서 data 객체로 감싸진 경우) ===
+    data?: {
+        editedData?: EditedDataDto;
+        sheetIndex?: number;
+        explanation?: string;
+        changeLog?: any[];
+        spreadsheetId?: string; // data 객체 내의 spreadsheetId
+        // 기타 data 필드들...
+        [key: string]: any;
+    };
 }
 
 // 국가별 시간대 매핑 (기본값)
@@ -397,6 +411,7 @@ export const callOrchestratorChatAPI = async (
         language?: string;
         timezone?: string;
         userId?: string; // 외부에서 userId 전달 가능
+        sheetId?: string; // 기존 sheetId 전달 가능
     }
 ): Promise<OrchestratorChatResponseDto> => {
     try {
@@ -460,6 +475,42 @@ export const callOrchestratorChatAPI = async (
         const language = options.language || COUNTRY_LANGUAGE_MAP[countryCode] || 'ko';
         const timezone = options.timezone || detectUserTimezone();
 
+        // SheetId 처리 - 우선순위: 옵션 > 로컬스토리지/상태관리 > 스프레드시트 데이터
+        let sheetIdToUse: string | undefined;
+        
+        console.log('🔍 SheetId 검색 시작...');
+        
+        if (options?.sheetId) {
+            // 1. 옵션으로 전달된 sheetId 우선 사용
+            sheetIdToUse = options.sheetId;
+            console.log(`✅ 옵션에서 sheetId 발견: ${sheetIdToUse}`);
+        } else {
+            // 2. 상태관리 저장소에서 가져오기 (동적 import로 안전하게)
+            try {
+                if (typeof window !== 'undefined') {
+                    const { useUnifiedStore } = require('@/stores');
+                    const { getCurrentSheetId } = useUnifiedStore.getState();
+                    const storeSheetId = getCurrentSheetId();
+                    if (storeSheetId) {
+                        sheetIdToUse = storeSheetId;
+                        console.log(`✅ 상태관리에서 sheetId 발견: ${sheetIdToUse}`);
+                    } else {
+                        console.log('❌ 상태관리에서 sheetId 없음');
+                    }
+                }
+            } catch (error) {
+                console.log('❌ 상태관리 저장소에서 sheetId를 가져올 수 없습니다:', error);
+            }
+            
+            // 3. 폴백: 스프레드시트 데이터에서 가져오기
+            if (!sheetIdToUse && analysisData?.spreadsheetId) {
+                sheetIdToUse = analysisData.spreadsheetId;
+                console.log(`✅ 스프레드시트 데이터에서 sheetId 발견: ${sheetIdToUse}`);
+            } else if (!sheetIdToUse) {
+                console.log('❌ 어디서도 sheetId를 찾을 수 없음');
+            }
+        }
+
         // 오케스트레이터 요청 DTO 구성
         const requestBody: OrchestratorChatRequestDto = {
             message: message,
@@ -469,8 +520,8 @@ export const callOrchestratorChatAPI = async (
             language: language,
             timezone: timezone,
             timestamp: new Date().toISOString(),
-            // sheetId는 스프레드시트 데이터가 있을 때만 포함
-            ...(analysisData?.spreadsheetId && { sheetId: analysisData.spreadsheetId })
+            // sheetId가 있으면 포함
+            ...(sheetIdToUse && { sheetId: sheetIdToUse })
         };
 
         console.log('==================== Orchestrator Chat API 요청 데이터 시작 ====================');
@@ -478,6 +529,9 @@ export const callOrchestratorChatAPI = async (
         console.log(`사용자 ID: ${requestBody.userId} (${currentUserId.startsWith('guest_') ? '게스트' : '로그인'})`);
         console.log(`채팅 ID: ${requestBody.chatId}`);
         console.log(`시트 ID: ${requestBody.sheetId || '없음'}`);
+        if (sheetIdToUse) {
+            console.log(`📍 사용된 SheetId 출처: ${options?.sheetId ? '옵션에서 전달' : '상태관리/스프레드시트 데이터'}`);
+        }
         console.log(`국가 코드: ${requestBody.countryCode}`);
         console.log(`언어: ${requestBody.language}`);
         console.log(`시간대: ${requestBody.timezone}`);
@@ -543,8 +597,34 @@ export const callOrchestratorChatAPI = async (
         if (result.functionDetails) {
             console.log(`함수 실행 - 타입: ${result.functionDetails.functionType}, 대상: ${result.functionDetails.targetCell}`);
         }
+        if (result.data?.spreadsheetId) {
+            console.log(`📝 Data 내 SpreadsheetId: ${result.data.spreadsheetId}`);
+        }
         console.log('전체 응답:', JSON.stringify(result, null, 2));
         console.log('==================== Orchestrator Chat API 응답 데이터 끝 ====================');
+        
+        // === 응답에서 sheetId가 있으면 상태관리에 저장 ===
+        // 여러 위치에서 spreadsheetId 확인: 최상위 sheetId, data.spreadsheetId 순서
+        const extractedSheetId = result.sheetId || result.data?.spreadsheetId;
+        
+        if (result.success && extractedSheetId) {
+            try {
+                if (typeof window !== 'undefined') {
+                    const { useUnifiedStore } = require('@/stores');
+                    const { setCurrentSheetId } = useUnifiedStore.getState();
+                    setCurrentSheetId(extractedSheetId);
+                    console.log(`📝 SheetId가 상태관리에 저장되었습니다: ${extractedSheetId}`);
+                    console.log(`📍 SheetId 출처: ${result.sheetId ? '최상위 sheetId' : 'data.spreadsheetId'}`);
+                }
+            } catch (error) {
+                console.warn('SheetId를 상태관리에 저장하는데 실패했습니다:', error);
+                // 실패해도 API 응답은 그대로 반환
+            }
+        } else if (result.success) {
+            console.log('⚠️ API 응답에서 SheetId를 찾을 수 없습니다');
+            console.log('- result.sheetId:', result.sheetId);
+            console.log('- result.data?.spreadsheetId:', result.data?.spreadsheetId);
+        }
         
         return result;
         

@@ -21,7 +21,7 @@ import { HandsontableStyles } from '@/config/handsontableStyles';
 import { useAutosave } from '@/hooks/useAutosave';
 import { AlertCircle, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import 'handsontable/languages/ko-KR'; // 한국어 언어팩 import
-
+import Link from 'next/link';
 
 
 import 'handsontable/styles/handsontable.css';
@@ -1376,7 +1376,7 @@ const MainSpreadSheet: React.FC = () => {
             <div className="flex items-center space-x-2">
               {/* 햄버거 버튼 주석처리 */}
 
-              <button
+              {/* <button
                 onClick={toggleSidebar}
                 className="flex items-center justify-center p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-200"
                 aria-label={isSidebarOpen ? "사이드바 닫기" : "사이드바 열기"}
@@ -1396,13 +1396,15 @@ const MainSpreadSheet: React.FC = () => {
                       }`}
                   />
                 </div>
-              </button>
+              </button> */}
 
 
               {/* EXTION 텍스트 로고 */}
-              <h1 className="text-xl font-bold text-gray-800" style={{ color: '#005DE9' }}>
-                EXTION
-              </h1>
+              <Link href="/ai" className="cursor-pointer">
+                <h1 className="text-xl font-bold text-gray-800" style={{ color: '#005DE9' }}>
+                  EXTION
+                </h1>
+              </Link>
             </div>
 
             {/* 선택된 셀 정보 표시 */}
