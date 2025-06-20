@@ -100,6 +100,7 @@ export interface ChatSession {
     lastAccessedAt: Date;
     currentSpreadsheetId: string | null;
     spreadsheetMetadata: SpreadsheetMetadata | null;
+    currentSheetId?: string | null; // 백엔드에서 받은 sheetId 저장
 }
 
 // 로딩 상태 타입

@@ -63,6 +63,11 @@ export interface ChatSlice {
     // === 스프레드시트 ID 액션 ===
     setCurrentSpreadsheetId: (spreadsheetId: string | null) => void;
 
+    // === SheetId 관리 액션 ===
+    currentSheetId: string | null;
+    setCurrentSheetId: (sheetId: string | null) => void;
+    getCurrentSheetId: () => string | null;
+
     // === 채팅 목록 새로고침 액션 ===
     refreshChatList: () => void;
 }
@@ -84,6 +89,7 @@ export const createChatSlice: StateCreator<
     activeSheetMessages: [],
     sheetChatIds: {},
     chatListRefreshTrigger: undefined,
+    currentSheetId: null,
     
     // === 채팅 세션 관리 액션 ===
     createNewChatSession: () => {
@@ -101,7 +107,8 @@ export const createChatSlice: StateCreator<
             createdAt: new Date(),
             lastAccessedAt: new Date(),
             currentSpreadsheetId: null,
-            spreadsheetMetadata: null
+            spreadsheetMetadata: null,
+            currentSheetId: null
         };
 
         set((state) => ({
@@ -120,7 +127,8 @@ export const createChatSlice: StateCreator<
             activeSheetMessages: [],
             sheetChatIds: {},
             currentSpreadsheetId: null,
-            spreadsheetMetadata: null
+            spreadsheetMetadata: null,
+            currentSheetId: null
         }));
 
         return newChatId;
@@ -162,7 +170,8 @@ export const createChatSlice: StateCreator<
             activeSheetMessages: session.activeSheetMessages,
             sheetChatIds: session.sheetChatIds,
             currentSpreadsheetId: session.currentSpreadsheetId,
-            spreadsheetMetadata: session.spreadsheetMetadata
+            spreadsheetMetadata: session.spreadsheetMetadata,
+            currentSheetId: session.currentSheetId
         }));
     },
 
@@ -232,7 +241,8 @@ export const createChatSlice: StateCreator<
                     sheetChatIds: {},
                     extendedSheetContext: null,
                     currentSpreadsheetId: null,
-                    spreadsheetMetadata: null
+                    spreadsheetMetadata: null,
+                    currentSheetId: null
                 };
             }
             
@@ -249,7 +259,8 @@ export const createChatSlice: StateCreator<
                     activeSheetMessages: targetSession.activeSheetMessages,
                     sheetChatIds: targetSession.sheetChatIds,
                     currentSpreadsheetId: targetSession.currentSpreadsheetId,
-                    spreadsheetMetadata: targetSession.spreadsheetMetadata
+                    spreadsheetMetadata: targetSession.spreadsheetMetadata,
+                    currentSheetId: targetSession.currentSheetId
                 };
             }
             
@@ -281,7 +292,8 @@ export const createChatSlice: StateCreator<
             createdAt: state.chatSessions[currentChatId]?.createdAt || new Date(),
             lastAccessedAt: new Date(),
             currentSpreadsheetId: state.currentSpreadsheetId,
-            spreadsheetMetadata: state.spreadsheetMetadata
+            spreadsheetMetadata: state.spreadsheetMetadata,
+            currentSheetId: state.currentSheetId // 백엔드에서 받은 sheetId 저장
         };
         
         set((prevState) => ({
@@ -535,6 +547,43 @@ export const createChatSlice: StateCreator<
         sheets.forEach((sheet: any, index: number) => {
             get().setChatIdForSheet(index, '');
         });
+    },
+
+    // === SheetId 관리 액션 ===
+    setCurrentSheetId: (sheetId) => {
+        set((state) => ({
+            ...state,
+            currentSheetId: sheetId
+        }));
+        
+        // 로컬 스토리지에도 저장
+        if (typeof window !== 'undefined') {
+            if (sheetId) {
+                localStorage.setItem('currentSheetId', sheetId);
+            } else {
+                localStorage.removeItem('currentSheetId');
+            }
+        }
+    },
+
+    getCurrentSheetId: () => {
+        const { currentSheetId } = get();
+        
+        // 메모리에 있으면 반환
+        if (currentSheetId) {
+            return currentSheetId;
+        }
+        
+        // 로컬 스토리지에서 가져오기
+        if (typeof window !== 'undefined') {
+            const storedSheetId = localStorage.getItem('currentSheetId');
+            if (storedSheetId) {
+                get().setCurrentSheetId(storedSheetId);
+                return storedSheetId;
+            }
+        }
+        
+        return null;
     },
 
     // === 채팅 목록 새로고침 액션 ===
