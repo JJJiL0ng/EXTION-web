@@ -31,10 +31,11 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * 미들웨어가 실행될 경로를 여기에 추가하세요
-     * 예: 대시보드, 프로필, API 경로 등
-     * 정적 파일들은 제외합니다
+     * 임시로 특정 경로만 활성화하여 딜레이 원인 확인
+     * 미들웨어가 딜레이 원인이라면 이렇게 변경 후 성능이 개선될 것입니다
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif|txt|xml|robots\\.txt|sitemap\\.xml)).*)',
+    // 미들웨어가 필요한 특정 경로만 활성화
+    // '/ai/:path*',  // AI 관련 경로만
+    // '/dashboard/:path*',  // 대시보드 관련 경로만
   ],
 };
