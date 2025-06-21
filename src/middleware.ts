@@ -24,6 +24,28 @@ export function middleware(request: NextRequest) {
   //   }
   // }
 
+  // /adminforpel!sers 경로에 대한 접근 제어
+  if (path.startsWith('/adminforpelisers')) {
+    // 간단한 예시로 쿠키 확인
+    const adminCookie = request.cookies.get('adminLoggedIn');
+    
+    if (!adminCookie || adminCookie.value !== 'true') {
+      // 로그인되지 않은 경우 어드민 게이트웨이로 리다이렉트
+      return NextResponse.redirect(new URL('/admingate', request.url));
+    }
+  }
+
+  // /admindashboard 경로에 대한 접근 제어
+  if (path.startsWith('/admindashboard')) {
+    // 어드민 로그인 쿠키 확인
+    const adminCookie = request.cookies.get('adminLoggedIn');
+    
+    if (!adminCookie || adminCookie.value !== 'true') {
+      // 로그인되지 않은 경우 어드민 게이트웨이로 리다이렉트
+      return NextResponse.redirect(new URL('/admingate', request.url));
+    }
+  }
+
   // 모든 페이지 접근 허용
   return NextResponse.next();
 }
@@ -37,5 +59,7 @@ export const config = {
     // 미들웨어가 필요한 특정 경로만 활성화
     // '/ai/:path*',  // AI 관련 경로만
     // '/dashboard/:path*',  // 대시보드 관련 경로만
+    '/adminforpelisers/:path*',
+    '/admindashboard/:path*'
   ],
 };
