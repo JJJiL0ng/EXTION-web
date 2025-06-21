@@ -3,10 +3,8 @@
 import React, { useState } from 'react';
 import { formatMessageDate } from '../../utils/chatUtils';
 import { ChatMessage } from '../../stores/store-types';
+import { ChatMode } from '@/types/chat';
 import { Loader2, ChevronDown, ChevronUp, BarChart3, Table, FileText, Sparkles, Wand2 } from 'lucide-react';
-
-// ChatMode 타입 정의
-type ChatMode = 'normal' | 'artifact' | 'datafix' | 'dataedit' | 'data-edit' | 'edit-chat' | 'function' | 'function-chat' | 'datageneration';
 
 // Message 인터페이스는 기존과의 호환성을 위해 유지
 export interface Message extends ChatMessage {}
