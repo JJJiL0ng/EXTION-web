@@ -241,6 +241,8 @@ const MainSpreadSheet: React.FC = () => {
           onSetPendingFormula={setPendingFormula}
           xlsxData={xlsxData}
           activeSheetData={activeSheetData}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={toggleSidebar}
         />
 
         {/* 시트 탭 바 */}

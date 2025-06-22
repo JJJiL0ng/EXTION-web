@@ -7,6 +7,7 @@ import { CellEditor } from '@/components/spreadsheet/CellEditor';
 import { SaveStatus } from '@/components/spreadsheet/SaveStatus';
 import { ExportControls } from '@/components/spreadsheet/ExportControls';
 import { SelectedCellInfo } from '@/types/spreadsheet';
+import HamburgerIcon from '@/components/icons/HamburgerIcon';
 
 interface TopControlPanelProps {
   selectedCellInfo: SelectedCellInfo | null;
@@ -23,6 +24,8 @@ interface TopControlPanelProps {
   onSetPendingFormula: (formula: any) => void;
   xlsxData: any;
   activeSheetData: any;
+  isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
 }
 
 export const TopControlPanel: React.FC<TopControlPanelProps> = ({
@@ -40,12 +43,19 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
   onSetPendingFormula,
   xlsxData,
   activeSheetData,
+  isSidebarOpen,
+  onToggleSidebar,
 }) => {
   return (
     <div className="example-controls-container bg-[#F9F9F7] border-b border-gray-200 p-2 shadow-sm flex-shrink-0 " style={{ position: 'relative', zIndex: 9000 }}>
       <div className="flex items-center justify-between space-x-2">
-        {/* 왼쪽: 로고 */}
+        {/* 왼쪽: 햄버거 버튼과 로고 */}
         <div className="flex items-center space-x-2">
+          <HamburgerIcon 
+            onClick={onToggleSidebar}
+            isOpen={isSidebarOpen}
+            className="flex-shrink-0"
+          />
           <Link href="/ai" className="cursor-pointer">
             <h1 className="text-xl font-bold text-gray-800" style={{ color: '#005DE9' }}>
               EXTION
