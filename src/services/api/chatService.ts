@@ -162,14 +162,14 @@ export const convertChatListItemToFirebaseChat = (item: ChatListItem) => {
  * 새 API 메시지를 기존 포맷으로 변환
  */
 export const convertApiMessageToChatMessage = (apiMessage: ChatMessage) => {
-  const role = apiMessage.role === 'assistant' ? 'Extion ai' as const : 'user' as const;
   return {
     id: apiMessage.id,
-    role: role,
+    type: (apiMessage.role === 'assistant' ? 'Extion ai' : 'user') as 'user' | 'Extion ai',
     content: apiMessage.content,
     timestamp: apiMessage.timestamp,
     metadata: apiMessage.metadata,
-    type: role, // role과 같은 값으로 설정
+    mode: 'normal' as const,
+    artifactData: undefined,
   };
 };
 

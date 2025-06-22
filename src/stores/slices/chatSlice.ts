@@ -2,6 +2,24 @@ import { StateCreator } from 'zustand';
 import { ChatMessage, ChatSession } from '../store-types';
 import { FirebaseChat } from '../../services/firebase/chatService';
 
+// 채팅 리스트 아이템 타입 (API에서 받는 데이터)
+export interface StoredChatListItem {
+    id: string;
+    title: string;
+    updatedAt: string; // ISO string으로 저장
+    createdAt: string; // ISO string으로 저장
+    sheetMetaDataId?: string;
+    spreadsheetData?: {
+        fileName: string;
+        totalSheets: number;
+    };
+    messageCount?: number;
+    lastMessage?: {
+        content: string;
+        timestamp: string; // ISO string으로 저장
+    };
+}
+
 // 채팅 슬라이스 상태
 export interface ChatSlice {
     // === 채팅 세션 관리 ===
@@ -12,6 +30,10 @@ export interface ChatSlice {
     
     // === 현재 채팅 메타데이터 ===
     currentChatMeta: Partial<FirebaseChat> | null;
+    
+    // === 채팅 리스트 캐시 ===
+    cachedChatList: StoredChatListItem[];
+    chatListLastUpdated: number | null;
     
     // === 시트별 채팅 메시지 ===
     sheetMessages: { [sheetIndex: number]: ChatMessage[] };
@@ -24,6 +46,13 @@ export interface ChatSlice {
     chatListRefreshTrigger?: number;
     
     // === 액션들 ===
+    // 채팅 리스트 관리
+    saveChatListToStorage: (chatList: any[]) => void;
+    loadChatListFromStorage: () => StoredChatListItem[];
+    getCachedChatList: () => StoredChatListItem[];
+    isChatListCacheValid: () => boolean;
+    clearChatListCache: () => void;
+    
     // 채팅 세션 관리
     createNewChatSession: () => string;
     switchToChatSession: (chatId: string) => void;
@@ -85,6 +114,8 @@ export const createChatSlice: StateCreator<
     currentSpreadsheetId: null,
     chatHistory: [],
     currentChatMeta: null,
+    cachedChatList: [],
+    chatListLastUpdated: null,
     sheetMessages: {},
     activeSheetMessages: [],
     sheetChatIds: {},
@@ -584,6 +615,96 @@ export const createChatSlice: StateCreator<
         }
         
         return null;
+    },
+
+    // === 채팅 리스트 관리 액션 ===
+    saveChatListToStorage: (chatList: any[]) => {
+        if (typeof window === 'undefined') return;
+        
+        try {
+            // API 응답을 StoredChatListItem 형태로 변환
+            const storedChatList: StoredChatListItem[] = chatList.map(chat => ({
+                id: chat.id,
+                title: chat.title,
+                updatedAt: chat.updatedAt instanceof Date ? chat.updatedAt.toISOString() : chat.updatedAt,
+                createdAt: chat.createdAt instanceof Date ? chat.createdAt.toISOString() : chat.createdAt,
+                sheetMetaDataId: chat.sheetMetaDataId,
+                spreadsheetData: chat.spreadsheetData,
+                messageCount: chat.messageCount,
+                lastMessage: chat.lastMessage ? {
+                    content: chat.lastMessage.content,
+                    timestamp: chat.lastMessage.timestamp instanceof Date 
+                        ? chat.lastMessage.timestamp.toISOString() 
+                        : chat.lastMessage.timestamp
+                } : undefined
+            }));
+
+            localStorage.setItem('cachedChatList', JSON.stringify(storedChatList));
+            localStorage.setItem('chatListLastUpdated', Date.now().toString());
+            
+            set({
+                cachedChatList: storedChatList,
+                chatListLastUpdated: Date.now()
+            });
+            
+            console.log('💾 채팅 리스트 로컬스토리지에 저장됨:', storedChatList.length, '개');
+        } catch (error) {
+            console.error('채팅 리스트 저장 오류:', error);
+        }
+    },
+
+    loadChatListFromStorage: () => {
+        if (typeof window === 'undefined') return [];
+        
+        try {
+            const stored = localStorage.getItem('cachedChatList');
+            const lastUpdated = localStorage.getItem('chatListLastUpdated');
+            
+            if (stored && lastUpdated) {
+                const chatList: StoredChatListItem[] = JSON.parse(stored);
+                const timestamp = parseInt(lastUpdated);
+                
+                set({
+                    cachedChatList: chatList,
+                    chatListLastUpdated: timestamp
+                });
+                
+                console.log('📋 로컬스토리지에서 채팅 리스트 로드됨:', chatList.length, '개');
+                return chatList;
+            }
+        } catch (error) {
+            console.error('채팅 리스트 로드 오류:', error);
+        }
+        
+        return [];
+    },
+
+    getCachedChatList: () => {
+        const { cachedChatList } = get();
+        return cachedChatList;
+    },
+
+    isChatListCacheValid: () => {
+        const { chatListLastUpdated } = get();
+        if (!chatListLastUpdated) return false;
+        
+        // 5분 이내의 캐시는 유효한 것으로 간주
+        const CACHE_DURATION = 5 * 60 * 1000; // 5분
+        return (Date.now() - chatListLastUpdated) < CACHE_DURATION;
+    },
+
+    clearChatListCache: () => {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('cachedChatList');
+            localStorage.removeItem('chatListLastUpdated');
+        }
+        
+        set({
+            cachedChatList: [],
+            chatListLastUpdated: null
+        });
+        
+        console.log('🗑️ 채팅 리스트 캐시 삭제됨');
     },
 
     // === 채팅 목록 새로고침 액션 ===
