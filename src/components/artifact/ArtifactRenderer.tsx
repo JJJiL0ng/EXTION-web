@@ -30,7 +30,7 @@ const createSafeExecutionContext = () => {
     YAxis: Recharts.YAxis,
     CartesianGrid: Recharts.CartesianGrid,
     Tooltip: Recharts.Tooltip,
-    Legend: Recharts.Legend,
+    Legend: Recharts.Legend,  
     Bar: Recharts.Bar,
     Line: Recharts.Line,
     Pie: Recharts.Pie,
@@ -198,7 +198,7 @@ function ArtifactRenderer() {
     artifactCode,
     loadingStates,
     errors,
-    currentSpreadsheetId,
+    currentSheetMetaDataId,
     currentChatId
   } = useUnifiedStore();
 
@@ -221,8 +221,8 @@ function ArtifactRenderer() {
 
   // 클라우드 채팅인지 확인
   const isCloudChat = useCallback(() => {
-    return !!(currentSpreadsheetId || currentChatId);
-  }, [currentSpreadsheetId, currentChatId]);
+    return !!(currentSheetMetaDataId || currentChatId);
+  }, [currentSheetMetaDataId, currentChatId]);
 
   const getDataSourceInfo = useCallback(() => {
     const isCloud = isCloudChat();

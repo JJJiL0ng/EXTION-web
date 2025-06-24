@@ -14,7 +14,7 @@ interface TopControlPanelProps {
   cellEditValue: string;
   isCellEditing: boolean;
   pendingFormula: any;
-  currentSpreadsheetId: string | null;
+  currentSheetMetaDataId: string | null;
   saveStatus: string;
   onCellEditChange: (value: string) => void;
   onCellEditSubmit: () => void;
@@ -33,7 +33,7 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
   cellEditValue,
   isCellEditing,
   pendingFormula,
-  currentSpreadsheetId,
+  currentSheetMetaDataId,
   saveStatus,
   onCellEditChange,
   onCellEditSubmit,
@@ -78,7 +78,7 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
         {/* 오른쪽: 저장 상태, 버튼들 */}
         <div className="flex items-center ml-auto space-x-2">
           <SaveStatus 
-            currentSpreadsheetId={currentSpreadsheetId}
+            currentSheetMetaDataId={currentSheetMetaDataId}
             saveStatus={saveStatus}
           />
           

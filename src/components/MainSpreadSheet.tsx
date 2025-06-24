@@ -74,7 +74,7 @@ const MainSpreadSheet: React.FC = () => {
     isInternalUpdate,
     pendingFormula,
     setPendingFormula,
-    currentSpreadsheetId,
+    currentSheetMetaDataId,
     saveStatus,
   } = useUnifiedStore();
 
@@ -122,7 +122,7 @@ const MainSpreadSheet: React.FC = () => {
         sheetsCount: xlsxData?.sheets?.length || 0,
         activeSheetIndex: xlsxData?.activeSheetIndex ?? 0,
         activeSheetName: xlsxData?.sheets?.[xlsxData?.activeSheetIndex || 0]?.sheetName || '시트 (default)',
-        currentSpreadsheetId: currentSpreadsheetId || 'None',
+        currentSheetMetaDataId: currentSheetMetaDataId || 'None',
         hasActiveSheetData: !!activeSheetData,
         displayDataLength: displayData.length,
         displayDataCols: displayData[0]?.length || 0,
@@ -148,7 +148,7 @@ const MainSpreadSheet: React.FC = () => {
         });
       }
     }
-  }, [xlsxData, activeSheetData, displayData, currentSpreadsheetId]);
+  }, [xlsxData, activeSheetData, displayData, currentSheetMetaDataId]);
 
   // 시트 변경 시에만 Handsontable 데이터 업데이트
   useEffect(() => {
@@ -231,7 +231,7 @@ const MainSpreadSheet: React.FC = () => {
           cellEditValue={cellEditValue}
           isCellEditing={isCellEditing}
           pendingFormula={pendingFormula}
-          currentSpreadsheetId={currentSpreadsheetId}
+          currentSheetMetaDataId={currentSheetMetaDataId}
           saveStatus={saveStatus}
           onCellEditChange={handleCellEditChange}
           onCellEditSubmit={handleCellEditSubmit}

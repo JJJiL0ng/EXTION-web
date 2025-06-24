@@ -31,8 +31,8 @@ export const useUnifiedStore = create<UnifiedStore>()(
                     xlsxData: null,
                     activeSheetData: null,
                     computedSheetData: {},
-                    currentSpreadsheetId: null,
-                    spreadsheetMetadata: null,
+                    currentSheetMetaDataId: null,
+                    sheetMetaData: null,
                     hasUploadedFile: false, // 파일 업로드 상태 초기화
                     
                     // 채팅 리셋 (세션과 히스토리는 유지)

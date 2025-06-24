@@ -4,15 +4,15 @@ import React from 'react';
 import { AlertCircle, Loader2, CheckCircle, XCircle } from 'lucide-react';
 
 interface SaveStatusProps {
-  currentSpreadsheetId: string | null;
+  currentSheetMetaDataId: string | null;
   saveStatus: string;
 }
 
 export const SaveStatus: React.FC<SaveStatusProps> = ({
-  currentSpreadsheetId,
+  currentSheetMetaDataId,
   saveStatus,
 }) => {
-  if (!currentSpreadsheetId) return null; // 파일이 없을 때는 표시 안함
+  if (!currentSheetMetaDataId) return null; // 파일이 없을 때는 표시 안함
 
   let icon = null;
   let iconColor = 'text-gray-500';

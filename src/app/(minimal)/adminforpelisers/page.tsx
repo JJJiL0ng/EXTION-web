@@ -26,7 +26,7 @@ function AdminPageContent() {
   const {
     setXLSXData,
     setCurrentChatId,
-    setCurrentSpreadsheetId,
+    setCurrentSheetMetaDataId,
     clearAllMessages,
     currentChatId,
     addMessageToSheet
@@ -109,7 +109,7 @@ function AdminPageContent() {
         // 2. 기존 데이터 초기화 (다른 채팅으로 전환 시)
         console.log('🧹 새 채팅 전환 - 기존 데이터 초기화');
         setXLSXData(null);
-        setCurrentSpreadsheetId(null);
+        setCurrentSheetMetaDataId(null);
         clearAllMessages();
         
         // 파일 업로드 상태도 초기화하여 새 파일 업로드 가능하게 함
@@ -137,7 +137,7 @@ function AdminPageContent() {
               
               // 스프레드시트 데이터 설정
               setXLSXData(spreadsheetData);
-              setCurrentSpreadsheetId(targetChat.spreadsheetId);
+              setCurrentSheetMetaDataId(targetChat.spreadsheetId);
               
               console.log('✅ 스프레드시트 메타데이터 설정 완료');
             } else {
@@ -190,7 +190,7 @@ function AdminPageContent() {
     };
 
     loadChatFromUrl();
-  }, [user, searchParams, currentChatId, setCurrentChatId, setXLSXData, setCurrentSpreadsheetId, clearAllMessages, addMessageToSheet]);
+  }, [user, searchParams, currentChatId, setCurrentChatId, setXLSXData, setCurrentSheetMetaDataId, clearAllMessages, addMessageToSheet]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

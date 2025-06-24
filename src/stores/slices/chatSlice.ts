@@ -25,7 +25,7 @@ export interface ChatSlice {
     // === 채팅 세션 관리 ===
     chatSessions: { [chatId: string]: ChatSession };
     currentChatId: string | null;
-    currentSpreadsheetId: string | null;
+    currentSheetMetaDataId: string | null;
     chatHistory: string[];
     
     // === 현재 채팅 메타데이터 ===
@@ -89,13 +89,13 @@ export interface ChatSlice {
     // === 채팅 메타데이터 액션 ===
     setCurrentChatMeta: (meta: Partial<FirebaseChat> | null) => void;
 
-    // === 스프레드시트 ID 액션 ===
-    setCurrentSpreadsheetId: (spreadsheetId: string | null) => void;
+    // === 시트 메타데이터 ID 액션 ===
+    setCurrentSheetMetaDataId: (sheetMetaDataId: string | null) => void;
 
-    // === SheetId 관리 액션 ===
-    currentSheetId: string | null;
-    setCurrentSheetId: (sheetId: string | null) => void;
-    getCurrentSheetId: () => string | null;
+    // === SheetTableDataId 관리 액션 ===
+    currentSheetTableDataId: string | null;
+    setCurrentSheetTableDataId: (sheetTableDataId: string | null) => void;
+    getCurrentSheetTableDataId: () => string | null;
 
     // === 채팅 목록 새로고침 액션 ===
     refreshChatList: () => void;
@@ -111,7 +111,7 @@ export const createChatSlice: StateCreator<
     // === 초기 상태 ===
     chatSessions: {},
     currentChatId: null,
-    currentSpreadsheetId: null,
+    currentSheetMetaDataId: null,
     chatHistory: [],
     currentChatMeta: null,
     cachedChatList: [],
@@ -120,7 +120,7 @@ export const createChatSlice: StateCreator<
     activeSheetMessages: [],
     sheetChatIds: {},
     chatListRefreshTrigger: undefined,
-    currentSheetId: null,
+    currentSheetTableDataId: null,
     
     // === 채팅 세션 관리 액션 ===
     createNewChatSession: () => {
@@ -137,9 +137,9 @@ export const createChatSlice: StateCreator<
             hasUploadedFile: false,
             createdAt: new Date(),
             lastAccessedAt: new Date(),
-            currentSpreadsheetId: null,
-            spreadsheetMetadata: null,
-            currentSheetId: null
+            currentSheetMetaDataId: null,
+            sheetMetaData: null,
+            currentSheetTableDataId: null
         };
 
         set((state) => ({
@@ -157,9 +157,9 @@ export const createChatSlice: StateCreator<
             sheetMessages: {},
             activeSheetMessages: [],
             sheetChatIds: {},
-            currentSpreadsheetId: null,
-            spreadsheetMetadata: null,
-            currentSheetId: null
+            currentSheetMetaDataId: null,
+            sheetMetaData: null,
+            currentSheetTableDataId: null
         }));
 
         return newChatId;
@@ -200,9 +200,9 @@ export const createChatSlice: StateCreator<
             sheetMessages: session.sheetMessages,
             activeSheetMessages: session.activeSheetMessages,
             sheetChatIds: session.sheetChatIds,
-            currentSpreadsheetId: session.currentSpreadsheetId,
-            spreadsheetMetadata: session.spreadsheetMetadata,
-            currentSheetId: session.currentSheetId
+            currentSheetMetaDataId: session.currentSheetMetaDataId,
+            sheetMetaData: session.sheetMetaData,
+            currentSheetTableDataId: session.currentSheetTableDataId
         }));
     },
 
@@ -271,9 +271,9 @@ export const createChatSlice: StateCreator<
                     activeSheetMessages: [],
                     sheetChatIds: {},
                     extendedSheetContext: null,
-                    currentSpreadsheetId: null,
-                    spreadsheetMetadata: null,
-                    currentSheetId: null
+                    currentSheetMetaDataId: null,
+                    sheetMetaData: null,
+                    currentSheetTableDataId: null
                 };
             }
             
@@ -289,9 +289,9 @@ export const createChatSlice: StateCreator<
                     sheetMessages: targetSession.sheetMessages,
                     activeSheetMessages: targetSession.activeSheetMessages,
                     sheetChatIds: targetSession.sheetChatIds,
-                    currentSpreadsheetId: targetSession.currentSpreadsheetId,
-                    spreadsheetMetadata: targetSession.spreadsheetMetadata,
-                    currentSheetId: targetSession.currentSheetId
+                    currentSheetMetaDataId: targetSession.currentSheetMetaDataId,
+                    sheetMetaData: targetSession.sheetMetaData,
+                    currentSheetTableDataId: targetSession.currentSheetTableDataId
                 };
             }
             
@@ -322,9 +322,9 @@ export const createChatSlice: StateCreator<
             hasUploadedFile: state.hasUploadedFile,
             createdAt: state.chatSessions[currentChatId]?.createdAt || new Date(),
             lastAccessedAt: new Date(),
-            currentSpreadsheetId: state.currentSpreadsheetId,
-            spreadsheetMetadata: state.spreadsheetMetadata,
-            currentSheetId: state.currentSheetId // 백엔드에서 받은 sheetId 저장
+            currentSheetMetaDataId: state.currentSheetMetaDataId,
+            sheetMetaData: state.sheetMetaData,
+            currentSheetTableDataId: state.currentSheetTableDataId // 백엔드에서 받은 sheetTableDataId 저장
         };
         
         set((prevState) => ({
@@ -382,7 +382,7 @@ export const createChatSlice: StateCreator<
         }
     },
 
-    setCurrentSpreadsheetId: (spreadsheetId) => set({ currentSpreadsheetId: spreadsheetId }),
+    setCurrentSheetMetaDataId: (sheetMetaDataId) => set({ currentSheetMetaDataId: sheetMetaDataId }),
 
     getCurrentChatId: () => {
         const { xlsxData, getCurrentSheetChatId } = get();
@@ -569,8 +569,8 @@ export const createChatSlice: StateCreator<
     },
 
     getCurrentSheetChatId: () => {
-        const { currentSpreadsheetId } = get();
-        return currentSpreadsheetId;
+        const { currentSheetMetaDataId } = get();
+        return currentSheetMetaDataId;
     },
 
     initializeSheetChatIds: () => {
@@ -580,37 +580,37 @@ export const createChatSlice: StateCreator<
         });
     },
 
-    // === SheetId 관리 액션 ===
-    setCurrentSheetId: (sheetId) => {
+    // === SheetTableDataId 관리 액션 ===
+    setCurrentSheetTableDataId: (sheetTableDataId) => {
         set((state) => ({
             ...state,
-            currentSheetId: sheetId
+            currentSheetTableDataId: sheetTableDataId
         }));
         
         // 로컬 스토리지에도 저장
         if (typeof window !== 'undefined') {
-            if (sheetId) {
-                localStorage.setItem('currentSheetId', sheetId);
+            if (sheetTableDataId) {
+                localStorage.setItem('currentSheetTableDataId', sheetTableDataId);
             } else {
-                localStorage.removeItem('currentSheetId');
+                localStorage.removeItem('currentSheetTableDataId');
             }
         }
     },
 
-    getCurrentSheetId: () => {
-        const { currentSheetId } = get();
+    getCurrentSheetTableDataId: () => {
+        const { currentSheetTableDataId } = get();
         
         // 메모리에 있으면 반환
-        if (currentSheetId) {
-            return currentSheetId;
+        if (currentSheetTableDataId) {
+            return currentSheetTableDataId;
         }
         
         // 로컬 스토리지에서 가져오기
         if (typeof window !== 'undefined') {
-            const storedSheetId = localStorage.getItem('currentSheetId');
-            if (storedSheetId) {
-                get().setCurrentSheetId(storedSheetId);
-                return storedSheetId;
+            const storedSheetTableDataId = localStorage.getItem('currentSheetTableDataId');
+            if (storedSheetTableDataId) {
+                get().setCurrentSheetTableDataId(storedSheetTableDataId);
+                return storedSheetTableDataId;
             }
         }
         

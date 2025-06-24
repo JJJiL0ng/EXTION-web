@@ -42,7 +42,7 @@ export interface ArtifactCode {
 
 // 시트 데이터 인터페이스
 export interface SheetData {
-    sheetId?: string; // Firebase에서 생성된 시트 ID
+    sheetTableDataId?: string; // 데이터베이스의 SheetTableData ID
     sheetName: string;
     rawData?: string[][]; // 원본 데이터 (공백 포함)
     metadata?: {
@@ -66,7 +66,7 @@ export interface XLSXData {
     fileName: string;
     sheets: SheetData[];
     activeSheetIndex: number; // 현재 활성 시트
-    spreadsheetId?: string; // Firebase에서 생성된 스프레드시트 ID
+    sheetMetaDataId?: string; // 데이터베이스의 SheetMetaData ID
 }
 
 // 다중 시트 수식 적용 인터페이스
@@ -98,9 +98,9 @@ export interface ChatSession {
     hasUploadedFile: boolean;
     createdAt: Date;
     lastAccessedAt: Date;
-    currentSpreadsheetId: string | null;
-    spreadsheetMetadata: SpreadsheetMetadata | null;
-    currentSheetId?: string | null; // 백엔드에서 받은 sheetId 저장
+    currentSheetMetaDataId: string | null;
+    sheetMetaData: SpreadsheetMetadata | null;
+    currentSheetTableDataId?: string | null; // 데이터베이스의 SheetTableData ID
 }
 
 // 로딩 상태 타입

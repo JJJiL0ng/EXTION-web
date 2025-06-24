@@ -66,7 +66,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         resetAllStores,
         setXLSXData,
         setCurrentChatId,
-        setCurrentSpreadsheetId,
+        setCurrentSheetMetaDataId,
         addMessageToSheet,
         chatListRefreshTrigger,
         saveChatListToStorage,
@@ -260,7 +260,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             // 2. 채팅 ID와 스프레드시트 ID 설정
             setCurrentChatId(chat.id);
             if (chat.sheetMetaDataId) {
-                setCurrentSpreadsheetId(chat.sheetMetaDataId);
+                setCurrentSheetMetaDataId(chat.sheetMetaDataId);
             }
             
             // 3. 병렬로 데이터 로드
@@ -275,14 +275,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             let loadedXlsxData: XLSXData | null = null;
             if (spreadsheetDataResult.status === 'fulfilled' && spreadsheetDataResult.value) {
                 loadedXlsxData = convertSpreadsheetDataToXLSXData(spreadsheetDataResult.value);
-                setCurrentSpreadsheetId(spreadsheetDataResult.value.id);
+                setCurrentSheetMetaDataId(spreadsheetDataResult.value.id);
                 console.log('📊 스프레드시트 데이터 로드 완료:', {
                     fileName: loadedXlsxData?.fileName,
                     sheetsCount: loadedXlsxData?.sheets?.length
                 });
             } else {
                 console.log('📊 스프레드시트 없음 - 빈 시트 표시');
-                setCurrentSpreadsheetId(null);
+                setCurrentSheetMetaDataId(null);
             }
             
             // 5. 스프레드시트 데이터 설정
@@ -339,19 +339,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             resetAllStores();
             
             const chatTitle = `채팅 ${new Date().toLocaleString('ko-KR')}`;
-            // 새 spreadsheetId 생성
-            const newSpreadsheetId = crypto.randomUUID();
+            // 새 sheetMetaDataId 생성
+            const newSheetMetaDataId = crypto.randomUUID();
             
-            const newChatId = await createChat(chatTitle, user.uid, newSpreadsheetId);
+            const newChatId = await createChat(chatTitle, user.uid, newSheetMetaDataId);
             
-            console.log('새 Firebase 채팅 생성됨:', newChatId, '연결된 spreadsheetId:', newSpreadsheetId);
+            console.log('새 Firebase 채팅 생성됨:', newChatId, '연결된 sheetMetaDataId:', newSheetMetaDataId);
             
             // 2. 채팅 목록 새로고침 (강제)
             await loadFirebaseChats(true);
 
             // 3. 새 채팅 상태 설정
             setCurrentChatId(newChatId);
-            setCurrentSpreadsheetId(newSpreadsheetId);
+            setCurrentSheetMetaDataId(newSheetMetaDataId);
             
             // 4. 새 채팅으로 URL 이동
             router.push(`/ai?chatId=${newChatId}`);

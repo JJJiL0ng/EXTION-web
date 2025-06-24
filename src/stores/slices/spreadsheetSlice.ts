@@ -10,7 +10,7 @@ export interface SpreadsheetSlice {
     computedSheetData: { [sheetIndex: number]: string[][] };
     
     // === 스프레드시트 메타데이터 ===
-    spreadsheetMetadata: SpreadsheetMetadata | null;
+    sheetMetaData: SpreadsheetMetadata | null;
     hasUploadedFile: boolean;
     
     // === 시트 저장 상태 ===
@@ -37,10 +37,10 @@ export interface SpreadsheetSlice {
     setComputedDataForSheet: (sheetIndex: number, data: string[][]) => void;
     getComputedDataForSheet: (sheetIndex: number) => string[][] | null;
     
-    // 스프레드시트 메타데이터 관리
-    setSpreadsheetMetadata: (metadata: SpreadsheetMetadata | null) => void;
-    getSpreadsheetMetadata: () => SpreadsheetMetadata | null;
-    markAsSaved: (spreadsheetId: string) => void;
+    // 시트 메타데이터 관리
+    setSheetMetaData: (metadata: SpreadsheetMetadata | null) => void;
+    getSheetMetaData: () => SpreadsheetMetadata | null;
+    markAsSaved: (sheetMetaDataId: string) => void;
     markAsUnsaved: () => void;
     
     // 파일 업로드 관리
@@ -51,16 +51,16 @@ export interface SpreadsheetSlice {
     cellAddressToCoords: (cellAddress: string) => { row: number; col: number };
     coordsToSheetReference: (sheetIndex: number, row: number, col: number) => string;
     
-    // 시트 ID 관리
-    updateSheetIds: (sheetsInfo: Array<{
-        sheetId: string;
+    // 시트 테이블 데이터 ID 관리
+    updateSheetTableDataIds: (sheetsInfo: Array<{
+        sheetTableDataId: string;
         sheetIndex: number;
         sheetName: string;
         headers: string[];
         rowCount: number;
     }>) => void;
-    getSheetIdByIndex: (sheetIndex: number) => string | null;
-    updateSheetIdByIndex: (sheetIndex: number, sheetId: string) => void;
+    getSheetTableDataIdByIndex: (sheetIndex: number) => string | null;
+    updateSheetTableDataIdByIndex: (sheetIndex: number, sheetTableDataId: string) => void;
     
     // GPT 분석용 데이터
     getDataForGPTAnalysis: (sheetIndex?: number, allSheets?: boolean) => {
@@ -73,7 +73,7 @@ export interface SpreadsheetSlice {
         currentSheetIndex?: number;
         totalSheets?: number;
         fileName?: string;
-        spreadsheetId?: string;
+        sheetMetaDataId?: string;
     };
     
     // 데이터 생성 결과 적용
@@ -86,7 +86,7 @@ export interface SpreadsheetSlice {
 
 // 스프레드시트 슬라이스 생성자
 export const createSpreadsheetSlice: StateCreator<
-    SpreadsheetSlice & { loadingStates: LoadingStates; errors: ErrorStates; setLoadingState: any; setError: any; currentSpreadsheetId: string | null },
+    SpreadsheetSlice & { loadingStates: LoadingStates; errors: ErrorStates; setLoadingState: any; setError: any; currentSheetMetaDataId: string | null },
     [],
     [],
     SpreadsheetSlice
@@ -95,7 +95,7 @@ export const createSpreadsheetSlice: StateCreator<
     xlsxData: null,
     activeSheetData: null,
     computedSheetData: {},
-    spreadsheetMetadata: null,
+    sheetMetaData: null,
     hasUploadedFile: false,
     saveStatus: 'synced',
     
@@ -271,21 +271,21 @@ export const createSpreadsheetSlice: StateCreator<
         return computedSheetData[sheetIndex] || null;
     },
 
-    // === 스프레드시트 메타데이터 관리 ===
-    setSpreadsheetMetadata: (metadata) => set({ spreadsheetMetadata: metadata }),
-    getSpreadsheetMetadata: () => get().spreadsheetMetadata,
-    markAsSaved: (spreadsheetId) => set((state) => ({
+    // === 시트 메타데이터 관리 ===
+    setSheetMetaData: (metadata) => set({ sheetMetaData: metadata }),
+    getSheetMetaData: () => get().sheetMetaData,
+    markAsSaved: (sheetMetaDataId) => set((state) => ({
         ...state,
-        spreadsheetMetadata: state.spreadsheetMetadata ? { 
-            ...state.spreadsheetMetadata, 
+        sheetMetaData: state.sheetMetaData ? { 
+            ...state.sheetMetaData, 
             isSaved: true,
             lastSaved: new Date()
         } : null
     })),
     markAsUnsaved: () => set((state) => ({
         ...state,
-        spreadsheetMetadata: state.spreadsheetMetadata ? { 
-            ...state.spreadsheetMetadata, 
+        sheetMetaData: state.sheetMetaData ? { 
+            ...state.sheetMetaData, 
             isSaved: false 
         } : null
     })),
@@ -303,8 +303,8 @@ export const createSpreadsheetSlice: StateCreator<
         return coordsToSheetReference(sheetIndex, row, col, xlsxData.sheets.map(s => s.sheetName));
     },
 
-    // === 시트 ID 관리 ===
-    updateSheetIds: (sheetsInfo) => {
+    // === 시트 테이블 데이터 ID 관리 ===
+    updateSheetTableDataIds: (sheetsInfo) => {
         set((state) => {
             if (!state.xlsxData) return state;
 
@@ -316,7 +316,7 @@ export const createSpreadsheetSlice: StateCreator<
                 if (targetSheet) {
                     newXlsxData.sheets[sheetInfo.sheetIndex] = {
                         ...targetSheet,
-                        sheetId: sheetInfo.sheetId
+                        sheetTableDataId: sheetInfo.sheetTableDataId
                     };
                 }
             });
@@ -331,12 +331,12 @@ export const createSpreadsheetSlice: StateCreator<
         });
     },
 
-    getSheetIdByIndex: (sheetIndex) => {
+    getSheetTableDataIdByIndex: (sheetIndex) => {
         const { xlsxData } = get();
-        return xlsxData?.sheets[sheetIndex]?.sheetId || null;
+        return xlsxData?.sheets[sheetIndex]?.sheetTableDataId || null;
     },
 
-    updateSheetIdByIndex: (sheetIndex, sheetId) => {
+    updateSheetTableDataIdByIndex: (sheetIndex, sheetTableDataId) => {
         set((state) => {
             if (!state.xlsxData) return state;
 
@@ -347,7 +347,7 @@ export const createSpreadsheetSlice: StateCreator<
             if (targetSheet) {
                 newXlsxData.sheets[sheetIndex] = {
                     ...targetSheet,
-                    sheetId: sheetId
+                    sheetTableDataId: sheetTableDataId
                 };
 
                 const activeSheetData = sheetIndex === newXlsxData.activeSheetIndex 
@@ -367,7 +367,7 @@ export const createSpreadsheetSlice: StateCreator<
 
     // === GPT 분석용 데이터 ===
     getDataForGPTAnalysis: (sheetIndex, allSheets = false) => {
-        const { xlsxData, computedSheetData, currentSpreadsheetId } = get();
+        const { xlsxData, computedSheetData, currentSheetMetaDataId } = get();
 
         if (!xlsxData) {
             return { sheets: [], activeSheet: '' };
@@ -424,7 +424,7 @@ export const createSpreadsheetSlice: StateCreator<
             currentSheetIndex: xlsxData.activeSheetIndex,
             totalSheets: xlsxData.sheets.length,
             fileName: xlsxData.fileName,
-            spreadsheetId: currentSpreadsheetId || undefined
+            sheetMetaDataId: currentSheetMetaDataId || undefined
         };
     },
 

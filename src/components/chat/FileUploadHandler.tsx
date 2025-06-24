@@ -37,8 +37,8 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
         setLoadingState,
         setError,
         // 스프레드시트 관련 상태
-        currentSpreadsheetId,
-        spreadsheetMetadata,
+        currentSheetMetaDataId,
+        sheetMetaData,
         currentChatId
     } = useUnifiedStore();
 
@@ -56,7 +56,7 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
                                 {xlsxData.fileName}
                             </span>
                             {/* 저장 상태 표시 */}
-                            {spreadsheetMetadata?.isSaved && (
+                            {sheetMetaData?.isSaved && (
                                 <span className="ml-2" title="Firebase에 저장됨">
                                     <CheckCircleIcon className="h-4 w-4 text-green-500" />
                                 </span>
@@ -71,9 +71,9 @@ const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
                             )}
                             
                             {/* 마지막 저장 시간 표시 */}
-                            {spreadsheetMetadata?.lastSaved && (
+                            {sheetMetaData?.lastSaved && (
                                 <span className="text-xs text-gray-400 mt-1">
-                                    저장됨: {new Date(spreadsheetMetadata.lastSaved).toLocaleString('ko-KR')}
+                                    저장됨: {new Date(sheetMetaData.lastSaved).toLocaleString('ko-KR')}
                                 </span>
                             )}
                         </div>
