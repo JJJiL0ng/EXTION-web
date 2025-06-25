@@ -354,7 +354,7 @@ export const getSpreadsheetData = async (spreadsheetId: string): Promise<XLSXDat
             fileName: metadata.fileName,
             sheets,
             activeSheetIndex: metadata.activeSheetIndex,
-            spreadsheetId: metadata.id
+            sheetMetaDataId: metadata.id
         };
 
         console.log('스프레드시트 데이터 로딩 완료:', {

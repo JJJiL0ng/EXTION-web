@@ -118,15 +118,37 @@ export const getChatList = async (userId: string): Promise<ChatListResponse> => 
 
     const data: ChatListResponse = await response.json();
     
-    // Date 객체로 변환
-    data.chats = data.chats.map(chat => ({
-      ...chat,
-      createdAt: new Date(chat.createdAt),
-      updatedAt: new Date(chat.updatedAt),
+    // 안전한 날짜 변환 함수
+    const safeParseDate = (dateValue: any): Date => {
+      if (!dateValue) return new Date();
+      
+      if (dateValue instanceof Date) {
+        return isNaN(dateValue.getTime()) ? new Date() : dateValue;
+      }
+      
+      if (typeof dateValue === 'string') {
+        const parsedDate = new Date(dateValue);
+        return isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+      }
+      
+      return new Date();
+    };
+    
+    // 백엔드 응답을 프론트엔드 형식으로 변환
+    data.chats = data.chats.map((chat: any) => ({
+      // chatId를 id로 매핑
+      id: chat.chatId || chat.id,
+      title: chat.title,
+      createdAt: safeParseDate(chat.createdAt),
+      // lastUpdated 또는 updatedAt 중 하나 사용
+      updatedAt: safeParseDate(chat.updatedAt || chat.lastUpdated),
+      messageCount: chat.messageCount || 0,
       lastMessage: chat.lastMessage ? {
-        ...chat.lastMessage,
-        timestamp: new Date(chat.lastMessage.timestamp)
-      } : undefined
+        content: chat.lastMessage.content,
+        timestamp: safeParseDate(chat.lastMessage.timestamp)
+      } : undefined,
+      sheetMetaDataId: chat.sheetMetaDataId,
+      spreadsheetData: chat.spreadsheetData
     }));
 
     return data;
@@ -162,14 +184,14 @@ export const convertChatListItemToFirebaseChat = (item: ChatListItem) => {
  * 새 API 메시지를 기존 포맷으로 변환
  */
 export const convertApiMessageToChatMessage = (apiMessage: ChatMessage) => {
-  const role = apiMessage.role === 'assistant' ? 'Extion ai' as const : 'user' as const;
   return {
     id: apiMessage.id,
-    role: role,
+    type: (apiMessage.role === 'assistant' ? 'Extion ai' : 'user') as 'user' | 'Extion ai',
     content: apiMessage.content,
     timestamp: apiMessage.timestamp,
     metadata: apiMessage.metadata,
-    type: role, // role과 같은 값으로 설정
+    mode: 'normal' as const,
+    artifactData: undefined,
   };
 };
 

@@ -604,8 +604,8 @@ export const callOrchestratorChatAPI = async (
         console.log('==================== Orchestrator Chat API 응답 데이터 끝 ====================');
         
         // === 응답에서 sheetId가 있으면 상태관리에 저장 ===
-        // 여러 위치에서 spreadsheetId 확인: 최상위 sheetId, data.spreadsheetId 순서
-        const extractedSheetId = result.sheetId || result.data?.spreadsheetId;
+        // 여러 위치에서 spreadsheetId 확인: data.id, 최상위 sheetId, data.spreadsheetId 순서
+        const extractedSheetId = result.data?.id || result.sheetId || result.data?.spreadsheetId;
         
         if (result.success && extractedSheetId) {
             try {
@@ -613,15 +613,17 @@ export const callOrchestratorChatAPI = async (
                     const { useUnifiedStore } = require('@/stores');
                     const { setCurrentSheetId } = useUnifiedStore.getState();
                     setCurrentSheetId(extractedSheetId);
-                    console.log(`📝 SheetId가 상태관리에 저장되었습니다: ${extractedSheetId}`);
-                    console.log(`📍 SheetId 출처: ${result.sheetId ? '최상위 sheetId' : 'data.spreadsheetId'}`);
+                    console.log(`📝 Orchestrator API - SheetId가 상태관리에 저장되었습니다: ${extractedSheetId}`);
+                    const source = result.data?.id ? 'data.id' : result.sheetId ? '최상위 sheetId' : 'data.spreadsheetId';
+                    console.log(`📍 SheetId 출처: ${source}`);
                 }
             } catch (error) {
-                console.warn('SheetId를 상태관리에 저장하는데 실패했습니다:', error);
+                console.warn('Orchestrator API - SheetId를 상태관리에 저장하는데 실패했습니다:', error);
                 // 실패해도 API 응답은 그대로 반환
             }
         } else if (result.success) {
-            console.log('⚠️ API 응답에서 SheetId를 찾을 수 없습니다');
+            console.log('⚠️ Orchestrator API - 응답에서 SheetId를 찾을 수 없습니다');
+            console.log('- result.data?.id:', result.data?.id);
             console.log('- result.sheetId:', result.sheetId);
             console.log('- result.data?.spreadsheetId:', result.data?.spreadsheetId);
         }
@@ -790,8 +792,8 @@ export const forceAutoSave = async (userId: string, spreadsheetId: string): Prom
     }
 };
 
-// === 스프레드시트 저장 API 호출 - Firebase 연동 버전 (수정) ===
-export const saveSpreadsheetToFirebase = async (
+// === 스프레드시트 저장 API 호출 (수정) ===
+export const saveSpreadsheetData = async (
     parsedData: {
         fileName: string;
         sheets: any[];
@@ -812,6 +814,7 @@ export const saveSpreadsheetToFirebase = async (
     data: any;
     message?: string;
     error?: string;
+    spreadsheetId?: string; // 반환받는 sheetId
 }> => {
     try {
         // 사용자 ID 결정 (옵션에서 제공되거나 자동 생성)
@@ -863,8 +866,11 @@ export const saveSpreadsheetToFirebase = async (
             })
         };
 
-        console.log('Save Spreadsheet Request Body:', JSON.stringify(requestBody, null, 2));
-        console.log(`사용자 타입: ${userId.startsWith('guest_') ? '게스트' : '로그인'}`);
+        console.log('==================== Save Spreadsheet API 요청 시작 ====================');
+        console.log(`사용자 ID: ${userId} (${userId.startsWith('guest_') ? '게스트' : '로그인'})`);
+        console.log(`파일명: ${parsedData.fileName}`);
+        console.log(`시트 수: ${parsedData.sheets.length}`);
+        console.log('전체 요청 본문:', JSON.stringify(requestBody, null, 2));
 
         const response = await fetch(`${API_BASE_URL}/spreadsheet/data/save`, {
             method: 'POST',
@@ -885,8 +891,41 @@ export const saveSpreadsheetToFirebase = async (
         }
 
         const result = await response.json();
-        console.log('Save Spreadsheet API Response:', result);
-        return result;
+        console.log('==================== Save Spreadsheet API 응답 시작 ====================');
+        console.log(`성공 여부: ${result.success}`);
+        console.log(`스프레드시트 ID: ${result.data?.id || result.data?.spreadsheetId || result.data?.sheetId || result.spreadsheetId || '없음'}`);
+        console.log('전체 응답:', JSON.stringify(result, null, 2));
+        
+        // 응답에서 spreadsheetId를 추출하여 반환 (data.id가 실제 spreadsheetId)
+        const spreadsheetId = result.data?.id || result.data?.spreadsheetId || result.data?.sheetId || result.spreadsheetId;
+        
+        // 상태관리에 sheetId 저장 (동적 import로 안전하게)
+        if (result.success && spreadsheetId) {
+            try {
+                if (typeof window !== 'undefined') {
+                    const { useUnifiedStore } = require('@/stores');
+                    const { setCurrentSheetId } = useUnifiedStore.getState();
+                    setCurrentSheetId(spreadsheetId);
+                    console.log(`✅ SpreadsheetId가 상태관리에 저장되었습니다: ${spreadsheetId}`);
+                }
+            } catch (error) {
+                console.warn('SpreadsheetId를 상태관리에 저장하는데 실패했습니다:', error);
+                // 실패해도 API 응답은 그대로 반환
+            }
+        } else {
+            console.log('⚠️ Save API - 응답에서 SpreadsheetId를 찾을 수 없습니다');
+            console.log('- result.data?.id:', result.data?.id);
+            console.log('- result.data?.spreadsheetId:', result.data?.spreadsheetId);
+            console.log('- result.data?.sheetId:', result.data?.sheetId);
+            console.log('- result.spreadsheetId:', result.spreadsheetId);
+        }
+        
+        console.log('==================== Save Spreadsheet API 완료 ====================');
+        
+        return {
+            ...result,
+            spreadsheetId: spreadsheetId
+        };
         
     } catch (error) {
         console.error('Save Spreadsheet API Call Error:', error);

@@ -41,14 +41,14 @@ export default function ArtifactRenderContainer({
         errors,
         xlsxData,
         activeSheetData,
-        currentSpreadsheetId,
+        currentSheetMetaDataId,
         currentChatId
     } = useUnifiedStore();
 
     // 현재 채팅이 클라우드 채팅인지 확인
     const isCloudChat = () => {
-        const spreadsheetId = currentSpreadsheetId;
-        return !!(spreadsheetId || (currentChatId && currentChatId.length > 20 && !currentChatId.includes('_local')));
+        const sheetMetaDataId = currentSheetMetaDataId;
+        return !!(sheetMetaDataId || (currentChatId && currentChatId.length > 20 && !currentChatId.includes('_local')));
     };
 
     // 데이터 소스 정보 가져오기

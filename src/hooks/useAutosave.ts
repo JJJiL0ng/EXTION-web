@@ -20,7 +20,7 @@ const debounce = <F extends (...args: any[]) => any>(func: F, waitFor: number) =
 export const useAutosave = () => {
     const { 
         xlsxData, 
-        currentSpreadsheetId, 
+        currentSheetMetaDataId, 
         saveStatus, 
         setSaveStatus,
     } = useUnifiedStore();
@@ -38,7 +38,7 @@ export const useAutosave = () => {
     useEffect(() => {
         console.log('[Autosave] Hook rendered. States:', {
             saveStatus,
-            currentSpreadsheetId,
+            currentSheetMetaDataId,
             userId: user?.uid,
             hasXlsxData: !!xlsxDataRef.current,
         });
@@ -46,10 +46,10 @@ export const useAutosave = () => {
 
     // Auto-Save 상태 체크 함수
     const checkAutoSaveStatus = useCallback(async () => {
-        if (!currentSpreadsheetId || !user?.uid) return;
+        if (!currentSheetMetaDataId || !user?.uid) return;
 
         try {
-            const statusResponse = await getAutoSaveStatus(user.uid, currentSpreadsheetId);
+            const statusResponse = await getAutoSaveStatus(user.uid, currentSheetMetaDataId);
             if (statusResponse.success && statusResponse.data.isQueued) {
                 console.log('[Autosave] 큐에 대기 중:', statusResponse.data);
                 setSaveStatus('saving');
@@ -57,17 +57,17 @@ export const useAutosave = () => {
         } catch (error) {
             console.error('[Autosave] 상태 확인 오류:', error);
         }
-    }, [currentSpreadsheetId, user?.uid, setSaveStatus]);
+    }, [currentSheetMetaDataId, user?.uid, setSaveStatus]);
 
     const saveChanges = useCallback(async () => {
         console.log('[Autosave] saveChanges triggered. Checking conditions with current state:', {
             saveStatus,
-            currentSpreadsheetId,
+            currentSheetMetaDataId,
             userId: user?.uid,
         });
         
         // 저장할 수 없는 조건이면 바로 리턴
-        if (saveStatus !== 'modified' || !currentSpreadsheetId || !user?.uid || !xlsxDataRef.current) {
+        if (saveStatus !== 'modified' || !currentSheetMetaDataId || !user?.uid || !xlsxDataRef.current) {
             console.warn('[Autosave] Save aborted due to unmet conditions.');
             return;
         }
@@ -78,7 +78,7 @@ export const useAutosave = () => {
         // 백엔드 auto-save API에 맞는 데이터 형식으로 변환
         const autoSaveData: AutoSaveSpreadsheetDto = {
             userId: user.uid,
-            spreadsheetId: currentSpreadsheetId,
+            spreadsheetId: currentSheetMetaDataId,
             sheets: xlsxDataRef.current.sheets.map((sheet, index) => ({
                 name: sheet.sheetName,
                 index: index,
@@ -102,11 +102,11 @@ export const useAutosave = () => {
             console.error('[Autosave] 자동 저장 큐 추가 중 예외 발생:', error);
             setSaveStatus('error');
         }
-    }, [currentSpreadsheetId, user, setSaveStatus, saveStatus]);
+    }, [currentSheetMetaDataId, user, setSaveStatus, saveStatus]);
 
     // 저장 완료까지 모니터링하는 함수
     const monitorSaveCompletion = useCallback(async () => {
-        if (!currentSpreadsheetId || !user?.uid) return;
+        if (!currentSheetMetaDataId || !user?.uid) return;
 
         // 최대 10초간 상태 체크 (2초마다)
         let attempts = 0;
@@ -114,7 +114,7 @@ export const useAutosave = () => {
         
         const checkStatus = async (): Promise<void> => {
             try {
-                const statusResponse = await getAutoSaveStatus(user.uid, currentSpreadsheetId);
+                const statusResponse = await getAutoSaveStatus(user.uid, currentSheetMetaDataId);
                 
                 if (statusResponse.success) {
                     if (statusResponse.data.isQueued) {
@@ -125,7 +125,7 @@ export const useAutosave = () => {
                         } else {
                             // 타임아웃 - 강제 저장 시도
                             console.warn('[Autosave] 저장 타임아웃, 강제 저장 시도...');
-                            await forceAutoSave(user.uid, currentSpreadsheetId);
+                            await forceAutoSave(user.uid, currentSheetMetaDataId);
                             setSaveStatus('synced');
                         }
                     } else {
@@ -142,7 +142,7 @@ export const useAutosave = () => {
 
         // 첫 번째 상태 체크는 3초 후 (백엔드 AUTO_SAVE_DELAY)
         setTimeout(checkStatus, 3000);
-    }, [currentSpreadsheetId, user?.uid, setSaveStatus]);
+    }, [currentSheetMetaDataId, user?.uid, setSaveStatus]);
     
     // useMemo를 사용하여 디바운스 함수가 불필요하게 재생성되는 것을 방지
     const debouncedSaveChanges = useMemo(() => {
@@ -160,8 +160,8 @@ export const useAutosave = () => {
 
     // 컴포넌트 마운트 시 자동 저장 상태 체크
     useEffect(() => {
-        if (currentSpreadsheetId && user?.uid) {
+        if (currentSheetMetaDataId && user?.uid) {
             checkAutoSaveStatus();
         }
-    }, [currentSpreadsheetId, user?.uid, checkAutoSaveStatus]);
+    }, [currentSheetMetaDataId, user?.uid, checkAutoSaveStatus]);
 }; 

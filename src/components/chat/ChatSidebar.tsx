@@ -6,20 +6,11 @@ import Image from 'next/image';
 import { 
     MessageCircleIcon, 
     PlusIcon, 
-    FileSpreadsheetIcon, 
     TrashIcon,
-    XIcon,
-    MenuIcon,
     Loader2Icon,
     RefreshCwIcon,
-    Cloud,
-    ChevronLeftIcon,
     SearchIcon,
-    FilterIcon,
-    MoreVerticalIcon,
-    CalendarIcon,
     ClockIcon,
-    Layers
 } from 'lucide-react';
 import GoogleIcon from '@/components/icons/GoogleIcon';
 import { useUnifiedStore } from '@/stores';
@@ -29,12 +20,11 @@ import {
     loadChatMessages,
     createChat,
     deleteChat,
-    convertChatListItemToFirebaseChat,
     convertApiMessageToChatMessage,
     ChatListItem
 } from '@/services/api/chatService';
 import { 
-    getSpreadsheetData,
+    getSpreadsheetDataByChatId,
     convertSpreadsheetDataToXLSXData
 } from '@/services/api/spreadsheetService';
 import { signInWithGoogle } from '@/services/firebase/authService';
@@ -62,7 +52,7 @@ interface CloudChatItem {
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     const { user, loading } = useAuthStore();
-    const [firebaseChats, setFirebaseChats] = useState<ChatListItem[]>([]);
+    const [chats, setChats] = useState<ChatListItem[]>([]);
     const [isLoadingChats, setIsLoadingChats] = useState(false);
     const [isCreatingChat, setIsCreatingChat] = useState(false);
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -72,40 +62,58 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     const [loadingChatId, setLoadingChatId] = useState<string | null>(null);
 
     const {
-        chatSessions,
-        currentChatId,
-        chatHistory,
-        createNewChatSession,
-        switchToChatSession,
-        deleteChatSession,
-        loadChatSessionsFromStorage,
-        saveChatSessionToStorage,
         xlsxData,
         resetAllStores,
-        getCurrentChatSession,
-        updateChatSession,
         setXLSXData,
         setCurrentChatId,
-        saveCurrentSessionToStore,
-        setCurrentSpreadsheetId,
+        setCurrentSheetMetaDataId,
         addMessageToSheet,
-        clearAllMessages,
-        setCurrentChatMeta,
-        chatListRefreshTrigger
+        chatListRefreshTrigger,
+        saveChatListToStorage,
+        loadChatListFromStorage,
+        getCachedChatList,
+        isChatListCacheValid,
+        clearChatListCache
     } = useUnifiedStore();
 
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // 채팅 목록 로드
-    const loadFirebaseChats = useCallback(async () => {
+    // 채팅 목록 로드 (캐시 우선)
+    const loadChats = useCallback(async (forceRefresh = false) => {
         if (!user) return;
+
+        // 강제 새로고침이 아니고 유효한 캐시가 있으면 캐시 사용
+        if (!forceRefresh && isChatListCacheValid()) {
+            const cachedList = getCachedChatList();
+            if (cachedList.length > 0) {
+                // StoredChatListItem을 ChatListItem으로 변환
+                const convertedChats: ChatListItem[] = cachedList.map(chat => ({
+                    ...chat,
+                    updatedAt: new Date(chat.updatedAt),
+                    createdAt: new Date(chat.createdAt),
+                    messageCount: chat.messageCount || 0,
+                    lastMessage: chat.lastMessage ? {
+                        ...chat.lastMessage,
+                        timestamp: new Date(chat.lastMessage.timestamp)
+                    } : undefined
+                }));
+                
+                setChats(convertedChats);
+                console.log('📋 캐시에서 채팅 목록 로드됨:', convertedChats.length, '개');
+                return;
+            }
+        }
 
         setIsLoadingChats(true);
         try {
             const response = await getChatList(user.uid);
-            setFirebaseChats(response.chats);
-            console.log('📋 채팅 목록 로드됨:', response.chats.length, '개');
+            setChats(response.chats);
+            
+            // 로컬스토리지에 저장
+            saveChatListToStorage(response.chats);
+            
+            console.log('📋 API에서 채팅 목록 로드됨:', response.chats.length, '개');
             
             // 각 채팅의 스프레드시트 정보 디버깅
             response.chats.forEach((chat: ChatListItem) => {
@@ -119,25 +127,49 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             });
         } catch (error) {
             console.error('❌ 채팅 목록 로드 오류:', error);
+            
+            // API 실패 시 캐시된 데이터라도 사용
+            const cachedList = getCachedChatList();
+            if (cachedList.length > 0) {
+                const convertedChats: ChatListItem[] = cachedList.map(chat => ({
+                    ...chat,
+                    updatedAt: new Date(chat.updatedAt),
+                    createdAt: new Date(chat.createdAt),
+                    messageCount: chat.messageCount || 0,
+                    lastMessage: chat.lastMessage ? {
+                        ...chat.lastMessage,
+                        timestamp: new Date(chat.lastMessage.timestamp)
+                    } : undefined
+                }));
+                
+                setChats(convertedChats);
+                console.log('📋 API 실패로 캐시에서 채팅 목록 복원:', convertedChats.length, '개');
+            }
         } finally {
             setIsLoadingChats(false);
         }
-    }, [user]);
+    }, [user, isChatListCacheValid, getCachedChatList, saveChatListToStorage]);
 
-    // 컴포넌트 마운트 시 Firebase 채팅 목록 로드
+    // 컴포넌트 마운트 시 로컬스토리지에서 캐시 로드
+    useEffect(() => {
+        // 사용자 정보가 없어도 캐시는 로드할 수 있음
+        loadChatListFromStorage();
+    }, [loadChatListFromStorage]);
+
+    // 컴포넌트 마운트 시 채팅 목록 로드
     useEffect(() => {
         if (user && !loading) {
-            loadFirebaseChats();
+            loadChats();
         }
-    }, [user, loading, loadFirebaseChats]);
+    }, [user, loading, loadChats]);
 
     // chatListRefreshTrigger가 변경될 때 채팅 목록 새로고침
     useEffect(() => {
         if (chatListRefreshTrigger && user && !loading) {
             console.log('📋 채팅 목록 새로고침 트리거 감지:', chatListRefreshTrigger);
-            loadFirebaseChats();
+            loadChats();
         }
-    }, [chatListRefreshTrigger, user, loading, loadFirebaseChats]);
+    }, [chatListRefreshTrigger, user, loading, loadChats]);
 
     // URL 파라미터와 선택된 채팅 동기화
     useEffect(() => {
@@ -145,12 +177,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         setSelectedChatId(chatId);
     }, [searchParams]);
 
-    // 채팅 전환 시 데이터 로딩 완료 후 로딩 애니메이션 중지
+    // 선택된 채팅 ID 변경 시 로딩 상태 동기화
     useEffect(() => {
-        if (loadingChatId && selectedChatId === loadingChatId) {
-            setLoadingChatId(null);
+        if (selectedChatId && loadingChatId && selectedChatId === loadingChatId) {
+            console.log('📋 선택된 채팅 ID와 로딩 중인 채팅 ID 일치 - 로딩 상태 유지');
         }
-    }, [selectedChatId, xlsxData, loadingChatId]);
+    }, [selectedChatId, loadingChatId]);
 
     const handleLogin = async () => {
         try {
@@ -165,13 +197,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         const cloudChats: CloudChatItem[] = [];
 
         // API 채팅 추가
-        firebaseChats.forEach(chat => {
+        chats.forEach(chat => {
             const hasSpreadsheet = !!chat.sheetMetaDataId;
             cloudChats.push({
                 id: chat.id,
                 title: chat.title,
                 updatedAt: chat.updatedAt,
-                preview: getFirebaseChatPreview(chat),
+                preview: getChatPreview(chat),
                 hasSpreadsheet: hasSpreadsheet,
                 spreadsheetInfo: hasSpreadsheet ? {
                     fileName: chat.spreadsheetData?.fileName || 'Spreadsheet',
@@ -204,69 +236,100 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         return filteredChats.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
     };
 
-    // 채팅 선택 및 복원
-    const handleSelectFirebaseChat = async (chat: ChatListItem) => {
+    // 채팅 선택 및 복원 (최적화된 버전)
+    const handleSelectChat = async (chat: ChatListItem) => {
         if (selectedChatId === chat.id) return;
     
+        console.log('=== 채팅 선택 시작 ===', {
+            chatId: chat.id,
+            chatTitle: chat.title,
+            hasSpreadsheet: !!chat.sheetMetaDataId,
+            messageCount: chat.messageCount
+        });
+
+        if (!chat.id) {
+            console.error('❌ 채팅 ID가 없습니다:', chat);
+            return;
+        }
+
         setLoadingChatId(chat.id);
         try {
-            console.log('=== 채팅 선택 ===', chat.id);
-            
             // 1. 상태 초기화
             resetAllStores();
 
-            // 2. 새 채팅 ID 및 메타데이터 설정
+            // 2. 채팅 ID와 스프레드시트 ID 설정
             setCurrentChatId(chat.id);
-            setCurrentSpreadsheetId(chat.sheetMetaDataId || null);
-            // setCurrentChatMeta는 타입 호환성 문제로 임시 주석 처리
-            // setCurrentChatMeta(convertChatListItemToFirebaseChat(chat));
-            
-            // 3. 스프레드시트 데이터 로드
-            let loadedXlsxData: XLSXData | null = null;
             if (chat.sheetMetaDataId) {
-                console.log(`- 스프레드시트 ID 발견: ${chat.sheetMetaDataId}. 데이터 로드 시작.`);
-                const spreadsheetData = await getSpreadsheetData(chat.sheetMetaDataId);
-                if (spreadsheetData) {
-                    loadedXlsxData = convertSpreadsheetDataToXLSXData(spreadsheetData);
-                    console.log(`- 스프레드시트 데이터 로드 완료.`);
-                } else {
-                    console.log(`- 스프레드시트 데이터를 찾을 수 없음. 빈 시트를 표시합니다.`);
-                }
-            } else {
-                console.log('- 스프레드시트 ID 없음. 빈 시트를 표시합니다.');
-                setCurrentSpreadsheetId(null);
+                setCurrentSheetMetaDataId(chat.sheetMetaDataId);
             }
+            
+            // 3. 병렬로 데이터 로드
+            const [spreadsheetDataResult, chatMessagesResult] = await Promise.allSettled([
+                // 스프레드시트 데이터 로드
+                chat.sheetMetaDataId ? getSpreadsheetDataByChatId(chat.id) : Promise.resolve(null),
+                // 채팅 메시지 로드
+                user ? loadChatMessages(chat.id, user.uid) : Promise.reject(new Error('사용자 정보가 없습니다.'))
+            ]);
+
+            // 4. 스프레드시트 데이터 처리
+            let loadedXlsxData: XLSXData | null = null;
+            if (spreadsheetDataResult.status === 'fulfilled' && spreadsheetDataResult.value) {
+                loadedXlsxData = convertSpreadsheetDataToXLSXData(spreadsheetDataResult.value);
+                setCurrentSheetMetaDataId(spreadsheetDataResult.value.id);
+                console.log('📊 스프레드시트 데이터 로드 완료:', {
+                    fileName: loadedXlsxData?.fileName,
+                    sheetsCount: loadedXlsxData?.sheets?.length
+                });
+            } else {
+                console.log('📊 스프레드시트 없음 - 빈 시트 표시');
+                setCurrentSheetMetaDataId(null);
+            }
+            
+            // 5. 스프레드시트 데이터 설정
             setXLSXData(loadedXlsxData);
             
-            // 4. 채팅 메시지 로드 및 상태 업데이트
-            console.log(`- 채팅 메시지 로드 시작 for chat ${chat.id}`);
-            if (!user) {
-                throw new Error('사용자 정보가 없습니다.');
+            // 6. 채팅 메시지 처리
+            if (chatMessagesResult.status === 'fulfilled') {
+                const chatMessages = chatMessagesResult.value.messages.map(convertApiMessageToChatMessage);
+                const activeSheetIndex = loadedXlsxData?.activeSheetIndex ?? 0;
+                
+                // 메시지를 활성 시트에 추가
+                chatMessages.forEach(message => {
+                    addMessageToSheet(activeSheetIndex, message);
+                });
+                
+                console.log('💬 채팅 메시지 로드 완료:', chatMessages.length, '개');
+            } else {
+                console.error('❌ 채팅 메시지 로드 실패:', chatMessagesResult.reason);
             }
-            const response = await loadChatMessages(chat.id, user.uid);
-            const chatMessages = response.messages.map(convertApiMessageToChatMessage);
-            
-            // `resetAllStores`가 메시지를 비웠으므로 바로 추가합니다.
-            // 메시지는 활성 시트(기본값 0)에 연결됩니다.
-            const activeSheetIndex = loadedXlsxData?.activeSheetIndex ?? 0;
-            chatMessages.forEach(message => {
-                addMessageToSheet(activeSheetIndex, message);
-            });
-            console.log(`- 채팅 메시지 ${chatMessages.length}개 로드 완료.`);
 
-            // 5. URL 업데이트
-            router.push(`/ai?chatId=${chat.id}`);
-            console.log('URL 업데이트:', `/ai?chatId=${chat.id}`);
+            // 7. URL 업데이트 (필요한 경우에만)
+            const currentUrl = new URL(window.location.href);
+            const currentChatIdFromUrl = currentUrl.searchParams.get('chatId');
+            
+            if (currentChatIdFromUrl !== chat.id) {
+                router.push(`/ai?chatId=${chat.id}`);
+                console.log('🔗 URL 업데이트:', `/ai?chatId=${chat.id}`);
+            }
+
+            // 8. 캐시 업데이트 (채팅 접근 시간 업데이트)
+            const updatedChatList = chats.map(c => 
+                c.id === chat.id ? { ...c, updatedAt: new Date() } : c
+            );
+            saveChatListToStorage(updatedChatList);
+
+            setLoadingChatId(null);
+            console.log('✅ 채팅 선택 완료');
             
         } catch (error) {
             console.error('❌ 채팅 선택 실패:', error);
             resetAllStores();
-            setLoadingChatId(null); // 실패 시 로딩 상태 해제
+            setLoadingChatId(null);
         }
     };
 
-    // 새 채팅 생성 (Firebase)
-    const handleNewFirebaseChat = async () => {
+    // 새 채팅 생성
+    const handleNewChat = async () => {
         if (!user) return;
 
         setIsCreatingChat(true);
@@ -276,39 +339,39 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             resetAllStores();
             
             const chatTitle = `채팅 ${new Date().toLocaleString('ko-KR')}`;
-            // 새 spreadsheetId 생성
-            const newSpreadsheetId = crypto.randomUUID();
+            // 새 sheetMetaDataId 생성
+            const newSheetMetaDataId = crypto.randomUUID();
             
-            const newChatId = await createChat(chatTitle, user.uid, newSpreadsheetId);
+            const newChatId = await createChat(chatTitle, user.uid, newSheetMetaDataId);
             
-            console.log('새 Firebase 채팅 생성됨:', newChatId, '연결된 spreadsheetId:', newSpreadsheetId);
+            console.log('새 채팅 생성됨:', newChatId, '연결된 sheetMetaDataId:', newSheetMetaDataId);
             
-            // 2. 채팅 목록 새로고침
-            await loadFirebaseChats();
+            // 2. 채팅 목록 새로고침 (강제)
+            await loadChats(true);
 
             // 3. 새 채팅 상태 설정
             setCurrentChatId(newChatId);
-            setCurrentSpreadsheetId(newSpreadsheetId);
+            setCurrentSheetMetaDataId(newSheetMetaDataId);
             
             // 4. 새 채팅으로 URL 이동
             router.push(`/ai?chatId=${newChatId}`);
             
         } catch (error) {
-            console.error('새 Firebase 채팅 생성 오류:', error);
+            console.error('새 채팅 생성 오류:', error);
         } finally {
             setIsCreatingChat(false);
         }
     };
 
-    // 채팅 선택 핸들러
-    const handleSelectChat = async (chatItem: CloudChatItem) => {
+    // 채팅 선택 핸들러 (CloudChatItem 대응)
+    const handleSelectCloudChat = async (chatItem: CloudChatItem) => {
         if (chatItem.isActive || loadingChatId) {
             return;
         }
 
-        const firebaseChat = firebaseChats.find(chat => chat.id === chatItem.id);
-        if (firebaseChat) {
-            await handleSelectFirebaseChat(firebaseChat);
+        const chat = chats.find(chat => chat.id === chatItem.id);
+        if (chat) {
+            await handleSelectChat(chat);
         }
     };
 
@@ -336,8 +399,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                 router.push('/ai');
             }
             
-            // 채팅 목록 새로고침
-            await loadFirebaseChats();
+            // 채팅 목록 새로고침 (강제)
+            await loadChats(true);
         } catch (error) {
             console.error('채팅 삭제 오류:', error);
         } finally {
@@ -346,7 +409,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     };
 
     // 채팅 미리보기 텍스트 생성
-    const getFirebaseChatPreview = (chat: ChatListItem) => {
+    const getChatPreview = (chat: ChatListItem) => {
         // sheetMetaDataId가 있으면 스프레드시트 채팅
         if (chat.sheetMetaDataId) {
             const fileName = chat.spreadsheetData?.fileName || 'Spreadsheet';
@@ -439,7 +502,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                     {/* 새 채팅 버튼 */}
                     {user && (
                         <button
-                            onClick={handleNewFirebaseChat}
+                            onClick={handleNewChat}
                             disabled={isCreatingChat}
                             className="w-full mt-4 flex items-center justify-center px-4 py-3 text-white rounded-xl transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                             style={{ backgroundColor: '#005DE9' }}
@@ -471,7 +534,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                         </span>
                         {user && (
                             <button
-                                onClick={loadFirebaseChats}
+                                onClick={() => loadChats(true)}
                                 disabled={isLoadingChats}
                                 className="p-1 hover:bg-white/50 rounded transition-colors"
                                 title="새로고침"
@@ -501,7 +564,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                 {cloudChats.map((chatItem) => (
                                     <div
                                         key={chatItem.id}
-                                        onClick={() => handleSelectChat(chatItem)}
+                                        onClick={() => handleSelectCloudChat(chatItem)}
                                         className={`
                                             relative p-4 rounded-xl cursor-pointer transition-all duration-200 group
                                             ${chatItem.isActive 
@@ -516,17 +579,11 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center mb-2">
+                                                <div className="flex items-center mb-1">
                                                     <div className="flex-1 min-w-0">
                                                         <h3 className="font-semibold text-sm text-gray-800 truncate">
                                                             {chatItem.title}
                                                         </h3>
-                                                        <div className="flex items-center mt-1 space-x-2">
-                                                            <ClockIcon className="h-3 w-3 text-gray-400" />
-                                                            <span className="text-xs text-gray-500">
-                                                                {formatTime(chatItem.updatedAt)}
-                                                            </span>
-                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -579,7 +636,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                             <div className="space-y-1">
                                 <div className="flex items-center justify-center space-x-2">
                                     <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                                    <span className="font-medium">{user.email}</span>
+                                    <span className="font-medium">{user.email || user.displayName}</span>
                                 </div>
                                 <div className="text-gray-400">Extion Chat v1.0</div>
                             </div>

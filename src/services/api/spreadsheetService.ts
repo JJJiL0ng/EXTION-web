@@ -66,7 +66,72 @@ export interface AutoSaveStatusDto {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 /**
- * 스프레드시트 데이터 로드
+ * 채팅 ID로 스프레드시트 데이터 로드
+ */
+export const getSpreadsheetDataByChatId = async (chatId: string): Promise<SpreadsheetData | null> => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/spreadsheet/data/loadsheet/${chatId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null; // 채팅이나 스프레드시트를 찾을 수 없음
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      // 채팅은 있지만 연결된 스프레드시트가 없는 경우
+      if (result.error === 'SHEET_NOT_FOUND') {
+        console.warn('채팅에 연결된 스프레드시트가 없습니다:', chatId);
+        return null;
+      }
+      throw new Error(result.message || '스프레드시트 로드에 실패했습니다.');
+    }
+
+    // 응답 데이터 구조 변환
+    const { chatInfo, sheetMetaData, sheets } = result.data;
+    
+    // SpreadsheetData 형식으로 변환
+    const data: SpreadsheetData = {
+      id: sheetMetaData.id,
+      userId: sheetMetaData.userId,
+      chatId: chatInfo.id,
+      fileName: sheetMetaData.fileName,
+      originalFileName: sheetMetaData.originalFileName,
+      fileSize: sheetMetaData.fileSize,
+      fileType: sheetMetaData.fileType,
+      activeSheetIndex: sheetMetaData.activeSheetIndex,
+      sheets: sheets.map((sheet: any) => ({
+        name: sheet.name,
+        index: sheet.index,
+        data: sheet.data
+      })),
+      createdAt: new Date(sheetMetaData.createdAt),
+      updatedAt: new Date(sheetMetaData.updatedAt),
+    };
+
+    return data;
+  } catch (error) {
+    console.error('채팅 ID로 스프레드시트 데이터 로드 실패:', error);
+    if (error instanceof Error && error.message.includes('404')) {
+      return null;
+    }
+    throw error;
+  }
+};
+
+/**
+ * 스프레드시트 데이터 로드 (기존 함수 - 하위 호환성 유지)
  */
 export const getSpreadsheetData = async (spreadsheetId: string): Promise<SpreadsheetData | null> => {
   try {
@@ -355,14 +420,25 @@ export const getAutoSaveStats = async (userId: string): Promise<any> => {
 export const convertSpreadsheetDataToXLSXData = (spreadsheetData: SpreadsheetData): any => {
   return {
     fileName: spreadsheetData.fileName,
-    totalSheets: spreadsheetData.sheets.length,
     activeSheetIndex: spreadsheetData.activeSheetIndex || 0,
-    hasSpreadsheet: true,
-    lastModifiedAt: spreadsheetData.updatedAt,
-    sheetNames: spreadsheetData.sheets.map(sheet => sheet.name),
+    spreadsheetId: spreadsheetData.id,
     sheets: spreadsheetData.sheets.map(sheet => ({
       sheetName: sheet.name,
-      data: sheet.data,
+      rawData: sheet.data,
+      metadata: {
+        rowCount: sheet.data?.length || 0,
+        columnCount: sheet.data?.[0]?.length || 0,
+        dataRange: {
+          startRow: 0,
+          endRow: Math.max(0, (sheet.data?.length || 0) - 1),
+          startCol: 0,
+          endCol: Math.max(0, (sheet.data?.[0]?.length || 0) - 1),
+          startColLetter: 'A',
+          endColLetter: String.fromCharCode(65 + Math.max(0, (sheet.data?.[0]?.length || 0) - 1))
+        },
+        preserveOriginalStructure: true,
+        lastModified: spreadsheetData.updatedAt
+      }
     })),
     id: spreadsheetData.id,
     userId: spreadsheetData.userId,

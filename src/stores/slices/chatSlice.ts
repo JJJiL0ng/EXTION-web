@@ -2,16 +2,38 @@ import { StateCreator } from 'zustand';
 import { ChatMessage, ChatSession } from '../store-types';
 import { FirebaseChat } from '../../services/firebase/chatService';
 
+// 채팅 리스트 아이템 타입 (API에서 받는 데이터)
+export interface StoredChatListItem {
+    id: string;
+    title: string;
+    updatedAt: string; // ISO string으로 저장
+    createdAt: string; // ISO string으로 저장
+    sheetMetaDataId?: string;
+    spreadsheetData?: {
+        fileName: string;
+        totalSheets: number;
+    };
+    messageCount?: number;
+    lastMessage?: {
+        content: string;
+        timestamp: string; // ISO string으로 저장
+    };
+}
+
 // 채팅 슬라이스 상태
 export interface ChatSlice {
     // === 채팅 세션 관리 ===
     chatSessions: { [chatId: string]: ChatSession };
     currentChatId: string | null;
-    currentSpreadsheetId: string | null;
+    currentSheetMetaDataId: string | null;
     chatHistory: string[];
     
     // === 현재 채팅 메타데이터 ===
     currentChatMeta: Partial<FirebaseChat> | null;
+    
+    // === 채팅 리스트 캐시 ===
+    cachedChatList: StoredChatListItem[];
+    chatListLastUpdated: number | null;
     
     // === 시트별 채팅 메시지 ===
     sheetMessages: { [sheetIndex: number]: ChatMessage[] };
@@ -24,6 +46,13 @@ export interface ChatSlice {
     chatListRefreshTrigger?: number;
     
     // === 액션들 ===
+    // 채팅 리스트 관리
+    saveChatListToStorage: (chatList: any[]) => void;
+    loadChatListFromStorage: () => StoredChatListItem[];
+    getCachedChatList: () => StoredChatListItem[];
+    isChatListCacheValid: () => boolean;
+    clearChatListCache: () => void;
+    
     // 채팅 세션 관리
     createNewChatSession: () => string;
     switchToChatSession: (chatId: string) => void;
@@ -60,13 +89,13 @@ export interface ChatSlice {
     // === 채팅 메타데이터 액션 ===
     setCurrentChatMeta: (meta: Partial<FirebaseChat> | null) => void;
 
-    // === 스프레드시트 ID 액션 ===
-    setCurrentSpreadsheetId: (spreadsheetId: string | null) => void;
+    // === 시트 메타데이터 ID 액션 ===
+    setCurrentSheetMetaDataId: (sheetMetaDataId: string | null) => void;
 
-    // === SheetId 관리 액션 ===
-    currentSheetId: string | null;
-    setCurrentSheetId: (sheetId: string | null) => void;
-    getCurrentSheetId: () => string | null;
+    // === SheetTableDataId 관리 액션 ===
+    currentSheetTableDataId: string | null;
+    setCurrentSheetTableDataId: (sheetTableDataId: string | null) => void;
+    getCurrentSheetTableDataId: () => string | null;
 
     // === 채팅 목록 새로고침 액션 ===
     refreshChatList: () => void;
@@ -82,14 +111,16 @@ export const createChatSlice: StateCreator<
     // === 초기 상태 ===
     chatSessions: {},
     currentChatId: null,
-    currentSpreadsheetId: null,
+    currentSheetMetaDataId: null,
     chatHistory: [],
     currentChatMeta: null,
+    cachedChatList: [],
+    chatListLastUpdated: null,
     sheetMessages: {},
     activeSheetMessages: [],
     sheetChatIds: {},
     chatListRefreshTrigger: undefined,
-    currentSheetId: null,
+    currentSheetTableDataId: null,
     
     // === 채팅 세션 관리 액션 ===
     createNewChatSession: () => {
@@ -106,9 +137,9 @@ export const createChatSlice: StateCreator<
             hasUploadedFile: false,
             createdAt: new Date(),
             lastAccessedAt: new Date(),
-            currentSpreadsheetId: null,
-            spreadsheetMetadata: null,
-            currentSheetId: null
+            currentSheetMetaDataId: null,
+            sheetMetaData: null,
+            currentSheetTableDataId: null
         };
 
         set((state) => ({
@@ -126,9 +157,9 @@ export const createChatSlice: StateCreator<
             sheetMessages: {},
             activeSheetMessages: [],
             sheetChatIds: {},
-            currentSpreadsheetId: null,
-            spreadsheetMetadata: null,
-            currentSheetId: null
+            currentSheetMetaDataId: null,
+            sheetMetaData: null,
+            currentSheetTableDataId: null
         }));
 
         return newChatId;
@@ -169,9 +200,9 @@ export const createChatSlice: StateCreator<
             sheetMessages: session.sheetMessages,
             activeSheetMessages: session.activeSheetMessages,
             sheetChatIds: session.sheetChatIds,
-            currentSpreadsheetId: session.currentSpreadsheetId,
-            spreadsheetMetadata: session.spreadsheetMetadata,
-            currentSheetId: session.currentSheetId
+            currentSheetMetaDataId: session.currentSheetMetaDataId,
+            sheetMetaData: session.sheetMetaData,
+            currentSheetTableDataId: session.currentSheetTableDataId
         }));
     },
 
@@ -240,9 +271,9 @@ export const createChatSlice: StateCreator<
                     activeSheetMessages: [],
                     sheetChatIds: {},
                     extendedSheetContext: null,
-                    currentSpreadsheetId: null,
-                    spreadsheetMetadata: null,
-                    currentSheetId: null
+                    currentSheetMetaDataId: null,
+                    sheetMetaData: null,
+                    currentSheetTableDataId: null
                 };
             }
             
@@ -258,9 +289,9 @@ export const createChatSlice: StateCreator<
                     sheetMessages: targetSession.sheetMessages,
                     activeSheetMessages: targetSession.activeSheetMessages,
                     sheetChatIds: targetSession.sheetChatIds,
-                    currentSpreadsheetId: targetSession.currentSpreadsheetId,
-                    spreadsheetMetadata: targetSession.spreadsheetMetadata,
-                    currentSheetId: targetSession.currentSheetId
+                    currentSheetMetaDataId: targetSession.currentSheetMetaDataId,
+                    sheetMetaData: targetSession.sheetMetaData,
+                    currentSheetTableDataId: targetSession.currentSheetTableDataId
                 };
             }
             
@@ -291,9 +322,9 @@ export const createChatSlice: StateCreator<
             hasUploadedFile: state.hasUploadedFile,
             createdAt: state.chatSessions[currentChatId]?.createdAt || new Date(),
             lastAccessedAt: new Date(),
-            currentSpreadsheetId: state.currentSpreadsheetId,
-            spreadsheetMetadata: state.spreadsheetMetadata,
-            currentSheetId: state.currentSheetId // 백엔드에서 받은 sheetId 저장
+            currentSheetMetaDataId: state.currentSheetMetaDataId,
+            sheetMetaData: state.sheetMetaData,
+            currentSheetTableDataId: state.currentSheetTableDataId // 백엔드에서 받은 sheetTableDataId 저장
         };
         
         set((prevState) => ({
@@ -351,7 +382,7 @@ export const createChatSlice: StateCreator<
         }
     },
 
-    setCurrentSpreadsheetId: (spreadsheetId) => set({ currentSpreadsheetId: spreadsheetId }),
+    setCurrentSheetMetaDataId: (sheetMetaDataId) => set({ currentSheetMetaDataId: sheetMetaDataId }),
 
     getCurrentChatId: () => {
         const { xlsxData, getCurrentSheetChatId } = get();
@@ -538,8 +569,8 @@ export const createChatSlice: StateCreator<
     },
 
     getCurrentSheetChatId: () => {
-        const { currentSpreadsheetId } = get();
-        return currentSpreadsheetId;
+        const { currentSheetMetaDataId } = get();
+        return currentSheetMetaDataId;
     },
 
     initializeSheetChatIds: () => {
@@ -549,41 +580,145 @@ export const createChatSlice: StateCreator<
         });
     },
 
-    // === SheetId 관리 액션 ===
-    setCurrentSheetId: (sheetId) => {
+    // === SheetTableDataId 관리 액션 ===
+    setCurrentSheetTableDataId: (sheetTableDataId) => {
         set((state) => ({
             ...state,
-            currentSheetId: sheetId
+            currentSheetTableDataId: sheetTableDataId
         }));
         
         // 로컬 스토리지에도 저장
         if (typeof window !== 'undefined') {
-            if (sheetId) {
-                localStorage.setItem('currentSheetId', sheetId);
+            if (sheetTableDataId) {
+                localStorage.setItem('currentSheetTableDataId', sheetTableDataId);
             } else {
-                localStorage.removeItem('currentSheetId');
+                localStorage.removeItem('currentSheetTableDataId');
             }
         }
     },
 
-    getCurrentSheetId: () => {
-        const { currentSheetId } = get();
+    getCurrentSheetTableDataId: () => {
+        const { currentSheetTableDataId } = get();
         
         // 메모리에 있으면 반환
-        if (currentSheetId) {
-            return currentSheetId;
+        if (currentSheetTableDataId) {
+            return currentSheetTableDataId;
         }
         
         // 로컬 스토리지에서 가져오기
         if (typeof window !== 'undefined') {
-            const storedSheetId = localStorage.getItem('currentSheetId');
-            if (storedSheetId) {
-                get().setCurrentSheetId(storedSheetId);
-                return storedSheetId;
+            const storedSheetTableDataId = localStorage.getItem('currentSheetTableDataId');
+            if (storedSheetTableDataId) {
+                get().setCurrentSheetTableDataId(storedSheetTableDataId);
+                return storedSheetTableDataId;
             }
         }
         
         return null;
+    },
+
+    // === 채팅 리스트 관리 액션 ===
+    saveChatListToStorage: (chatList: any[]) => {
+        if (typeof window === 'undefined') return;
+        
+        try {
+            // 안전한 날짜 변환 함수
+            const safeToISOString = (date: any): string => {
+                if (!date) return new Date().toISOString();
+                
+                if (typeof date === 'string') {
+                    const parsedDate = new Date(date);
+                    return isNaN(parsedDate.getTime()) ? new Date().toISOString() : parsedDate.toISOString();
+                }
+                
+                if (date instanceof Date) {
+                    return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+                }
+                
+                return new Date().toISOString();
+            };
+
+            // API 응답을 StoredChatListItem 형태로 변환
+            const storedChatList: StoredChatListItem[] = chatList.map(chat => ({
+                id: chat.id,
+                title: chat.title,
+                updatedAt: safeToISOString(chat.updatedAt),
+                createdAt: safeToISOString(chat.createdAt),
+                sheetMetaDataId: chat.sheetMetaDataId,
+                spreadsheetData: chat.spreadsheetData,
+                messageCount: chat.messageCount,
+                lastMessage: chat.lastMessage ? {
+                    content: chat.lastMessage.content,
+                    timestamp: safeToISOString(chat.lastMessage.timestamp)
+                } : undefined
+            }));
+
+            localStorage.setItem('cachedChatList', JSON.stringify(storedChatList));
+            localStorage.setItem('chatListLastUpdated', Date.now().toString());
+            
+            set({
+                cachedChatList: storedChatList,
+                chatListLastUpdated: Date.now()
+            });
+            
+            console.log('💾 채팅 리스트 로컬스토리지에 저장됨:', storedChatList.length, '개');
+        } catch (error) {
+            console.error('채팅 리스트 저장 오류:', error);
+        }
+    },
+
+    loadChatListFromStorage: () => {
+        if (typeof window === 'undefined') return [];
+        
+        try {
+            const stored = localStorage.getItem('cachedChatList');
+            const lastUpdated = localStorage.getItem('chatListLastUpdated');
+            
+            if (stored && lastUpdated) {
+                const chatList: StoredChatListItem[] = JSON.parse(stored);
+                const timestamp = parseInt(lastUpdated);
+                
+                set({
+                    cachedChatList: chatList,
+                    chatListLastUpdated: timestamp
+                });
+                
+                console.log('📋 로컬스토리지에서 채팅 리스트 로드됨:', chatList.length, '개');
+                return chatList;
+            }
+        } catch (error) {
+            console.error('채팅 리스트 로드 오류:', error);
+        }
+        
+        return [];
+    },
+
+    getCachedChatList: () => {
+        const { cachedChatList } = get();
+        return cachedChatList;
+    },
+
+    isChatListCacheValid: () => {
+        const { chatListLastUpdated } = get();
+        if (!chatListLastUpdated) return false;
+        
+        // 5분 이내의 캐시는 유효한 것으로 간주
+        const CACHE_DURATION = 5 * 60 * 1000; // 5분
+        return (Date.now() - chatListLastUpdated) < CACHE_DURATION;
+    },
+
+    clearChatListCache: () => {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('cachedChatList');
+            localStorage.removeItem('chatListLastUpdated');
+        }
+        
+        set({
+            cachedChatList: [],
+            chatListLastUpdated: null
+        });
+        
+        console.log('🗑️ 채팅 리스트 캐시 삭제됨');
     },
 
     // === 채팅 목록 새로고침 액션 ===

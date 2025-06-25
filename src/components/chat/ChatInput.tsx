@@ -2,9 +2,10 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Send, Paperclip } from 'lucide-react';
+import { ChatMode } from '@/types/chat';
 
 interface ChatInputProps {
-    currentMode: 'normal' | 'function' | 'artifact' | 'datafix' | 'dataedit' | 'data-edit' | 'edit-chat' | 'function-chat' | 'datageneration';
+    currentMode: ChatMode;
     inputValue: string;
     isDragOver: boolean;
     isLoading: boolean;
@@ -118,14 +119,14 @@ export default function ChatInput({
                             onKeyDown={onKeyPress}
                             onCompositionStart={onCompositionStart}
                             onCompositionEnd={onCompositionEnd}
-                            placeholder="파일을 업로드하여 데이터와 대화해보세요"
+                            placeholder={hasUploadedFile ? "원하는 수정사항이나 질문을 입력하세요" : "← 왼쪽 버튼을 눌러 파일을 먼저 업로드해주세요"}
                             className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 placeholder-gray-500 resize-none pr-2 py-1.5"
-                            disabled={isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || loadingStates.dataFix || isArtifactModalOpen}
+                            disabled={!hasUploadedFile || isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || loadingStates.dataFix || isArtifactModalOpen}
                         />
 
                         <button
                             onClick={onSendMessage}
-                            disabled={!inputValue.trim() || isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || loadingStates.dataFix || isArtifactModalOpen}
+                            disabled={!hasUploadedFile || !inputValue.trim() || isLoading || loadingStates.formulaGeneration || loadingStates.artifactGeneration || loadingStates.dataGeneration || loadingStates.dataFix || isArtifactModalOpen}
                             className="flex items-center justify-center w-8 h-8 rounded-full bg-[#005DE9] hover:bg-[#0052d1] disabled:opacity-50 disabled:cursor-not-allowed transition-colors ml-2 flex-shrink-0"
                         >
                             <Send className="h-4 w-4 text-white" />
