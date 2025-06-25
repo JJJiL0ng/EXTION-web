@@ -150,7 +150,7 @@ export const useFileProcessing = (
             const rawData = sheet.rawData || [[]];
             return `• ${sheet.sheetName}: ${rawData[0]?.length || 0}열 × ${rawData.length}행`;
           }).join('\n') +
-          (saveResult.success ? '\n\n✅ 서버에 자동 저장되었습니다.' : 
+          (saveResult.success ? '\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!' : 
            saveResult.error ? `\n\n⚠️ 서버 저장 실패: ${saveResult.error}` : ''),
         timestamp: new Date()
       };
@@ -257,7 +257,7 @@ export const useFileProcessing = (
             const successMessage: ChatMessage = {
               id: Date.now().toString(),
               type: 'Extion ai',
-              content: `${file.name} 파일이 성공적으로 로드되었습니다.\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!`,
+              content: `${file.name} 파일이 성공적으로 로드되었습니다.\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!`,
               timestamp: new Date()
             };
             addMessageToSheet(0, successMessage);
