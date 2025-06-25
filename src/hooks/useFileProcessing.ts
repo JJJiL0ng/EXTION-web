@@ -257,10 +257,7 @@ export const useFileProcessing = (
             const successMessage: ChatMessage = {
               id: Date.now().toString(),
               type: 'Extion ai',
-              content: `${file.name} 파일이 성공적으로 로드되었습니다.\n` +
-                `${newSheetData.rawData[0]?.length || 0}열 × ${newSheetData.rawData.length}행의 데이터가 스프레드시트에 표시됩니다.` +
-                (saveResult.success ? '\n\n✅ 서버에 자동 저장되었습니다.' : 
-                 saveResult.error ? `\n\n⚠️ 서버 저장 실패: ${saveResult.error}\n\n로컬에서는 정상적으로 사용할 수 있습니다.` : ''),
+              content: `${file.name} 파일이 성공적으로 로드되었습니다.\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!`,
               timestamp: new Date()
             };
             addMessageToSheet(0, successMessage);
