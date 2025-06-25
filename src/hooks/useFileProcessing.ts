@@ -175,7 +175,7 @@ export const useFileProcessing = (
             const rawData = sheet.rawData || [[]];
             return `• ${sheet.sheetName}: ${rawData[0]?.length || 0}열 × ${rawData.length}행`;
           }).join('\n') +
-          (saveResult.success ? '\n\n✅ 서버에 자동 저장되었습니다.\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!' : 
+          (saveResult.success ? '\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!' : 
            saveResult.error ? `\n\n⚠️ 서버 저장 실패: ${saveResult.error}\n\n로컬에서는 정상적으로 사용할 수 있습니다. 데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!` : 
            `\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!`),
         timestamp: new Date()
@@ -239,7 +239,7 @@ export const useFileProcessing = (
               content: `${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
                 `추가된 시트 정보:\n` +
                 `• ${newSheetData.sheetName}: ${newSheetData.rawData[0]?.length || 0}열 × ${newSheetData.rawData.length}행` +
-                (saveResult.success ? '\n\n✅ 서버에 자동 저장되었습니다.' : 
+                (saveResult.success ? '\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!' : 
                  saveResult.error ? `\n\n⚠️ 서버 저장 실패: ${saveResult.error}` : ''),
               timestamp: new Date()
             };
