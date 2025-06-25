@@ -10,10 +10,10 @@ export function middleware(request: NextRequest) {
   const sessionToken = request.cookies.get('firebase-session-token')?.value;
 
   // 모바일에서 /ai 접근 시 /sorryformobile로 리디렉션
-  // if (isMobile && path.startsWith('/ai')) {
-  //   const sorryUrl = new URL('/sorryformobile', request.url);
-  //   return NextResponse.redirect(sorryUrl);
-  // }
+  if (isMobile && path.startsWith('/ai')) {
+    const sorryUrl = new URL('/sorryformobile', request.url);
+    return NextResponse.redirect(sorryUrl);
+  }
 
   // 로그인이 필요한 경로에 대한 인증 확인
   // if (path.startsWith('/ai')) {

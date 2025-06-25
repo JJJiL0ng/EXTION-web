@@ -41,12 +41,50 @@ export const useFileProcessing = (
     return result;
   };
 
-  // 로컬 데이터 처리 함수 (Firebase 저장 제거)
-  const processSpreadsheetLocally = (xlsxDataToSave: any) => {
-    // 로컬에서만 데이터 처리
-    setXLSXData(xlsxDataToSave);
-    console.log('스프레드시트가 로컬에서 처리되었습니다');
-    return { success: true };
+  // 스프레드시트 저장 함수 (API 호출)
+  const saveSpreadsheetToAPI = async (xlsxDataToSave: any, originalFile: File) => {
+    try {
+      // 동적 import로 API 함수 가져오기
+      const { saveSpreadsheetData, getCurrentUserId } = await import('@/services/api/dataServices');
+      const { getCurrentChatId } = useUnifiedStore.getState();
+      
+      // 파일 정보 구성
+      const fileInfo = {
+        originalFileName: originalFile.name,
+        fileSize: originalFile.size,
+        fileType: originalFile.name.toLowerCase().endsWith('.csv') ? 'csv' as const : 'xlsx' as const
+      };
+      
+      // 현재 채팅 ID 가져오기
+      const currentChatId = getCurrentChatId();
+      
+      // API 호출
+      const result = await saveSpreadsheetData(
+        xlsxDataToSave,
+        fileInfo,
+        {
+          chatId: currentChatId || undefined,
+          userId: getCurrentUserId()
+        }
+      );
+      
+      if (result.success) {
+        console.log('스프레드시트가 성공적으로 저장되었습니다. SpreadsheetId:', result.spreadsheetId);
+        // 로컬 상태 업데이트
+        setXLSXData(xlsxDataToSave);
+        return { success: true, spreadsheetId: result.spreadsheetId };
+      } else {
+        console.error('스프레드시트 저장 실패:', result.error);
+        // 실패해도 로컬에는 저장
+        setXLSXData(xlsxDataToSave);
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('스프레드시트 저장 중 오류:', error);
+      // 오류 발생 시에도 로컬에는 저장
+      setXLSXData(xlsxDataToSave);
+      return { success: false, error: error instanceof Error ? error.message : '저장 중 오류가 발생했습니다' };
+    }
   };
 
   // XLSX 파일 처리
@@ -101,7 +139,7 @@ export const useFileProcessing = (
       }
 
       const newXlsxData = { ...xlsxData, sheets: [...xlsxData.sheets, ...newSheets] };
-      processSpreadsheetLocally(newXlsxData);
+      const saveResult = await saveSpreadsheetToAPI(newXlsxData, file);
 
       const successMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -111,7 +149,9 @@ export const useFileProcessing = (
           newSheets.map((sheet) => {
             const rawData = sheet.rawData || [[]];
             return `• ${sheet.sheetName}: ${rawData[0]?.length || 0}열 × ${rawData.length}행`;
-          }).join('\n'),
+          }).join('\n') +
+          (saveResult.success ? '\n\n✅ 서버에 자동 저장되었습니다.' : 
+           saveResult.error ? `\n\n⚠️ 서버 저장 실패: ${saveResult.error}` : ''),
         timestamp: new Date()
       };
 
@@ -124,7 +164,7 @@ export const useFileProcessing = (
         activeSheetIndex: 0
       };
 
-      processSpreadsheetLocally(xlsxDataNew);
+      const saveResult = await saveSpreadsheetToAPI(xlsxDataNew, file);
 
       const successMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -135,7 +175,9 @@ export const useFileProcessing = (
             const rawData = sheet.rawData || [[]];
             return `• ${sheet.sheetName}: ${rawData[0]?.length || 0}열 × ${rawData.length}행`;
           }).join('\n') +
-          `\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!`,
+          (saveResult.success ? '\n\n✅ 서버에 자동 저장되었습니다.\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!' : 
+           saveResult.error ? `\n\n⚠️ 서버 저장 실패: ${saveResult.error}\n\n로컬에서는 정상적으로 사용할 수 있습니다. 데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!` : 
+           `\n\n데이터에 대해 궁금한 점이 있으시면 언제든 물어보세요!`),
         timestamp: new Date()
       };
       addMessageToSheet(activeSheetIndex, successMessage);
@@ -189,14 +231,16 @@ export const useFileProcessing = (
           if (xlsxData) {
             // 기존 데이터에 새 시트 추가
             const newXlsxData = { ...xlsxData, sheets: [...xlsxData.sheets, newSheetData] };
-            processSpreadsheetLocally(newXlsxData);
+            const saveResult = await saveSpreadsheetToAPI(newXlsxData, file);
 
             const successMessage: ChatMessage = {
               id: Date.now().toString(),
               type: 'Extion ai',
               content: `${file.name} 파일이 새로운 시트로 추가되었습니다.\n\n` +
                 `추가된 시트 정보:\n` +
-                `• ${newSheetData.sheetName}: ${newSheetData.rawData[0]?.length || 0}열 × ${newSheetData.rawData.length}행`,
+                `• ${newSheetData.sheetName}: ${newSheetData.rawData[0]?.length || 0}열 × ${newSheetData.rawData.length}행` +
+                (saveResult.success ? '\n\n✅ 서버에 자동 저장되었습니다.' : 
+                 saveResult.error ? `\n\n⚠️ 서버 저장 실패: ${saveResult.error}` : ''),
               timestamp: new Date()
             };
             addMessageToSheet(activeSheetIndex, successMessage);
@@ -208,13 +252,15 @@ export const useFileProcessing = (
               activeSheetIndex: 0
             };
 
-            processSpreadsheetLocally(xlsxDataNew);
+            const saveResult = await saveSpreadsheetToAPI(xlsxDataNew, file);
 
             const successMessage: ChatMessage = {
               id: Date.now().toString(),
               type: 'Extion ai',
               content: `${file.name} 파일이 성공적으로 로드되었습니다.\n` +
-                `${newSheetData.rawData[0]?.length || 0}열 × ${newSheetData.rawData.length}행의 데이터가 스프레드시트에 표시됩니다.`,
+                `${newSheetData.rawData[0]?.length || 0}열 × ${newSheetData.rawData.length}행의 데이터가 스프레드시트에 표시됩니다.` +
+                (saveResult.success ? '\n\n✅ 서버에 자동 저장되었습니다.' : 
+                 saveResult.error ? `\n\n⚠️ 서버 저장 실패: ${saveResult.error}\n\n로컬에서는 정상적으로 사용할 수 있습니다.` : ''),
               timestamp: new Date()
             };
             addMessageToSheet(0, successMessage);

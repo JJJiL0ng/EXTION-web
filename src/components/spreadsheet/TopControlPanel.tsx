@@ -51,11 +51,11 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
       <div className="flex items-center justify-between space-x-2">
         {/* 왼쪽: 햄버거 버튼과 로고 */}
         <div className="flex items-center space-x-2">
-          <HamburgerIcon 
+          {/* <HamburgerIcon 
             onClick={onToggleSidebar}
             isOpen={isSidebarOpen}
             className="flex-shrink-0"
-          />
+          /> */}
           <Link href="/ai" className="cursor-pointer">
             <h1 className="text-xl font-bold text-gray-800" style={{ color: '#005DE9' }}>
               EXTION

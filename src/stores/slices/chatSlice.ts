@@ -622,20 +622,34 @@ export const createChatSlice: StateCreator<
         if (typeof window === 'undefined') return;
         
         try {
+            // 안전한 날짜 변환 함수
+            const safeToISOString = (date: any): string => {
+                if (!date) return new Date().toISOString();
+                
+                if (typeof date === 'string') {
+                    const parsedDate = new Date(date);
+                    return isNaN(parsedDate.getTime()) ? new Date().toISOString() : parsedDate.toISOString();
+                }
+                
+                if (date instanceof Date) {
+                    return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+                }
+                
+                return new Date().toISOString();
+            };
+
             // API 응답을 StoredChatListItem 형태로 변환
             const storedChatList: StoredChatListItem[] = chatList.map(chat => ({
                 id: chat.id,
                 title: chat.title,
-                updatedAt: chat.updatedAt instanceof Date ? chat.updatedAt.toISOString() : chat.updatedAt,
-                createdAt: chat.createdAt instanceof Date ? chat.createdAt.toISOString() : chat.createdAt,
+                updatedAt: safeToISOString(chat.updatedAt),
+                createdAt: safeToISOString(chat.createdAt),
                 sheetMetaDataId: chat.sheetMetaDataId,
                 spreadsheetData: chat.spreadsheetData,
                 messageCount: chat.messageCount,
                 lastMessage: chat.lastMessage ? {
                     content: chat.lastMessage.content,
-                    timestamp: chat.lastMessage.timestamp instanceof Date 
-                        ? chat.lastMessage.timestamp.toISOString() 
-                        : chat.lastMessage.timestamp
+                    timestamp: safeToISOString(chat.lastMessage.timestamp)
                 } : undefined
             }));
 

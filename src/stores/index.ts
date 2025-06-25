@@ -34,6 +34,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
                     currentSheetMetaDataId: null,
                     sheetMetaData: null,
                     hasUploadedFile: false, // 파일 업로드 상태 초기화
+                    currentSheetId: null, // 현재 스프레드시트 ID 초기화
                     
                     // 채팅 리셋 (세션과 히스토리는 유지)
                     sheetMessages: {},
@@ -68,9 +69,18 @@ export const useSheetList = () => {
     );
 };
 
-// 편의 함수로 resetAllStores export
+// 편의 함수들 export
 export const resetAllStores = () => {
     useUnifiedStore.getState().resetAllStores();
+};
+
+// SheetId 관련 편의 함수들
+export const getCurrentSheetId = () => {
+    return useUnifiedStore.getState().getCurrentSheetId();
+};
+
+export const setCurrentSheetId = (sheetId: string | null) => {
+    return useUnifiedStore.getState().setCurrentSheetId(sheetId);
 };
 
 // 유틸리티 함수들 export

@@ -52,7 +52,7 @@ interface CloudChatItem {
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     const { user, loading } = useAuthStore();
-    const [firebaseChats, setFirebaseChats] = useState<ChatListItem[]>([]);
+    const [chats, setChats] = useState<ChatListItem[]>([]);
     const [isLoadingChats, setIsLoadingChats] = useState(false);
     const [isCreatingChat, setIsCreatingChat] = useState(false);
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -80,7 +80,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     const searchParams = useSearchParams();
 
     // 채팅 목록 로드 (캐시 우선)
-    const loadFirebaseChats = useCallback(async (forceRefresh = false) => {
+    const loadChats = useCallback(async (forceRefresh = false) => {
         if (!user) return;
 
         // 강제 새로고침이 아니고 유효한 캐시가 있으면 캐시 사용
@@ -99,7 +99,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                     } : undefined
                 }));
                 
-                setFirebaseChats(convertedChats);
+                setChats(convertedChats);
                 console.log('📋 캐시에서 채팅 목록 로드됨:', convertedChats.length, '개');
                 return;
             }
@@ -108,7 +108,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         setIsLoadingChats(true);
         try {
             const response = await getChatList(user.uid);
-            setFirebaseChats(response.chats);
+            setChats(response.chats);
             
             // 로컬스토리지에 저장
             saveChatListToStorage(response.chats);
@@ -142,7 +142,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                     } : undefined
                 }));
                 
-                setFirebaseChats(convertedChats);
+                setChats(convertedChats);
                 console.log('📋 API 실패로 캐시에서 채팅 목록 복원:', convertedChats.length, '개');
             }
         } finally {
@@ -156,20 +156,20 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         loadChatListFromStorage();
     }, [loadChatListFromStorage]);
 
-    // 컴포넌트 마운트 시 Firebase 채팅 목록 로드
+    // 컴포넌트 마운트 시 채팅 목록 로드
     useEffect(() => {
         if (user && !loading) {
-            loadFirebaseChats();
+            loadChats();
         }
-    }, [user, loading, loadFirebaseChats]);
+    }, [user, loading, loadChats]);
 
     // chatListRefreshTrigger가 변경될 때 채팅 목록 새로고침
     useEffect(() => {
         if (chatListRefreshTrigger && user && !loading) {
             console.log('📋 채팅 목록 새로고침 트리거 감지:', chatListRefreshTrigger);
-            loadFirebaseChats();
+            loadChats();
         }
-    }, [chatListRefreshTrigger, user, loading, loadFirebaseChats]);
+    }, [chatListRefreshTrigger, user, loading, loadChats]);
 
     // URL 파라미터와 선택된 채팅 동기화
     useEffect(() => {
@@ -197,13 +197,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         const cloudChats: CloudChatItem[] = [];
 
         // API 채팅 추가
-        firebaseChats.forEach(chat => {
+        chats.forEach(chat => {
             const hasSpreadsheet = !!chat.sheetMetaDataId;
             cloudChats.push({
                 id: chat.id,
                 title: chat.title,
                 updatedAt: chat.updatedAt,
-                preview: getFirebaseChatPreview(chat),
+                preview: getChatPreview(chat),
                 hasSpreadsheet: hasSpreadsheet,
                 spreadsheetInfo: hasSpreadsheet ? {
                     fileName: chat.spreadsheetData?.fileName || 'Spreadsheet',
@@ -237,7 +237,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     };
 
     // 채팅 선택 및 복원 (최적화된 버전)
-    const handleSelectFirebaseChat = async (chat: ChatListItem) => {
+    const handleSelectChat = async (chat: ChatListItem) => {
         if (selectedChatId === chat.id) return;
     
         console.log('=== 채팅 선택 시작 ===', {
@@ -313,7 +313,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             }
 
             // 8. 캐시 업데이트 (채팅 접근 시간 업데이트)
-            const updatedChatList = firebaseChats.map(c => 
+            const updatedChatList = chats.map(c => 
                 c.id === chat.id ? { ...c, updatedAt: new Date() } : c
             );
             saveChatListToStorage(updatedChatList);
@@ -328,8 +328,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
         }
     };
 
-    // 새 채팅 생성 (Firebase)
-    const handleNewFirebaseChat = async () => {
+    // 새 채팅 생성
+    const handleNewChat = async () => {
         if (!user) return;
 
         setIsCreatingChat(true);
@@ -344,10 +344,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             
             const newChatId = await createChat(chatTitle, user.uid, newSheetMetaDataId);
             
-            console.log('새 Firebase 채팅 생성됨:', newChatId, '연결된 sheetMetaDataId:', newSheetMetaDataId);
+            console.log('새 채팅 생성됨:', newChatId, '연결된 sheetMetaDataId:', newSheetMetaDataId);
             
             // 2. 채팅 목록 새로고침 (강제)
-            await loadFirebaseChats(true);
+            await loadChats(true);
 
             // 3. 새 채팅 상태 설정
             setCurrentChatId(newChatId);
@@ -357,21 +357,21 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             router.push(`/ai?chatId=${newChatId}`);
             
         } catch (error) {
-            console.error('새 Firebase 채팅 생성 오류:', error);
+            console.error('새 채팅 생성 오류:', error);
         } finally {
             setIsCreatingChat(false);
         }
     };
 
-    // 채팅 선택 핸들러
-    const handleSelectChat = async (chatItem: CloudChatItem) => {
+    // 채팅 선택 핸들러 (CloudChatItem 대응)
+    const handleSelectCloudChat = async (chatItem: CloudChatItem) => {
         if (chatItem.isActive || loadingChatId) {
             return;
         }
 
-        const firebaseChat = firebaseChats.find(chat => chat.id === chatItem.id);
-        if (firebaseChat) {
-            await handleSelectFirebaseChat(firebaseChat);
+        const chat = chats.find(chat => chat.id === chatItem.id);
+        if (chat) {
+            await handleSelectChat(chat);
         }
     };
 
@@ -400,7 +400,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
             }
             
             // 채팅 목록 새로고침 (강제)
-            await loadFirebaseChats(true);
+            await loadChats(true);
         } catch (error) {
             console.error('채팅 삭제 오류:', error);
         } finally {
@@ -409,7 +409,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
     };
 
     // 채팅 미리보기 텍스트 생성
-    const getFirebaseChatPreview = (chat: ChatListItem) => {
+    const getChatPreview = (chat: ChatListItem) => {
         // sheetMetaDataId가 있으면 스프레드시트 채팅
         if (chat.sheetMetaDataId) {
             const fileName = chat.spreadsheetData?.fileName || 'Spreadsheet';
@@ -502,7 +502,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                     {/* 새 채팅 버튼 */}
                     {user && (
                         <button
-                            onClick={handleNewFirebaseChat}
+                            onClick={handleNewChat}
                             disabled={isCreatingChat}
                             className="w-full mt-4 flex items-center justify-center px-4 py-3 text-white rounded-xl transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                             style={{ backgroundColor: '#005DE9' }}
@@ -534,7 +534,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                         </span>
                         {user && (
                             <button
-                                onClick={() => loadFirebaseChats(true)}
+                                onClick={() => loadChats(true)}
                                 disabled={isLoadingChats}
                                 className="p-1 hover:bg-white/50 rounded transition-colors"
                                 title="새로고침"
@@ -564,7 +564,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                                 {cloudChats.map((chatItem) => (
                                     <div
                                         key={chatItem.id}
-                                        onClick={() => handleSelectChat(chatItem)}
+                                        onClick={() => handleSelectCloudChat(chatItem)}
                                         className={`
                                             relative p-4 rounded-xl cursor-pointer transition-all duration-200 group
                                             ${chatItem.isActive 
@@ -636,7 +636,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({ isOpen, onToggle }) => {
                             <div className="space-y-1">
                                 <div className="flex items-center justify-center space-x-2">
                                     <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                                    <span className="font-medium">{user.email}</span>
+                                    <span className="font-medium">{user.email || user.displayName}</span>
                                 </div>
                                 <div className="text-gray-400">Extion Chat v1.0</div>
                             </div>

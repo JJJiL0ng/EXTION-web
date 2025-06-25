@@ -13,6 +13,9 @@ export interface SpreadsheetSlice {
     sheetMetaData: SpreadsheetMetadata | null;
     hasUploadedFile: boolean;
     
+    // === 현재 스프레드시트 ID 관리 ===
+    currentSheetId: string | null;
+    
     // === 시트 저장 상태 ===
     saveStatus: 'synced' | 'modified' | 'saving' | 'error';
     setSaveStatus: (status: 'synced' | 'modified' | 'saving' | 'error') => void;
@@ -42,6 +45,10 @@ export interface SpreadsheetSlice {
     getSheetMetaData: () => SpreadsheetMetadata | null;
     markAsSaved: (sheetMetaDataId: string) => void;
     markAsUnsaved: () => void;
+    
+    // === 현재 스프레드시트 ID 관리 액션 ===
+    setCurrentSheetId: (sheetId: string | null) => void;
+    getCurrentSheetId: () => string | null;
     
     // 파일 업로드 관리
     markFileAsUploaded: () => void;
@@ -74,6 +81,7 @@ export interface SpreadsheetSlice {
         totalSheets?: number;
         fileName?: string;
         sheetMetaDataId?: string;
+        spreadsheetId?: string;
     };
     
     // 데이터 생성 결과 적용
@@ -98,6 +106,7 @@ export const createSpreadsheetSlice: StateCreator<
     sheetMetaData: null,
     hasUploadedFile: false,
     saveStatus: 'synced',
+    currentSheetId: null,
     
     // === 시트 저장 상태 액션 ===
     setSaveStatus: (status) => set({ saveStatus: status }),
@@ -365,9 +374,13 @@ export const createSpreadsheetSlice: StateCreator<
         });
     },
 
+    // === 현재 스프레드시트 ID 관리 액션 ===
+    setCurrentSheetId: (sheetId) => set({ currentSheetId: sheetId }),
+    getCurrentSheetId: () => get().currentSheetId,
+
     // === GPT 분석용 데이터 ===
     getDataForGPTAnalysis: (sheetIndex, allSheets = false) => {
-        const { xlsxData, computedSheetData, currentSheetMetaDataId } = get();
+        const { xlsxData, computedSheetData, currentSheetMetaDataId, currentSheetId } = get();
 
         if (!xlsxData) {
             return { sheets: [], activeSheet: '' };
@@ -424,7 +437,8 @@ export const createSpreadsheetSlice: StateCreator<
             currentSheetIndex: xlsxData.activeSheetIndex,
             totalSheets: xlsxData.sheets.length,
             fileName: xlsxData.fileName,
-            sheetMetaDataId: currentSheetMetaDataId || undefined
+            sheetMetaDataId: currentSheetMetaDataId || undefined,
+            spreadsheetId: currentSheetId || undefined
         };
     },
 
