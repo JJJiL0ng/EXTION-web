@@ -52,7 +52,7 @@ export const ExportControls: React.FC<ExportControlsProps> = ({
 
       {/* 내보내기 드롭다운 */}
       {isExportDropdownOpen && (
-        <div className="export-dropdown absolute right-0 top-full mt-1 bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden z-50 min-w-[180px]" style={{ zIndex: 9999 }}>
+        <div className="export-dropdown absolute right-0 top-full mt-1 bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden z-50 min-w-[225px]" style={{ zIndex: 9999 }}>
           <div className="py-1">
             <button
               className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors duration-150 flex items-center space-x-2 text-sm"
