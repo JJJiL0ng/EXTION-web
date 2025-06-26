@@ -83,7 +83,7 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
           />
           
           <a
-            href="https://open.kakao.com/o/gB4EkaAh"
+            href="https://slashpage.com/extion-cs"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center space-x-1.5 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm transition-colors duration-200"
@@ -99,7 +99,7 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
             }}
           >
             <MessageCircleIcon size={16} />
-            <span>개발자와 소통하기</span>
+            <span>기능 제안하기</span>
           </a>
           
           <ExportControls 
