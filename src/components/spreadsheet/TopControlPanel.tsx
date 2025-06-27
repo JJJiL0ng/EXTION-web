@@ -82,7 +82,7 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
             saveStatus={saveStatus}
           />
           
-          <a
+          <Link
             href="https://slashpage.com/extion-cs"
             target="_blank"
             rel="noopener noreferrer"
@@ -100,7 +100,7 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
           >
             <MessageCircleIcon size={16} />
             <span>기능 제안하기</span>
-          </a>
+          </Link>
           
           <ExportControls 
             xlsxData={xlsxData}

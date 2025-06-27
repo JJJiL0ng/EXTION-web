@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Search, Bell, Plus, FileText, Table, BarChart3, Users, Calendar, Settings, Home, File, Folder, Download, MoreVertical, Grid3X3, List, Filter, MessageCircle, Mic, Zap, RefreshCw, Eye, Shield } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Bell, Plus, FileText, Table, BarChart3, Users, Calendar, Settings, Home, File, Folder, Download, MoreVertical, Grid3X3, List, Filter, MessageCircle, Mic, Zap, RefreshCw, Eye, Shield, MessageSquare } from 'lucide-react';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -25,15 +26,15 @@ const Dashboard = () => {
       accent: 'text-blue-600'
     },
     { 
-      title: '음성으로 표 정리', 
-      subtitle: '"정렬하고 중복 제거해줘"',
+      title: '함수로 하지 못하는 요청 처리', 
+      subtitle: '"현재 코스피 지수 반영해서 정렬해"',
       icon: <Mic className="w-6 h-6" />, 
       color: 'bg-purple-50 border-purple-200 hover:bg-purple-100',
       accent: 'text-purple-600'
     },
     { 
-      title: '원클릭 자동화', 
-      subtitle: '"매주 자동으로 정리해줘"',
+      title: '그래프 시각화', 
+      subtitle: '"코스피 지수 그래프 그려줘"',
       icon: <Zap className="w-6 h-6" />, 
       color: 'bg-orange-50 border-orange-200 hover:bg-orange-100',
       accent: 'text-orange-600'
@@ -64,8 +65,8 @@ const Dashboard = () => {
           <div className="flex items-center space-x-3 mb-6">
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">Ex</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                  <img src="/logo.png" alt="Extion Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <h1 className="font-bold text-gray-900 text-lg">Extion</h1>
@@ -90,42 +91,36 @@ const Dashboard = () => {
           </div>
 
           <nav className="space-y-2">
-            <div 
+            <Link
+              href="/dashboard"
               className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer ${activeTab === 'home' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'hover:bg-gray-50'}`}
-              onClick={() => setActiveTab('home')}
             >
               <Home className="w-5 h-5" />
               <span className="font-medium">홈</span>
-            </div>
-            <div 
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer ${activeTab === 'chat' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'hover:bg-gray-50'}`}
-              onClick={() => setActiveTab('chat')}
-            >
-              <MessageCircle className="w-5 h-5" />
-              <span className="font-medium">AI 채팅</span>
-            </div>
-            <div 
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer ${activeTab === 'recent' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'hover:bg-gray-50'}`}
-              onClick={() => setActiveTab('recent')}
-            >
-              <RefreshCw className="w-5 h-5" />
-              <span className="font-medium">자동화</span>
-            </div>
-            <div 
+            </Link>
+            <Link
+              href="/ai"
               className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer ${activeTab === 'templates' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'hover:bg-gray-50'}`}
-              onClick={() => setActiveTab('templates')}
             >
               <Table className="w-5 h-5" />
-              <span className="font-medium">스마트 템플릿</span>
-            </div>
+              <span className="font-medium">새 시트채팅</span>
+            </Link>
+            <Link
+            href="https://slashpage.com/extion-cs"
+            className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer ${activeTab === 'chat' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'hover:bg-gray-50'}`}
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="font-medium">기능 제안하기</span>
+            </Link>
+            <Link
+              href="/https://open.kakao.com/o/gB4EkaAh"
+              className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer ${activeTab === 'recent' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'hover:bg-gray-50'}`}
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span className="font-medium">커뮤니티</span>
+            </Link>
           </nav>
-
-          <div className="mt-8">
-            <div className="flex items-center space-x-3 px-3 py-2">
-              <Folder className="w-5 h-5 text-gray-500" />
-              <span className="text-gray-700">내 파일</span>
-            </div>
-          </div>
+            
 
           <div className="mt-auto pt-8">
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 rounded-lg text-white">
@@ -144,15 +139,6 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="flex-1">
         <div className="p-8">
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">함수 몰라도 돼. 그냥 말만 해.</h1>
-                <p className="text-lg text-gray-600">Extion이 당신의 엑셀 말을 알아듣는 AI 비서입니다</p>
-              </div>
-            </div>
-          </div>
-
           {/* Feature Highlight */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">✨ 이런 걸 할 수 있어요</h2>
@@ -172,7 +158,7 @@ const Dashboard = () => {
           </div>
 
           {/* Templates Section */}
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">🚀 스마트 템플릿으로 시작하기</h2>
             <div className="grid grid-cols-6 gap-4">
               {templates.map((template, index) => (
@@ -184,14 +170,14 @@ const Dashboard = () => {
                   <p className="text-xs text-gray-500 text-center">{template.subtitle}</p>
                 </div>
               ))}
-            </div>
-          </div>
+            </div> */}
+          {/* </div> */}    
 
           {/* Recent Files Section */}
           <div className="bg-white rounded-xl shadow-sm">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">🔥 최근 AI가 도와준 파일들</h2>
+                <h2 className="text-xl font-semibold text-gray-900">최근 시트채팅</h2>
                 <div className="flex items-center space-x-2">
                   <button className="text-sm text-gray-500 hover:text-gray-700">모든 파일 보기</button>
                   <Filter className="w-4 h-4 text-gray-400" />
