@@ -21,7 +21,10 @@ import {
   Download,
   Upload,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  X,
+  MessageSquare,
+  Calendar
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -29,7 +32,9 @@ import {
   adminLogout, 
   fetchAllUsers, 
   fetchAllChats, 
-  fetchSystemStats 
+  fetchSystemStats,
+  fetchUserChats,
+  fetchChatMessages
 } from '@/services/admin/adminApiUtils';
 
 // 타입 정의
@@ -53,6 +58,21 @@ interface RecentUser {
   lastActive: string;
 }
 
+interface Chat {
+  id: string;
+  title: string;
+  createdAt: string;
+  lastUpdated: string;
+  messageCount?: number;
+}
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -65,6 +85,14 @@ export default function AdminDashboardPage() {
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // 사용자 채팅 모달 관련 상태
+  const [selectedUser, setSelectedUser] = useState<RecentUser | null>(null);
+  const [userChats, setUserChats] = useState<Chat[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState('');
 
   // 인증 상태 확인 및 데이터 로드
   useEffect(() => {
@@ -87,6 +115,18 @@ export default function AdminDashboardPage() {
 
     return () => clearInterval(timer);
   }, []);
+
+  // ESC 키로 모달 닫기
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && selectedUser) {
+        closeModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => document.removeEventListener('keydown', handleEscapeKey);
+  }, [selectedUser]);
 
   const loadDashboardData = async () => {
     try {
@@ -152,6 +192,75 @@ export default function AdminDashboardPage() {
 
   const handleRefresh = () => {
     loadDashboardData();
+  };
+
+  // 사용자 채팅 목록 불러오기
+  const handleUserClick = async (user: RecentUser) => {
+    setSelectedUser(user);
+    setModalLoading(true);
+    setModalError('');
+    setUserChats([]);
+    setChatMessages([]);
+    setSelectedChat(null);
+
+    try {
+      const chats = await fetchUserChats(user.id);
+      const formattedChats: Chat[] = chats.map((chat: any) => ({
+        id: chat.id,
+        title: chat.title || '제목 없음',
+        createdAt: chat.createdAt || chat.created_at,
+        lastUpdated: chat.lastUpdated || chat.updated_at || chat.createdAt || chat.created_at,
+        messageCount: chat.messageCount || 0
+      }));
+      setUserChats(formattedChats);
+    } catch (err) {
+      console.error('사용자 채팅 로드 오류:', err);
+      setModalError('채팅 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // 채팅 메시지 불러오기
+  const handleChatClick = async (chat: Chat) => {
+    setSelectedChat(chat);
+    setModalLoading(true);
+    setModalError('');
+
+    try {
+      const messages = await fetchChatMessages(chat.id);
+      const formattedMessages: ChatMessage[] = messages.map((msg: any) => ({
+        id: msg.id || Math.random().toString(),
+        role: msg.role || (msg.sender === 'user' ? 'user' : 'assistant'),
+        content: msg.content || msg.message || '',
+        timestamp: msg.timestamp || msg.createdAt || msg.created_at
+      }));
+      setChatMessages(formattedMessages);
+    } catch (err) {
+      console.error('채팅 메시지 로드 오류:', err);
+      setModalError('채팅 메시지를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // 모달 닫기
+  const closeModal = () => {
+    setSelectedUser(null);
+    setUserChats([]);
+    setChatMessages([]);
+    setSelectedChat(null);
+    setModalError('');
+  };
+
+  // 메시지 시간 포맷팅
+  const formatMessageTime = (timestamp: string): string => {
+    if (!timestamp) return '';
+    try {
+      return new Date(timestamp).toLocaleString('ko-KR');
+    } catch {
+      return timestamp;
+    }
   };
 
   const dashboardStats = [
@@ -293,7 +402,11 @@ export default function AdminDashboardPage() {
               ) : recentUsers.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {recentUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div 
+                      key={user.id} 
+                      onClick={() => handleUserClick(user)}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                    >
                       <div className="flex items-center space-x-3">
                         <div className={`w-3 h-3 rounded-full ${
                           user.status === 'online' ? 'bg-green-500' : 
@@ -304,7 +417,10 @@ export default function AdminDashboardPage() {
                           <p className="text-xs text-gray-600">{user.email}</p>
                         </div>
                       </div>
-                      <span className="text-xs text-gray-500">{user.lastActive}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-gray-500">{user.lastActive}</span>
+                        <Eye className="w-4 h-4 text-gray-400" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -368,6 +484,160 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* 사용자 채팅 모달 */}
+      {selectedUser && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={closeModal}
+        >
+          <div 
+            className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <Users className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">{selectedUser.name}의 채팅 목록</h2>
+                  <p className="text-sm text-gray-600">{selectedUser.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={closeModal}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="flex h-[calc(90vh-80px)]">
+              {/* 채팅 목록 */}
+              <div className="w-1/3 border-r border-gray-200 overflow-y-auto">
+                <div className="p-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">채팅 목록</h3>
+                  
+                  {modalError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-red-800 text-sm">{modalError}</p>
+                    </div>
+                  )}
+
+                  {modalLoading ? (
+                    <div className="text-center py-8">
+                      <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">채팅 목록을 불러오는 중...</p>
+                    </div>
+                  ) : userChats.length > 0 ? (
+                    <div className="space-y-2">
+                      {userChats.map((chat) => (
+                        <div
+                          key={chat.id}
+                          onClick={() => handleChatClick(chat)}
+                          className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                            selectedChat?.id === chat.id
+                              ? 'bg-blue-50 border-blue-200'
+                              : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900 text-sm truncate">
+                                {chat.title}
+                              </h4>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <Calendar className="w-3 h-3 text-gray-400" />
+                                <span className="text-xs text-gray-500">
+                                  {formatMessageTime(chat.createdAt)}
+                                </span>
+                              </div>
+                              {chat.messageCount && (
+                                <div className="flex items-center space-x-1 mt-1">
+                                  <MessageSquare className="w-3 h-3 text-gray-400" />
+                                  <span className="text-xs text-gray-500">
+                                    {chat.messageCount}개 메시지
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <MessageSquare className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">채팅이 없습니다.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 채팅 메시지 */}
+              <div className="flex-1 flex flex-col">
+                {selectedChat ? (
+                  <>
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="text-lg font-medium text-gray-900">{selectedChat.title}</h3>
+                      <p className="text-sm text-gray-600">
+                        생성일: {formatMessageTime(selectedChat.createdAt)}
+                      </p>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-4">
+                      {modalLoading ? (
+                        <div className="text-center py-8">
+                          <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500 text-sm">메시지를 불러오는 중...</p>
+                        </div>
+                      ) : chatMessages.length > 0 ? (
+                        <div className="space-y-4">
+                          {chatMessages.map((message) => (
+                            <div
+                              key={message.id}
+                              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div
+                                className={`max-w-[70%] p-3 rounded-lg ${
+                                  message.role === 'user'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 text-gray-900'
+                                }`}
+                              >
+                                <div className="whitespace-pre-wrap break-words">
+                                  {message.content}
+                                </div>
+                                <div className={`text-xs mt-1 ${
+                                  message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                                }`}>
+                                  {formatMessageTime(message.timestamp)}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <MessageSquare className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500 text-sm">메시지가 없습니다.</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-500">채팅을 선택하여 메시지를 확인하세요</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
