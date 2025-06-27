@@ -1,8 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+// 백엔드 API URL (환경변수로 관리하는 것이 좋습니다)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export default function AdminGatewayPage() {
   const router = useRouter();
@@ -12,53 +15,85 @@ export default function AdminGatewayPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // 이미 로그인된 상태인지 확인
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
+      if (isLoggedIn === 'true') {
+        router.push('/admindashboard');
+      }
+    }
+  }, [router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
-      // 환경변수에서 어드민 계정 정보 가져오기
-      const kelly_username = process.env.NEXT_PUBLIC_ADMIN_KELLY;
-      const kelly_password = process.env.NEXT_PUBLIC_ADMIN_KELLY_PASSWORD;
-      const jilong_username = process.env.NEXT_PUBLIC_ADMIN_JILONG;
-      const jilong_password = process.env.NEXT_PUBLIC_ADMIN_JILONG_PASSWORD;
-
-      // 디버깅용 로그 (실제 운영에서는 제거해야 함)
-      console.log('디버깅 정보:');
-      console.log('입력된 사용자명:', username);
-      console.log('입력된 비밀번호:', password);
-      console.log('kelly 사용자명:', kelly_username);
-      console.log('kelly 비밀번호:', kelly_password);
-      console.log('jilong 사용자명:', jilong_username);
-      console.log('jilong 비밀번호:', jilong_password);
-
-      // 로그인 검증 - 두 계정 모두 확인
-      const isKellyLogin = (username === kelly_username && password === kelly_password);
-      const isJilongLogin = (username === jilong_username && password === jilong_password);
+      console.log('API 호출 시작:', `${API_BASE_URL}/auth/admin/login`);
       
-      console.log('kelly 로그인 결과:', isKellyLogin);
-      console.log('jilong 로그인 결과:', isJilongLogin);
+      // 백엔드 어드민 로그인 API 호출
+      const response = await fetch(`${API_BASE_URL}/auth/admin/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username.trim(),
+          password: password.trim(),
+        }),
+      });
 
-      if (isKellyLogin || isJilongLogin) {
-        // 성공 시 세션과 쿠키에 로그인 상태 저장
+      console.log('API 응답 상태:', response.status);
+
+      // 응답이 JSON이 아닐 수 있으므로 먼저 텍스트로 받아서 확인
+      const responseText = await response.text();
+      console.log('API 응답 텍스트:', responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('JSON 파싱 오류:', parseError);
+        throw new Error('서버 응답을 처리할 수 없습니다.');
+      }
+
+      if (response.ok && data.success) {
+        // 성공 시 세션과 쿠키에 어드민 정보 저장
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('adminLoggedIn', 'true');
-          document.cookie = 'adminLoggedIn=true; path=/; max-age=86400';
+          sessionStorage.setItem('adminUserId', data.adminUserId || data.user_id || '');
+          sessionStorage.setItem('adminDisplayName', data.displayName || data.display_name || username);
+          
+          // 쿠키에도 저장 (보안을 위해 HttpOnly 권장하지만 여기서는 간단히 처리)
+          document.cookie = `adminLoggedIn=true; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = `adminUserId=${data.adminUserId || data.user_id || ''}; path=/; max-age=86400; SameSite=Lax`;
         }
         
-        // 성공 메시지와 리다이렉션
+        // 성공 메시지 표시 (선택적)
+        console.log('어드민 로그인 성공:', data.message || '로그인 성공');
         
-        // 관리자 페이지로 리다이렉션 (Next.js Router 사용)
+        // 관리자 대시보드로 리다이렉션
         router.push('/admindashboard');
       } else {
-        setError('아이디 또는 비밀번호가 올바르지 않습니다.');
+        // 서버에서 반환된 에러 메시지 표시
+        const errorMessage = data.message || data.error || '로그인에 실패했습니다.';
+        console.error('로그인 실패:', errorMessage);
+        setError(errorMessage);
       }
     } catch (err) {
-      setError('로그인 중 오류가 발생했습니다.');
+      console.error('로그인 API 호출 오류:', err);
+      
+      // 네트워크 오류인지 확인
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('백엔드 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
+      } else {
+        setError(err instanceof Error ? err.message : '서버 연결 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      }
     } finally {
       setIsLoading(false);
-    } 
+    }
   };
 
   return (
@@ -78,11 +113,12 @@ export default function AdminGatewayPage() {
             className="w-16 h-16 mx-auto mb-6"
           />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Extion Admin</h1>
+          <p className="text-gray-600 text-sm">관리자 인증이 필요합니다</p>
         </div>
 
         {/* 로그인 폼 */}
         <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-100">
-          <div className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-6">
             {/* 아이디 입력 */}
             <div>
               <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-3">
@@ -98,6 +134,7 @@ export default function AdminGatewayPage() {
                   className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-base"
                   placeholder="아이디를 입력하세요"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -117,11 +154,13 @@ export default function AdminGatewayPage() {
                   className="w-full pl-12 pr-12 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-base"
                   placeholder="비밀번호를 입력하세요"
                   required
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -137,27 +176,27 @@ export default function AdminGatewayPage() {
 
             {/* 로그인 버튼 */}
             <button
-              onClick={handleLogin}
+              type="submit"
               disabled={isLoading}
               className="w-full py-4 px-6 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-base"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                  로그인 중...
+                  인증 중...
                 </div>
               ) : (
                 '관리자 로그인'
               )}
             </button>
-          </div>
+          </form>
 
           {/* 추가 정보 */}
           <div className="mt-8 pt-6 border-t border-gray-100">
             <div className="flex items-center justify-center space-x-2">
               <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
               <p className="text-center text-sm text-gray-500 font-medium">
-                안전한 관리자 인증 시스템
+                백엔드 인증을 통한 안전한 관리자 시스템
               </p>
             </div>
           </div>
