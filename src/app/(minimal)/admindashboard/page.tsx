@@ -83,6 +83,8 @@ export default function AdminDashboardPage() {
     serverStatus: '정상'
   });
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
+  const [allUsers, setAllUsers] = useState<RecentUser[]>([]);
+  const [showAllUsers, setShowAllUsers] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -147,14 +149,13 @@ export default function AdminDashboardPage() {
         serverStatus: '정상'
       });
 
-      // 최근 사용자 데이터 (최대 5명)
-      const recentUsersData = usersData
+      // 사용자 데이터 정렬 및 포맷팅
+      const sortedUsersData = usersData
         .sort((a: User, b: User) => {
           const aTime = new Date(b.lastLoginAt || b.created_at || 0).getTime();
           const bTime = new Date(a.lastLoginAt || a.created_at || 0).getTime();
           return aTime - bTime;
         })
-        .slice(0, 5)
         .map((user: User): RecentUser => ({
           id: user.id || user.uid || '',
           name: user.displayName || user.display_name || user.email.split('@')[0],
@@ -163,6 +164,11 @@ export default function AdminDashboardPage() {
           lastActive: formatLastActive(user.lastLoginAt || user.created_at)
         }));
 
+      // 전체 사용자 데이터 저장
+      setAllUsers(sortedUsersData);
+      
+      // 최근 사용자 데이터 (최대 6명)
+      const recentUsersData = sortedUsersData.slice(0, 6);
       setRecentUsers(recentUsersData);
     } catch (err) {
       console.error('대시보드 데이터 로드 오류:', err);
@@ -384,14 +390,25 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <Users className="w-6 h-6 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">최근 가입 사용자</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {showAllUsers ? '전체 사용자' : '최근 가입 사용자'}
+                </h3>
               </div>
-              <button 
-                onClick={() => router.push('/adminforpelisers')}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                전체 사용자 관리
-              </button>
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={() => setShowAllUsers(!showAllUsers)}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  {showAllUsers ? '최근 사용자만 보기' : '전체 사용자 보기'}
+                </button>
+                <span className="text-gray-300">|</span>
+                <button 
+                  onClick={() => router.push('/adminforpelisers')}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  고급 관리
+                </button>
+              </div>
             </div>
             <div className="space-y-3">
               {loading ? (
@@ -399,9 +416,9 @@ export default function AdminDashboardPage() {
                   <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
                   <p className="text-gray-500 text-sm">사용자 데이터를 불러오는 중...</p>
                 </div>
-              ) : recentUsers.length > 0 ? (
+              ) : (showAllUsers ? allUsers : recentUsers).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recentUsers.map((user) => (
+                  {(showAllUsers ? allUsers : recentUsers).map((user) => (
                     <div 
                       key={user.id} 
                       onClick={() => handleUserClick(user)}
@@ -435,7 +452,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* 빠른 액션 버튼들 */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-8">
+        {/* <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-8">
           <div className="flex items-center space-x-3 mb-6">
             <Settings className="w-6 h-6 text-orange-600" />
             <h3 className="text-lg font-semibold text-gray-900">빠른 관리 도구</h3>
@@ -461,7 +478,7 @@ export default function AdminDashboardPage() {
               <span className="text-sm font-medium text-red-900">고급 관리</span>
             </button>
           </div>
-        </div>
+        </div> */}
 
         {/* 고급 관리 패널 바로가기 */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
