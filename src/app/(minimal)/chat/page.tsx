@@ -34,6 +34,9 @@ const ClaudeInputUI = () => {
     setInputValue('');
   };
 
+  const handleTextareaFocus = () => {
+    textareaRef.current?.focus();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 relative">
@@ -58,42 +61,55 @@ const ClaudeInputUI = () => {
       {/* 메인 입력 영역 */}
       <div className="w-full max-w-4xl">
         {/* 입력창 */}
-        <div className="input-container bg-white rounded-2xl border border-gray-200 shadow-sm mb-6 transition-all duration-200" style={{ borderColor: inputValue ? '#005ed9' : '#e5e7eb' }}>
+        <div className="input-container bg-white rounded-2xl border border-gray-200 shadow-sm mb-6 transition-all duration-200 relative" style={{ borderColor: inputValue ? '#005ed9' : '#e5e7eb' }}>
           <style jsx>{`
             .input-container:focus-within {
               border-color: #005ed9 !important;
               box-shadow: 0 0 0 3px rgba(0, 94, 217, 0.1);
             }
           `}</style>
+          
+          {/* 커스텀 placeholder */}
+          {!inputValue && (
+            <div 
+              className="absolute top-6 left-6 right-6 text-gray-500 text-lg pointer-events-none select-none leading-relaxed"
+              onClick={handleTextareaFocus}
+            >
+              어떤 시트를 만들어볼까요?<br />
+              가지고 계신 데이터들을 보내주세요! 표로 만들어드릴게요.
+            </div>
+          )}
+          
           <textarea
             ref={textareaRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="어떤 시트를 만들어볼까요? 가지고 계신 데이터들을 보내주세요! 표로 만들어드릴게요."
-            className="w-full bg-transparent border-none outline-none resize-none px-6 py-6 text-gray-900 placeholder-gray-500 text-lg min-h-[80px] max-h-48"
+            className="w-full bg-transparent border-none outline-none resize-none px-6 py-6 text-gray-900 text-lg min-h-[80px] max-h-48 relative z-10"
             style={{ height: 'auto' }}
           />
           
           {/* 하단 컨트롤 */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
             <div className="flex items-center space-x-3">
-              <button className="w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200">
-                <Plus className="w-5 h-5 text-gray-600" />
+              <button className="w-24 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200">
+                <Plus className="w-5 h-5 text-gray-600 mr-1" />
+                <span className="text-sm text-gray-600">업로드</span>
               </button>
               
-              <button className="w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200">
-                <Shuffle className="w-5 h-5 text-gray-600" />
+              <button className="w-24 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200">
+                <Search className="w-4 h-5 text-gray-600" />
+                <span className="text-sm text-gray-600">웹 검색</span>
               </button>
             </div>
 
             <div className="flex items-center space-x-3">
-              <div className="flex items-center bg-gray-100 rounded-full px-3 py-2 text-sm text-gray-600">
+              {/* <div className="flex items-center bg-gray-100 rounded-full px-3 py-2 text-sm text-gray-600">
                 Claude Sonnet 4
                 <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-              </div>
+              </div> */}
               
               <button 
                 onClick={handleSend}

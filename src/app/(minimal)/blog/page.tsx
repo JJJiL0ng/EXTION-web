@@ -70,26 +70,6 @@ const BlogComingSoon = () => {
           </div>
         </div>
 
-        {/* 알림 신청 */}
-        {/* <div className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">
-            오픈 소식을 가장 먼저 받아보세요
-          </h3>
-          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="이메일 주소를 입력하세요"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-            />
-            <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 whitespace-nowrap">
-              알림 신청
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 mt-3">
-            스팸 메일은 발송하지 않으며, 언제든지 구독을 취소할 수 있습니다.
-          </p>
-        </div> */}
-
         {/* 푸터 */}
         <div className="mt-12 text-gray-500 text-sm">
           <p>© 2025 Extion팀의 Blog. 훌륭한 콘텐츠로 찾아뵙겠습니다.</p>

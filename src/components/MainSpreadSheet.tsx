@@ -17,7 +17,6 @@ import { useCellEditor } from '@/hooks/useCellEditor';
 // 컴포넌트 imports
 import { TopControlPanel } from './spreadsheet/TopControlPanel';
 import { SheetTabs } from './spreadsheet/SheetTabs';
-import ChatSidebar from './chat/ChatSidebar';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -215,9 +214,6 @@ const MainSpreadSheet: React.FC = () => {
 
   return (
     <div className="h-full flex relative spreadsheet-main-container">
-      {/* 사이드바 */}
-      <ChatSidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
-
       {/* 메인 스프레드시트 영역 - 사이드바 상태에 따른 마진 조정 */}
       <div className={`h-full flex flex-col flex-1 min-w-0 spreadsheet-container transition-all duration-300 ease-in-out ${
         isSidebarOpen ? 'ml-80' : 'ml-0'
