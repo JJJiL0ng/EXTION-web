@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Home, Table, MessageCircle, MessageSquare, BookOpen, Zap, LogIn } from 'lucide-react';
+import { Home, MessageSquare, BookOpen, Zap, LogIn, FileSpreadsheet, Lightbulb, Users, Upload } from 'lucide-react';
 import { User } from 'firebase/auth';
 
 interface DashboardSidebarProps {
@@ -35,7 +35,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ user }) => {
               </div>
               <div>
                 <h1 className="font-bold text-gray-900 text-lg">Extion</h1>
-                <p className="text-xs text-gray-500">AI Excel 도우미</p>
+                <p className="text-xs text-gray-500">AI Excel 어시스턴트</p>
               </div>
             </div>
             <div className="flex items-center">
@@ -76,25 +76,45 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ user }) => {
             <Home className="w-5 h-5" />
             <span className="font-medium">홈</span>
           </Link>
+          
+          <div className="border-b border-gray-200 my-2"></div>
+         
+          <Link
+            href="/chat"
+            className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50"
+          >
+            <MessageSquare className="w-5 h-5" />
+            <span className="font-medium">채팅으로 시트 생성</span>
+          </Link>
+          <Link
+            href="/fileupload"
+            className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50"
+          >
+            <Upload className="w-5 h-5" />
+            <span className="font-medium">기존 엑셀 파일 업로드</span>
+          </Link>
           <Link
             href="/ai"
             className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50"
           >
-            <Table className="w-5 h-5" />
-            <span className="font-medium">새 시트채팅 생성</span>
+            <FileSpreadsheet className="w-5 h-5" />
+            <span className="font-medium">새 작업시트 생성 </span>
           </Link>
+
+          <div className="border-b border-gray-200 my-2"></div>
+
           <Link
             href="https://slashpage.com/extion-cs"
             className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50"
           >
-            <MessageCircle className="w-5 h-5" />
-            <span className="font-medium">기능 제안하기</span>
+            <Lightbulb className="w-5 h-5" />
+            <span className="font-medium">엑션에 대해 피드백</span>
           </Link>
           <Link
             href="https://open.kakao.com/o/gB4EkaAh"
             className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50"
           >
-            <MessageSquare className="w-5 h-5" />
+            <Users className="w-5 h-5" />
             <span className="font-medium">커뮤니티</span>
           </Link>
           <Link
@@ -107,12 +127,36 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ user }) => {
         </nav>
 
         <div className="mt-auto pt-8">
-          <div className="bg-[#005de9] p-4 rounded-lg text-white">
-            <div className="flex items-start space-x-2">
-              <Zap className="w-5 h-5 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-semibold">Pro로 업그레이드 (준비중)</p>
-                <p className="text-xs opacity-90 mt-1">고급 모델 사용 가능 <br /> 더 많은 기능 제공 <br /> 더 빠른 응답 시간</p>
+          <Link href="https://slashpage.com/extion-cs">
+            <button className="w-full bg-[#005de9] p-4 rounded-lg text-white transition-all hover:bg-[#004bc1] hover:shadow-lg">
+              <div className="flex items-start space-x-2">
+                <Zap className="w-6 h-6 mt-1" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">Extion의 새로운 기능 제안</p>
+                  <p className="text-xs opacity-90 mt-1">프로에 필요한 기능들을 제안하여 <br /> 엑션에 발전에 기여해주세요</p>
+                </div>
+              </div>
+            </button>
+          </Link>
+          
+          {/* Footer 정보 */}
+          <div className="mt-10 pt-4 border-t border-gray-200">
+            <div className="space-y-3">
+              {/* 개발자 정보 */}
+              {/* <div className="flex items-center text-xs text-gray-500">
+                <span>Developed by</span>
+                <span className="ml-1 font-semibold text-[#005de9]">Pelisers</span>
+              </div> */}
+              
+              {/* 서비스 상태 */}
+              {/* <div className="flex items-center text-xs text-gray-500">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                <span>서비스 정상 운영중</span>
+              </div> */}
+        
+              {/* 저작권 */}
+              <div className="text-xs text-gray-400 text-center">
+                © {new Date().getFullYear()} Extion by Pelisers
               </div>
             </div>
           </div>

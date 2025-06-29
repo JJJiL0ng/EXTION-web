@@ -8,11 +8,11 @@ interface ChatListViewsProps {
   viewMode: 'grid' | 'list';
 }
 
-const formatChatStatus = (chat: ChatListItem): string => {
-  if (chat.messageCount === 0) return '새 채팅';
-  if (chat.messageCount < 5) return '진행 중';
-  return '완료됨';
-};
+// const formatChatStatus = (chat: ChatListItem): string => {
+//   if (chat.messageCount === 0) return '새 채팅';
+//   if (chat.messageCount < 5) return '진행 중';
+//   return '완료됨';
+// };
 
 const formatDate = (dateString: string): string => {
   try {
@@ -46,9 +46,9 @@ export const ChatListGrid: React.FC<{ chats: ChatListItem[] }> = ({ chats }) => 
             </div>
             <p className="text-sm font-semibold text-gray-900 truncate mb-3">{chat.title}</p>
             <div className="space-y-2">
-              <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                {formatChatStatus(chat)}
-              </span>
+                {/* <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {formatChatStatus(chat)}
+                </span> */}
               <p className="text-xs text-gray-500">{formatDate(chat.lastUpdated)}</p>
             </div>
           </div>
@@ -70,9 +70,9 @@ export const ChatListList: React.FC<{ chats: ChatListItem[] }> = ({ chats }) => 
             <div className="flex-1">
               <p className="font-semibold text-gray-900 text-lg">{chat.title}</p>
               <div className="flex items-center space-x-3 mt-2">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                {/* <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                   {formatChatStatus(chat)}
-                </span>
+                </span> */}
                 <span className="text-gray-500">•</span>
                 <span className="text-gray-500">메시지 {chat.messageCount}개 • {formatDate(chat.lastUpdated)}</span>
               </div>

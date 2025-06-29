@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Dashboard - Extion',
-  description: 'AI 기반 Excel 도우미 Extion의 대시보드',
+  description: 'AI 기반 Excel 어시스턴트 Extion의 대시보드',
 };
 
 const Dashboard = () => {

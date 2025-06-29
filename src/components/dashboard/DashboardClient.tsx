@@ -16,7 +16,7 @@ const DashboardClient: React.FC = () => {
   const [recentChats, setRecentChats] = useState<ChatListItem[]>([]);
   const [chatsLoading, setChatsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {

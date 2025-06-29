@@ -25,7 +25,7 @@ export default function Footer() {
             </p>
             <div className="flex items-center text-sm text-gray-500">
               <span>Developed by</span>
-              <span className="ml-2 font-semibold text-blue-600">Palacers</span>
+              <span className="ml-2 font-semibold text-blue-600">Pelisers</span>
             </div>
           </div>
 
@@ -88,7 +88,7 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-6 mb-4 md:mb-0">
               <p className="text-sm text-gray-500">
-                © {currentYear} Extion by Palacers. All rights reserved.
+                © {currentYear} Extion by Pelisers. All rights reserved.
               </p>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
