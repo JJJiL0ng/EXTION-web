@@ -17,7 +17,7 @@ export default function LoginPage() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         // 사용자가 이미 로그인된 경우 메인 페이지로 리디렉션
-        router.push('/ai');
+        router.push('/dashboard');
       }
     });
 

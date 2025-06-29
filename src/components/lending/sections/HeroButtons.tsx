@@ -9,7 +9,7 @@ export function HeroButtons() {
   const router = useRouter()
 
   const handleCTAClick = () => {
-    router.push('/ai')
+    router.push('/dashboard')
     
     // 이벤트 트래킹
     if (typeof window !== 'undefined' && (window as any).gtag) {

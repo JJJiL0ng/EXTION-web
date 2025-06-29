@@ -1,53 +1,151 @@
 // 백엔드 API 호출을 위한 채팅 서비스
 
+// 기본 채팅 메시지 타입
 export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
+  messageId: string;
   content: string;
-  timestamp: Date;
+  role: 'USER' | 'ASSISTANT';
+  type: string;
+  mode: string;
+  timestamp: string;
+  sheetContext?: any;
+  formulaData?: any;
+  artifactData?: any;
+  dataChangeInfo?: any;
+  fileUploadInfo?: any;
   metadata?: any;
 }
 
+// 오케스트레이터 채팅 요청 타입
+export interface OrchestratorChatRequest {
+  message: string;
+  sheetId?: string;
+  chatId?: string;
+  userId?: string;
+  countryCode: string;
+  language?: string;
+  timezone?: string;
+  timestamp: string;
+}
+
+// 오케스트레이터 채팅 응답 타입
+export interface OrchestratorChatResponse {
+  success: boolean;
+  chatType: 'general-chat' | 'function-chat' | 'edit-chat' | 'generate-chat' | 'visualization-chat' | null;
+  chatId: string;
+  sheetId: string;
+  userId: string;
+  userMessageId: string;
+  aiMessageId: string;
+  timestamp: string;
+  userContext: {
+    countryCode: string;
+    language: string;
+    timezone: string;
+  };
+  data: any;
+  error?: string;
+}
+
+// 채팅 정보 타입
 export interface ChatInfo {
   title: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   totalMessageCount: number;
   sheetMetaDataId?: string;
 }
 
+// 채팅 목록 아이템 타입
 export interface ChatListItem {
-  id: string;
+  chatId: string;
   title: string;
-  createdAt: Date;
-  updatedAt: Date;
   messageCount: number;
-  lastMessage?: {
-    content: string;
-    timestamp: Date;
-  };
+  lastUpdated: string;
+  createdAt: string;
   sheetMetaDataId?: string;
-  spreadsheetData?: {
-    fileName: string;
-    totalSheets: number;
-  };
+  status: string;
 }
 
+// 채팅 로드 응답 타입
 export interface LoadChatResponse {
   success: boolean;
   chatId: string;
   messages: ChatMessage[];
   messageCount: number;
-  chatInfo?: ChatInfo;
+  chatInfo: ChatInfo;
 }
 
+// 채팅 목록 응답 타입
 export interface ChatListResponse {
   success: boolean;
   chats: ChatListItem[];
   count: number;
 }
 
+// 새 채팅 생성 요청 타입
+export interface CreateChatRequest {
+  title: string;
+  userId: string;
+  spreadsheetId?: string;
+}
+
+// 새 채팅 생성 응답 타입
+export interface CreateChatResponse {
+  success: boolean;
+  chatId: string;
+  chat: ChatListItem;
+}
+
+// 채팅 삭제 응답 타입
+export interface DeleteChatResponse {
+  success: boolean;
+  message: string;
+}
+
+// 채팅 제목 업데이트 요청 타입
+export interface UpdateChatTitleRequest {
+  title: string;
+  userId: string;
+}
+
+// 채팅 제목 업데이트 응답 타입
+export interface UpdateChatTitleResponse {
+  success: boolean;
+  message: string;
+  data: {
+    chatId: string;
+    title: string;
+    updatedAt: string;
+  };
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+/**
+ * 오케스트레이터 채팅 메시지 전송
+ */
+export const sendOrchestratorMessage = async (request: OrchestratorChatRequest): Promise<OrchestratorChatResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/orchestrator-chat/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: OrchestratorChatResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error('오케스트레이터 메시지 전송 실패:', error);
+    throw error;
+  }
+};
 
 /**
  * 채팅 메시지 로드
@@ -78,18 +176,6 @@ export const loadChatMessages = async (
     }
 
     const data: LoadChatResponse = await response.json();
-    
-    // Date 객체로 변환
-    data.messages = data.messages.map(msg => ({
-      ...msg,
-      timestamp: new Date(msg.timestamp)
-    }));
-
-    if (data.chatInfo) {
-      data.chatInfo.createdAt = new Date(data.chatInfo.createdAt);
-      data.chatInfo.updatedAt = new Date(data.chatInfo.updatedAt);
-    }
-
     return data;
   } catch (error) {
     console.error('채팅 메시지 로드 실패:', error);
@@ -117,40 +203,6 @@ export const getChatList = async (userId: string): Promise<ChatListResponse> => 
     }
 
     const data: ChatListResponse = await response.json();
-    
-    // 안전한 날짜 변환 함수
-    const safeParseDate = (dateValue: any): Date => {
-      if (!dateValue) return new Date();
-      
-      if (dateValue instanceof Date) {
-        return isNaN(dateValue.getTime()) ? new Date() : dateValue;
-      }
-      
-      if (typeof dateValue === 'string') {
-        const parsedDate = new Date(dateValue);
-        return isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
-      }
-      
-      return new Date();
-    };
-    
-    // 백엔드 응답을 프론트엔드 형식으로 변환
-    data.chats = data.chats.map((chat: any) => ({
-      // chatId를 id로 매핑
-      id: chat.chatId || chat.id,
-      title: chat.title,
-      createdAt: safeParseDate(chat.createdAt),
-      // lastUpdated 또는 updatedAt 중 하나 사용
-      updatedAt: safeParseDate(chat.updatedAt || chat.lastUpdated),
-      messageCount: chat.messageCount || 0,
-      lastMessage: chat.lastMessage ? {
-        content: chat.lastMessage.content,
-        timestamp: safeParseDate(chat.lastMessage.timestamp)
-      } : undefined,
-      sheetMetaDataId: chat.sheetMetaDataId,
-      spreadsheetData: chat.spreadsheetData
-    }));
-
     return data;
   } catch (error) {
     console.error('채팅 목록 조회 실패:', error);
@@ -159,70 +211,24 @@ export const getChatList = async (userId: string): Promise<ChatListResponse> => 
 };
 
 /**
- * Firebase 호환 타입을 새 API 타입으로 변환
- */
-export const convertChatListItemToFirebaseChat = (item: ChatListItem) => {
-  return {
-    id: item.id,
-    title: item.title,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-    messageCount: item.messageCount,
-    lastMessage: item.lastMessage ? {
-      content: item.lastMessage.content,
-      timestamp: item.lastMessage.timestamp,
-      role: 'user' as const,
-      type: 'text'
-    } : undefined,
-    spreadsheetId: item.sheetMetaDataId,
-    spreadsheetData: item.spreadsheetData,
-    userId: '', // API에서 제공되지 않으므로 빈 문자열
-  };
-};
-
-/**
- * 새 API 메시지를 기존 포맷으로 변환
- */
-export const convertApiMessageToChatMessage = (apiMessage: ChatMessage) => {
-  return {
-    id: apiMessage.id,
-    type: (apiMessage.role === 'assistant' ? 'Extion ai' : 'user') as 'user' | 'Extion ai',
-    content: apiMessage.content,
-    timestamp: apiMessage.timestamp,
-    metadata: apiMessage.metadata,
-    mode: 'normal' as const,
-    artifactData: undefined,
-  };
-};
-
-/**
  * 새 채팅 생성
  */
-export const createChat = async (title: string, userId: string, spreadsheetId?: string): Promise<string> => {
+export const createChat = async (request: CreateChatRequest): Promise<CreateChatResponse> => {
   try {
     const response = await fetch(`${API_BASE_URL}/chat-database/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        title,
-        userId,
-        spreadsheetId,
-      }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data: CreateChatResponseDto = await response.json();
-    
-    if (!data.success) {
-      throw new Error('채팅 생성에 실패했습니다.');
-    }
-
-    return data.chatId;
+    const data: CreateChatResponse = await response.json();
+    return data;
   } catch (error) {
     console.error('새 채팅 생성 실패:', error);
     throw error;
@@ -232,7 +238,7 @@ export const createChat = async (title: string, userId: string, spreadsheetId?: 
 /**
  * 채팅 삭제
  */
-export const deleteChat = async (chatId: string, userId: string): Promise<void> => {
+export const deleteChat = async (chatId: string, userId: string): Promise<DeleteChatResponse> => {
   try {
     const response = await fetch(
       `${API_BASE_URL}/chat-database/${chatId}?userId=${userId}`,
@@ -248,11 +254,8 @@ export const deleteChat = async (chatId: string, userId: string): Promise<void> 
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data: DeleteChatResponseDto = await response.json();
-    
-    if (!data.success) {
-      throw new Error('채팅 삭제에 실패했습니다.');
-    }
+    const data: DeleteChatResponse = await response.json();
+    return data;
   } catch (error) {
     console.error('채팅 삭제 실패:', error);
     throw error;
@@ -262,45 +265,76 @@ export const deleteChat = async (chatId: string, userId: string): Promise<void> 
 /**
  * 채팅 제목 업데이트
  */
-export const updateChatTitle = async (chatId: string, title: string, userId: string): Promise<void> => {
+export const updateChatTitle = async (
+  chatId: string, 
+  request: UpdateChatTitleRequest
+): Promise<UpdateChatTitleResponse> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/chat-database/${chatId}/title`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          userId,
-        }),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/chat-database/${chatId}/title`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error('채팅 제목 업데이트에 실패했습니다.');
-    }
+    const data: UpdateChatTitleResponse = await response.json();
+    return data;
   } catch (error) {
     console.error('채팅 제목 업데이트 실패:', error);
     throw error;
   }
 };
 
-// 새로운 DTO 타입들
-export interface CreateChatResponseDto {
-  success: boolean;
-  chatId: string;
-  chat?: ChatListItem;
-}
+/**
+ * 사용자 채팅 디버깅 정보 조회
+ */
+export const getUserChatDebugInfo = async (userId: string): Promise<any> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chat-database/debug/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-export interface DeleteChatResponseDto {
-  success: boolean;
-  message?: string;
-} 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('사용자 채팅 디버깅 정보 조회 실패:', error);
+    throw error;
+  }
+};
+
+// 레거시 호환성을 위한 변환 함수들
+export const convertChatListItemToFirebaseChat = (item: ChatListItem) => {
+  return {
+    id: item.chatId,
+    title: item.title,
+    createdAt: new Date(item.createdAt),
+    updatedAt: new Date(item.lastUpdated),
+    messageCount: item.messageCount,
+    spreadsheetId: item.sheetMetaDataId,
+    userId: '',
+  };
+};
+
+export const convertApiMessageToChatMessage = (apiMessage: ChatMessage) => {
+  return {
+    id: apiMessage.messageId,
+    type: (apiMessage.role === 'ASSISTANT' ? 'Extion ai' : 'user') as 'user' | 'Extion ai',
+    content: apiMessage.content,
+    timestamp: new Date(apiMessage.timestamp),
+    metadata: apiMessage.metadata,
+    mode: apiMessage.mode as 'normal',
+    artifactData: apiMessage.artifactData,
+  };
+}; 
