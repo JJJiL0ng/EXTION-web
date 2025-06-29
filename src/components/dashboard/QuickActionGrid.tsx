@@ -1,9 +1,16 @@
 import React from 'react';
 import Link from 'next/link';
-import { Calculator, Database, LineChart, Eye } from 'lucide-react';
+import { Calculator, Database, LineChart, FileSpreadsheet } from 'lucide-react';
 
 const QuickActionGrid: React.FC = () => {
   const quickActions = [
+    { 
+      title: '표 만들기', 
+      subtitle: '"이 마케팅 결과 이미지를 표로 만들어줘"',
+      icon: <FileSpreadsheet className="w-6 h-6" />, 
+      color: 'bg-blue-50 border-blue-200 hover:bg-blue-100',
+      accent: 'text-[#005de9]'
+    },
     { 
       title: '자연어로 함수 요청', 
       subtitle: '"이 열에서 합계 구해줘"',
@@ -25,17 +32,10 @@ const QuickActionGrid: React.FC = () => {
       color: 'bg-blue-50 border-blue-200 hover:bg-blue-100',
       accent: 'text-[#005de9]'
     },
-    { 
-      title: '안전 모드 미리보기', 
-      subtitle: '"망가질까 걱정되니까 미리보기로"',
-      icon: <Eye className="w-6 h-6" />, 
-      color: 'bg-blue-50 border-blue-200 hover:bg-blue-100',
-      accent: 'text-[#005de9]'
-    },
   ];
 
   return (
-    <div className="mb-8">
+    <div className="mb-4">
       <h2 className="text-xl font-semibold text-gray-900 mb-4">이런 걸 할 수 있어요</h2>
       <div className="grid grid-cols-4 gap-4">
         {quickActions.map((action, index) => (

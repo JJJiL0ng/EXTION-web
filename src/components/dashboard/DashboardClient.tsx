@@ -77,11 +77,13 @@ const DashboardClient: React.FC = () => {
       <DashboardSidebar user={user} />
       
       <div className="flex-1">
-        <div className="p-8">
+        <div className="p-6">
+          <QuickActionGrid />
+          <div className="border-b border-gray-200 my-4"></div>
           {!user && (
             <>
-              <QuickActionGrid />
               <CTASection />
+              <div className="border-b border-gray-200 my-4"></div>
             </>
           )}
 

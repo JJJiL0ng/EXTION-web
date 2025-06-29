@@ -25,8 +25,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ user }) => {
   };
 
   return (
-    <div className="w-64 bg-white shadow-sm border-r">
-      <div className="p-4">
+    <div className="w-64 bg-white shadow-sm border-r h-screen flex flex-col">
+      <div className="p-4 flex-1 flex flex-col">
+        {/* Header Section */}
         <div className="flex items-center space-x-3 mb-6">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center space-x-3">
@@ -54,6 +55,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ user }) => {
           </div>
         </div>
         
+        {/* Login Prompt for Non-users */}
         {!user && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-700 mb-2">
@@ -68,7 +70,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ user }) => {
           </div>
         )}
 
-        <nav className="space-y-2">
+        {/* Navigation Menu */}
+        <nav className="space-y-2 flex-1">
           <Link
             href="/dashboard"
             className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer bg-blue-50 text-[#005de9] border-r-2 border-[#005de9]"
@@ -124,42 +127,29 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ user }) => {
             <BookOpen className="w-5 h-5" />
             <span className="font-medium">블로그</span>
           </Link>
+          <div className="border-b border-gray-200 my-2"></div>
         </nav>
 
-        <div className="mt-auto pt-8">
+        {/* CTA Section */}
+        <div className="mt-4">
           <Link href="https://slashpage.com/extion-cs">
             <button className="w-full bg-[#005de9] p-4 rounded-lg text-white transition-all hover:bg-[#004bc1] hover:shadow-lg">
               <div className="flex items-start space-x-2">
                 <Zap className="w-6 h-6 mt-1" />
                 <div className="flex-1">
                   <p className="text-sm font-semibold">Extion의 새로운 기능 제안</p>
-                  <p className="text-xs opacity-90 mt-1">프로에 필요한 기능들을 제안하여 <br /> 엑션에 발전에 기여해주세요</p>
+                  <p className="text-xs opacity-90 mt-1">혁신적인 기능들을 제안하여 <br /> 엑션의 발전에 기여해주세요</p>
                 </div>
               </div>
             </button>
           </Link>
-          
-          {/* Footer 정보 */}
-          <div className="mt-10 pt-4 border-t border-gray-200">
-            <div className="space-y-3">
-              {/* 개발자 정보 */}
-              {/* <div className="flex items-center text-xs text-gray-500">
-                <span>Developed by</span>
-                <span className="ml-1 font-semibold text-[#005de9]">Pelisers</span>
-              </div> */}
-              
-              {/* 서비스 상태 */}
-              {/* <div className="flex items-center text-xs text-gray-500">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                <span>서비스 정상 운영중</span>
-              </div> */}
-        
-              {/* 저작권 */}
-              <div className="text-xs text-gray-400 text-center">
-                © {new Date().getFullYear()} Extion by Pelisers
-              </div>
-            </div>
-          </div>
+        </div>
+      </div>
+      
+      {/* Footer 정보 - 최하단 고정 */}
+      <div className="p-4 pt-2 border-t">
+        <div className="text-xs text-gray-400 text-center">
+          © {new Date().getFullYear()} Extion by Pelisers
         </div>
       </div>
     </div>

@@ -46,9 +46,12 @@ const ClaudeInputUI = () => {
           <div className="w-10 h-10 rounded-lg flex items-center justify-center mr-3">
             <img src="/logo.png" alt="Extion Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-4xl font-light text-gray-800">
-            LEE/JIHONG님, 만들고 싶은 시트를 말씀해주세요
-          </h1>
+          <h1 className="text-4xl font-semibold text-gray-800">
+            LEE/JIHONG
+            </h1>
+            <h2 className="text-3xl font-sans text-gray-800">            
+                님, 만들고 싶은 시트를 말씀해주세요
+            </h2>
         </div>
       </div>
 
@@ -67,7 +70,7 @@ const ClaudeInputUI = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="어떤 시트를 만들어볼까요? 가지고 계신 데이터들을 보내주세요"
+            placeholder="어떤 시트를 만들어볼까요? 가지고 계신 데이터들을 보내주세요! 표로 만들어드릴게요."
             className="w-full bg-transparent border-none outline-none resize-none px-6 py-6 text-gray-900 placeholder-gray-500 text-lg min-h-[80px] max-h-48"
             style={{ height: 'auto' }}
           />

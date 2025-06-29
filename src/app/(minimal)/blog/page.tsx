@@ -61,7 +61,7 @@ const BlogComingSoon = () => {
         {/* 예상 오픈 일정 */}
         <div className="bg-blue-600 text-white rounded-lg p-6 mb-8">
           <h3 className="text-xl font-semibold mb-2">예상 오픈 일정</h3>
-          <p className="text-blue-100 mb-4">2025년 여름 중 오픈 예정</p>
+          <p className="text-blue-100 mb-4">2025년 7월 중 오픈 예정</p>
           <div className="flex justify-center">
             <div className="bg-white bg-opacity-20 rounded-full px-4 py-2 flex items-center">
               <span className="text-sm font-medium">곧 만나요!</span>
@@ -92,7 +92,7 @@ const BlogComingSoon = () => {
 
         {/* 푸터 */}
         <div className="mt-12 text-gray-500 text-sm">
-          <p>© 2025 Extion의 Blog. 훌륭한 콘텐츠로 찾아뵙겠습니다.</p>
+          <p>© 2025 Extion팀의 Blog. 훌륭한 콘텐츠로 찾아뵙겠습니다.</p>
         </div>
       </div>
     </div>
