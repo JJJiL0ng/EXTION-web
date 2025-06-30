@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import MainSpreadSheet from "@/components/MainSpreadSheet";
 import ChattingMainContainer from "@/components/ChattingMainContainer";
 import { useUnifiedStore } from '@/stores';
+import { useLoadChatandsheet } from '@/hooks/useLoadChatandsheet';
 import { auth } from '@/services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
@@ -14,15 +15,20 @@ function AIPageContent() {
   const [leftWidth, setLeftWidth] = useState(65); // 초기 65%
   const [isDragging, setIsDragging] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isMouseDownRef = useRef(false);
   const searchParams = useSearchParams();
   
-  const {
-    setCurrentChatId,
-    currentChatId
-  } = useUnifiedStore();
+  const { currentChatId } = useUnifiedStore();
+  
+  // Chat과 Sheet 데이터 로드를 위한 훅 사용
+  const { 
+    isLoading: isLoadingChatSheet, 
+    error: chatSheetError, 
+    hasSheetData,
+    retryLoad,
+    clearError
+  } = useLoadChatandsheet();
 
   // 로컬 스토리지에서 저장된 비율 불러오기
   useEffect(() => {
@@ -49,33 +55,8 @@ function AIPageContent() {
     return () => unsubscribe();
   }, []);
 
-  // URL 파라미터에서 chatId를 읽어와서 채팅 로드 (ChatSidebar와 중복 방지)
-  useEffect(() => {
-    const loadChatFromUrl = async () => {
-      if (!user) return;
-      
-      const chatId = searchParams.get('chatId');
-      
-      // ChatSidebar에서 이미 처리 중이거나 현재 채팅과 동일한 경우 건너뛰기
-      if (!chatId || chatId === currentChatId) {
-        return;
-      }
-
-      console.log('🔄 AI 페이지: URL 파라미터 채팅 ID 감지:', chatId);
-      
-      // ChatSidebar가 먼저 처리하도록 약간의 지연
-      setTimeout(() => {
-        // ChatSidebar에서 처리하지 못한 경우에만 fallback 로직 실행
-        const currentChatIdAfterDelay = useUnifiedStore.getState().currentChatId;
-        if (currentChatIdAfterDelay !== chatId) {
-          console.log('⚠️ ChatSidebar에서 처리되지 않은 채팅 - fallback 로직 실행');
-          setCurrentChatId(chatId);
-        }
-      }, 100);
-    };
-
-    loadChatFromUrl();
-  }, [user, searchParams, currentChatId, setCurrentChatId]);
+  // useLoadChatandsheet 훅이 URL 파라미터를 자동으로 처리하므로 별도 로직 불필요
+  // 사용자 인증이 완료된 후에만 데이터 로드가 가능하도록 체크
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -121,11 +102,40 @@ function AIPageContent() {
       className="flex w-full h-screen relative"
     >
       {/* 로딩 오버레이 */}
-      {isLoading && (
+      {isLoadingChatSheet && (
         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="text-sm text-gray-600">채팅을 불러오는 중...</p>
+            <p className="text-sm text-gray-600">채팅과 시트 데이터를 불러오는 중...</p>
+          </div>
+        </div>
+      )}
+
+      {/* 에러 표시 */}
+      {chatSheetError && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-4 max-w-md mx-auto p-6">
+            <div className="text-red-500 text-center">
+              <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+              <h3 className="text-lg font-semibold mb-2">데이터 로드 실패</h3>
+              <p className="text-sm text-gray-600 mb-4">{chatSheetError}</p>
+              <div className="flex space-x-2">
+                <button
+                  onClick={retryLoad}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  다시 시도
+                </button>
+                <button
+                  onClick={clearError}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
