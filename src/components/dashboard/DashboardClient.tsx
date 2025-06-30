@@ -9,6 +9,8 @@ import QuickActionGrid from './QuickActionGrid';
 import CTASection from './CTASection';
 import RecentChatsSection from './RecentChatsSection';
 import MainLoadingSpinner from './MainLoadingSpinner';
+import { ChatBoxOnly } from '../chatbox';
+import FastActionButtons from './Fastaction';
 
 const DashboardClient: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -72,12 +74,32 @@ const DashboardClient: React.FC = () => {
     return <MainLoadingSpinner />;
   }
 
+  const handleSend = (message: string) => {
+    console.log('메시지 전송:', message);
+  };
+
+  const handleUpload = () => {
+    console.log('파일 업로드');
+  };
+
+  const handleSearch = () => {
+    console.log('웹 검색');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <DashboardSidebar user={user} />
       
       <div className="flex-1">
         <div className="p-6">
+          <ChatBoxOnly
+            onSend={handleSend}
+            onUpload={handleUpload}
+            onSearch={handleSearch}
+          />
+          <div className="border-b border-gray-200 my-4"></div>
+          <FastActionButtons />
+          <div className="border-b border-gray-200 my-4"></div>
           <QuickActionGrid />
           <div className="border-b border-gray-200 my-4"></div>
           {!user && (
