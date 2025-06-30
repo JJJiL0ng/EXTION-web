@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import { User } from 'firebase/auth';
 
 interface AuthState {
@@ -8,9 +9,18 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  loading: true,
-  setUser: (user) => set({ user }),
-  setLoading: (loading) => set({ loading }),
-})); 
+export const useAuthStore = create<AuthState>()(
+  devtools(
+    (set) => ({
+      user: null,
+      loading: true,
+      setUser: (user) => set({ user }, false, 'setUser'),
+      setLoading: (loading) => set({ loading }, false, 'setLoading'),
+    }),
+    {
+      name: 'auth-store',
+      enabled: process.env.NODE_ENV === 'development',
+      trace: true,
+    }
+  )
+); 

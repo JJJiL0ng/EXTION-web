@@ -40,14 +40,51 @@ export const useUnifiedStore = create<UnifiedStore>()(
                     sheetMessages: {},
                     activeSheetMessages: [],
                     sheetChatIds: {},
-                });
+                }, false, 'resetAllStores');
                 
                 console.log('✅ 모든 스토어 초기화 완료 - 파일 업로드 가능');
             }
         }),
         {
             name: 'unified-store',
-            skipHydration: true
+            skipHydration: true,
+            // 개발 환경에서만 활성화
+            enabled: process.env.NODE_ENV === 'development',
+            // 액션 로깅 설정
+            trace: true,
+            // 스토어 분할을 위한 파티션 설정
+            partialize: (state: UnifiedStore) => ({
+                // 스프레드시트 관련 상태
+                spreadsheet: {
+                    xlsxData: state.xlsxData,
+                    activeSheetData: state.activeSheetData,
+                    computedSheetData: state.computedSheetData,
+                    sheetMetaData: state.sheetMetaData,
+                    hasUploadedFile: state.hasUploadedFile,
+                    currentSheetId: state.currentSheetId,
+                    saveStatus: state.saveStatus,
+                },
+                // 채팅 관련 상태
+                chat: {
+                    chatSessions: state.chatSessions,
+                    currentChatId: state.currentChatId,
+                    currentSheetMetaDataId: state.currentSheetMetaDataId,
+                    chatHistory: state.chatHistory,
+                    sheetMessages: state.sheetMessages,
+                    activeSheetMessages: state.activeSheetMessages,
+                    sheetChatIds: state.sheetChatIds,
+                    currentSheetTableDataId: state.currentSheetTableDataId,
+                },
+                // UI 관련 상태
+                ui: {
+                    loadingStates: state.loadingStates,
+                    errors: state.errors,
+                    pendingFormula: state.pendingFormula,
+                    artifactCode: state.artifactCode,
+                    isArtifactModalOpen: state.isArtifactModalOpen,
+                    isSheetSelectorOpen: state.isSheetSelectorOpen,
+                }
+            })
         }
     )
 );
