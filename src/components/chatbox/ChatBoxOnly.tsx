@@ -94,8 +94,8 @@ const ChatBoxOnly: React.FC<ChatBoxOnlyProps> = ({
         <div className="mb-20"></div>
          <ChatHeader
         userName={auth.currentUser?.displayName || ''}
-        title={auth.currentUser?.displayName || ''}
-        subtitle="님, 말로 편하게 시트를 생성해보세요"
+        title={auth.currentUser?.displayName ? `${auth.currentUser?.displayName}님,` : ''}
+        subtitle={auth.currentUser ? "말로 편하게 시트를 생성해보세요" : "안녕하세요, 말로 편하게 시트를 생성해보세요"}
         logoSrc="/logo.png"
         className="mb-4"
       />
