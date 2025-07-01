@@ -32,20 +32,46 @@ export interface ChatSheetDataResponseDto {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// 개발 환경에서는 Next.js 프록시 사용 (CORS 문제 해결)
+const getApiUrl = (endpoint: string) => {
+  if (process.env.NODE_ENV === 'development') {
+    // 개발 환경: Next.js 프록시 사용
+    return `/api/chatandsheet/${endpoint}`;
+  } else {
+    // 프로덕션 환경: 직접 API 서버 호출
+    return `${API_BASE_URL}/chatandsheet/${endpoint}`;
+  }
+};
+
 /**
  * 채팅 ID로 Chat과 Sheet 데이터를 함께 로드
  */
 export const loadChatSheetData = async (chatId: string): Promise<ChatSheetDataResponseDto> => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/chatandsheet/load/${chatId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const apiUrl = getApiUrl(`load/${chatId}`);
+    console.log('🌐 API 요청 시작:', {
+      chatId,
+      apiUrl,
+      API_BASE_URL,
+      environment: process.env.NODE_ENV,
+      usingProxy: process.env.NODE_ENV === 'development'
+    });
+
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      mode: 'cors', // CORS 명시적 설정
+      credentials: 'omit', // 쿠키 전송 안함
+    });
+
+    console.log('📡 API 응답 받음:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      url: response.url
+    });
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -55,6 +81,12 @@ export const loadChatSheetData = async (chatId: string): Promise<ChatSheetDataRe
     }
 
     const data: ChatSheetDataResponseDto = await response.json();
+    
+    console.log('✅ API 데이터 파싱 완료:', {
+      chatId: data.chatId,
+      hasSheetMetaData: !!data.sheetMetaData,
+      sheetsCount: data.sheetMetaData?.sheetTableData?.length || 0
+    });
     
     // Date 객체로 변환
     if (data.sheetMetaData) {
@@ -71,7 +103,12 @@ export const loadChatSheetData = async (chatId: string): Promise<ChatSheetDataRe
 
     return data;
   } catch (error) {
-    console.error('Chat과 Sheet 데이터 로드 실패:', error);
+    console.error('❌ Chat과 Sheet 데이터 로드 실패:', {
+      chatId,
+      error: error instanceof Error ? error.message : error,
+      API_BASE_URL,
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw error;
   }
 };

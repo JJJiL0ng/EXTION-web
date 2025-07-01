@@ -21,6 +21,7 @@ interface UseLoadChatAndSheetReturn extends LoadChatAndSheetState {
   loadData: (chatId: string) => Promise<void>;
   retryLoad: () => Promise<void>;
   clearError: () => void;
+  forceLoad: (chatId?: string) => Promise<void>;
 }
 
 export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
@@ -48,51 +49,142 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
     getChatSession,
     setSheetMetaData,
     setSaveStatus,
+    setLoadingState,
     currentChatId
   } = useUnifiedStore();
 
-  // 시트 데이터를 XLSX 형태로 변환하는 함수
-  const convertToXLSXData = useCallback(
+  // API 데이터를 파일 업로드 방식과 동일한 XLSX 형태로 변환하는 함수
+  const processAPIDataToXLSX = useCallback(
     (sheetMetaData: SheetMetaDataWithTablesDto): XLSXData => {
-      const sheets: SheetData[] = sheetMetaData.sheetTableData
-        .sort((a, b) => a.index - b.index) // index 순으로 정렬
-        .map((tableData: SheetTableDataDto) => ({
-          sheetTableDataId: tableData.id,
-          sheetName: tableData.name,
-          rawData: Array.isArray(tableData.data) ? tableData.data : [],
-          metadata: {
-            rowCount: Array.isArray(tableData.data) ? tableData.data.length : 0,
-            columnCount: Array.isArray(tableData.data) && tableData.data.length > 0 
-              ? Math.max(...tableData.data.map(row => Array.isArray(row) ? row.length : 0))
-              : 0,
-            dataRange: {
-              startRow: 0,
-              endRow: Array.isArray(tableData.data) ? Math.max(0, tableData.data.length - 1) : 0,
-              startCol: 0,
-              endCol: Array.isArray(tableData.data) && tableData.data.length > 0 
-                ? Math.max(0, Math.max(...tableData.data.map(row => Array.isArray(row) ? row.length : 0)) - 1)
-                : 0,
-              startColLetter: 'A',
-              endColLetter: Array.isArray(tableData.data) && tableData.data.length > 0 
-                ? String.fromCharCode(65 + Math.max(0, Math.max(...tableData.data.map(row => Array.isArray(row) ? row.length : 0)) - 1))
-                : 'A'
-            },
-            preserveOriginalStructure: true,
-            lastModified: tableData.updatedAt
-          }
-        }));
-
-      return {
+      console.log('🔄 API 데이터를 XLSX 형태로 변환 시작:', {
         fileName: sheetMetaData.fileName,
-        sheets,
-        activeSheetIndex: Math.max(0, sheetMetaData.activeSheetIndex),
-        sheetMetaDataId: sheetMetaData.id
+        sheetsCount: sheetMetaData.sheetTableData.length,
+        activeSheetIndex: sheetMetaData.activeSheetIndex,
+        rawSheetTableData: sheetMetaData.sheetTableData.map(sheet => ({
+          id: sheet.id,
+          name: sheet.name,
+          index: sheet.index,
+          dataType: typeof sheet.data,
+          isArray: Array.isArray(sheet.data),
+          dataLength: Array.isArray(sheet.data) ? sheet.data.length : 0
+        }))
+      });
+
+      // 시트 데이터를 인덱스 순으로 정렬하고 파일 업로드 방식과 동일한 형태로 변환
+      const sheets: SheetData[] = sheetMetaData.sheetTableData
+        .sort((a, b) => a.index - b.index)
+        .map((tableData: SheetTableDataDto, sortedIndex) => {
+          console.log(`🔧 시트 처리 시작: ${tableData.name}`, {
+            originalIndex: tableData.index,
+            sortedIndex,
+            dataType: typeof tableData.data,
+            isArray: Array.isArray(tableData.data),
+            dataPreview: Array.isArray(tableData.data) ? tableData.data.slice(0, 2) : tableData.data
+          });
+
+          // rawData 검증 및 변환 (파일 업로드 방식과 동일)
+          let rawData: string[][] = [];
+          
+          if (Array.isArray(tableData.data)) {
+            // 2차원 배열인지 확인하고 문자열로 변환
+            rawData = tableData.data.map((row, rowIndex) => {
+              if (Array.isArray(row)) {
+                return row.map(cell => String(cell || ''));
+              } else {
+                console.warn(`🚨 행 ${rowIndex}이 배열이 아닙니다:`, row);
+                return [''];
+              }
+            });
+            
+            console.log(`✅ rawData 변환 완료 - ${tableData.name}:`, {
+              totalRows: rawData.length,
+              firstRowCols: rawData[0]?.length || 0,
+              sampleFirstRow: rawData[0],
+              sampleLastRow: rawData[rawData.length - 1]
+            });
+          } else {
+            // 데이터가 배열이 아닌 경우 빈 시트로 처리
+            console.warn(`🚨 시트 "${tableData.name}"의 데이터가 배열 형태가 아닙니다:`, {
+              dataType: typeof tableData.data,
+              data: tableData.data
+            });
+            rawData = [['']];
+          }
+
+          // 빈 데이터 처리
+          if (rawData.length === 0) {
+            console.warn(`🚨 시트 "${tableData.name}"이 빈 데이터입니다. 기본값으로 설정.`);
+            rawData = [['']];
+          }
+
+          // 열 개수 계산 (파일 업로드 방식과 동일)
+          const rowCount = rawData.length;
+          let columnCount = 0;
+          for (const row of rawData) {
+            if (row && Array.isArray(row) && row.length > columnCount) {
+              columnCount = row.length;
+            }
+          }
+
+          // 파일 업로드 방식과 동일한 메타데이터 구조 생성
+          const sheetData: SheetData = {
+            sheetTableDataId: tableData.id, // API에서 온 고유 ID 보존
+            sheetName: tableData.name,
+            rawData: rawData,
+            metadata: {
+              rowCount: rowCount,
+              columnCount: columnCount,
+              dataRange: {
+                startRow: 0,
+                endRow: Math.max(0, rowCount - 1),
+                startCol: 0,
+                endCol: Math.max(0, columnCount - 1),
+                startColLetter: 'A',
+                endColLetter: columnCount > 0 
+                  ? String.fromCharCode(65 + Math.max(0, columnCount - 1))
+                  : 'A'
+              },
+              preserveOriginalStructure: true,
+              lastModified: tableData.updatedAt
+            }
+          };
+
+          console.log(`📊 시트 변환 완료: ${tableData.name}`, {
+            index: tableData.index,
+            sortedIndex,
+            rawDataRows: rawData.length,
+            rawDataCols: columnCount,
+            sheetTableDataId: tableData.id,
+            metadata: sheetData.metadata
+          });
+
+          return sheetData;
+        });
+
+      // 파일 업로드 방식과 동일한 XLSXData 구조 생성
+      const xlsxData: XLSXData = {
+        fileName: sheetMetaData.fileName,
+        sheets: sheets,
+        activeSheetIndex: Math.max(0, Math.min(sheetMetaData.activeSheetIndex, sheets.length - 1)),
+        sheetMetaDataId: sheetMetaData.id // API 메타데이터 ID 보존
       };
+
+      console.log('✅ XLSX 데이터 변환 완료:', {
+        fileName: xlsxData.fileName,
+        sheetsCount: xlsxData.sheets.length,
+        activeSheetIndex: xlsxData.activeSheetIndex,
+        activeSheetName: xlsxData.sheets[xlsxData.activeSheetIndex]?.sheetName || 'Unknown',
+        sheetMetaDataId: xlsxData.sheetMetaDataId,
+        activeSheetRawDataLength: xlsxData.sheets[xlsxData.activeSheetIndex]?.rawData?.length || 0,
+        activeSheetColumnCount: xlsxData.sheets[xlsxData.activeSheetIndex]?.metadata?.columnCount || 0
+      });
+
+      return xlsxData;
     },
     []
   );
 
-  // 메인 로드 함수
+  // 메인 로드 함수 (파일 업로드 방식과 동일한 플로우 사용)
   const loadData = useCallback(
     async (chatId: string): Promise<void> => {
       if (!chatId) {
@@ -107,6 +199,9 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
       }
 
       isLoadingRef.current = true;
+      
+      // 파일 업로드 방식과 동일한 로딩 상태 설정
+      setLoadingState('fileUpload', true);
       setState(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
@@ -115,26 +210,74 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
         // API 호출
         const response: ChatSheetDataResponseDto = await loadChatSheetData(chatId);
         
-        console.log('✅ API 응답 받음:', response);
+        console.log('✅ API 응답 받음:', {
+          chatId: response.chatId,
+          hasSheetData: !!response.sheetMetaData,
+          sheetsCount: response.sheetMetaData?.sheetTableData?.length || 0
+        });
 
         // 채팅 ID 설정
         setCurrentChatId(chatId);
 
-        // 시트 데이터가 있는 경우 처리
-        if (response.sheetMetaData) {
-          console.log('📊 시트 데이터 발견, 변환 시작');
+        // 시트 데이터가 있는 경우 파일 업로드 방식과 동일하게 처리
+        if (response.sheetMetaData && response.sheetMetaData.sheetTableData.length > 0) {
+          console.log('📊 시트 데이터 발견, XLSX 변환 시작');
           
           // 시트 메타데이터 ID 설정
           setCurrentSheetMetaDataId(response.sheetMetaData.id);
 
-          // XLSX 데이터로 변환
-          const xlsxData = convertToXLSXData(response.sheetMetaData);
-          console.log('🔄 XLSX 데이터 변환 완료:', xlsxData);
+          // API 데이터를 XLSX 형태로 변환 (파일 업로드 방식과 동일)
+          const xlsxData = processAPIDataToXLSX(response.sheetMetaData);
 
-          // 스토어에 설정
+          // 파일 업로드 방식과 동일하게 스토어에 설정
+          // 이 시점에서 MainSpreadSheet의 useEffect가 트리거되어 
+          // xlsxData → activeSheetData → displayData → HotTable 플로우가 시작됨
+          console.log('🎯 setXLSXData 호출 직전:', {
+            xlsxDataToSet: {
+              fileName: xlsxData.fileName,
+              sheetsCount: xlsxData.sheets.length,
+              activeSheetIndex: xlsxData.activeSheetIndex,
+              firstSheetName: xlsxData.sheets[0]?.sheetName,
+              firstSheetDataLength: xlsxData.sheets[0]?.rawData?.length
+            }
+          });
+
           setXLSXData(xlsxData);
           
-          // 스프레드시트 메타데이터 설정
+          console.log('🎯 setXLSXData 호출 완료 - MainSpreadSheet 렌더링 트리거됨');
+
+          // 즉시 상태 확인
+          const immediateState = useUnifiedStore.getState();
+          console.log('🔍 setXLSXData 직후 즉시 상태 확인:', {
+            hasXlsxData: !!immediateState.xlsxData,
+            hasActiveSheetData: !!immediateState.activeSheetData,
+            xlsxDataFileName: immediateState.xlsxData?.fileName,
+            activeSheetName: immediateState.activeSheetData?.sheetName,
+            activeSheetDataLength: immediateState.activeSheetData?.rawData?.length,
+            hasUploadedFile: immediateState.hasUploadedFile
+          });
+
+          // 100ms, 300ms, 500ms, 1000ms 후 상태 지속 확인
+          [100, 300, 500, 1000].forEach(delay => {
+            setTimeout(() => {
+              const currentState = useUnifiedStore.getState();
+              console.log(`🔍 setXLSXData 이후 ${delay}ms 후 스토어 상태 확인:`, {
+                hasXlsxData: !!currentState.xlsxData,
+                hasActiveSheetData: !!currentState.activeSheetData,
+                xlsxDataFileName: currentState.xlsxData?.fileName,
+                activeSheetName: currentState.activeSheetData?.sheetName,
+                activeSheetDataLength: currentState.activeSheetData?.rawData?.length,
+                hasUploadedFile: currentState.hasUploadedFile
+              });
+              
+              // 상태가 초기화된 경우 경고
+              if (!currentState.xlsxData) {
+                console.warn(`⚠️ ${delay}ms 후 xlsxData가 null로 초기화됨! 다른 곳에서 상태를 덮어쓰고 있습니다.`);
+              }
+            }, delay);
+          });
+
+          // 스프레드시트 메타데이터 설정 (파일 업로드 방식과 유사)
           setSheetMetaData({
             fileName: response.sheetMetaData.fileName,
             originalFileName: response.sheetMetaData.originalFileName,
@@ -148,10 +291,12 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
           setSaveStatus('synced');
 
           setState(prev => ({ ...prev, hasSheetData: true }));
+
+          console.log('✅ 시트 데이터 스토어 설정 완료 - 렌더링 시작됨');
         } else {
-          console.log('📭 시트 데이터 없음');
+          console.log('📭 시트 데이터 없음 - 빈 상태로 초기화');
           
-          // 시트 데이터가 없는 경우 초기화
+          // 시트 데이터가 없는 경우 초기화 (파일 업로드 방식과 동일)
           setCurrentSheetMetaDataId(null);
           setXLSXData(null);
           setSheetMetaData(null);
@@ -162,10 +307,9 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
         // 채팅 세션 업데이트 또는 생성
         let existingSession = getChatSession(chatId);
         if (!existingSession) {
-          // 새 세션 생성 (기존 chatId 사용)
-          createNewChatSession();
-          // 생성된 세션의 chatId를 업데이트
-          existingSession = getChatSession(chatId);
+          console.warn('⚠️ 채팅 세션이 존재하지 않지만 createNewChatSession 호출 방지 (xlsxData 덮어쓰기 방지)');
+          // createNewChatSession(); // 임시로 주석 처리하여 xlsxData 덮어쓰기 방지
+          // existingSession = getChatSession(chatId);
         }
 
         if (existingSession) {
@@ -184,7 +328,7 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
           });
         }
 
-        console.log('✅ Chat과 Sheet 데이터 로드 완료');
+        console.log('✅ Chat과 Sheet 데이터 로드 및 렌더링 설정 완료');
         
         // 성공적으로 로드된 chatId 기록
         lastLoadedChatIdRef.current = chatId;
@@ -196,7 +340,7 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
         setState(prev => ({ ...prev, error: errorMessage }));
 
         // 에러 발생 시 기본 상태로 설정
-        setCurrentChatId(chatId); // chatId는 설정
+        setCurrentChatId(chatId);
         setCurrentSheetMetaDataId(null);
         setXLSXData(null);
         setSheetMetaData(null);
@@ -205,10 +349,12 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
         lastLoadedChatIdRef.current = chatId;
       } finally {
         isLoadingRef.current = false;
+        // 파일 업로드 방식과 동일하게 로딩 상태 해제
+        setLoadingState('fileUpload', false);
         setState(prev => ({ ...prev, isLoading: false }));
       }
     },
-    [convertToXLSXData] // 스토어 액션들은 안정적이므로 의존성에서 제거
+    [processAPIDataToXLSX] // Zustand 액션들은 안정적이므로 의존성에서 제거 (무한 루프 방지)
   );
 
   // 재시도 함수
@@ -220,25 +366,52 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
     }
   }, [chatIdFromUrl, loadData]);
 
+  // 강제 로드 함수 (디버깅용)
+  const forceLoad = useCallback(async (chatId?: string): Promise<void> => {
+    const targetChatId = chatId || chatIdFromUrl;
+    if (targetChatId) {
+      console.log('🔧 강제 로드 실행:', targetChatId);
+      lastLoadedChatIdRef.current = null;
+      isLoadingRef.current = false;
+      await loadData(targetChatId);
+    }
+  }, [chatIdFromUrl, loadData]);
+
   // 에러 클리어 함수
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
-  // URL의 chatId가 변경될 때 자동 로드
+  // URL의 chatId가 변경될 때 자동 로드 (파일 업로드 방식과 동일한 플로우 시작)
   useEffect(() => {
+    console.log('🔍 useEffect 트리거됨:', {
+      chatIdFromUrl,
+      lastLoadedChatId: lastLoadedChatIdRef.current,
+      isLoadingRefCurrent: isLoadingRef.current,
+      shouldLoad: chatIdFromUrl && 
+                  chatIdFromUrl !== lastLoadedChatIdRef.current && 
+                  !isLoadingRef.current
+    });
+
     if (chatIdFromUrl && 
         chatIdFromUrl !== lastLoadedChatIdRef.current && 
         !isLoadingRef.current) {
-      console.log('🔄 URL chatId 변경 감지, 자동 로드:', chatIdFromUrl);
+      console.log('🔄 URL chatId 변경 감지, 자동 로드 시작:', chatIdFromUrl);
       loadData(chatIdFromUrl);
+    } else {
+      console.log('⏭️ 로드 조건 불충족:', {
+        noChatId: !chatIdFromUrl,
+        alreadyLoaded: chatIdFromUrl === lastLoadedChatIdRef.current,
+        isLoading: isLoadingRef.current
+      });
     }
-  }, [chatIdFromUrl]); // loadData 의존성 제거
+  }, [chatIdFromUrl, loadData]);
 
   return {
     ...state,
     loadData,
     retryLoad,
+    forceLoad,
     clearError,
   };
 };

@@ -1,10 +1,8 @@
 'use client'
 
-import React, { useState, useCallback } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import React from 'react';
 import { XLSXData, useUnifiedStore } from '@/stores';
-import { XIcon, FileIcon, FileSpreadsheetIcon, CheckCircleIcon, CloudIcon, MessageCircleIcon } from 'lucide-react';
+import { FileSpreadsheetIcon, CheckCircleIcon } from 'lucide-react';
 
 interface FileUploadHandlerProps {
     isDragOver?: boolean;

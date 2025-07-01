@@ -82,6 +82,21 @@ const nextConfig = {
           // },
       ]
   },
+
+  // API 프록시 설정 (CORS 문제 해결)
+  async rewrites() {
+      return [
+          {
+              source: '/api/chatandsheet/:path*',
+              destination: 'http://localhost:8080/chatandsheet/:path*',
+          },
+          // 다른 API 엔드포인트도 필요시 추가
+          {
+              source: '/api/backend/:path*',
+              destination: 'http://localhost:8080/:path*',
+          },
+      ]
+  },
 }
 
 export default nextConfig;

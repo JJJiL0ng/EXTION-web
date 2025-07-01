@@ -41,6 +41,12 @@ export const useAutosave = () => {
             currentSheetMetaDataId,
             userId: user?.uid,
             hasXlsxData: !!xlsxDataRef.current,
+            // 추가 디버깅
+            xlsxDataFromHook: !!xlsxData,
+            xlsxDataFromRef: !!xlsxDataRef.current,
+            xlsxDataEqual: xlsxData === xlsxDataRef.current,
+            xlsxDataFileName: xlsxData?.fileName || 'null',
+            refFileName: xlsxDataRef.current?.fileName || 'null'
         });
     });
 

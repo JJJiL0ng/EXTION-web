@@ -21,7 +21,11 @@ export const useUnifiedStore = create<UnifiedStore>()(
             
             // resetAllStores 함수 추가
             resetAllStores: () => {
-                console.log('🧹 모든 스토어 초기화 중...');
+                const stack = new Error().stack;
+                console.log('🧹 모든 스토어 초기화 중... 호출 스택:', {
+                    callerInfo: stack?.split('\n')[2]?.trim() || 'unknown',
+                    fullStack: stack?.split('\n').slice(1, 5).map(line => line.trim())
+                });
                 const { resetUIStore } = get();
                 resetUIStore();
                 
