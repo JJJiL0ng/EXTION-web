@@ -18,28 +18,13 @@ interface FileUploadHandlerProps {
 }
 
 const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
-    isDragOver = false,
     xlsxData,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-    handleFileInputChange,
-    removeFile,
     switchToSheet
 }) => {
-    const [isDragging, setIsDragging] = useState(false);
-    const [previewFiles, setPreviewFiles] = useState<File[]>([]);
+    
     
     const {
-        loadingStates,
-        errors,
-        canUploadFile,
-        setLoadingState,
-        setError,
-        // 스프레드시트 관련 상태
-        currentSheetMetaDataId,
         sheetMetaData,
-        currentChatId
     } = useUnifiedStore();
 
     return (

@@ -25,7 +25,6 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({
-    currentMode,
     inputValue,
     isDragOver,
     isLoading,

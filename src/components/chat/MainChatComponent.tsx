@@ -34,8 +34,6 @@ export default function MainChatComponent() {
         switchToSheet,
         // 시트별 채팅 관련 스토어 값
         activeSheetMessages,
-        clearAllMessages,
-        setXLSXData,
     } = useUnifiedStore();
 
     // 현재 활성 시트 인덱스 가져오기
