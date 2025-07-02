@@ -43,6 +43,8 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
   const {
     setCurrentChatId,
     setCurrentSheetMetaDataId,
+    setCurrentSheetTableDataId,
+    setCurrentSheetId,
     setXLSXData,
     updateChatSession,
     createNewChatSession,
@@ -216,15 +218,31 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
           sheetsCount: response.sheetMetaData?.sheetTableData?.length || 0
         });
 
-        // 채팅 ID 설정
-        setCurrentChatId(chatId);
+        // API 응답에서 받아온 실제 chatId로 현재 chatId 업데이트
+        console.log('🆔 현재 chatId 업데이트:', {
+          requestedChatId: chatId,
+          responseChatId: response.chatId,
+          updating: true
+        });
+        setCurrentChatId(response.chatId);
 
         // 시트 데이터가 있는 경우 파일 업로드 방식과 동일하게 처리
         if (response.sheetMetaData && response.sheetMetaData.sheetTableData.length > 0) {
           console.log('📊 시트 데이터 발견, XLSX 변환 시작');
           
-          // 시트 메타데이터 ID 설정
+          // API 응답에서 받아온 실제 sheetMetaDataId로 현재 sheetMetaDataId 업데이트
+          console.log('🆔 현재 sheetMetaDataId 업데이트:', {
+            newSheetMetaDataId: response.sheetMetaData.id,
+            updating: true
+          });
           setCurrentSheetMetaDataId(response.sheetMetaData.id);
+          
+          // dataServices.ts에서 getCurrentSheetId()로 찾을 수 있도록 currentSheetId도 설정
+          console.log('🆔 현재 sheetId 업데이트 (dataServices.ts 호환성):', {
+            newSheetId: response.sheetMetaData.id,
+            updating: true
+          });
+          setCurrentSheetId(response.sheetMetaData.id);
 
           // API 데이터를 XLSX 형태로 변환 (파일 업로드 방식과 동일)
           const xlsxData = processAPIDataToXLSX(response.sheetMetaData);
@@ -243,6 +261,18 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
           });
 
           setXLSXData(xlsxData);
+          
+          // 현재 활성화된 시트의 sheetTableDataId 업데이트
+          const activeSheet = xlsxData.sheets[xlsxData.activeSheetIndex];
+          if (activeSheet?.sheetTableDataId) {
+            console.log('🆔 현재 활성 시트의 sheetTableDataId 업데이트:', {
+              activeSheetIndex: xlsxData.activeSheetIndex,
+              activeSheetName: activeSheet.sheetName,
+              sheetTableDataId: activeSheet.sheetTableDataId,
+              updating: true
+            });
+            setCurrentSheetTableDataId(activeSheet.sheetTableDataId);
+          }
           
           console.log('🎯 setXLSXData 호출 완료 - MainSpreadSheet 렌더링 트리거됨');
 
@@ -296,24 +326,29 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
         } else {
           console.log('📭 시트 데이터 없음 - 빈 상태로 초기화');
           
+          // 시트 데이터가 없어도 API 응답의 chatId는 유지
+          console.log('🆔 시트 데이터 없음 - chatId는 유지, sheetMetaDataId, sheetTableDataId, sheetId 초기화');
+          
           // 시트 데이터가 없는 경우 초기화 (파일 업로드 방식과 동일)
           setCurrentSheetMetaDataId(null);
+          setCurrentSheetTableDataId(null);
+          setCurrentSheetId(null);
           setXLSXData(null);
           setSheetMetaData(null);
           
           setState(prev => ({ ...prev, hasSheetData: false }));
         }
 
-        // 채팅 세션 업데이트 또는 생성
-        let existingSession = getChatSession(chatId);
+        // 채팅 세션 업데이트 또는 생성 (API 응답의 chatId 사용)
+        let existingSession = getChatSession(response.chatId);
         if (!existingSession) {
           console.warn('⚠️ 채팅 세션이 존재하지 않지만 createNewChatSession 호출 방지 (xlsxData 덮어쓰기 방지)');
           // createNewChatSession(); // 임시로 주석 처리하여 xlsxData 덮어쓰기 방지
-          // existingSession = getChatSession(chatId);
+          // existingSession = getChatSession(response.chatId);
         }
 
         if (existingSession) {
-          updateChatSession(chatId, {
+          updateChatSession(response.chatId, {
             currentSheetMetaDataId: response.sheetMetaData?.id || null,
             sheetMetaData: response.sheetMetaData ? {
               fileName: response.sheetMetaData.fileName,
@@ -328,10 +363,13 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
           });
         }
 
-        console.log('✅ Chat과 Sheet 데이터 로드 및 렌더링 설정 완료');
+        console.log('✅ Chat과 Sheet 데이터 로드 및 렌더링 설정 완료', {
+          finalChatId: response.chatId,
+          finalSheetMetaDataId: response.sheetMetaData?.id || null
+        });
         
-        // 성공적으로 로드된 chatId 기록
-        lastLoadedChatIdRef.current = chatId;
+        // 성공적으로 로드된 chatId 기록 (요청한 chatId가 아닌 응답 chatId 기록)
+        lastLoadedChatIdRef.current = response.chatId;
 
       } catch (error) {
         console.error('❌ Chat과 Sheet 데이터 로드 실패:', error);
@@ -339,9 +377,15 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
         const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
         setState(prev => ({ ...prev, error: errorMessage }));
 
-        // 에러 발생 시 기본 상태로 설정
+        // 에러 발생 시 요청된 chatId로라도 설정 (API 응답을 받지 못했으므로)
+        console.log('🆔 에러 발생 - 요청된 chatId로 설정, 다른 ID들 초기화:', {
+          requestedChatId: chatId,
+          errorMessage
+        });
         setCurrentChatId(chatId);
         setCurrentSheetMetaDataId(null);
+        setCurrentSheetTableDataId(null);
+        setCurrentSheetId(null);
         setXLSXData(null);
         setSheetMetaData(null);
         
