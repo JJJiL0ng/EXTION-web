@@ -23,11 +23,23 @@ interface UseLoadChatAndSheetReturn extends LoadChatAndSheetState {
   retryLoad: () => Promise<void>;
   clearError: () => void;
   forceLoad: (chatId?: string) => Promise<void>;
+  debugCurrentChatId: (context: string) => string | null;
 }
 
 export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
   const params = useParams();
   const chatIdFromUrl = params?.id as string;
+
+  // 디버깅 헬퍼 함수
+  const debugCurrentChatId = useCallback((context: string) => {
+    const state = useUnifiedStore.getState();
+    console.log(`🔍 [${context}] currentChatId 상태:`, {
+      currentChatId: state.currentChatId,
+      context,
+      timestamp: new Date().toISOString()
+    });
+    return state.currentChatId;
+  }, []);
 
   // 무한 루프 방지를 위한 ref들
   const lastLoadedChatIdRef = useRef<string | null>(null);
@@ -212,6 +224,7 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
 
       try {
         console.log('🔄 Chat과 Sheet 데이터 로드 시작:', chatId);
+        debugCurrentChatId('로드 시작');
 
         // API 호출
         const response: ChatSheetDataResponseDto = await loadChatSheetData(chatId);
@@ -229,6 +242,28 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
           updating: true
         });
         setCurrentChatId(response.chatId);
+
+        // 즉시 상태 확인하여 업데이트 확인
+        const immediateState = useUnifiedStore.getState();
+        console.log('🔍 setCurrentChatId 직후 즉시 상태 확인:', {
+          currentChatId: immediateState.currentChatId,
+          expectedChatId: response.chatId,
+          isUpdated: immediateState.currentChatId === response.chatId
+        });
+
+        // 100ms 후 상태 지속 확인
+        setTimeout(() => {
+          const delayedState = useUnifiedStore.getState();
+          console.log('🔍 setCurrentChatId 이후 100ms 후 상태 확인:', {
+            currentChatId: delayedState.currentChatId,
+            expectedChatId: response.chatId,
+            isUpdated: delayedState.currentChatId === response.chatId
+          });
+          
+          if (delayedState.currentChatId !== response.chatId) {
+            console.warn('⚠️ currentChatId가 예상과 다릅니다! 다른 곳에서 덮어쓰고 있을 수 있습니다.');
+          }
+        }, 100);
 
         // 시트 데이터가 있는 경우 파일 업로드 방식과 동일하게 처리
         if (response.sheetMetaData && response.sheetMetaData.sheetTableData.length > 0) {
@@ -357,6 +392,14 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
           }
           
           setState(prev => ({ ...prev, hasSheetData: false }));
+
+          // 시트 데이터가 없는 경우에도 chatId 상태 확인
+          const immediateState = useUnifiedStore.getState();
+          console.log('🔍 시트 데이터 없음 케이스 - currentChatId 상태 확인:', {
+            currentChatId: immediateState.currentChatId,
+            expectedChatId: response.chatId,
+            isUpdated: immediateState.currentChatId === response.chatId
+          });
         }
 
         // 채팅 메시지 처리 (시트 데이터 유무와 관계없이 처리)
@@ -400,9 +443,42 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
         // 채팅 세션 업데이트 또는 생성 (API 응답의 chatId 사용)
         let existingSession = getChatSession(response.chatId);
         if (!existingSession) {
-          console.warn('⚠️ 채팅 세션이 존재하지 않지만 createNewChatSession 호출 방지 (xlsxData 덮어쓰기 방지)');
-          // createNewChatSession(); // 임시로 주석 처리하여 xlsxData 덮어쓰기 방지
-          // existingSession = getChatSession(response.chatId);
+          console.warn('⚠️ 채팅 세션이 존재하지 않음. 새 세션 생성하지 않고 수동으로 세션 정보 업데이트 (currentChatId 보존)');
+          // createNewChatSession()은 호출하지 않음 - currentChatId를 덮어쓸 수 있기 때문
+          
+          // 대신 수동으로 세션 정보만 업데이트
+          const manualSession = {
+            chatId: response.chatId,
+            chatTitle: response.chat?.title,
+            xlsxData: null, // 나중에 시트 데이터 처리에서 설정됨
+            activeSheetData: null,
+            computedSheetData: {},
+            sheetMessages: {},
+            activeSheetMessages: [],
+            sheetChatIds: {},
+            hasUploadedFile: !!response.sheetMetaData,
+            createdAt: response.chat?.createdAt ? new Date(response.chat.createdAt) : new Date(),
+            lastAccessedAt: new Date(),
+            currentSheetMetaDataId: response.sheetMetaData?.id || null,
+            sheetMetaData: response.sheetMetaData ? {
+              fileName: response.sheetMetaData.fileName,
+              originalFileName: response.sheetMetaData.originalFileName,
+              fileSize: response.sheetMetaData.fileSize,
+              fileType: response.sheetMetaData.fileType as 'xlsx' | 'csv' | undefined,
+              lastSaved: response.sheetMetaData.updatedAt,
+              isSaved: true
+            } : null,
+            currentSheetTableDataId: null
+          };
+          
+          // 세션 직접 추가 (currentChatId는 그대로 유지)
+          updateChatSession(response.chatId, manualSession);
+          existingSession = manualSession as any;
+          
+          console.log('✅ 수동 세션 생성 완료 - currentChatId 보존됨:', {
+            sessionChatId: manualSession.chatId,
+            currentChatId: useUnifiedStore.getState().currentChatId
+          });
         }
 
         if (existingSession) {
@@ -425,9 +501,24 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
           finalChatId: response.chatId,
           finalSheetMetaDataId: response.sheetMetaData?.id || null
         });
+
+        // 최종 currentChatId 상태 확인
+        const finalState = useUnifiedStore.getState();
+        console.log('🔍 로드 완료 후 최종 currentChatId 상태 확인:', {
+          currentChatId: finalState.currentChatId,
+          expectedChatId: response.chatId,
+          isCorrect: finalState.currentChatId === response.chatId,
+          status: finalState.currentChatId === response.chatId ? '✅ 성공' : '❌ 실패'
+        });
+
+        if (finalState.currentChatId !== response.chatId) {
+          console.error('❌ currentChatId 업데이트 실패! 다시 설정 시도');
+          setCurrentChatId(response.chatId);
+        }
         
         // 성공적으로 로드된 chatId 기록 (요청한 chatId가 아닌 응답 chatId 기록)
         lastLoadedChatIdRef.current = response.chatId;
+        debugCurrentChatId('로드 완료');
 
       } catch (error) {
         console.error('❌ Chat과 Sheet 데이터 로드 실패:', error);
@@ -456,8 +547,17 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
           console.log('📝 에러 발생 - 기존 파일 데이터 보존, xlsxData 유지');
         }
         
+        // 에러 발생 시 chatId 상태 확인
+        const errorState = useUnifiedStore.getState();
+        console.log('🔍 에러 발생 시 currentChatId 상태 확인:', {
+          currentChatId: errorState.currentChatId,
+          expectedChatId: chatId,
+          isUpdated: errorState.currentChatId === chatId
+        });
+
         // 에러 발생 시에도 chatId 기록 (재시도 방지)
         lastLoadedChatIdRef.current = chatId;
+        debugCurrentChatId('에러 발생');
       } finally {
         isLoadingRef.current = false;
         // 파일 업로드 방식과 동일하게 로딩 상태 해제
@@ -524,5 +624,6 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
     retryLoad,
     forceLoad,
     clearError,
+    debugCurrentChatId,
   };
 };
