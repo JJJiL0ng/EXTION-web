@@ -99,6 +99,10 @@ export interface ChatSlice {
 
     // === 채팅 목록 새로고침 액션 ===
     refreshChatList: () => void;
+
+    // === 채팅 메시지 로딩 액션 ===
+    loadChatMessages: (messages: ChatMessage[]) => void;
+    setChatMessagesFromBackend: (messages: ChatMessage[], activeSheetIndex?: number) => void;
 }
 
 // 채팅 슬라이스 생성자
@@ -730,5 +734,73 @@ export const createChatSlice: StateCreator<
             // 트리거를 위한 임의의 timestamp 업데이트
             chatListRefreshTrigger: Date.now()
         }));
+    },
+
+    // === 채팅 메시지 로딩 액션 ===
+    loadChatMessages: (messages: ChatMessage[]) => {
+        console.log('🔄 채팅 메시지 로딩 시작:', messages.length, '개');
+        get().setChatMessagesFromBackend(messages);
+    },
+
+    setChatMessagesFromBackend: (messages: ChatMessage[], activeSheetIndex: number = 0) => {
+        set((state) => {
+            const newSheetMessages: { [sheetIndex: number]: ChatMessage[] } = {};
+            
+            // 메시지들을 시트별로 분류
+            messages.forEach(message => {
+                // 메시지의 sheetContext나 metadata에서 시트 인덱스 추출
+                let targetSheetIndex = activeSheetIndex;
+                
+                // sheetContext가 있는 경우 해당 시트 인덱스 사용
+                if ((message as any).sheetContext?.sheetIndex !== undefined) {
+                    targetSheetIndex = (message as any).sheetContext.sheetIndex;
+                }
+                // metadata에 시트 정보가 있는 경우
+                else if ((message as any).metadata?.sheetIndex !== undefined) {
+                    targetSheetIndex = (message as any).metadata.sheetIndex;
+                }
+                
+                // 해당 시트에 메시지 추가
+                if (!newSheetMessages[targetSheetIndex]) {
+                    newSheetMessages[targetSheetIndex] = [];
+                }
+                newSheetMessages[targetSheetIndex].push(message);
+            });
+
+            // 활성 시트의 메시지들을 activeSheetMessages에 설정
+            const activeSheetMessages = newSheetMessages[activeSheetIndex] || [];
+
+            console.log('📝 채팅 메시지 설정 완료:', {
+                totalMessages: messages.length,
+                sheetMessageCounts: Object.entries(newSheetMessages).map(([index, msgs]) => 
+                    `시트${index}: ${msgs.length}개`
+                ).join(', '),
+                activeSheetMessages: activeSheetMessages.length,
+                activeSheetIndex,
+                previousActiveSheetMessages: state.activeSheetMessages?.length || 0,
+                mergedSheetMessages: Object.keys({ ...state.sheetMessages, ...newSheetMessages })
+            });
+
+            const newState = {
+                ...state,
+                sheetMessages: {
+                    ...state.sheetMessages,
+                    ...newSheetMessages
+                },
+                activeSheetMessages
+            };
+
+            console.log('🎯 새로운 상태 설정:', {
+                finalActiveSheetMessages: newState.activeSheetMessages?.length || 0,
+                finalSheetMessagesKeys: Object.keys(newState.sheetMessages),
+                firstMessage: newState.activeSheetMessages?.[0] ? {
+                    id: newState.activeSheetMessages[0].id,
+                    type: newState.activeSheetMessages[0].type,
+                    preview: newState.activeSheetMessages[0].content?.substring(0, 30)
+                } : 'none'
+            });
+
+            return newState;
+        });
     }
 }); 

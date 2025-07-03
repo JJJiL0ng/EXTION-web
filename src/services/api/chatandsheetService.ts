@@ -1,4 +1,5 @@
 // 백엔드 Chat and Sheet API 호출을 위한 서비스
+import { ChatMessage } from '@/stores/store-types';
 
 // Sheet Table Data 타입
 export interface SheetTableDataDto {
@@ -24,13 +25,118 @@ export interface SheetMetaDataWithTablesDto {
   sheetTableData: SheetTableDataDto[];
 }
 
-// Chat Sheet Data Response 타입
+// 백엔드 Message DTO 타입
+export interface MessageDto {
+  id: string;
+  content: string;
+  timestamp: Date;
+  role: 'USER' | 'EXTION_AI' | 'SYSTEM';
+  type: 'TEXT' | 'FILE_UPLOAD' | 'VISUALIZATION' | 'DATA_GENERATION' | 'FUNCTION' | 'DATA_EDIT';
+  mode?: 'NORMAL' | 'VISUALIZATION' | 'DATA_GENERATION' | 'DATA_EDIT' | 'FUNCTION';
+  sheetContext?: any;
+  formulaData?: any;
+  artifactData?: any;
+  dataChangeInfo?: any;
+  fileUploadInfo?: any;
+  metadata?: any;
+}
+
+// 백엔드 Chat DTO 타입
+export interface ChatDto {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+  messageCount: number;
+  status: 'ACTIVE' | 'ARCHIVED' | 'DELETED';
+  analytics?: any;
+  userId: string;
+  messages: MessageDto[];
+}
+
+// Chat Sheet Data Response 타입 (업데이트됨)
 export interface ChatSheetDataResponseDto {
   chatId: string;
+  chat?: ChatDto;
   sheetMetaData?: SheetMetaDataWithTablesDto;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+/**
+ * 백엔드 MessageDto를 프론트엔드 ChatMessage로 변환
+ */
+export const convertMessageDtoToChatMessage = (messageDto: MessageDto): ChatMessage => {
+  // role 매핑
+  const typeMapping: { [key: string]: 'user' | 'Extion ai' } = {
+    'USER': 'user',
+    'EXTION_AI': 'Extion ai',
+    'SYSTEM': 'Extion ai'
+  };
+
+  // mode 매핑
+  const modeMapping: { [key: string]: 'normal' | 'formula' | 'artifact' | 'datafix' } = {
+    'NORMAL': 'normal',
+    'FUNCTION': 'formula',
+    'VISUALIZATION': 'artifact',
+    'DATA_EDIT': 'datafix',
+    'DATA_GENERATION': 'artifact'
+  };
+
+  const chatMessage: ChatMessage = {
+    id: messageDto.id,
+    type: typeMapping[messageDto.role] || 'Extion ai',
+    content: messageDto.content,
+    timestamp: new Date(messageDto.timestamp),
+    mode: messageDto.mode ? modeMapping[messageDto.mode] || 'normal' : 'normal'
+  };
+
+  // 백엔드에서 불러온 메시지임을 표시하는 플래그 추가
+  (chatMessage as any).isFromBackend = true;
+
+  // artifactData 변환
+  if (messageDto.artifactData) {
+    chatMessage.artifactData = {
+      type: messageDto.artifactData.type || 'analysis',
+      title: messageDto.artifactData.title || '분석 결과',
+      timestamp: new Date(messageDto.timestamp),
+      code: messageDto.artifactData.code,
+      artifactId: messageDto.artifactData.artifactId,
+      explanation: messageDto.artifactData.explanation
+    };
+  }
+
+  // dataChangeInfo를 dataFixData로 변환
+  if (messageDto.dataChangeInfo && messageDto.type === 'DATA_EDIT') {
+    chatMessage.dataFixData = {
+      editedData: messageDto.dataChangeInfo.editedData || messageDto.dataChangeInfo,
+      sheetIndex: messageDto.dataChangeInfo.sheetIndex,
+      changes: messageDto.dataChangeInfo.changes,
+      isApplied: false // 기본값으로 false 설정
+    };
+  }
+
+  // formulaData 처리 (ChatMessage 타입에 없지만 런타임에서 사용)
+  if (messageDto.formulaData) {
+    (chatMessage as any).formulaData = messageDto.formulaData;
+  }
+
+  // functionData 처리 (FUNCTION 타입 메시지용)
+  if (messageDto.type === 'FUNCTION' && messageDto.formulaData) {
+    (chatMessage as any).functionData = {
+      functionDetails: messageDto.formulaData
+    };
+  }
+
+  return chatMessage;
+};
+
+/**
+ * 백엔드 ChatDto의 메시지들을 프론트엔드 ChatMessage[]로 변환
+ */
+export const convertChatMessagesToFrontend = (chatDto: ChatDto): ChatMessage[] => {
+  return chatDto.messages.map(convertMessageDtoToChatMessage);
+};
 
 // 개발 환경에서는 Next.js 프록시 사용 (CORS 문제 해결)
 const getApiUrl = (endpoint: string) => {

@@ -137,6 +137,20 @@ export default function MainChatComponent() {
         });
     }, [hasUploadedFile, xlsxData]);
 
+    // 디버깅: activeSheetMessages 상태 변화 추적
+    useEffect(() => {
+        console.log('💬 MainChatComponent activeSheetMessages 상태 변화:', {
+            activeSheetMessages: activeSheetMessages?.length || 0,
+            activeSheetIndex,
+            hasXlsxData: !!xlsxData,
+            messagesPreview: activeSheetMessages?.slice(0, 2).map(msg => ({
+                id: msg.id,
+                type: msg.type,
+                contentPreview: msg.content?.substring(0, 50) || 'no content'
+            })) || []
+        });
+    }, [activeSheetMessages, activeSheetIndex, xlsxData]);
+
     return (
         <div className="flex flex-col h-full w-full overflow-hidden">
             <div className="flex flex-col h-full w-full">

@@ -5,7 +5,8 @@ import {
   loadChatSheetData, 
   ChatSheetDataResponseDto, 
   SheetMetaDataWithTablesDto, 
-  SheetTableDataDto 
+  SheetTableDataDto,
+  convertChatMessagesToFrontend 
 } from '@/services/api/chatandsheetService';
 import { XLSXData, SheetData } from '@/stores/store-types';
 
@@ -52,7 +53,10 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
     setSheetMetaData,
     setSaveStatus,
     setLoadingState,
-    currentChatId
+    currentChatId,
+    loadChatMessages,
+    setChatMessagesFromBackend,
+    xlsxData // 기존 파일 데이터 확인용
   } = useUnifiedStore();
 
   // API 데이터를 파일 업로드 방식과 동일한 XLSX 형태로 변환하는 함수
@@ -324,19 +328,73 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
 
           console.log('✅ 시트 데이터 스토어 설정 완료 - 렌더링 시작됨');
         } else {
-          console.log('📭 시트 데이터 없음 - 빈 상태로 초기화');
+          console.log('📭 시트 데이터 없음 - 기존 파일 데이터 보존하며 시트 메타데이터만 초기화');
+          
+          // 기존 파일 데이터가 있는지 확인
+          const hasExistingFileData = !!xlsxData;
+          console.log('🔍 기존 파일 데이터 확인:', {
+            hasExistingXlsxData: hasExistingFileData,
+            existingFileName: xlsxData?.fileName || 'none',
+            existingSheetsCount: xlsxData?.sheets?.length || 0
+          });
           
           // 시트 데이터가 없어도 API 응답의 chatId는 유지
-          console.log('🆔 시트 데이터 없음 - chatId는 유지, sheetMetaDataId, sheetTableDataId, sheetId 초기화');
+          console.log('🆔 시트 데이터 없음 - chatId는 유지, 시트 메타데이터만 초기화');
           
-          // 시트 데이터가 없는 경우 초기화 (파일 업로드 방식과 동일)
+          // 시트 관련 메타데이터만 초기화 (기존 파일 데이터는 보존)
           setCurrentSheetMetaDataId(null);
           setCurrentSheetTableDataId(null);
           setCurrentSheetId(null);
-          setXLSXData(null);
           setSheetMetaData(null);
           
+          // 기존 파일 데이터가 없는 경우에만 xlsxData 초기화
+          if (!hasExistingFileData) {
+            console.log('📝 기존 파일 데이터 없음 - xlsxData 초기화');
+            setXLSXData(null);
+          } else {
+            console.log('📝 기존 파일 데이터 보존 - xlsxData 유지');
+            // 기존 파일 데이터가 있으면 그대로 유지
+          }
+          
           setState(prev => ({ ...prev, hasSheetData: false }));
+        }
+
+        // 채팅 메시지 처리 (시트 데이터 유무와 관계없이 처리)
+        if (response.chat && response.chat.messages && response.chat.messages.length > 0) {
+          console.log('💬 채팅 메시지 발견, 프론트엔드 형식으로 변환 시작:', {
+            messageCount: response.chat.messages.length,
+            chatTitle: response.chat.title
+          });
+
+          try {
+            // 백엔드 메시지를 프론트엔드 형식으로 변환
+            const frontendMessages = convertChatMessagesToFrontend(response.chat);
+            
+            console.log('✅ 채팅 메시지 변환 완료:', {
+              originalCount: response.chat.messages.length,
+              convertedCount: frontendMessages.length,
+              messageTypes: frontendMessages.map(msg => ({ id: msg.id, type: msg.type, mode: msg.mode }))
+            });
+
+            // 시트 데이터의 activeSheetIndex를 사용하여 메시지 로딩
+            const activeSheetIndex = response.sheetMetaData?.activeSheetIndex || 0;
+            
+            console.log('🎯 메시지 로딩에 사용할 activeSheetIndex:', {
+              sheetMetaDataActiveIndex: response.sheetMetaData?.activeSheetIndex,
+              finalActiveSheetIndex: activeSheetIndex,
+              hasSheetMetaData: !!response.sheetMetaData
+            });
+            
+            // activeSheetIndex를 전달하여 메시지 로딩
+            setChatMessagesFromBackend(frontendMessages, activeSheetIndex);
+
+            console.log('📝 채팅 메시지 스토어에 로딩 완료');
+          } catch (messageError) {
+            console.error('❌ 채팅 메시지 변환/로딩 실패:', messageError);
+            // 메시지 로딩 실패는 치명적이지 않으므로 계속 진행
+          }
+        } else {
+          console.log('📭 채팅 메시지 없음 또는 빈 메시지 목록');
         }
 
         // 채팅 세션 업데이트 또는 생성 (API 응답의 chatId 사용)
@@ -378,16 +436,25 @@ export const useLoadChatandsheet = (): UseLoadChatAndSheetReturn => {
         setState(prev => ({ ...prev, error: errorMessage }));
 
         // 에러 발생 시 요청된 chatId로라도 설정 (API 응답을 받지 못했으므로)
-        console.log('🆔 에러 발생 - 요청된 chatId로 설정, 다른 ID들 초기화:', {
+        console.log('🆔 에러 발생 - 요청된 chatId로 설정, 시트 메타데이터만 초기화:', {
           requestedChatId: chatId,
-          errorMessage
+          errorMessage,
+          hasExistingXlsxData: !!xlsxData
         });
+        
         setCurrentChatId(chatId);
         setCurrentSheetMetaDataId(null);
         setCurrentSheetTableDataId(null);
         setCurrentSheetId(null);
-        setXLSXData(null);
         setSheetMetaData(null);
+        
+        // 기존 파일 데이터가 없는 경우에만 xlsxData 초기화
+        if (!xlsxData) {
+          console.log('📝 에러 발생 - 기존 파일 데이터 없음, xlsxData 초기화');
+          setXLSXData(null);
+        } else {
+          console.log('📝 에러 발생 - 기존 파일 데이터 보존, xlsxData 유지');
+        }
         
         // 에러 발생 시에도 chatId 기록 (재시도 방지)
         lastLoadedChatIdRef.current = chatId;
