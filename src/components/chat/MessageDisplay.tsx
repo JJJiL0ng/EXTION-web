@@ -185,11 +185,11 @@ const DataFixMessage: React.FC<{
                     )}
                     
                     {/* 백엔드에서 불러온 메시지인 경우 적용 완료 표시 */}
-                    {isFromBackend && (
+                    {/* {isFromBackend && (
                         <div className="mt-4 w-full text-center px-4 py-2 text-sm font-medium rounded-lg bg-green-50 text-green-700 border border-green-200">
                             <span>✓ 과거 적용된 변경사항</span>
                         </div>
-                    )}
+                    )} */}
                 </div>
             </div>
         </div>
@@ -314,11 +314,11 @@ export default function MessageDisplay({
                     <div key={message.id} className={`py-6 ${index !== 0 ? 'border-t border-gray-100' : ''}`}>
                         <div className="flex items-start">
                             {/* AI 메시지 아바타 */}
-                            {!isUser && (
+                            {/* {!isUser && (
                                 <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3 mt-1">
                                     <span className="text-white text-sm font-medium">AI</span>
                                 </div>
-                            )}
+                            )} */}
                             
                             <div className="flex-1">
                                 <div className="flex items-center mb-1">
