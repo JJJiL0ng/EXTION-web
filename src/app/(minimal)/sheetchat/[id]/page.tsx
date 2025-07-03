@@ -19,7 +19,7 @@ function AIPageContent() {
   const isMouseDownRef = useRef(false);
   const searchParams = useSearchParams();
   
-  const { currentChatId } = useUnifiedStore();
+  // const { currentChatId } = useUnifiedStore();
   
   // Chat과 Sheet 데이터 로드를 위한 훅 사용
   const { 

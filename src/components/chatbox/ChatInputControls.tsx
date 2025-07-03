@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Search, Send } from 'lucide-react';
+import { Paperclip, Send, Globe } from 'lucide-react';
 
 interface ChatInputControlsProps {
   inputValue: string;
@@ -23,18 +23,18 @@ const ChatInputControls: React.FC<ChatInputControlsProps> = ({
       <div className="flex items-center space-x-3">
         <button 
           onClick={onUpload}
-          className="w-32 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200"
+          className="w-20 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200"
         >
-          <Plus className="w-5 h-5 text-gray-600 mr-1" />
-          <span className="text-sm text-gray-600">데이터 업로드</span>
+          <Paperclip className="w-4 h-4 text-gray-600 mr-1" />
+          <span className="text-sm text-gray-600">첨부</span>
         </button>
         
         <button 
           onClick={onSearch}
-          className="w-24 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200"
+          className="w-20 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200"
         >
-          <Search className="w-4 h-5 text-gray-600" />
-          <span className="text-sm text-gray-600">웹 검색</span>
+          <Globe className="w-4 h-4 text-gray-600 mr-1" />
+          <span className="text-sm text-gray-600">검색</span>
         </button>
       </div>
 

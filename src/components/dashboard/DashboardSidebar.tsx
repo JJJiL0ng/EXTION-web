@@ -59,7 +59,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ user }) => {
         {!user && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-700 mb-2">
-              더 많은 기능을 이용하려면 로그인하세요
+              로그인하면 채팅 기록을 저장하고 <br /> 언제든 다시 볼 수 있어요
             </p>
             <Link href="/login">
               <button className="w-full bg-[#005de9] text-white text-sm py-2 px-3 rounded-lg hover:bg-[#005de9] transition-colors flex items-center justify-center space-x-2">
@@ -101,7 +101,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ user }) => {
             className="flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50"
           >
             <FileSpreadsheet className="w-5 h-5" />
-            <span className="font-medium">새 작업시트 생성 </span>
+            <span className="font-medium">빈 작업시트 생성 </span>
           </Link>
 
           <div className="border-b border-gray-200 my-2"></div>

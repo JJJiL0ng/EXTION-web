@@ -91,7 +91,7 @@ const ChatBoxOnly: React.FC<ChatBoxOnlyProps> = ({
 
   return (
     <div className={`w-full ${className}`}>
-        <div className="mb-20"></div>
+        <div className="mb-4"></div>
          <ChatHeader
         userName={auth.currentUser?.displayName || ''}
         title={auth.currentUser?.displayName ? `${auth.currentUser?.displayName}님,` : ''}
@@ -101,13 +101,13 @@ const ChatBoxOnly: React.FC<ChatBoxOnlyProps> = ({
       />
 
       <div 
-        className="input-container bg-white rounded-2xl border border-gray-200 shadow-sm transition-all duration-200 relative" 
-        style={{ borderColor: inputValue ? '#005ed9' : '#e5e7eb' }}
+        className="input-container bg-white rounded-2xl border-2 border-[#005ed9] shadow-sm transition-all duration-200 relative hover:shadow-lg hover:scale-[1.01]" 
       >
         <style jsx>{`
           .input-container:focus-within {
             border-color: #005ed9 !important;
             box-shadow: 0 0 0 3px rgba(0, 94, 217, 0.1);
+            transform: scale(1.02);
           }
         `}</style>
         

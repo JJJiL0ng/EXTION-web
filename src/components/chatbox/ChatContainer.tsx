@@ -54,12 +54,12 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
       {showBackButton && <DashboardBackButton />}
 
       {/* 헤더 */}
-      <ChatHeader
+       <ChatHeader
         userName={auth.currentUser?.displayName || ''}
-        title={auth.currentUser?.displayName || ''}
-        subtitle="님, 어떤 시트를 만들어볼까요?"
-        logoSrc={logoSrc}
-        className={headerClassName}
+        title={auth.currentUser?.displayName ? `${auth.currentUser?.displayName}님,` : ''}
+        subtitle={auth.currentUser ? "말로 편하게 시트를 생성해보세요" : "안녕하세요, 말로 편하게 시트를 생성해보세요"}
+        logoSrc="/logo.png"
+        className="mb-4"
       />
 
       {/* 메인 입력 영역 */}

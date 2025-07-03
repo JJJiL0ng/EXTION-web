@@ -101,13 +101,13 @@ const DashboardClient: React.FC = () => {
           <FastActionButtons />
           <div className="border-b border-gray-200 my-4"></div>
           <QuickActionGrid />
-          <div className="border-b border-gray-200 my-4"></div>
+          {/* <div className="border-b border-gray-200 my-4"></div>
           {!user && (
             <>
               <CTASection />
               <div className="border-b border-gray-200 my-4"></div>
             </>
-          )}
+          )} */}
 
           <RecentChatsSection
             user={user}
