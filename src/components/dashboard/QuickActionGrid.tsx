@@ -55,7 +55,7 @@ const QuickActionGrid: React.FC = () => {
   };
 
   return (
-    <div className="mb-4">
+    <div className="mb-4 w-[60%] mx-auto">
       <div 
         className="flex items-center cursor-pointer mb-4 group"
         onClick={toggleExpanded}

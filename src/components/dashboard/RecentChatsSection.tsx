@@ -49,7 +49,7 @@ const RecentChatsSection: React.FC<RecentChatsSectionProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm">
+    <div className="bg-white rounded-xl shadow-sm w-[60%] mx-auto">
       <div className="px-6 py-4 border-b border-gray-100">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium text-gray-900">

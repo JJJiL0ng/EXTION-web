@@ -91,15 +91,16 @@ const DashboardClient: React.FC = () => {
       <DashboardSidebar user={user} />
       
       <div className="flex-1">
-        <div className="p-6">
+        <div className="my-20 p-6">
           <ChatBoxOnly
             onSend={handleSend}
             onUpload={handleUpload}
             onSearch={handleSearch}
           />
-          <div className="border-b border-gray-200 my-4"></div>
+          <div className="my-4"></div>
           <FastActionButtons />
-          <div className="border-b border-gray-200 my-4"></div>
+          <div className="my-20"></div>
+          <div className="border-b border-gray-200 my-4 w-[60%] mx-auto"></div>
           <QuickActionGrid />
           {/* <div className="border-b border-gray-200 my-4"></div>
           {!user && (
