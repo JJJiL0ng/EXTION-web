@@ -36,6 +36,9 @@ import {
   fetchUserChats,
   fetchChatMessages
 } from '@/services/admin/adminApiUtils';
+import { loadAdminChatSheetData } from '@/services/admin/adminSheetchatApiUtils';
+import { useAdminStore, type AdminChat, type AdminUser } from '@/stores/adminStore';
+
 
 // 타입 정의
 interface User {
@@ -83,18 +86,31 @@ export default function AdminDashboardPage() {
     serverStatus: '정상'
   });
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
-  const [allUsers, setAllUsers] = useState<RecentUser[]>([]);
   const [showAllUsers, setShowAllUsers] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   
-  // 사용자 채팅 모달 관련 상태
-  const [selectedUser, setSelectedUser] = useState<RecentUser | null>(null);
-  const [userChats, setUserChats] = useState<Chat[]>([]);
+  // Admin Store 사용
+  const {
+    allUsers,
+    selectedUser,
+    userChats,
+    loading,
+    modalLoading,
+    error,
+    modalError,
+    setAllUsers,
+    setSelectedUser,
+    setUserChats,
+    setLoading,
+    setModalLoading,
+    setError,
+    setModalError,
+    setSelectedChatId,
+    clearErrors
+  } = useAdminStore();
+  
+  // 기존 상태들 (adminStore로 대체되지 않은 것들)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [modalError, setModalError] = useState('');
 
   // 인증 상태 확인 및 데이터 로드
   useEffect(() => {
@@ -134,6 +150,7 @@ export default function AdminDashboardPage() {
     try {
       setLoading(true);
       setError('');
+      clearErrors();
 
       // 병렬로 데이터 가져오기
       const [usersData, chatsData] = await Promise.all([
@@ -164,8 +181,15 @@ export default function AdminDashboardPage() {
           lastActive: formatLastActive(user.lastLoginAt || user.created_at)
         }));
 
-      // 전체 사용자 데이터 저장
-      setAllUsers(sortedUsersData);
+      // 전체 사용자 데이터 저장 (AdminUser 타입으로 변환)
+      const adminUsersData: AdminUser[] = sortedUsersData.map((user: RecentUser) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        status: user.status,
+        lastActive: user.lastActive
+      }));
+      setAllUsers(adminUsersData);
       
       // 최근 사용자 데이터 (최대 6명)
       const recentUsersData = sortedUsersData.slice(0, 6);
@@ -202,7 +226,13 @@ export default function AdminDashboardPage() {
 
   // 사용자 채팅 목록 불러오기
   const handleUserClick = async (user: RecentUser) => {
-    setSelectedUser(user);
+    setSelectedUser({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      status: user.status,
+      lastActive: user.lastActive
+    });
     setModalLoading(true);
     setModalError('');
     setUserChats([]);
@@ -211,12 +241,17 @@ export default function AdminDashboardPage() {
 
     try {
       const chats = await fetchUserChats(user.id);
-      const formattedChats: Chat[] = chats.map((chat: any) => ({
-        id: chat.id,
+      const formattedChats: AdminChat[] = chats.map((chat: any) => ({
+        chatId: chat.chatId || chat.id,
         title: chat.title || '제목 없음',
         createdAt: chat.createdAt || chat.created_at,
         lastUpdated: chat.lastUpdated || chat.updated_at || chat.createdAt || chat.created_at,
-        messageCount: chat.messageCount || 0
+        messageCount: chat.messageCount || 0,
+        sheetMetaDataId: chat.sheetMetaDataId,
+        status: chat.status || 'ACTIVE',
+        userId: chat.userId || user.id,
+        userDisplayName: chat.userDisplayName || user.name,
+        userEmail: chat.userEmail || user.email
       }));
       setUserChats(formattedChats);
     } catch (err) {
@@ -227,26 +262,15 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // 채팅 메시지 불러오기
-  const handleChatClick = async (chat: Chat) => {
-    setSelectedChat(chat);
-    setModalLoading(true);
-    setModalError('');
-
-    try {
-      const messages = await fetchChatMessages(chat.id);
-      const formattedMessages: ChatMessage[] = messages.map((msg: any) => ({
-        id: msg.id || Math.random().toString(),
-        role: msg.role || (msg.sender === 'user' ? 'user' : 'assistant'),
-        content: msg.content || msg.message || '',
-        timestamp: msg.timestamp || msg.createdAt || msg.created_at
-      }));
-      setChatMessages(formattedMessages);
-    } catch (err) {
-      console.error('채팅 메시지 로드 오류:', err);
-      setModalError('채팅 메시지를 불러오는 중 오류가 발생했습니다.');
-    } finally {
-      setModalLoading(false);
+  // 채팅 선택 시 관리 페이지로 이동
+  const handleChatClick = (chat: AdminChat) => {
+    const chatId = chat.chatId || chat.id;
+    if (chatId) {
+      setSelectedChatId(chatId);
+      // sessionStorage에서 adminUserId 가져오기
+      const adminUserId = sessionStorage.getItem('adminUserId');
+      const queryParams = adminUserId ? `?adminUserId=${adminUserId}` : '';
+      router.push(`/adminsheetchat/${chatId}${queryParams}`);
     }
   };
 
@@ -257,15 +281,16 @@ export default function AdminDashboardPage() {
     setChatMessages([]);
     setSelectedChat(null);
     setModalError('');
+    setSelectedChatId(null);
   };
 
   // 메시지 시간 포맷팅
-  const formatMessageTime = (timestamp: string): string => {
+  const formatMessageTime = (timestamp: string | Date): string => {
     if (!timestamp) return '';
     try {
       return new Date(timestamp).toLocaleString('ko-KR');
     } catch {
-      return timestamp;
+      return timestamp.toString();
     }
   };
 
@@ -418,7 +443,7 @@ export default function AdminDashboardPage() {
                 </div>
               ) : (showAllUsers ? allUsers : recentUsers).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(showAllUsers ? allUsers : recentUsers).map((user) => (
+                  {(showAllUsers ? allUsers : recentUsers).map((user: AdminUser | RecentUser) => (
                     <div 
                       key={user.id} 
                       onClick={() => handleUserClick(user)}
@@ -451,35 +476,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* 빠른 액션 버튼들 */}
-        {/* <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-8">
-          <div className="flex items-center space-x-3 mb-6">
-            <Settings className="w-6 h-6 text-orange-600" />
-            <h3 className="text-lg font-semibold text-gray-900">빠른 관리 도구</h3>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-              <Users className="w-8 h-8 text-blue-600 mb-2" />
-              <span className="text-sm font-medium text-blue-900">사용자 관리</span>
-            </button>
-            <button className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-              <Database className="w-8 h-8 text-green-600 mb-2" />
-              <span className="text-sm font-medium text-green-900">데이터 백업</span>
-            </button>
-            <button className="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-              <BarChart3 className="w-8 h-8 text-purple-600 mb-2" />
-              <span className="text-sm font-medium text-purple-900">통계 리포트</span>
-            </button>
-            <button 
-              onClick={() => router.push('/adminforpelisers')}
-              className="flex flex-col items-center p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border-2 border-red-200"
-            >
-              <Shield className="w-8 h-8 text-red-600 mb-2" />
-              <span className="text-sm font-medium text-red-900">고급 관리</span>
-            </button>
-          </div>
-        </div> */}
-
         {/* 고급 관리 패널 바로가기 */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="text-center">
@@ -509,7 +505,7 @@ export default function AdminDashboardPage() {
           onClick={closeModal}
         >
           <div 
-            className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
+            className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 모달 헤더 */}
@@ -529,128 +525,66 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
-            <div className="flex h-[calc(90vh-80px)]">
-              {/* 채팅 목록 */}
-              <div className="w-1/3 border-r border-gray-200 overflow-y-auto">
-                <div className="p-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">채팅 목록</h3>
-                  
-                  {modalError && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-red-800 text-sm">{modalError}</p>
-                    </div>
-                  )}
+            {/* 채팅 목록 */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
+              {modalError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-800 text-sm">{modalError}</p>
+                </div>
+              )}
 
-                  {modalLoading ? (
-                    <div className="text-center py-8">
-                      <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">채팅 목록을 불러오는 중...</p>
-                    </div>
-                  ) : userChats.length > 0 ? (
-                    <div className="space-y-2">
-                      {userChats.map((chat) => (
-                        <div
-                          key={chat.id}
-                          onClick={() => handleChatClick(chat)}
-                          className={`p-3 rounded-lg cursor-pointer transition-colors border ${
-                            selectedChat?.id === chat.id
-                              ? 'bg-blue-50 border-blue-200'
-                              : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-gray-900 text-sm truncate">
-                                {chat.title}
-                              </h4>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Calendar className="w-3 h-3 text-gray-400" />
-                                <span className="text-xs text-gray-500">
-                                  {formatMessageTime(chat.createdAt)}
+              {modalLoading ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">채팅 목록을 불러오는 중...</p>
+                </div>
+              ) : userChats.length > 0 ? (
+                <div className="space-y-3">
+                  {userChats.map((chat: AdminChat) => (
+                    <div
+                      key={chat.chatId || chat.id}
+                      onClick={() => handleChatClick(chat)}
+                      className="p-4 rounded-lg cursor-pointer transition-colors border border-gray-200 hover:bg-gray-50 hover:border-blue-200"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-900 text-base truncate">
+                            {chat.title}
+                          </h4>
+                          <div className="flex items-center space-x-4 mt-2">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-500">
+                                {formatMessageTime(chat.createdAt)}
+                              </span>
+                            </div>
+                            {chat.messageCount && (
+                              <div className="flex items-center space-x-1">
+                                <MessageSquare className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm text-gray-500">
+                                  {chat.messageCount}개 메시지
                                 </span>
                               </div>
-                              {chat.messageCount && (
-                                <div className="flex items-center space-x-1 mt-1">
-                                  <MessageSquare className="w-3 h-3 text-gray-400" />
-                                  <span className="text-xs text-gray-500">
-                                    {chat.messageCount}개 메시지
-                                  </span>
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </div>
                         </div>
-                      ))}
+                        <div className="flex items-center space-x-2 ml-4">
+                          <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                            보기
+                          </span>
+                          <ExternalLink className="w-4 h-4 text-gray-400" />
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <MessageSquare className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">채팅이 없습니다.</p>
-                    </div>
-                  )}
+                  ))}
                 </div>
-              </div>
-
-              {/* 채팅 메시지 */}
-              <div className="flex-1 flex flex-col">
-                {selectedChat ? (
-                  <>
-                    <div className="p-4 border-b border-gray-200">
-                      <h3 className="text-lg font-medium text-gray-900">{selectedChat.title}</h3>
-                      <p className="text-sm text-gray-600">
-                        생성일: {formatMessageTime(selectedChat.createdAt)}
-                      </p>
-                    </div>
-                    
-                    <div className="flex-1 overflow-y-auto p-4">
-                      {modalLoading ? (
-                        <div className="text-center py-8">
-                          <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
-                          <p className="text-gray-500 text-sm">메시지를 불러오는 중...</p>
-                        </div>
-                      ) : chatMessages.length > 0 ? (
-                        <div className="space-y-4">
-                          {chatMessages.map((message) => (
-                            <div
-                              key={message.id}
-                              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
-                              <div
-                                className={`max-w-[70%] p-3 rounded-lg ${
-                                  message.role === 'user'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-900'
-                                }`}
-                              >
-                                <div className="whitespace-pre-wrap break-words">
-                                  {message.content}
-                                </div>
-                                <div className={`text-xs mt-1 ${
-                                  message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
-                                }`}>
-                                  {formatMessageTime(message.timestamp)}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <MessageSquare className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-gray-500 text-sm">메시지가 없습니다.</p>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                      <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500">채팅을 선택하여 메시지를 확인하세요</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              ) : (
+                <div className="text-center py-12">
+                  <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500 text-lg">채팅이 없습니다.</p>
+                  <p className="text-gray-400 text-sm mt-1">이 사용자는 아직 채팅을 시작하지 않았습니다.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
