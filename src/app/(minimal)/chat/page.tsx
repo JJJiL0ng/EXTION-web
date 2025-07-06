@@ -4,41 +4,32 @@ import { useRouter } from 'next/navigation';
 import { ChatBoxOnly } from '@/components/chatbox';
 import useTableGenerate from '@/hooks/useTablegenerate';
 import { useAuthStore } from '@/stores/authStore';
-
-// DashboardClient.tsx 에서 가져온 타입. 나중에 전역 타입으로 옮기는 것 고려
-interface UploadedFile {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  file: File;
-}
+import { UploadedFile } from '@/components/chatbox/ChatInputArea';
 
 const ChatPage = () => {
   const { user: authUser } = useAuthStore();
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isSearchActive, setIsSearchActive] = useState(false);
   
   const router = useRouter();
   const { generateTable } = useTableGenerate();
 
-  const handleSend = (message: string) => {
+  const handleSend = (message: string, files: UploadedFile[]) => {
     console.log('[ChatPage] handleSend 호출됨, 메시지:', message);
     const userId = authUser?.uid;
 
-    if (!message.trim() && uploadedFiles.length === 0) {
+    if (!message.trim() && files.length === 0) {
       alert('메시지를 입력하거나 파일을 업로드해주세요.');
       return;
     }
     
-    if (!userId) {
-      alert('테이블을 생성하려면 로그인이 필요합니다.');
-      // 혹은 로그인 페이지로 리디렉션
-      router.push('/login');
-      return;
-    }
+    // if (!userId) {
+    //   alert('테이블을 생성하려면 로그인이 필요합니다.');
+    //   // 혹은 로그인 페이지로 리디렉션
+    //   router.push('/login');
+    //   return;
+    // }
     
-    const filesToUpload = uploadedFiles.map(f => f.file);
+    const filesToUpload = files.map(f => f.file);
 
     generateTable({
       userId,
@@ -61,10 +52,7 @@ const ChatPage = () => {
         <ChatBoxOnly 
           onSend={handleSend}
           onUpload={handleUpload}
-          onSearch={() => setIsSearchActive(!isSearchActive)}
-          uploadedFiles={uploadedFiles}
-          onFilesChange={setUploadedFiles}
-          isSearchActive={isSearchActive}
+          onSearch={(isActive) => setIsSearchActive(isActive)}
         />
       </div>
     </div>
