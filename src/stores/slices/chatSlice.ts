@@ -105,6 +105,9 @@ export interface ChatSlice {
     setChatMessagesFromBackend: (messages: ChatMessage[], activeSheetIndex?: number) => void;
 }
 
+// 채팅 슬라이스 상태
+export type ChatState = ChatSlice;
+
 // 채팅 슬라이스 생성자
 export const createChatSlice: StateCreator<
     ChatSlice & { xlsxData: any; [key: string]: any },

@@ -195,9 +195,12 @@ export const processTableGeneration = async (
 };
 
 /**
- * 파일 검증
+ * 파일 및 입력 데이터 검증
  */
-export const validateFiles = (files: File[]): { valid: boolean; errors: string[] } => {
+export const validateRequest = (
+  files: File[], 
+  message: string
+): { valid: boolean; errors: string[] } => {
   const errors: string[] = [];
   const maxFileSize = 50 * 1024 * 1024; // 50MB
   const allowedTypes = [
@@ -208,8 +211,9 @@ export const validateFiles = (files: File[]): { valid: boolean; errors: string[]
     'text/plain', // .txt
   ];
 
-  if (!files || files.length === 0) {
-    errors.push('업로드할 파일을 선택해주세요.');
+  // 파일도 없고 메시지도 없는 경우
+  if ((!files || files.length === 0) && (!message || message.trim() === '')) {
+    errors.push('업로드할 파일이나 생성할 테이블에 대한 설명을 입력해주세요.');
     return { valid: false, errors };
   }
 

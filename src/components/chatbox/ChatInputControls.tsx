@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Paperclip, Send, Globe, X, FileText, Image, FileSpreadsheet } from 'lucide-react';
 
 interface UploadedFile {
@@ -16,7 +16,9 @@ interface ChatInputControlsProps {
   onSearch?: () => void;
   disabled?: boolean;
   className?: string;
-  onFilesChange?: (files: UploadedFile[]) => void;
+  uploadedFiles: UploadedFile[];
+  onFilesChange: (files: UploadedFile[]) => void;
+  isSearchActive: boolean;
 }
 
 const ChatInputControls: React.FC<ChatInputControlsProps> = ({
@@ -26,18 +28,11 @@ const ChatInputControls: React.FC<ChatInputControlsProps> = ({
   onSearch,
   disabled = false,
   className = "",
-  onFilesChange
+  uploadedFiles = [],
+  onFilesChange,
+  isSearchActive
 }) => {
-  const [isSearchActive, setIsSearchActive] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleSearchToggle = () => {
-    setIsSearchActive(!isSearchActive);
-    if (onSearch) {
-      onSearch();
-    }
-  };
 
   const handleFileUpload = () => {
     fileInputRef.current?.click();
@@ -105,11 +100,7 @@ const ChatInputControls: React.FC<ChatInputControlsProps> = ({
 
     if (newFiles.length > 0) {
       const updatedFiles = [...uploadedFiles, ...newFiles];
-      setUploadedFiles(updatedFiles);
-      
-      if (onFilesChange) {
-        onFilesChange(updatedFiles);
-      }
+      onFilesChange(updatedFiles);
     }
 
     // 파일 입력 초기화
@@ -120,15 +111,12 @@ const ChatInputControls: React.FC<ChatInputControlsProps> = ({
 
   const removeFile = (fileId: string) => {
     const updatedFiles = uploadedFiles.filter(file => file.id !== fileId);
-    setUploadedFiles(updatedFiles);
-    
-    if (onFilesChange) {
-      onFilesChange(updatedFiles);
-    }
+    onFilesChange(updatedFiles);
   };
 
   const getFileIcon = (fileName: string, fileType: string) => {
     if (fileType.startsWith('image/')) {
+      // eslint-disable-next-line jsx-a11y/alt-text
       return <Image className="w-3 h-3" />;
     } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
       return <FileSpreadsheet className="w-3 h-3" />;
@@ -180,7 +168,7 @@ const ChatInputControls: React.FC<ChatInputControlsProps> = ({
           </button>
           
           <button 
-            onClick={handleSearchToggle}
+            onClick={onSearch}
             className={`w-20 h-9 rounded-full flex items-center justify-center transition-colors duration-200 ${
               isSearchActive 
                 ? 'bg-blue-100 hover:bg-blue-200 border border-blue-300' 
@@ -199,13 +187,13 @@ const ChatInputControls: React.FC<ChatInputControlsProps> = ({
         <div className="flex items-center space-x-3">
           <button 
             onClick={onSend}
-            disabled={!inputValue.trim() || disabled}
+            disabled={!inputValue.trim() && uploadedFiles.length === 0 || disabled}
             className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
-              inputValue.trim() && !disabled
+              (inputValue.trim() || uploadedFiles.length > 0) && !disabled
                 ? 'text-white shadow-sm' 
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
-            style={{ backgroundColor: inputValue.trim() && !disabled ? '#005ed9' : undefined }}
+            style={{ backgroundColor: (inputValue.trim() || uploadedFiles.length > 0) && !disabled ? '#005ed9' : undefined }}
           >
             <Send className="w-4 h-4" />
           </button>

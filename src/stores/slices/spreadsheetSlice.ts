@@ -92,6 +92,8 @@ export interface SpreadsheetSlice {
     }) => void;
 }
 
+export type SpreadsheetState = SpreadsheetSlice;
+
 // 스프레드시트 슬라이스 생성자
 export const createSpreadsheetSlice: StateCreator<
     SpreadsheetSlice & { loadingStates: LoadingStates; errors: ErrorStates; setLoadingState: any; setError: any; currentSheetMetaDataId: string | null },

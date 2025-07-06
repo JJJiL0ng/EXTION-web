@@ -2,6 +2,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ChatInputControls from './ChatInputControls';
 
+interface UploadedFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  file: File;
+}
+
 interface ChatInputAreaProps {
   value: string;
   onChange: (value: string) => void;
@@ -28,6 +36,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   minHeight = 80
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [isSearchActive, setIsSearchActive] = useState(false);
 
   // 텍스트 에어리어 높이 자동 조절
   const adjustTextareaHeight = () => {
@@ -47,6 +57,13 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       onSend();
+    }
+  };
+
+  const handleSearchClick = () => {
+    setIsSearchActive(prev => !prev);
+    if (onSearch) {
+      onSearch();
     }
   };
 
@@ -102,8 +119,11 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
           inputValue={value}
           onSend={onSend}
           onUpload={onUpload}
-          onSearch={onSearch}
+          onSearch={handleSearchClick}
           disabled={disabled}
+          uploadedFiles={uploadedFiles}
+          onFilesChange={setUploadedFiles}
+          isSearchActive={isSearchActive}
         />
       </div>
     </div>

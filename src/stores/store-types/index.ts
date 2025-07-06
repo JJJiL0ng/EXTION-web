@@ -66,7 +66,7 @@ export interface XLSXData {
     fileName: string;
     sheets: SheetData[];
     activeSheetIndex: number; // 현재 활성 시트
-    sheetMetaDataId?: string; // 데이터베이스의 SheetMetaData ID
+    spreadsheetId?: string; // Firebase에서 생성된 스프레드시트 ID
 }
 
 // 다중 시트 수식 적용 인터페이스
@@ -121,4 +121,9 @@ export interface ErrorStates {
     artifactError: string | null;
     dataGenerationError: string | null;
     dataFixError: string | null;
+}
+
+// 확장된 시트 컨텍스트
+export interface ExtendedSheetContext {
+    // ... existing code ...
 } 

@@ -17,6 +17,17 @@ interface ChatBoxOnlyProps {
   minHeight?: number;
   showControls?: boolean;
   autoFocus?: boolean;
+  uploadedFiles?: UploadedFile[];
+  onFilesChange?: (files: UploadedFile[]) => void;
+  isSearchActive?: boolean;
+}
+
+interface UploadedFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  file: File;
 }
 
 const ChatBoxOnly: React.FC<ChatBoxOnlyProps> = ({
@@ -31,7 +42,10 @@ const ChatBoxOnly: React.FC<ChatBoxOnlyProps> = ({
   maxHeight = 200,
   minHeight = 80,
   showControls = true,
-  autoFocus = false
+  autoFocus = false,
+  uploadedFiles,
+  onFilesChange,
+  isSearchActive
 }) => {
   const [internalValue, setInternalValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -68,7 +82,7 @@ const ChatBoxOnly: React.FC<ChatBoxOnlyProps> = ({
 
   // Enter 키 처리
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSend();
     }
@@ -148,6 +162,9 @@ const ChatBoxOnly: React.FC<ChatBoxOnlyProps> = ({
             onUpload={onUpload}
             onSearch={onSearch}
             disabled={disabled}
+            uploadedFiles={uploadedFiles || []}
+            onFilesChange={onFilesChange || (() => {})}
+            isSearchActive={isSearchActive || false}
           />
         )}
       </div>
