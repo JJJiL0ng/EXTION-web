@@ -7,6 +7,7 @@ import {
 } from '@/services/api/tablegenerateService';
 import { useUnifiedDataStore } from '@/stores/useUnifiedDataStore';
 import { useAuthStore } from '@/stores/authStore';
+import { SheetData, XLSXData } from '@/stores/store-types';
 
 // useTablegenerate 훅의 반환 타입 정의
 export interface UseTableGenerateReturn {
@@ -24,6 +25,7 @@ const useTableGenerate = (): UseTableGenerateReturn => {
     setGenerationSuccess,
     setGenerationError,
     setProgress,
+    setXLSXData,
   } = useUnifiedDataStore();
 
   const generateTable = useCallback(
@@ -48,6 +50,25 @@ const useTableGenerate = (): UseTableGenerateReturn => {
 
         if (response.success) {
           setGenerationSuccess(response);
+          if (response.sheetMetaData) {
+            const { sheetMetaData } = response;
+            const sheets: SheetData[] = sheetMetaData.sheetTableData.map(
+              (dto) => ({
+                sheetName: dto.name,
+                rawData: dto.data.map((row: any[]) =>
+                  row.map((cell: any) => String(cell ?? ''))
+                ),
+                sheetTableDataId: dto.id,
+              })
+            );
+            const xlsxData: XLSXData = {
+              fileName: sheetMetaData.fileName,
+              sheets: sheets,
+              activeSheetIndex: sheetMetaData.activeSheetIndex,
+              sheetMetaDataId: sheetMetaData.id,
+            };
+            setXLSXData(xlsxData);
+          }
         } else {
           setGenerationError(response.error || '테이블 생성에 실패했습니다.');
         }
@@ -65,7 +86,13 @@ const useTableGenerate = (): UseTableGenerateReturn => {
         };
       }
     },
-    [startGeneration, setGenerationSuccess, setGenerationError, setProgress]
+    [
+      startGeneration,
+      setGenerationSuccess,
+      setGenerationError,
+      setProgress,
+      setXLSXData,
+    ]
   );
 
   return { generateTable };

@@ -77,7 +77,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   };
 
   return (
-    <div className={`w-full max-w-4xl ${className}`}>
+    <div className={`w-full ${className}`}>
       {/* 입력창 */}
       <div 
         className="input-container bg-white rounded-2xl border border-gray-200 shadow-sm mb-6 transition-all duration-200 relative" 

@@ -6,7 +6,7 @@ import { Upload, FileSpreadsheet } from 'lucide-react';
 
 const FastActionButtons: React.FC = () => {
   return (
-    <div className="grid grid-cols-2 gap-4 w-[60%] mx-auto">
+    <div className="grid grid-cols-2 gap-4 mx-auto">
       {/* 기존 엑셀 파일 업로드 버튼 */}
       <Link href="/fileupload">
         <button className="w-full bg-white border border-gray-200 hover:border-[#005de9] hover:bg-blue-50 transition-all duration-200 rounded-lg p-4 text-left group">

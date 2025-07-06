@@ -48,7 +48,7 @@ const ChatPage = () => {
 
   return (
     <div className="flex justify-center items-center h-screen">
-      <div className="w-full w-[60%] mx-auto">
+      <div className=" mx-auto">
         <ChatBoxOnly 
           onSend={handleSend}
           onUpload={handleUpload}
