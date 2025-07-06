@@ -139,7 +139,7 @@ const DashboardClient: React.FC = () => {
           <div className="my-4"></div>
           <FastActionButtons />
           <div className="my-20"></div>
-          <div className="border-b border-gray-200 my-4 w-[60%] mx-auto"></div>
+          <div className="border-b border-gray-200 my-4 w-[100%] mx-auto"></div>
           <QuickActionGrid />
           {/* <div className="border-b border-gray-200 my-4"></div>
           {!user && (
