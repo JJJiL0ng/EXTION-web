@@ -22,7 +22,7 @@ const ChatBoxOnly: React.FC<ChatBoxOnlyProps> = ({
   autoFocus = false,
 }) => {
   return (
-    <div className={`w-[60%] mx-auto ${className}`}>
+    <div className={`mx-auto ${className}`}>
       <div className="mb-4"></div>
       <ChatHeader
         userName={auth.currentUser?.displayName || ''}
