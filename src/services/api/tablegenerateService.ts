@@ -29,7 +29,7 @@ export interface TableGenerateSheetMetaDataDto {
   fileSize?: number;
   fileType?: string;
   activeSheetIndex: number;
-  createdAt: Date;
+
   updatedAt: Date;
   userId: string;
   sheetTableData: TableGenerateSheetTableDataDto[];
@@ -83,6 +83,7 @@ export const processTableGeneration = async (
   progressCallback?: FileUploadProgressCallback
 ): Promise<ProcessChatResponse> => {
   try {
+    console.log('백엔드로 보내는 전체 요청 데이터:', request);
     console.log('테이블 생성 요청 시작:', {
       chatId: request.chatId,
       userId: request.userId,
@@ -172,6 +173,8 @@ export const processTableGeneration = async (
     }
 
     const data: ProcessChatResponse = await response.json();
+    
+    console.log('백엔드 응답 전체 데이터:', data);
     
     console.log('테이블 생성 응답 받음:', {
       success: data.success,
