@@ -13,7 +13,7 @@ registerAllModules();
 
 export default function AdminSheetRender() {
   const { sheetMetaData } = useAdminStore();
-  const hotTableRef = useRef<HotTable>(null);
+  const hotTableRef = useRef<any>(null);
   const [selectedSheetIndex, setSelectedSheetIndex] = useState(0);
   const [isSheetListOpen, setIsSheetListOpen] = useState(false);
   const [sheetStats, setSheetStats] = useState<{
@@ -198,10 +198,6 @@ export default function AdminSheetRender() {
                 
                 // 스타일링
                 className: 'htCenter htMiddle',
-                
-                // 스크롤 설정
-                scrollToBottom: false,
-                scrollToRight: false,
                 
                 // 컨텍스트 메뉴 비활성화
                 contextMenu: false,

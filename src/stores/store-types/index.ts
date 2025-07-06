@@ -67,6 +67,7 @@ export interface XLSXData {
     sheets: SheetData[];
     activeSheetIndex: number; // 현재 활성 시트
     spreadsheetId?: string; // Firebase에서 생성된 스프레드시트 ID
+    sheetMetaDataId?: string; // API에서 받아온 SheetMetaData의 ID
 }
 
 // 다중 시트 수식 적용 인터페이스
