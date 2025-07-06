@@ -14,14 +14,7 @@ import RecentChatsSection from './RecentChatsSection';
 import MainLoadingSpinner from './MainLoadingSpinner';
 import { ChatBoxOnly } from '../chatbox';
 import FastActionButtons from './Fastaction';
-
-interface UploadedFile {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  file: File;
-}
+import { UploadedFile } from '../chatbox/ChatInputArea';
 
 const DashboardClient: React.FC = () => {
   const { user: authUser, setUser: setAuthUser } = useAuthStore();
@@ -32,7 +25,6 @@ const DashboardClient: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   
   // 상태를 DashboardClient로 이동
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isSearchActive, setIsSearchActive] = useState(false);
   
   const router = useRouter();
@@ -92,24 +84,19 @@ const DashboardClient: React.FC = () => {
     return <MainLoadingSpinner />;
   }
 
-  const handleSend = (message: string) => {
+  const handleSend = (message: string, files: UploadedFile[]) => {
     console.log('[DashboardClient] handleSend 호출됨, 메시지:', message);
     const userId = authUser?.uid;
 
-    if (!message.trim() && uploadedFiles.length === 0) {
+    if (!message.trim() && files.length === 0) {
       alert('메시지를 입력하거나 파일을 업로드해주세요.');
       return;
     }
     
-    if (!userId) {
-      alert('테이블을 생성하려면 로그인이 필요합니다.');
-      return;
-    }
-    
-    const filesToUpload = uploadedFiles.map(f => f.file);
+    const filesToUpload = files.map(f => f.file);
 
     generateTable({
-      userId,
+      userId: userId,
       message: message,
       files: filesToUpload,
       webSearchEnabled: isSearchActive,
@@ -131,10 +118,7 @@ const DashboardClient: React.FC = () => {
           <ChatBoxOnly
             onSend={handleSend}
             onUpload={handleUpload}
-            onSearch={() => setIsSearchActive(!isSearchActive)}
-            uploadedFiles={uploadedFiles}
-            onFilesChange={setUploadedFiles}
-            isSearchActive={isSearchActive}
+            onSearch={(isActive) => setIsSearchActive(isActive)}
           />
           <div className="my-4"></div>
           <FastActionButtons />

@@ -6,11 +6,12 @@ import {
   ProcessChatResponse,
 } from '@/services/api/tablegenerateService';
 import { useUnifiedDataStore } from '@/stores/useUnifiedDataStore';
+import { useAuthStore } from '@/stores/authStore';
 
 // useTablegenerate 훅의 반환 타입 정의
 export interface UseTableGenerateReturn {
   generateTable: (
-    params: Omit<ProcessChatRequest, 'chatId' | 'files'> & { files: File[] }
+    params: Omit<ProcessChatRequest, 'chatId' | 'userId' | 'files'> & { files: File[], userId?: string }
   ) => Promise<ProcessChatResponse | undefined>;
 }
 
@@ -27,16 +28,18 @@ const useTableGenerate = (): UseTableGenerateReturn => {
 
   const generateTable = useCallback(
     async (
-      params: Omit<ProcessChatRequest, 'chatId' | 'files'> & { files: File[] }
+      params: Omit<ProcessChatRequest, 'chatId' | 'userId' | 'files'> & { files: File[], userId?: string }
     ): Promise<ProcessChatResponse | undefined> => {
       startGeneration();
 
       const chatId = uuidv4();
+      const userId = params.userId || `guest_${uuidv4()}`;
 
       try {
         const request: ProcessChatRequest = {
           ...params,
           chatId,
+          userId,
         };
         
         const response = await processTableGeneration(request, (progressEvent) => {
@@ -56,6 +59,7 @@ const useTableGenerate = (): UseTableGenerateReturn => {
         
         return {
           chatId,
+          userId,
           success: false,
           error: errorMessage,
         };

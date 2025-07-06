@@ -38,6 +38,7 @@ export interface TableGenerateSheetMetaDataDto {
 // 채팅 처리 응답 DTO (백엔드와 동일)
 export interface ProcessChatResponse {
   chatId: string;
+  userId?: string;
   sheetMetaData?: TableGenerateSheetMetaDataDto;
   success?: boolean;
   error?: string;
