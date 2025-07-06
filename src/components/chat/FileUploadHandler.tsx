@@ -1,10 +1,8 @@
 'use client'
 
-import React, { useState, useCallback } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import React from 'react';
 import { XLSXData, useUnifiedStore } from '@/stores';
-import { XIcon, FileIcon, FileSpreadsheetIcon, CheckCircleIcon, CloudIcon, MessageCircleIcon } from 'lucide-react';
+import { FileSpreadsheetIcon, CheckCircleIcon } from 'lucide-react';
 
 interface FileUploadHandlerProps {
     isDragOver?: boolean;
@@ -18,28 +16,13 @@ interface FileUploadHandlerProps {
 }
 
 const FileUploadHandler: React.FC<FileUploadHandlerProps> = ({
-    isDragOver = false,
     xlsxData,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-    handleFileInputChange,
-    removeFile,
     switchToSheet
 }) => {
-    const [isDragging, setIsDragging] = useState(false);
-    const [previewFiles, setPreviewFiles] = useState<File[]>([]);
+    
     
     const {
-        loadingStates,
-        errors,
-        canUploadFile,
-        setLoadingState,
-        setError,
-        // 스프레드시트 관련 상태
-        currentSheetMetaDataId,
         sheetMetaData,
-        currentChatId
     } = useUnifiedStore();
 
     return (

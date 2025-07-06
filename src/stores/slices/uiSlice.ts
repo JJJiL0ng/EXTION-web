@@ -54,6 +54,8 @@ export interface UISlice {
     resetUIStore: () => void;
 }
 
+export type UIState = UISlice;
+
 // UI 슬라이스 생성자
 export const createUISlice: StateCreator<
     UISlice & { 

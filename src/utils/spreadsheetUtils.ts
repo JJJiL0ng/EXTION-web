@@ -1,4 +1,5 @@
-import { SheetData } from '@/stores/store-types';
+import { SheetData, XLSXData } from '@/stores/store-types';
+import { TableGenerateSheetMetaDataDto, TableGenerateSheetTableDataDto } from '@/services/api/tablegenerateService';
 
 // Handsontable에 표시할 데이터를 준비하는 헬퍼 함수
 export const prepareDisplayData = (sheetData: SheetData | null): any[][] => {
@@ -75,4 +76,56 @@ export const prepareDisplayData = (sheetData: SheetData | null): any[][] => {
 };
 
 // CSV 데이터가 없을 때의 기본 설정
-export const getDefaultData = () => Array(100).fill(null).map(() => Array(26).fill('')); 
+export const getDefaultData = () => Array(100).fill(null).map(() => Array(26).fill(''));
+
+export const coordsToSheetReference = (
+  sheetName: string,
+  colLetter: string,
+  rowNumber: number
+): string => {
+  return `${sheetName}!${colLetter}${rowNumber}`;
+};
+
+/**
+ * 백엔드 테이블 생성 API 응답을 프론트엔드 XLSXData 형식으로 변환
+ */
+export const transformToXLSXData = (
+  sheetMetaData: TableGenerateSheetMetaDataDto
+): XLSXData => {
+  const sheets: SheetData[] = sheetMetaData.sheetTableData.map((tableData, index) => {
+    const rawData: string[][] = tableData.data || [];
+    const headers = rawData.length > 0 ? rawData[0] : [];
+    const data = rawData.length > 1 ? rawData.slice(1) : [];
+    
+    return {
+      sheetId: tableData.id,
+      sheetName: tableData.name,
+      headers: headers,
+      data: data,
+      rawData: rawData,
+      metadata: {
+        rowCount: data.length,
+        columnCount: headers.length,
+        headerRow: 0, 
+        dataRange: {
+          startRow: 1,
+          endRow: data.length,
+          startCol: 0,
+          endCol: headers.length > 0 ? headers.length - 1 : 0,
+          startColLetter: 'A',
+          endColLetter: headers.length > 0 ? String.fromCharCode(64 + headers.length) : 'A',
+        },
+        lastModified: new Date(tableData.updatedAt),
+      },
+    };
+  });
+
+  const xlsxData: XLSXData = {
+    fileName: sheetMetaData.fileName || 'Untitled',
+    sheets,
+    activeSheetIndex: sheetMetaData.activeSheetIndex,
+    spreadsheetId: sheetMetaData.id,
+  };
+
+  return xlsxData;
+}; 

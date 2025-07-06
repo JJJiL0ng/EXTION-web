@@ -815,6 +815,7 @@ export const saveSpreadsheetData = async (
     message?: string;
     error?: string;
     spreadsheetId?: string; // 반환받는 sheetId
+    chatId?: string; // 반환받는 chatId
 }> => {
     try {
         // 사용자 ID 결정 (옵션에서 제공되거나 자동 생성)
@@ -899,17 +900,32 @@ export const saveSpreadsheetData = async (
         // 응답에서 spreadsheetId를 추출하여 반환 (data.id가 실제 spreadsheetId)
         const spreadsheetId = result.data?.id || result.data?.spreadsheetId || result.data?.sheetId || result.spreadsheetId;
         
-        // 상태관리에 sheetId 저장 (동적 import로 안전하게)
-        if (result.success && spreadsheetId) {
+        // 상태관리에 sheetId와 chatId 저장 (동적 import로 안전하게)
+        if (result.success) {
             try {
                 if (typeof window !== 'undefined') {
                     const { useUnifiedStore } = require('@/stores');
-                    const { setCurrentSheetId } = useUnifiedStore.getState();
-                    setCurrentSheetId(spreadsheetId);
-                    console.log(`✅ SpreadsheetId가 상태관리에 저장되었습니다: ${spreadsheetId}`);
+                    const { setCurrentSheetId, setCurrentChatId } = useUnifiedStore.getState();
+                    
+                    // SpreadsheetId 저장
+                    if (spreadsheetId) {
+                        setCurrentSheetId(spreadsheetId);
+                        console.log(`✅ SpreadsheetId가 상태관리에 저장되었습니다: ${spreadsheetId}`);
+                    }
+                    
+                    // ChatId 저장 (응답에서 chatId를 추출)
+                    const chatId = result.data?.chatId || result.chatId;
+                    if (chatId) {
+                        setCurrentChatId(chatId);
+                        console.log(`✅ ChatId가 상태관리에 저장되었습니다: ${chatId}`);
+                    } else {
+                        console.log('⚠️ Save API - 응답에서 ChatId를 찾을 수 없습니다');
+                        console.log('- result.data?.chatId:', result.data?.chatId);
+                        console.log('- result.chatId:', result.chatId);
+                    }
                 }
             } catch (error) {
-                console.warn('SpreadsheetId를 상태관리에 저장하는데 실패했습니다:', error);
+                console.warn('상태관리 저장 중 오류 발생:', error);
                 // 실패해도 API 응답은 그대로 반환
             }
         } else {
@@ -922,9 +938,13 @@ export const saveSpreadsheetData = async (
         
         console.log('==================== Save Spreadsheet API 완료 ====================');
         
+        // chatId도 반환값에 포함
+        const chatId = result.data?.chatId || result.chatId;
+        
         return {
             ...result,
-            spreadsheetId: spreadsheetId
+            spreadsheetId: spreadsheetId,
+            chatId: chatId
         };
         
     } catch (error) {

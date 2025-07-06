@@ -92,6 +92,8 @@ export interface SpreadsheetSlice {
     }) => void;
 }
 
+export type SpreadsheetState = SpreadsheetSlice;
+
 // 스프레드시트 슬라이스 생성자
 export const createSpreadsheetSlice: StateCreator<
     SpreadsheetSlice & { loadingStates: LoadingStates; errors: ErrorStates; setLoadingState: any; setError: any; currentSheetMetaDataId: string | null },
@@ -114,16 +116,36 @@ export const createSpreadsheetSlice: StateCreator<
     // === XLSX 데이터 액션들 ===
     setXLSXData: (data) => {
         set((state) => {
-            if (!data) {
-                return {
-                    ...state,
-                    xlsxData: null,
-                    activeSheetData: null,
-                    computedSheetData: {},
-                };
-            }
+            // 디버깅을 위한 스택 트레이스 로그
+            const stack = new Error().stack;
+            console.log('🏪 SpreadsheetSlice - setXLSXData 호출됨:', {
+                hasIncomingData: !!data,
+                incomingFileName: data?.fileName || 'null',
+                incomingSheetsCount: data?.sheets?.length || 0,
+                callerInfo: stack?.split('\n')[2]?.trim() || 'unknown'
+            });
+
+                    if (!data) {
+            console.log('🏪 데이터가 null이므로 상태 초기화');
+            console.log('🏪 setXLSXData(null) 호출 스택:', {
+                callerInfo: stack?.split('\n')[2]?.trim() || 'unknown',
+                fullStack: stack?.split('\n').slice(1, 6).map(line => line.trim())
+            });
+            return {
+                ...state,
+                xlsxData: null,
+                activeSheetData: null,
+                computedSheetData: {},
+            };
+        }
 
             const activeSheet = data.sheets[data.activeSheetIndex];
+            console.log('🏪 activeSheet 계산됨:', {
+                activeSheetIndex: data.activeSheetIndex,
+                activeSheetName: activeSheet?.sheetName,
+                activeSheetRawDataLength: activeSheet?.rawData?.length || 0
+            });
+
             const newComputedData = { ...state.computedSheetData };
 
             // 각 시트에 대한 computed data 초기화
@@ -133,13 +155,24 @@ export const createSpreadsheetSlice: StateCreator<
                 }
             });
 
-            return {
+            const newState = {
                 ...state,
                 xlsxData: data,
                 hasUploadedFile: true,
                 activeSheetData: activeSheet,
                 computedSheetData: newComputedData,
             };
+
+            console.log('🏪 SpreadsheetSlice 상태 업데이트 완료:', {
+                hasXlsxData: !!newState.xlsxData,
+                hasActiveSheetData: !!newState.activeSheetData,
+                fileName: newState.xlsxData?.fileName,
+                activeSheetName: newState.activeSheetData?.sheetName,
+                hasUploadedFile: newState.hasUploadedFile,
+                activeSheetRawDataLength: newState.activeSheetData?.rawData?.length || 0
+            });
+
+            return newState;
         });
     },
 

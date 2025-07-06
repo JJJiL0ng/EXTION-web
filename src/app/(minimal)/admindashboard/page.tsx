@@ -21,7 +21,10 @@ import {
   Download,
   Upload,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  X,
+  MessageSquare,
+  Calendar
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -29,8 +32,13 @@ import {
   adminLogout, 
   fetchAllUsers, 
   fetchAllChats, 
-  fetchSystemStats 
+  fetchSystemStats,
+  fetchUserChats,
+  fetchChatMessages
 } from '@/services/admin/adminApiUtils';
+import { loadAdminChatSheetData } from '@/services/admin/adminSheetchatApiUtils';
+import { useAdminStore, type AdminChat, type AdminUser } from '@/stores/adminStore';
+
 
 // 타입 정의
 interface User {
@@ -53,6 +61,21 @@ interface RecentUser {
   lastActive: string;
 }
 
+interface Chat {
+  id: string;
+  title: string;
+  createdAt: string;
+  lastUpdated: string;
+  messageCount?: number;
+}
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -63,8 +86,31 @@ export default function AdminDashboardPage() {
     serverStatus: '정상'
   });
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [showAllUsers, setShowAllUsers] = useState(false);
+  
+  // Admin Store 사용
+  const {
+    allUsers,
+    selectedUser,
+    userChats,
+    loading,
+    modalLoading,
+    error,
+    modalError,
+    setAllUsers,
+    setSelectedUser,
+    setUserChats,
+    setLoading,
+    setModalLoading,
+    setError,
+    setModalError,
+    setSelectedChatId,
+    clearErrors
+  } = useAdminStore();
+  
+  // 기존 상태들 (adminStore로 대체되지 않은 것들)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
 
   // 인증 상태 확인 및 데이터 로드
   useEffect(() => {
@@ -88,10 +134,23 @@ export default function AdminDashboardPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // ESC 키로 모달 닫기
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && selectedUser) {
+        closeModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => document.removeEventListener('keydown', handleEscapeKey);
+  }, [selectedUser]);
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       setError('');
+      clearErrors();
 
       // 병렬로 데이터 가져오기
       const [usersData, chatsData] = await Promise.all([
@@ -107,14 +166,13 @@ export default function AdminDashboardPage() {
         serverStatus: '정상'
       });
 
-      // 최근 사용자 데이터 (최대 5명)
-      const recentUsersData = usersData
+      // 사용자 데이터 정렬 및 포맷팅
+      const sortedUsersData = usersData
         .sort((a: User, b: User) => {
           const aTime = new Date(b.lastLoginAt || b.created_at || 0).getTime();
           const bTime = new Date(a.lastLoginAt || a.created_at || 0).getTime();
           return aTime - bTime;
         })
-        .slice(0, 5)
         .map((user: User): RecentUser => ({
           id: user.id || user.uid || '',
           name: user.displayName || user.display_name || user.email.split('@')[0],
@@ -123,6 +181,18 @@ export default function AdminDashboardPage() {
           lastActive: formatLastActive(user.lastLoginAt || user.created_at)
         }));
 
+      // 전체 사용자 데이터 저장 (AdminUser 타입으로 변환)
+      const adminUsersData: AdminUser[] = sortedUsersData.map((user: RecentUser) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        status: user.status,
+        lastActive: user.lastActive
+      }));
+      setAllUsers(adminUsersData);
+      
+      // 최근 사용자 데이터 (최대 6명)
+      const recentUsersData = sortedUsersData.slice(0, 6);
       setRecentUsers(recentUsersData);
     } catch (err) {
       console.error('대시보드 데이터 로드 오류:', err);
@@ -152,6 +222,76 @@ export default function AdminDashboardPage() {
 
   const handleRefresh = () => {
     loadDashboardData();
+  };
+
+  // 사용자 채팅 목록 불러오기
+  const handleUserClick = async (user: RecentUser) => {
+    setSelectedUser({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      status: user.status,
+      lastActive: user.lastActive
+    });
+    setModalLoading(true);
+    setModalError('');
+    setUserChats([]);
+    setChatMessages([]);
+    setSelectedChat(null);
+
+    try {
+      const chats = await fetchUserChats(user.id);
+      const formattedChats: AdminChat[] = chats.map((chat: any) => ({
+        chatId: chat.chatId || chat.id,
+        title: chat.title || '제목 없음',
+        createdAt: chat.createdAt || chat.created_at,
+        lastUpdated: chat.lastUpdated || chat.updated_at || chat.createdAt || chat.created_at,
+        messageCount: chat.messageCount || 0,
+        sheetMetaDataId: chat.sheetMetaDataId,
+        status: chat.status || 'ACTIVE',
+        userId: chat.userId || user.id,
+        userDisplayName: chat.userDisplayName || user.name,
+        userEmail: chat.userEmail || user.email
+      }));
+      setUserChats(formattedChats);
+    } catch (err) {
+      console.error('사용자 채팅 로드 오류:', err);
+      setModalError('채팅 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // 채팅 선택 시 관리 페이지로 이동
+  const handleChatClick = (chat: AdminChat) => {
+    const chatId = chat.chatId || chat.id;
+    if (chatId) {
+      setSelectedChatId(chatId);
+      // sessionStorage에서 adminUserId 가져오기
+      const adminUserId = sessionStorage.getItem('adminUserId');
+      const queryParams = adminUserId ? `?adminUserId=${adminUserId}` : '';
+      router.push(`/adminsheetchat/${chatId}${queryParams}`);
+    }
+  };
+
+  // 모달 닫기
+  const closeModal = () => {
+    setSelectedUser(null);
+    setUserChats([]);
+    setChatMessages([]);
+    setSelectedChat(null);
+    setModalError('');
+    setSelectedChatId(null);
+  };
+
+  // 메시지 시간 포맷팅
+  const formatMessageTime = (timestamp: string | Date): string => {
+    if (!timestamp) return '';
+    try {
+      return new Date(timestamp).toLocaleString('ko-KR');
+    } catch {
+      return timestamp.toString();
+    }
   };
 
   const dashboardStats = [
@@ -275,14 +415,25 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <Users className="w-6 h-6 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">최근 가입 사용자</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {showAllUsers ? '전체 사용자' : '최근 가입 사용자'}
+                </h3>
               </div>
-              <button 
-                onClick={() => router.push('/adminforpelisers')}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                전체 사용자 관리
-              </button>
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={() => setShowAllUsers(!showAllUsers)}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  {showAllUsers ? '최근 사용자만 보기' : '전체 사용자 보기'}
+                </button>
+                <span className="text-gray-300">|</span>
+                <button 
+                  onClick={() => router.push('/adminforpelisers')}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  고급 관리
+                </button>
+              </div>
             </div>
             <div className="space-y-3">
               {loading ? (
@@ -290,10 +441,14 @@ export default function AdminDashboardPage() {
                   <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
                   <p className="text-gray-500 text-sm">사용자 데이터를 불러오는 중...</p>
                 </div>
-              ) : recentUsers.length > 0 ? (
+              ) : (showAllUsers ? allUsers : recentUsers).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recentUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  {(showAllUsers ? allUsers : recentUsers).map((user: AdminUser | RecentUser) => (
+                    <div 
+                      key={user.id} 
+                      onClick={() => handleUserClick(user)}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                    >
                       <div className="flex items-center space-x-3">
                         <div className={`w-3 h-3 rounded-full ${
                           user.status === 'online' ? 'bg-green-500' : 
@@ -304,7 +459,10 @@ export default function AdminDashboardPage() {
                           <p className="text-xs text-gray-600">{user.email}</p>
                         </div>
                       </div>
-                      <span className="text-xs text-gray-500">{user.lastActive}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-gray-500">{user.lastActive}</span>
+                        <Eye className="w-4 h-4 text-gray-400" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -315,35 +473,6 @@ export default function AdminDashboardPage() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* 빠른 액션 버튼들 */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-8">
-          <div className="flex items-center space-x-3 mb-6">
-            <Settings className="w-6 h-6 text-orange-600" />
-            <h3 className="text-lg font-semibold text-gray-900">빠른 관리 도구</h3>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-              <Users className="w-8 h-8 text-blue-600 mb-2" />
-              <span className="text-sm font-medium text-blue-900">사용자 관리</span>
-            </button>
-            <button className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-              <Database className="w-8 h-8 text-green-600 mb-2" />
-              <span className="text-sm font-medium text-green-900">데이터 백업</span>
-            </button>
-            <button className="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-              <BarChart3 className="w-8 h-8 text-purple-600 mb-2" />
-              <span className="text-sm font-medium text-purple-900">통계 리포트</span>
-            </button>
-            <button 
-              onClick={() => router.push('/adminforpelisers')}
-              className="flex flex-col items-center p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border-2 border-red-200"
-            >
-              <Shield className="w-8 h-8 text-red-600 mb-2" />
-              <span className="text-sm font-medium text-red-900">고급 관리</span>
-            </button>
           </div>
         </div>
 
@@ -368,6 +497,98 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* 사용자 채팅 모달 */}
+      {selectedUser && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={closeModal}
+        >
+          <div 
+            className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <Users className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">{selectedUser.name}의 채팅 목록</h2>
+                  <p className="text-sm text-gray-600">{selectedUser.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={closeModal}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-600" />
+              </button>
+            </div>
+
+            {/* 채팅 목록 */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
+              {modalError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-800 text-sm">{modalError}</p>
+                </div>
+              )}
+
+              {modalLoading ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">채팅 목록을 불러오는 중...</p>
+                </div>
+              ) : userChats.length > 0 ? (
+                <div className="space-y-3">
+                  {userChats.map((chat: AdminChat) => (
+                    <div
+                      key={chat.chatId || chat.id}
+                      onClick={() => handleChatClick(chat)}
+                      className="p-4 rounded-lg cursor-pointer transition-colors border border-gray-200 hover:bg-gray-50 hover:border-blue-200"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-900 text-base truncate">
+                            {chat.title}
+                          </h4>
+                          <div className="flex items-center space-x-4 mt-2">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-500">
+                                {formatMessageTime(chat.createdAt)}
+                              </span>
+                            </div>
+                            {chat.messageCount && (
+                              <div className="flex items-center space-x-1">
+                                <MessageSquare className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm text-gray-500">
+                                  {chat.messageCount}개 메시지
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                          <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                            보기
+                          </span>
+                          <ExternalLink className="w-4 h-4 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500 text-lg">채팅이 없습니다.</p>
+                  <p className="text-gray-400 text-sm mt-1">이 사용자는 아직 채팅을 시작하지 않았습니다.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

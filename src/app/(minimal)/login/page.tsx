@@ -17,7 +17,7 @@ export default function LoginPage() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         // 사용자가 이미 로그인된 경우 메인 페이지로 리디렉션
-        router.push('/ai');
+        router.push('/dashboard');
       }
     });
 
@@ -68,7 +68,7 @@ export default function LoginPage() {
       }
       
       // 로그인 성공 시 메인 페이지로 이동
-      router.push('/ai');
+      router.push('/dashboard');
     } catch (err) {
       console.error('로그인 실패:', err);
       setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');

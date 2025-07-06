@@ -25,7 +25,6 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({
-    currentMode,
     inputValue,
     isDragOver,
     isLoading,
@@ -75,7 +74,7 @@ export default function ChatInput({
         if (hasUploadedFile) {
             console.log('⚠️ 이미 파일이 업로드되어 새로운 파일을 업로드할 수 없습니다.');
             return;
-        }
+        } 
         console.log('📎 파일 선택 버튼 클릭됨');
         fileInputRef.current?.click();
     };

@@ -17,7 +17,6 @@ import { useCellEditor } from '@/hooks/useCellEditor';
 // 컴포넌트 imports
 import { TopControlPanel } from './spreadsheet/TopControlPanel';
 import { SheetTabs } from './spreadsheet/SheetTabs';
-import ChatSidebar from './chat/ChatSidebar';
 
 import 'handsontable/styles/handsontable.css';
 import 'handsontable/styles/ht-theme-main.css';
@@ -78,6 +77,22 @@ const MainSpreadSheet: React.FC = () => {
     saveStatus,
   } = useUnifiedStore();
 
+  // 스토어에서 가져온 상태 로깅 (렌더링 때마다)
+  useEffect(() => {
+    console.log('🔗 MainSpreadSheet useUnifiedStore 상태 변화:', {
+      hasXlsxData: !!xlsxData,
+      xlsxDataFileName: xlsxData?.fileName,
+      xlsxDataSheetsCount: xlsxData?.sheets?.length || 0,
+      xlsxDataActiveSheetIndex: xlsxData?.activeSheetIndex,
+      hasActiveSheetData: !!activeSheetData,
+      activeSheetDataName: activeSheetData?.sheetName,
+      activeSheetDataRawLength: activeSheetData?.rawData?.length || 0,
+      storeStateMatch: xlsxData && activeSheetData 
+        ? xlsxData.sheets[xlsxData.activeSheetIndex]?.sheetName === activeSheetData.sheetName
+        : false
+    });
+  }, [xlsxData, activeSheetData]);
+
   // HyperFormula 설정
   const formulasConfig = useMemo<DetailedSettings>(() => ({
     engine: hyperformulaInstance,
@@ -87,7 +102,14 @@ const MainSpreadSheet: React.FC = () => {
 
   // Handsontable에 표시할 데이터를 준비
   const displayData = useMemo(() => {
-    console.log('🔄 시트 데이터 변경으로 displayData 다시 계산:', activeSheetData?.sheetName);
+    console.log('🔄 시트 데이터 변경으로 displayData 다시 계산:', {
+      activeSheetName: activeSheetData?.sheetName,
+      hasActiveSheetData: !!activeSheetData,
+      hasRawData: !!(activeSheetData?.rawData),
+      rawDataLength: activeSheetData?.rawData?.length || 0,
+      rawDataFirstRow: activeSheetData?.rawData?.[0] || null,
+      metadata: activeSheetData?.metadata
+    });
     return prepareDisplayData(activeSheetData);
   }, [activeSheetData]);
 
@@ -124,19 +146,29 @@ const MainSpreadSheet: React.FC = () => {
         activeSheetName: xlsxData?.sheets?.[xlsxData?.activeSheetIndex || 0]?.sheetName || '시트 (default)',
         currentSheetMetaDataId: currentSheetMetaDataId || 'None',
         hasActiveSheetData: !!activeSheetData,
+        activeSheetDataName: activeSheetData?.sheetName || 'None',
+        activeSheetRawDataLength: activeSheetData?.rawData?.length || 0,
         displayDataLength: displayData.length,
         displayDataCols: displayData[0]?.length || 0,
-        isEmptySpreadsheet: !xlsxData && !activeSheetData
+        isEmptySpreadsheet: !xlsxData && !activeSheetData,
+        // 추가 디버깅 정보
+        xlsxDataActiveSheetMatch: xlsxData && activeSheetData 
+          ? xlsxData.sheets[xlsxData.activeSheetIndex]?.sheetName === activeSheetData.sheetName
+          : false
       });
 
       if (xlsxData?.sheets) {
+        console.log('📋 시트 목록 및 상태:');
         xlsxData.sheets.forEach((sheet, index) => {
           console.log(`📋 시트 ${index}:`, {
             index,
             name: sheet.sheetName,
             rows: sheet.rawData?.length || 0,
             cols: sheet.rawData?.[0]?.length || 0,
-            isActive: index === (xlsxData.activeSheetIndex || 0)
+            isActive: index === (xlsxData.activeSheetIndex || 0),
+            isCurrentActiveSheet: activeSheetData?.sheetName === sheet.sheetName,
+            sampleData: sheet.rawData?.slice(0, 2) || [],
+            metadata: sheet.metadata
           });
         });
       } else {
@@ -153,8 +185,20 @@ const MainSpreadSheet: React.FC = () => {
   // 시트 변경 시에만 Handsontable 데이터 업데이트
   useEffect(() => {
     const hot = hotRef.current?.hotInstance;
+    
+    console.log('🔄 시트 변경 useEffect 트리거:', {
+      hasHotInstance: !!hot,
+      hasDisplayData: !!displayData && displayData.length > 0,
+      activeSheetIndex: xlsxData?.activeSheetIndex,
+      activeSheetName: activeSheetData?.sheetName,
+      displayDataRows: displayData.length,
+      displayDataCols: displayData[0]?.length || 0,
+      lastModified: activeSheetData?.metadata?.lastModified,
+      displayDataSample: displayData.slice(0, 3) // 첫 3행 샘플
+    });
+
     if (hot && displayData && displayData.length > 0) {
-      console.log('🔄 시트 변경 감지 - displayData 업데이트:', {
+      console.log('🔄 시트 변경 감지 - displayData 업데이트 시작:', {
         activeSheetIndex: xlsxData?.activeSheetIndex,
         activeSheetName: activeSheetData?.sheetName,
         displayDataRows: displayData.length,
@@ -164,6 +208,7 @@ const MainSpreadSheet: React.FC = () => {
 
       // displayData를 Handsontable에 로드
       hot.loadData(displayData);
+      console.log('🎯 hot.loadData() 호출 완료');
 
       // 추가 렌더링으로 확실하게 업데이트
       const timeoutId = setTimeout(() => {
@@ -171,7 +216,7 @@ const MainSpreadSheet: React.FC = () => {
         if (currentHot && !currentHot.isDestroyed) {
           try {
             currentHot.render();
-            console.log('✅ 시트 변경 데이터 업데이트 완료');
+            console.log('✅ 시트 변경 데이터 업데이트 및 렌더링 완료');
           } catch (error) {
             console.warn('Handsontable 렌더링 중 오류 (무시됨):', error);
           }
@@ -181,6 +226,12 @@ const MainSpreadSheet: React.FC = () => {
       return () => {
         clearTimeout(timeoutId);
       };
+    } else {
+      console.log('⚠️ 시트 업데이트 조건 미충족:', {
+        hasHotInstance: !!hot,
+        hasDisplayData: !!displayData && displayData.length > 0,
+        displayDataLength: displayData.length
+      });
     }
   }, [xlsxData?.activeSheetIndex, activeSheetData?.sheetName, activeSheetData?.metadata?.lastModified, displayData]);
 
@@ -215,9 +266,6 @@ const MainSpreadSheet: React.FC = () => {
 
   return (
     <div className="h-full flex relative spreadsheet-main-container">
-      {/* 사이드바 */}
-      <ChatSidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
-
       {/* 메인 스프레드시트 영역 - 사이드바 상태에 따른 마진 조정 */}
       <div className={`h-full flex flex-col flex-1 min-w-0 spreadsheet-container transition-all duration-300 ease-in-out ${
         isSidebarOpen ? 'ml-80' : 'ml-0'

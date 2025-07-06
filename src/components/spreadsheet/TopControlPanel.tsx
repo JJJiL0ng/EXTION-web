@@ -7,7 +7,7 @@ import { CellEditor } from '@/components/spreadsheet/CellEditor';
 import { SaveStatus } from '@/components/spreadsheet/SaveStatus';
 import { ExportControls } from '@/components/spreadsheet/ExportControls';
 import { SelectedCellInfo } from '@/types/spreadsheet';
-import HamburgerIcon from '@/components/icons/HamburgerIcon';
+import { LayoutDashboard } from 'lucide-react';
 
 interface TopControlPanelProps {
   selectedCellInfo: SelectedCellInfo | null;
@@ -51,16 +51,21 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
       <div className="flex items-center justify-between space-x-2">
         {/* 왼쪽: 햄버거 버튼과 로고 */}
         <div className="flex items-center space-x-2">
-          {/* <HamburgerIcon 
-            onClick={onToggleSidebar}
-            isOpen={isSidebarOpen}
-            className="flex-shrink-0"
-          /> */}
-          <Link href="/ai" className="cursor-pointer">
+        
+          <Link href="/dashboard" className="cursor-pointer">
             <h1 className="text-xl font-bold text-gray-800" style={{ color: '#005DE9' }}>
               EXTION
             </h1>
           </Link>
+          {/* <Link href="/dashboard" className="group relative">
+            <div className="flex items-center space-x-2 px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+              <LayoutDashboard className="w-5 h-5 text-gray-600 group-hover:text-blue-600" />
+              <span className="text-sm text-gray-600 group-hover:text-blue-600">대시보드</span>
+            </div>
+            <div className="absolute left-0 top-full mt-2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              대시보드로 가기
+            </div>
+          </Link> */}
         </div>
 
         {/* 중앙: 셀 편집기 */}
@@ -82,8 +87,8 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
             saveStatus={saveStatus}
           />
           
-          <a
-            href="https://slashpage.com/extion-cs"
+          <Link
+            href="/dashboard"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center space-x-1.5 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-sm transition-colors duration-200"
@@ -98,9 +103,9 @@ export const TopControlPanel: React.FC<TopControlPanelProps> = ({
               e.currentTarget.style.backgroundColor = 'white';
             }}
           >
-            <MessageCircleIcon size={16} />
-            <span>기능 제안하기</span>
-          </a>
+            <LayoutDashboard className="w-4 h-4 text-blue-600 group-hover:text-blue-600" />
+            <span>홈화면으로 가기</span>
+          </Link>
           
           <ExportControls 
             xlsxData={xlsxData}

@@ -1,10 +1,9 @@
 'use client'
 
 import React, { useState } from 'react';
-import { formatMessageDate } from '../../utils/chatUtils';
 import { ChatMessage } from '../../stores/store-types';
 import { ChatMode } from '@/types/chat';
-import { Loader2, ChevronDown, ChevronUp, BarChart3, Table, FileText, Sparkles, Wand2 } from 'lucide-react';
+import { Loader2, ChevronDown, BarChart3, Table, FileText, Sparkles } from 'lucide-react';
 
 // Message 인터페이스는 기존과의 호환성을 위해 유지
 export interface Message extends ChatMessage {}
@@ -142,6 +141,7 @@ const DataFixMessage: React.FC<{
     if (!dataFixData) return null;
 
     const { editedData } = dataFixData;
+    const isFromBackend = (message as any).isFromBackend;
 
     return (
         <div className="space-y-4">
@@ -162,23 +162,34 @@ const DataFixMessage: React.FC<{
                     <p className="text-xs text-gray-500 mt-1">
                         {editedData.data.length}개 행, {editedData.data[0]?.length || 0}개 열
                     </p>
-                    <button
-                        onClick={() => onDataFixApply(message.id)}
-                        disabled={isApplied}
-                        className={`mt-4 w-full text-center px-4 py-2 text-sm font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2
-                            ${isApplied 
-                                ? 'bg-[#e6f0ff] text-[#005de9] cursor-not-allowed' 
-                                : 'bg-[#005de9] text-white hover:bg-[#004bc1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#005de9]'
-                            }`}
-                    >
-                        {isApplied ? (
-                            <>
-                                <span>✓ 적용 완료</span>
-                            </>
-                        ) : (
-                            '변경사항 적용하기'
-                        )}
-                    </button>
+                    
+                    {/* 백엔드에서 불러온 메시지가 아닌 경우에만 적용 버튼 표시 */}
+                    {!isFromBackend && (
+                        <button
+                            onClick={() => onDataFixApply(message.id)}
+                            disabled={isApplied}
+                            className={`mt-4 w-full text-center px-4 py-2 text-sm font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2
+                                ${isApplied 
+                                    ? 'bg-[#e6f0ff] text-[#005de9] cursor-not-allowed' 
+                                    : 'bg-[#005de9] text-white hover:bg-[#004bc1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#005de9]'
+                                }`}
+                        >
+                            {isApplied ? (
+                                <>
+                                    <span>✓ 적용 완료</span>
+                                </>
+                            ) : (
+                                '변경사항 적용하기'
+                            )}
+                        </button>
+                    )}
+                    
+                    {/* 백엔드에서 불러온 메시지인 경우 적용 완료 표시 */}
+                    {/* {isFromBackend && (
+                        <div className="mt-4 w-full text-center px-4 py-2 text-sm font-medium rounded-lg bg-green-50 text-green-700 border border-green-200">
+                            <span>✓ 과거 적용된 변경사항</span>
+                        </div>
+                    )} */}
                 </div>
             </div>
         </div>
@@ -195,6 +206,7 @@ const FunctionResultMessage: React.FC<{
     if (!functionData) return null;
 
     const { functionDetails } = functionData;
+    const isFromBackend = (message as any).isFromBackend;
 
     const resultPreview = Array.isArray(functionDetails.result)
         ? `[${functionDetails.result.length}x${functionDetails.result[0]?.length || 0} 데이터]`
@@ -222,23 +234,34 @@ const FunctionResultMessage: React.FC<{
                     <p className="text-xs text-gray-500 mt-1">
                         생성된 수식: <code className="text-xs bg-gray-100 p-1 rounded">{functionDetails.formula}</code>
                     </p>
-                    <button
-                        onClick={() => onFunctionApply(message.id)}
-                        disabled={isApplied}
-                        className={`mt-4 w-full text-center px-4 py-2 text-sm font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2
-                            ${isApplied 
-                                ? 'bg-[#e6f0ff] text-[#005de9] cursor-not-allowed' 
-                                : 'bg-[#005de9] text-white hover:bg-[#004bc1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#005de9]'
-                            }`}
-                    >
-                        {isApplied ? (
-                            <>
-                                <span>✓ 적용 완료</span>
-                            </>
-                        ) : (
-                            '결과 적용하기'
-                        )}
-                    </button>
+                    
+                    {/* 백엔드에서 불러온 메시지가 아닌 경우에만 적용 버튼 표시 */}
+                    {!isFromBackend && (
+                        <button
+                            onClick={() => onFunctionApply(message.id)}
+                            disabled={isApplied}
+                            className={`mt-4 w-full text-center px-4 py-2 text-sm font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2
+                                ${isApplied 
+                                    ? 'bg-[#e6f0ff] text-[#005de9] cursor-not-allowed' 
+                                    : 'bg-[#005de9] text-white hover:bg-[#004bc1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#005de9]'
+                                }`}
+                        >
+                            {isApplied ? (
+                                <>
+                                    <span>✓ 적용 완료</span>
+                                </>
+                            ) : (
+                                '결과 적용하기'
+                            )}
+                        </button>
+                    )}
+                    
+                    {/* 백엔드에서 불러온 메시지인 경우 적용 완료 표시 */}
+                    {isFromBackend && (
+                        <div className="mt-4 w-full text-center px-4 py-2 text-sm font-medium rounded-lg bg-green-50 text-green-700 border border-green-200">
+                            <span>✓ 과거 적용된 함수 결과</span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -291,11 +314,11 @@ export default function MessageDisplay({
                     <div key={message.id} className={`py-6 ${index !== 0 ? 'border-t border-gray-100' : ''}`}>
                         <div className="flex items-start">
                             {/* AI 메시지 아바타 */}
-                            {!isUser && (
+                            {/* {!isUser && (
                                 <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3 mt-1">
                                     <span className="text-white text-sm font-medium">AI</span>
                                 </div>
-                            )}
+                            )} */}
                             
                             <div className="flex-1">
                                 <div className="flex items-center mb-1">
