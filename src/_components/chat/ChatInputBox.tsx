@@ -237,7 +237,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
           <button
             onClick={handleSend}
             disabled={disabled || (!message.trim() && !selectedFile)}
-            className={`flex items-center justify-center w-8 h-6 rounded-full transition-all ${
+            className={`flex items-center justify-center w-10 h-6 rounded-full transition-all ${
               disabled || (!message.trim() && !selectedFile)
                 ? 'bg-gray-300 text-white cursor-not-allowed'
                 : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
