@@ -12,7 +12,7 @@ export const useGenerateChatId = () => {
    */
   const generateChatId = useCallback(() => {
     const uuid = uuidv4();
-    return `chat_${uuid}`;
+    return `${uuid}`;
   }, []);
   return {
     generateChatId

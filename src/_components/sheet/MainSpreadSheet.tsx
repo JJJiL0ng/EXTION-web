@@ -11,12 +11,13 @@ import { useSheetRender } from '../../_hooks/sheet/useSheetRender'; // 훅 impor
 // GC.Spread.Sheets.LicenseKey = SpreadJSKey;
 GC.Spread.Common.CultureManager.culture("ko-kr");
 
-export default function SpreadSheet() {
+export default function MainSpreadSheet() {
     const [hostStyle, setHostStyle] = useState({
         width: '100vw',
         height: 'calc(100vh - 24px)', // 상단 바 높이(24px)를 제외한 전체 화면
         minWidth: '100%',
         boxSizing: 'border-box' as const,
+
     });
 
     // SpreadJS 인스턴스 참조
@@ -319,11 +320,18 @@ export default function SpreadSheet() {
     };
 
     return (
-        <div className="w-full h-screen box-border flex flex-col">
+        <div className="w-full h-screen box-border flex flex-col border-4 border-rounded border-gray-500 bg-gray-50">
             {/* 구글 스프레드시트 스타일 상단 바 */}
             <div className="flex-shrink-0">
                 <div className="w-full h-6 bg-white border-b border-gray-200 flex items-center px-4 box-border">
                     <div className="flex items-center space-x-6">
+                        {/* 홈으로 가기 */}
+                        <button
+                            onClick={() => window.location.href = '/dashboard'}
+                            className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
+                        >
+                            <img src="/logo.png" alt="Logo" className="h-4" />
+                        </button>
                         {/* 홈으로 가기 */}
                         <button
                             onClick={() => window.location.href = '/dashboard'}
@@ -395,14 +403,14 @@ export default function SpreadSheet() {
                         </div>
 
                         {/* 엑션AI에 피드백 남기기 */}
-                        <div className="relative">
+                        {/* <div className="relative">
                             <button
                                 onClick={() => window.open('https://slashpage.com/extion-cs', '_blank')}
                                 className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md cursor-pointer inline-block"
                             >
-                                엑션AI에 피드백 남기기
+                                엑션AI에 대해 피드백 남기기
                             </button>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* 오른쪽 상태 표시 영역 - 훅의 상태 사용 */}
@@ -426,10 +434,10 @@ export default function SpreadSheet() {
 
                         {renderState.fileName && !renderState.isRendering && !renderState.isProcessing && !renderState.error && (
                             <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: '#005ed9'}}>
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span className="text-sm text-green-600 font-medium">
+                                <span className="text-sm font-medium" style={{color: '#005ed9'}}>
                                     {renderState.fileName}
                                 </span>
                             </div>
@@ -449,8 +457,10 @@ export default function SpreadSheet() {
                 </div>
             </div>
 
+            <div className='border-2 border-gray-200'></div>
+
             {/* SpreadJS 컴포넌트 - 남은 공간 전체 사용 */}
-            <div className="flex-1 overflow-hidden w-full">
+            <div className="flex-1 w-full">
                 <SpreadSheets
                     workbookInitialized={(spread) => initSpread(spread)}
                     hostStyle={hostStyle}>

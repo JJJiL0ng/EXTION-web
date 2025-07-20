@@ -12,7 +12,7 @@ export const useGenerateSpreadSheetId = () => {
    */
   const generateSpreadSheetId = useCallback(() => {
     const uuid = uuidv4();
-    return `spreadsheet_${uuid}`;
+    return `${uuid}`;
   }, []);
 
   return {
