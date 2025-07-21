@@ -4,7 +4,11 @@ import '@mescius/spread-sheets-io';
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { SpreadSheets, Worksheet, Column } from "@mescius/spread-sheets-react";
 import * as GC from "@mescius/spread-sheets";
-import { useSheetRender } from '../../_hooks/sheet/useSheetRender'; // 훅 import
+import Image from 'next/image';
+import { useParams } from 'next/navigation';
+import { useFileUpload } from '../../_hooks/sheet/useFileUpload';
+import { useFileExport } from '../../_hooks/sheet/useFileExport';
+import { useSheetCreate } from '../../_hooks/sheet/useSheetCreate';
 
 // SpreadJS 라이선싱
 // var SpreadJSKey = "xxx";          // 라이선스 키 입력
@@ -12,32 +16,319 @@ import { useSheetRender } from '../../_hooks/sheet/useSheetRender'; // 훅 impor
 GC.Spread.Common.CultureManager.culture("ko-kr");
 
 export default function MainSpreadSheet() {
+    // URL 파라미터 추출
+    const params = useParams();
+    const spreadSheetId = params.SpreadSheetId as string;
+    const chatId = params.ChatId as string;
+
     const [hostStyle, setHostStyle] = useState({
         width: '100vw',
         height: 'calc(100vh - 24px)', // 상단 바 높이(24px)를 제외한 전체 화면
         minWidth: '100%',
         boxSizing: 'border-box' as const,
-
     });
 
     // SpreadJS 인스턴스 참조
     const spreadRef = useRef<any>(null);
 
-    // useSheetRender 훅 사용
-    const { renderState, renderFile, resetState } = useSheetRender({
-        maxDirectLoadSize: 10 * 1024 * 1024, // 10MB
-        onSuccess: (fileName) => {
-            console.log(`✅ 파일 렌더링 성공: ${fileName}`);
-            alert(`${fileName} 파일이 성공적으로 업로드되었습니다.`);
+    // 스프레드시트 생성 훅
+    const {
+        isCreating,
+        error: createError,
+        createdSheet,
+        createSheetWithDefaults,
+        resetState: resetCreateState,
+        clearError: clearCreateError
+    } = useSheetCreate({
+        onSuccess: (sheet) => {
+            console.log(`✅ 스프레드시트 생성 성공:`, sheet);
         },
-        onError: (error, fileName) => {
-            console.error(`❌ 파일 렌더링 실패: ${fileName}`, error);
+        onError: (error) => {
+            console.error(`❌ 스프레드시트 생성 실패:`, error);
+            alert(`스프레드시트 생성 중 오류가 발생했습니다: ${error.message}`);
+        }
+    });
+
+    // 파일 데이터를 JSON으로 변환하는 함수 (SpreadJS 유틸리티 활용)
+    const convertFileDataToJson = useCallback(async (fileData: any, fileName: string): Promise<Record<string, any>> => {
+        try {
+            // 이미 JSON 객체인 경우 그대로 반환 (Blob이나 File 객체가 아닌 경우)
+            if (typeof fileData === 'object' && fileData !== null && 
+                !(fileData instanceof Blob) && !(fileData instanceof File)) {
+                return fileData;
+            }
+
+            // 파일 확장자 확인
+            const fileExtension = fileName.toLowerCase().split('.').pop();
+            
+            // Excel 파일 (.xlsx, .xls) 처리
+            if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+                return new Promise((resolve, reject) => {
+                    if (!spreadRef.current) {
+                        reject(new Error('SpreadJS 인스턴스가 없습니다.'));
+                        return;
+                    }
+
+                    // 임시 워크북 생성
+                    const tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
+                    
+                    tempWorkbook.import(
+                        fileData,
+                        (result: any) => {
+                            try {
+                                // SpreadJS JSON 형태로 변환
+                                const jsonData = tempWorkbook.toJSON({
+                                    includeBindingSource: true,
+                                    ignoreFormula: false,
+                                    ignoreStyle: false,
+                                    saveAsView: true,
+                                    rowHeadersAsFrozenColumns: true,
+                                    columnHeadersAsFrozenRows: true,
+                                    includeAutoMergedCells: true,
+                                    saveR1C1Formula: true
+                                });
+
+                                // 메타데이터 추가
+                                const result = {
+                                    fileName: fileName,
+                                    originalType: 'excel',
+                                    spreadsheetData: jsonData,
+                                    timestamp: new Date().toISOString(),
+                                    fileExtension: fileExtension
+                                };
+
+                                // 임시 워크북 정리
+                                tempWorkbook.destroy();
+                                resolve(result);
+                            } catch (error) {
+                                tempWorkbook.destroy();
+                                reject(error);
+                            }
+                        },
+                        (error: any) => {
+                            tempWorkbook.destroy();
+                            reject(new Error(`Excel 파일 변환 실패: ${error.message || error}`));
+                        },
+                        {
+                            fileType: fileExtension === 'xlsx' ? 
+                                GC.Spread.Sheets.FileType.excel : 
+                                GC.Spread.Sheets.FileType.excel
+                        }
+                    );
+                });
+            }
+
+            // CSV 파일 처리
+            if (fileExtension === 'csv') {
+                return new Promise((resolve, reject) => {
+                    if (!spreadRef.current) {
+                        reject(new Error('SpreadJS 인스턴스가 없습니다.'));
+                        return;
+                    }
+
+                    // 임시 워크북 생성
+                    const tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
+                    
+                    tempWorkbook.import(
+                        fileData,
+                        (result: any) => {
+                            try {
+                                // SpreadJS JSON 형태로 변환
+                                const jsonData = tempWorkbook.toJSON({
+                                    includeBindingSource: true,
+                                    ignoreFormula: false,
+                                    ignoreStyle: false,
+                                    saveAsView: true,
+                                    rowHeadersAsFrozenColumns: true,
+                                    columnHeadersAsFrozenRows: true,
+                                    includeAutoMergedCells: true,
+                                    saveR1C1Formula: true
+                                });
+
+                                // 메타데이터 추가
+                                const result = {
+                                    fileName: fileName,
+                                    originalType: 'csv',
+                                    spreadsheetData: jsonData,
+                                    timestamp: new Date().toISOString(),
+                                    fileExtension: fileExtension
+                                };
+
+                                // 임시 워크북 정리
+                                tempWorkbook.destroy();
+                                resolve(result);
+                            } catch (error) {
+                                tempWorkbook.destroy();
+                                reject(error);
+                            }
+                        },
+                        (error: any) => {
+                            tempWorkbook.destroy();
+                            reject(new Error(`CSV 파일 변환 실패: ${error.message || error}`));
+                        },
+                        {
+                            fileType: GC.Spread.Sheets.FileType.csv
+                        }
+                    );
+                });
+            }
+
+            // JSON 파일 처리
+            if (fileExtension === 'json') {
+                if (typeof fileData === 'string') {
+                    try {
+                        const parsedJson = JSON.parse(fileData);
+                        return {
+                            fileName: fileName,
+                            originalType: 'json',
+                            spreadsheetData: parsedJson,
+                            timestamp: new Date().toISOString(),
+                            fileExtension: fileExtension
+                        };
+                    } catch {
+                        return {
+                            fileName: fileName,
+                            originalType: 'json',
+                            content: fileData,
+                            error: 'JSON 파싱 실패',
+                            timestamp: new Date().toISOString(),
+                            fileExtension: fileExtension
+                        };
+                    }
+                }
+            }
+
+            // SJS (SpreadJS 네이티브) 파일 처리
+            if (fileExtension === 'sjs') {
+                if (typeof fileData === 'string') {
+                    try {
+                        const parsedSjs = JSON.parse(fileData);
+                        return {
+                            fileName: fileName,
+                            originalType: 'sjs',
+                            spreadsheetData: parsedSjs,
+                            timestamp: new Date().toISOString(),
+                            fileExtension: fileExtension
+                        };
+                    } catch {
+                        return {
+                            fileName: fileName,
+                            originalType: 'sjs',
+                            content: fileData,
+                            error: 'SJS 파싱 실패',
+                            timestamp: new Date().toISOString(),
+                            fileExtension: fileExtension
+                        };
+                    }
+                }
+            }
+            
+            // 문자열인 경우 JSON 파싱 시도
+            if (typeof fileData === 'string') {
+                try {
+                    const parsedData = JSON.parse(fileData);
+                    return {
+                        fileName: fileName,
+                        originalType: 'text',
+                        spreadsheetData: parsedData,
+                        timestamp: new Date().toISOString(),
+                        fileExtension: fileExtension
+                    };
+                } catch {
+                    // JSON 파싱 실패 시 문자열을 객체로 감싸서 반환
+                    return {
+                        fileName: fileName,
+                        originalType: 'text',
+                        content: fileData,
+                        timestamp: new Date().toISOString(),
+                        fileExtension: fileExtension
+                    };
+                }
+            }
+            
+            // 기타 타입의 경우 기본 구조로 감싸서 반환
+            return {
+                fileName: fileName,
+                originalType: typeof fileData,
+                data: fileData,
+                timestamp: new Date().toISOString(),
+                fileExtension: fileExtension
+            };
+
+        } catch (error) {
+            console.warn('파일 데이터 JSON 변환 실패:', error);
+            // 변환 실패 시 기본 구조 반환
+            return {
+                fileName: fileName,
+                originalType: 'unknown',
+                error: `Failed to convert file data: ${error instanceof Error ? error.message : error}`,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }, [spreadRef]);
+
+    // 파일 업로드 훅
+    const {
+        uploadState,
+        uploadFiles,
+        resetUploadState
+    } = useFileUpload(spreadRef.current, {
+        maxFileSize: 50 * 1024 * 1024, // 50MB
+        allowedExtensions: ['xlsx', 'xls', 'csv', 'json'],
+        onUploadSuccess: async (fileName: string, fileData: any) => {
+            console.log(`✅ 파일 업로드 성공: ${fileName}`);
+            
+            // 파일 업로드 후 스프레드시트 생성 API 호출
+            try {
+                // TODO: userId를 실제 인증된 사용자 ID로 변경 필요
+                // 참고: 백엔드에서는 req.user.sub에서 userId를 추출함
+                const userId = 'qweqwe12'; // 임시 하드코딩
+                
+                // 파일 데이터를 JSON으로 변환 (async 함수이므로 await 사용)
+                const jsonData = await convertFileDataToJson(fileData, fileName);
+                console.log('🔄 JSON 변환된 데이터:', jsonData);
+                
+                await createSheetWithDefaults(
+                    fileName, // 업로드된 파일명을 스프레드시트명으로 사용
+                    spreadSheetId, // URL에서 추출한 spreadSheetId
+                    chatId, // URL에서 추출한 chatId
+                    jsonData // JSON으로 변환된 파일 데이터를 초기 데이터로 사용
+                );
+            } catch (error) {
+                console.error('스프레드시트 생성 실패:', error);
+                // createSheetWithDefaults의 onError에서 이미 처리됨
+            }
+        },
+        onUploadError: (error: Error, fileName: string) => {
+            console.error(`❌ 파일 업로드 실패: ${fileName}`, error);
             alert(`파일 업로드 중 오류가 발생했습니다: ${error.message}`);
         }
     });
 
+    // 파일 내보내기 훅
+    const {
+        exportState,
+        saveAsExcel,
+        saveAsCSV,
+        saveAsJSON,
+        resetExportState
+    } = useFileExport(spreadRef.current, {
+        defaultFileName: 'spreadsheet',
+        onExportSuccess: (fileName: string) => {
+            console.log(`✅ 파일 저장 성공: ${fileName}`);
+        },
+        onExportError: (error: Error) => {
+            console.error('❌ 파일 저장 실패:', error);
+            alert(`파일 저장 중 오류가 발생했습니다: ${error.message}`);
+        }
+    });
+
     // 메모리 관리를 위한 cleanup 함수
-    const cleanup = useCallback(() => {
+    const handleCleanup = useCallback(() => {
+        resetUploadState();
+        resetExportState();
+        resetCreateState();
+        clearCreateError();
         if (spreadRef.current) {
             try {
                 spreadRef.current.destroy && spreadRef.current.destroy();
@@ -45,14 +336,23 @@ export default function MainSpreadSheet() {
                 console.warn('Cleanup warning:', error);
             }
         }
-    }, []);
+    }, [resetUploadState, resetExportState, resetCreateState, clearCreateError]);
 
     // 컴포넌트 언마운트 시 정리
     useEffect(() => {
         return () => {
-            cleanup();
+            handleCleanup();
         };
-    }, [cleanup]);
+    }, [handleCleanup]);
+
+    // URL 파라미터 확인 및 디버깅
+    useEffect(() => {
+        console.log('🔍 URL 파라미터 확인:', { spreadSheetId, chatId });
+        
+        if (!spreadSheetId || !chatId) {
+            console.warn('⚠️ 필수 URL 파라미터가 누락되었습니다:', { spreadSheetId, chatId });
+        }
+    }, [spreadSheetId, chatId]);
 
     // 화면 크기 변경 시 SpreadJS 크기 조정
     useEffect(() => {
@@ -140,20 +440,24 @@ export default function MainSpreadSheet() {
         sheet.setColumnWidth(2, 200);
     };
 
-    // 파일 업로드 핸들러 (간소화됨)
+    // 통합 파일 업로드 핸들러 (단일/다중 자동 처리)
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
 
-        // 훅을 사용하여 파일 렌더링
-        await renderFile(file, spreadRef.current);
+        try {
+            // 새로운 통합 업로드 함수 사용
+            await uploadFiles(files);
+        } catch (error) {
+            // 오류는 이미 훅에서 처리됨
+        }
 
         // 파일 입력 초기화
         event.target.value = '';
     };
 
     // 새 스프레드시트 생성 (최적화됨)
-    const handleNewSpreadsheet = () => {
+    const handleNewSpreadsheet = async () => {
         if (spreadRef.current) {
             try {
                 spreadRef.current.clearSheets();
@@ -166,155 +470,42 @@ export default function MainSpreadSheet() {
                 sheet.setColumnCount(26);
                 configurePerformanceSettings(spreadRef.current);
 
-                // 렌더링 상태 초기화
-                resetState();
+                // 빈 스프레드시트로 백엔드에 생성 요청
+                try {
+                    // TODO: userId를 실제 인증된 사용자 ID로 변경 필요  
+                    // 참고: 백엔드에서는 req.user.sub에서 userId를 추출함
+                    
+                    // 새 스프레드시트의 초기 JSON 데이터 구조
+                    const initialJsonData = {
+                        fileName: '새 스프레드시트',
+                        sheets: [
+                            {
+                                name: 'Sheet1',
+                                data: {},
+                                rowCount: 100,
+                                columnCount: 26
+                            }
+                        ],
+                        createdAt: new Date().toISOString(),
+                        type: 'new_spreadsheet'
+                    };
+                    
+                    await createSheetWithDefaults(
+                        '새 스프레드시트', // 기본 파일명
+                        spreadSheetId, // URL에서 추출한 spreadSheetId
+                        chatId, // URL에서 추출한 chatId
+                        initialJsonData // 구조화된 JSON 초기 데이터
+                    );
+                } catch (error) {
+                    console.error('스프레드시트 생성 실패:', error);
+                    // createSheetWithDefaults의 onError에서 이미 처리됨
+                }
+
+                // 업로드 상태 초기화
+                resetUploadState();
                 console.log('✅ 새 스프레드시트 생성 완료 (최적화됨)');
             } catch (error) {
                 console.error('❌ 새 스프레드시트 생성 실패:', error);
-            }
-        }
-    };
-
-    // 엑셀 파일로 다운로드
-    const handleDownloadExcel = () => {
-        if (spreadRef.current) {
-            const fileName = renderState.fileName
-                ? renderState.fileName.replace(/\.[^/.]+$/, '.xlsx')
-                : 'spreadsheet.xlsx';
-
-            const exportOptions = {
-                fileType: GC.Spread.Sheets.FileType.excel,
-                includeStyles: true,
-                includeFormulas: true
-            };
-
-            console.log('📄 Excel 다운로드 시작:', fileName);
-
-            spreadRef.current.export(
-                (blob: Blob) => {
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = fileName;
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                    console.log('✅ 엑셀 파일 다운로드 완료:', fileName);
-                },
-                (error: any) => {
-                    console.error('❌ Excel 다운로드 실패:', error);
-                    alert('Excel 파일 다운로드 중 오류가 발생했습니다.');
-                },
-                exportOptions
-            );
-        }
-    };
-
-    // CSV 파일로 다운로드
-    const handleDownloadCSV = () => {
-        if (spreadRef.current) {
-            const fileName = renderState.fileName
-                ? renderState.fileName.replace(/\.[^/.]+$/, '.csv')
-                : 'spreadsheet.csv';
-
-            const exportOptions = {
-                fileType: GC.Spread.Sheets.FileType.csv
-            };
-
-            console.log('📄 CSV 다운로드 시작:', fileName);
-
-            spreadRef.current.export(
-                (blob: Blob) => {
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = fileName;
-                    link.style.display = 'none';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                    console.log('✅ CSV 파일 다운로드 완료:', fileName);
-                },
-                (error: any) => {
-                    console.error('❌ CSV 다운로드 실패:', error);
-                    alert('CSV 파일 다운로드 중 오류가 발생했습니다.');
-                },
-                exportOptions
-            );
-        }
-    };
-
-    // SJS 파일로 다운로드
-    const handleDownloadSJS = () => {
-        if (spreadRef.current) {
-            const fileName = renderState.fileName
-                ? renderState.fileName.replace(/\.[^/.]+$/, '.sjs')
-                : 'spreadsheet.sjs';
-
-            try {
-                console.log('📄 SJS 다운로드 시작:', fileName);
-
-                const jsonData = spreadRef.current.toJSON();
-                const jsonString = JSON.stringify(jsonData, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/sjs' });
-
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = fileName;
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                console.log('✅ SJS 파일 다운로드 완료:', fileName);
-            } catch (error) {
-                console.error('❌ SJS 다운로드 실패:', error);
-                alert('SJS 파일 다운로드 중 오류가 발생했습니다.');
-            }
-        }
-    };
-
-    // 일반 JSON 파일로 다운로드
-    const handleDownloadJSON = () => {
-        if (spreadRef.current) {
-            const fileName = renderState.fileName
-                ? renderState.fileName.replace(/\.[^/.]+$/, '.json')
-                : 'spreadsheet.json';
-
-            try {
-                const jsonData = spreadRef.current.toJSON({
-                    includeBindingSource: true,
-                    ignoreFormula: false,
-                    ignoreStyle: false,
-                    saveAsView: true,
-                    rowHeadersAsFrozenColumns: true,
-                    columnHeadersAsFrozenRows: true,
-                    includeAutoMergedCells: true,
-                    saveR1C1Formula: true,
-                    includeUnsupportedFormula: true,
-                    includeUnsupportedStyle: true
-                });
-
-                const jsonString = JSON.stringify(jsonData, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = fileName;
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                console.log('✅ 일반 JSON 파일 다운로드 완료:', fileName);
-            } catch (error) {
-                console.error('❌ 일반 JSON 다운로드 실패:', error);
-                alert('JSON 파일 다운로드 중 오류가 발생했습니다.');
             }
         }
     };
@@ -330,9 +521,9 @@ export default function MainSpreadSheet() {
                             onClick={() => window.location.href = '/dashboard'}
                             className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
                         >
-                            <img src="/logo.png" alt="Logo" className="h-4" />
+                            <Image src="/logo.png" alt="Logo" width={16} height={16} />
                         </button>
-                        {/* 홈으로 가기 */}
+                        
                         <button
                             onClick={() => window.location.href = '/dashboard'}
                             className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
@@ -340,23 +531,30 @@ export default function MainSpreadSheet() {
                             홈
                         </button>
 
-                        {/* 파일 업로드 */}
-                        <div className="relative">
-                            <label
-                                htmlFor="file-upload"
-                                className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md cursor-pointer inline-block"
-                            >
-                                파일 업로드
-                            </label>
-                            <input
-                                id="file-upload"
-                                type="file"
-                                accept=".xlsx,.xls,.csv,.sjs,.json"
-                                onChange={handleFileUpload}
-                                disabled={renderState.isRendering}
-                                className="hidden"
-                            />
-                        </div>
+                        {/* 통합 파일 업로드 (단일/다중 자동 처리) - 파일이 업로드되면 숨김 */}
+                        {!uploadState.fileName && (
+                            <div className="relative">
+                                <label
+                                    htmlFor="file-upload"
+                                    className={`px-2 py-1 text-sm rounded-md inline-block ${
+                                        uploadState.isUploading
+                                            ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                                            : 'text-gray-700 hover:bg-gray-100 cursor-pointer'
+                                    }`}
+                                >
+                                    파일 업로드
+                                </label>
+                                <input
+                                    id="file-upload"
+                                    type="file"
+                                    accept=".xlsx,.xls,.csv,.sjs,.json"
+                                    multiple
+                                    onChange={handleFileUpload}
+                                    disabled={uploadState.isUploading}
+                                    className="hidden"
+                                />
+                            </div>
+                        )}
 
                         {/* 내보내기 드롭다운 */}
                         <div className="relative group">
@@ -371,29 +569,22 @@ export default function MainSpreadSheet() {
                             <div className="absolute left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
                                 <div className="py-1">
                                     <button
-                                        onClick={handleDownloadExcel}
-                                        disabled={renderState.isRendering}
+                                        onClick={() => saveAsExcel()}
+                                        disabled={exportState.isExporting}
                                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Excel (.xlsx)
                                     </button>
                                     <button
-                                        onClick={handleDownloadCSV}
-                                        disabled={renderState.isRendering}
+                                        onClick={() => saveAsCSV()}
+                                        disabled={exportState.isExporting}
                                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         CSV (.csv)
                                     </button>
                                     <button
-                                        onClick={handleDownloadSJS}
-                                        disabled={renderState.isRendering}
-                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        SpreadJS (.sjs)
-                                    </button>
-                                    <button
-                                        onClick={handleDownloadJSON}
-                                        disabled={renderState.isRendering}
+                                        onClick={() => saveAsJSON()}
+                                        disabled={exportState.isExporting}
                                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         JSON (.json)
@@ -402,54 +593,88 @@ export default function MainSpreadSheet() {
                             </div>
                         </div>
 
-                        {/* 엑션AI에 피드백 남기기 */}
-                        {/* <div className="relative">
-                            <button
-                                onClick={() => window.open('https://slashpage.com/extion-cs', '_blank')}
-                                className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md cursor-pointer inline-block"
-                            >
-                                엑션AI에 대해 피드백 남기기
-                            </button>
-                        </div> */}
+                        {/* 새 스프레드시트 */}
+                        <button
+                            onClick={handleNewSpreadsheet}
+                            className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
+                        >
+                            시트 초기화
+                        </button>
+
                     </div>
 
-                    {/* 오른쪽 상태 표시 영역 - 훅의 상태 사용 */}
+                    {/* 오른쪽 상태 표시 영역 - 분리된 훅 상태 */}
                     <div className="ml-auto flex items-center space-x-4">
-                        {(renderState.isRendering || renderState.isProcessing) && (
+                        {/* 업로드/저장/생성 상태 */}
+                        {(uploadState.isUploading || uploadState.isProcessing || exportState.isExporting || isCreating) && (
                             <div className="flex items-center gap-2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                                 <span className="text-sm text-gray-600">
-                                    {renderState.isProcessing ? `처리 중... ${renderState.progress}%` : '업로드 중...'}
+                                    {isCreating ? '스프레드시트 생성 중...' :
+                                     exportState.isExporting ? '저장 중...' : 
+                                     uploadState.isProcessing ? `처리 중... ${uploadState.progress}%` : '업로드 중...'}
                                 </span>
-                                {renderState.progress > 0 && (
+                                {uploadState.progress > 0 && !exportState.isExporting && !isCreating && (
                                     <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-blue-600 transition-all duration-300"
-                                            style={{ width: `${renderState.progress}%` }}
+                                            style={{ width: `${uploadState.progress}%` }}
                                         ></div>
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {renderState.fileName && !renderState.isRendering && !renderState.isProcessing && !renderState.error && (
+                        {/* 성공 상태 */}
+                        {uploadState.fileName && !uploadState.isUploading && !uploadState.isProcessing && !uploadState.error && !exportState.isExporting && !isCreating && (
                             <div className="flex items-center gap-2">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: '#005ed9'}}>
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
                                 <span className="text-sm font-medium" style={{color: '#005ed9'}}>
-                                    {renderState.fileName}
+                                    {uploadState.fileName}
                                 </span>
                             </div>
                         )}
 
-                        {renderState.error && (
+                        {/* 스프레드시트 생성 성공 상태 */}
+                        {createdSheet && !isCreating && (
+                            <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: '#22c55e'}}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span className="text-sm font-medium" style={{color: '#22c55e'}}>
+                                    스프레드시트 생성됨
+                                </span>
+                            </div>
+                        )}
+
+                        {/* 업로드된 파일 수 */}
+                        {/* {uploadState.uploadedFiles.length > 0 && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-600">
+                                    업로드된 파일: {uploadState.uploadedFiles.length}개
+                                </span>
+                            </div>
+                        )} */}
+
+                        {/* 마지막 저장 시간 */}
+                        {exportState.lastExportedAt && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-600">
+                                    저장: {exportState.lastExportedAt.toLocaleTimeString()}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* 오류 상태 */}
+                        {(uploadState.error || exportState.error || createError) && (
                             <div className="flex items-center gap-2">
                                 <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                                 <span className="text-sm text-red-600 font-medium">
-                                    오류 발생
+                                    {createError || uploadState.error || exportState.error}
                                 </span>
                             </div>
                         )}
