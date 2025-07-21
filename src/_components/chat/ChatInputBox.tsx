@@ -10,7 +10,7 @@ interface ChatInputBoxProps {
 }
 
 type Mode = 'agent' | 'edit';
-type Model = 'claude-sonnet-4' | 'GPT-4o' | 'Gemini-2.5-pro';
+type Model = 'claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
 
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   onSendMessage,
@@ -25,6 +25,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const [showModelModal, setShowModelModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modeModalRef = useRef<HTMLDivElement>(null);
+  const modelModalRef = useRef<HTMLDivElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -71,11 +73,20 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     adjustTextareaHeight();
   }, [message]);
 
-  // 모달 외부 클릭 시 닫기
+  // 모달 외부 클릭 시 닫기 (수정된 버전)
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      setShowModeModal(false);
-      setShowModelModal(false);
+      const target = event.target as Node;
+      
+      // 모드 모달 외부 클릭 확인
+      if (showModeModal && modeModalRef.current && !modeModalRef.current.contains(target)) {
+        setShowModeModal(false);
+      }
+      
+      // 모델 모달 외부 클릭 확인
+      if (showModelModal && modelModalRef.current && !modelModalRef.current.contains(target)) {
+        setShowModelModal(false);
+      }
     };
 
     if (showModeModal || showModelModal) {
@@ -141,51 +152,50 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         <div className="px-6 py-3 flex items-center justify-between relative">
           <div className="flex items-center gap-4">
             {/* 모드 선택 */}
-            <div className="relative">
+            <div className="relative" ref={modeModalRef}>
               <button
                 onClick={() => setShowModeModal(!showModeModal)}
-                className="flex items-center gap-2 rounded-lg text-sm  text-gray-700 hover:bg-gray-200 transition-colors"
+                className="flex items-center justify-between gap-2 rounded-lg px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors w-20"
                 disabled={disabled}
               >
                 <span className="capitalize">{mode}</span>
                 <ChevronDown size={16} />
               </button>
             
-              
               {/* 모드 선택 모달 */}
               {showModeModal && (
-                <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[200px] w-max">
+                <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[200px] w-max">
                   <button
                     onClick={() => {
                       setMode('agent');
                       setShowModeModal(false);
                     }}
-                    className={`w-full text-left px-2 py-1 text-sm hover:bg-gray-100 ${
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
                       mode === 'agent' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                     }`}
                   >
-                    Agent: 자동으로 변경사항 적용
+                    Agent: 변경사항 자동 적용
                   </button>
                   <button
                     onClick={() => {
                       setMode('edit');
                       setShowModeModal(false);
                     }}
-                    className={`w-full text-left px-2 py-1 text-sm hover:bg-gray-100 ${
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
                       mode === 'edit' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                     }`}
                   >
-                    Edit: 수동으로 변경사항 적용
+                    Edit: 변경사항 수동 적용
                   </button>
                 </div>
               )}
             </div>
 
             {/* 모델 선택 */}
-            <div className="relative">
+            <div className="relative" ref={modelModalRef}>
               <button
                 onClick={() => setShowModelModal(!showModelModal)}
-                className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors"
+                className="flex items-center justify-between gap-2 rounded-lg px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors w-40"
                 disabled={disabled}
               >
                 <span className="capitalize">{model}</span>
@@ -194,7 +204,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
               
               {/* 모델 선택 모달 */}
               {showModelModal && (
-                <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10">
+                <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 ">
                   <button
                     onClick={() => {
                       setModel('claude-sonnet-4');
@@ -208,14 +218,14 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                   </button>
                   <button
                     onClick={() => {
-                      setModel('GPT-4o');
+                      setModel('OpenAi-GPT-4o');
                       setShowModelModal(false);
                     }}
                     className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                      model === 'GPT-4o' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                      model === 'OpenAi-GPT-4o' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                     }`}
                   >
-                    GPT-4o
+                    OpenAi-GPT-4o
                   </button>
                   <button
                     onClick={() => {

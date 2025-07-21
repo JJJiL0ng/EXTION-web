@@ -4,6 +4,7 @@
 import MainChattingContainer from "@/_components/chat/MainChattingContainer";
 import dynamic from "next/dynamic";
 import React, { useState, useRef, useCallback } from "react";
+import ChatInputBox from "../../../../../_components/chat/ChatInputBox";
 
 const MainSpreadSheet = dynamic(
   () => {
@@ -82,7 +83,7 @@ export default function Home() {
         className="h-screen overflow-hidden"
         style={{ width: `${100 - leftWidth}%` }}
       >
-          <MainChattingContainer />
+          <ChatInputBox />
       </div>
     </div>
   );
