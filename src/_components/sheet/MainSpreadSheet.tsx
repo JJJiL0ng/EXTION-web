@@ -9,6 +9,7 @@ import { useParams } from 'next/navigation';
 import { useFileUpload } from '../../_hooks/sheet/useFileUpload';
 import { useFileExport } from '../../_hooks/sheet/useFileExport';
 import { useSheetCreate } from '../../_hooks/sheet/useSheetCreate';
+import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 
 // SpreadJS 라이선싱
 // var SpreadJSKey = "xxx";          // 라이선스 키 입력
@@ -20,6 +21,18 @@ export default function MainSpreadSheet() {
     const params = useParams();
     const spreadSheetId = params.SpreadSheetId as string;
     const chatId = params.ChatId as string;
+
+    // 채팅 가시성 제어
+    const { isChatVisible, showChat } = useChatVisibility();
+    
+    // Chat 버튼 표시 상태 (지연된 렌더링용)
+    const [showChatButton, setShowChatButton] = useState(!isChatVisible);
+
+    // AI 버튼 클릭 핸들러 - 즉시 버튼 숨김
+    const handleShowChat = () => {
+        setShowChatButton(false); // 즉시 버튼 제거
+        showChat(); // 채팅 열기
+    };
 
     const [hostStyle, setHostStyle] = useState({
         width: '100vw',
@@ -53,14 +66,14 @@ export default function MainSpreadSheet() {
     const convertFileDataToJson = useCallback(async (fileData: any, fileName: string): Promise<Record<string, any>> => {
         try {
             // 이미 JSON 객체인 경우 그대로 반환 (Blob이나 File 객체가 아닌 경우)
-            if (typeof fileData === 'object' && fileData !== null && 
+            if (typeof fileData === 'object' && fileData !== null &&
                 !(fileData instanceof Blob) && !(fileData instanceof File)) {
                 return fileData;
             }
 
             // 파일 확장자 확인
             const fileExtension = fileName.toLowerCase().split('.').pop();
-            
+
             // Excel 파일 (.xlsx, .xls) 처리
             if (fileExtension === 'xlsx' || fileExtension === 'xls') {
                 return new Promise((resolve, reject) => {
@@ -71,7 +84,7 @@ export default function MainSpreadSheet() {
 
                     // 임시 워크북 생성
                     const tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
-                    
+
                     tempWorkbook.import(
                         fileData,
                         (result: any) => {
@@ -110,8 +123,8 @@ export default function MainSpreadSheet() {
                             reject(new Error(`Excel 파일 변환 실패: ${error.message || error}`));
                         },
                         {
-                            fileType: fileExtension === 'xlsx' ? 
-                                GC.Spread.Sheets.FileType.excel : 
+                            fileType: fileExtension === 'xlsx' ?
+                                GC.Spread.Sheets.FileType.excel :
                                 GC.Spread.Sheets.FileType.excel
                         }
                     );
@@ -128,7 +141,7 @@ export default function MainSpreadSheet() {
 
                     // 임시 워크북 생성
                     const tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
-                    
+
                     tempWorkbook.import(
                         fileData,
                         (result: any) => {
@@ -222,7 +235,7 @@ export default function MainSpreadSheet() {
                     }
                 }
             }
-            
+
             // 문자열인 경우 JSON 파싱 시도
             if (typeof fileData === 'string') {
                 try {
@@ -245,7 +258,7 @@ export default function MainSpreadSheet() {
                     };
                 }
             }
-            
+
             // 기타 타입의 경우 기본 구조로 감싸서 반환
             return {
                 fileName: fileName,
@@ -277,17 +290,17 @@ export default function MainSpreadSheet() {
         allowedExtensions: ['xlsx', 'xls', 'csv', 'json'],
         onUploadSuccess: async (fileName: string, fileData: any) => {
             console.log(`✅ 파일 업로드 성공: ${fileName}`);
-            
+
             // 파일 업로드 후 스프레드시트 생성 API 호출
             try {
                 // TODO: userId를 실제 인증된 사용자 ID로 변경 필요
                 // 참고: 백엔드에서는 req.user.sub에서 userId를 추출함
                 const userId = 'qweqwe12'; // 임시 하드코딩
-                
+
                 // 파일 데이터를 JSON으로 변환 (async 함수이므로 await 사용)
                 const jsonData = await convertFileDataToJson(fileData, fileName);
                 console.log('🔄 JSON 변환된 데이터:', jsonData);
-                
+
                 await createSheetWithDefaults(
                     fileName, // 업로드된 파일명을 스프레드시트명으로 사용
                     spreadSheetId, // URL에서 추출한 spreadSheetId
@@ -348,7 +361,7 @@ export default function MainSpreadSheet() {
     // URL 파라미터 확인 및 디버깅
     useEffect(() => {
         console.log('🔍 URL 파라미터 확인:', { spreadSheetId, chatId });
-        
+
         if (!spreadSheetId || !chatId) {
             console.warn('⚠️ 필수 URL 파라미터가 누락되었습니다:', { spreadSheetId, chatId });
         }
@@ -363,7 +376,7 @@ export default function MainSpreadSheet() {
                 minWidth: '100%',
                 boxSizing: 'border-box' as const,
             });
-            
+
             // SpreadJS 인스턴스가 있으면 리사이즈
             if (spreadRef.current) {
                 setTimeout(() => {
@@ -375,6 +388,21 @@ export default function MainSpreadSheet() {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리
+    useEffect(() => {
+        if (isChatVisible) {
+            // 채팅이 열릴 때는 handleShowChat에서 이미 처리했으므로 아무것도 하지 않음
+            return;
+        } else {
+            // 채팅이 닫힐 때는 300ms 지연 후 버튼 표시 (채팅 닫힘 애니메이션 시간과 맞춤)
+            const timer = setTimeout(() => {
+                setShowChatButton(true);
+            }, 300); // 300ms 지연
+
+            return () => clearTimeout(timer);
+        }
+    }, [isChatVisible]);
 
     const initSpread = function (spread: any) {
         try {
@@ -474,7 +502,7 @@ export default function MainSpreadSheet() {
                 try {
                     // TODO: userId를 실제 인증된 사용자 ID로 변경 필요  
                     // 참고: 백엔드에서는 req.user.sub에서 userId를 추출함
-                    
+
                     // 새 스프레드시트의 초기 JSON 데이터 구조
                     const initialJsonData = {
                         fileName: '새 스프레드시트',
@@ -489,7 +517,7 @@ export default function MainSpreadSheet() {
                         createdAt: new Date().toISOString(),
                         type: 'new_spreadsheet'
                     };
-                    
+
                     await createSheetWithDefaults(
                         '새 스프레드시트', // 기본 파일명
                         spreadSheetId, // URL에서 추출한 spreadSheetId
@@ -514,16 +542,16 @@ export default function MainSpreadSheet() {
         <div className="w-full h-screen box-border flex flex-col border-4 border-rounded border-gray-500 bg-gray-50">
             {/* 구글 스프레드시트 스타일 상단 바 */}
             <div className="flex-shrink-0">
-                <div className="w-full h-6 bg-white border-b border-gray-200 flex items-center px-4 box-border">
+                <div className="w-full h-6 bg-white border-b border-gray-200 flex items-center px-2 box-border">
                     <div className="flex items-center space-x-6">
                         {/* 홈으로 가기 */}
                         <button
                             onClick={() => window.location.href = '/dashboard'}
-                            className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
+                            className="px-2 pl-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
                         >
                             <Image src="/logo.png" alt="Logo" width={16} height={16} />
                         </button>
-                        
+
                         <button
                             onClick={() => window.location.href = '/dashboard'}
                             className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
@@ -536,11 +564,10 @@ export default function MainSpreadSheet() {
                             <div className="relative">
                                 <label
                                     htmlFor="file-upload"
-                                    className={`px-2 py-1 text-sm rounded-md inline-block ${
-                                        uploadState.isUploading
+                                    className={`px-2 py-1 text-sm rounded-md inline-block ${uploadState.isUploading
                                             ? 'text-gray-400 cursor-not-allowed bg-gray-50'
                                             : 'text-gray-700 hover:bg-gray-100 cursor-pointer'
-                                    }`}
+                                        }`}
                                 >
                                     파일 업로드
                                 </label>
@@ -603,16 +630,18 @@ export default function MainSpreadSheet() {
 
                     </div>
 
+
+
                     {/* 오른쪽 상태 표시 영역 - 분리된 훅 상태 */}
-                    <div className="ml-auto flex items-center space-x-4">
+                    <div className="flex items-center space-x-4">
                         {/* 업로드/저장/생성 상태 */}
                         {(uploadState.isUploading || uploadState.isProcessing || exportState.isExporting || isCreating) && (
                             <div className="flex items-center gap-2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                                 <span className="text-sm text-gray-600">
                                     {isCreating ? '스프레드시트 생성 중...' :
-                                     exportState.isExporting ? '저장 중...' : 
-                                     uploadState.isProcessing ? `처리 중... ${uploadState.progress}%` : '업로드 중...'}
+                                        exportState.isExporting ? '저장 중...' :
+                                            uploadState.isProcessing ? `처리 중... ${uploadState.progress}%` : '업로드 중...'}
                                 </span>
                                 {uploadState.progress > 0 && !exportState.isExporting && !isCreating && (
                                     <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -628,10 +657,10 @@ export default function MainSpreadSheet() {
                         {/* 성공 상태 */}
                         {uploadState.fileName && !uploadState.isUploading && !uploadState.isProcessing && !uploadState.error && !exportState.isExporting && !isCreating && (
                             <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: '#005ed9'}}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#005ed9' }}>
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span className="text-sm font-medium" style={{color: '#005ed9'}}>
+                                <span className="text-sm font-medium" style={{ color: '#005ed9' }}>
                                     {uploadState.fileName}
                                 </span>
                             </div>
@@ -640,10 +669,10 @@ export default function MainSpreadSheet() {
                         {/* 스프레드시트 생성 성공 상태 */}
                         {createdSheet && !isCreating && (
                             <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: '#22c55e'}}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#22c55e' }}>
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span className="text-sm font-medium" style={{color: '#22c55e'}}>
+                                <span className="text-sm font-medium" style={{ color: '#22c55e' }}>
                                     스프레드시트 생성됨
                                 </span>
                             </div>
@@ -679,6 +708,24 @@ export default function MainSpreadSheet() {
                             </div>
                         )}
                     </div>
+                    {/* Chat 버튼 - 채팅이 숨겨져 있을 때만 표시 (지연된 렌더링) */}
+                    {showChatButton && (
+                        <div className="ml-auto py-3 transition-all duration-500 ease-in-out opacity-100 translate-x-0 scale-100">
+                            <button
+                                onClick={handleShowChat}
+                                style={{ backgroundColor: '#005ed9' }}
+                                className="flex items-center gap-1 px-3 py-0 text-sm text-white bg-gray-500 hover:bg-[#005ed9] rounded-md transition-all duration-200 hover:scale-105"
+                            >
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.97 4.29L1 23l6.71-1.97C9.02 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.38 0-2.68-.33-3.83-.91L4 20l.91-4.17C4.33 14.68 4 13.38 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z" />
+                                    <circle cx="8.5" cy="12" r="1" />
+                                    <circle cx="12" cy="12" r="1" />
+                                    <circle cx="15.5" cy="12" r="1" />
+                                </svg>
+                                AI
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 

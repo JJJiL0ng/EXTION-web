@@ -10,7 +10,7 @@ interface ChatInputBoxProps {
 }
 
 type Mode = 'agent' | 'edit';
-type Model = 'claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
+type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
 
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   onSendMessage,
@@ -20,7 +20,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [mode, setMode] = useState<Mode>('agent');
-  const [model, setModel] = useState<Model>('claude-sonnet-4');
+  const [model, setModel] = useState<Model>('Claude-sonnet-4');
   const [showModeModal, setShowModeModal] = useState(false);
   const [showModelModal, setShowModelModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,7 +135,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         </div>
 
         {/* 메인 입력 영역 */}
-        <div className="px-4 py-2">
+        <div className="px-4 py-[8px]">
           <textarea
             ref={textareaRef}
             value={message}
@@ -207,11 +207,11 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                 <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 ">
                   <button
                     onClick={() => {
-                      setModel('claude-sonnet-4');
+                      setModel('Claude-sonnet-4');
                       setShowModelModal(false);
                     }}
                     className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                      model === 'claude-sonnet-4' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                      model === 'Claude-sonnet-4' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                     }`}
                   >
                     Claude-sonnet-4
