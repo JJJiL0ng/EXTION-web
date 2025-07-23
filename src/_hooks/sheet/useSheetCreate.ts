@@ -73,12 +73,14 @@ export const useSheetCreate = (options?: UseSheetCreateOptions) => {
     fileName: string,
     spreadSheetId: string,
     chatId: string,
+    userId: string,
     initialData: Record<string, any> = {}
   ) => {
     const request: CreateSpreadSheetRequest = {
       fileName,
       spreadsheetId: spreadSheetId, // 백엔드 형식에 맞게 변경
       chatId,
+      userId,
       initialData,
     };
     

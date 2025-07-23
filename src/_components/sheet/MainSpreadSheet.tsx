@@ -10,6 +10,9 @@ import { useFileUpload } from '../../_hooks/sheet/useFileUpload';
 import { useFileExport } from '../../_hooks/sheet/useFileExport';
 import { useSheetCreate } from '../../_hooks/sheet/useSheetCreate';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
+import { useAuthStore } from '@/stores/authStore';
+import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadSheetUploadStore';
+import { getOrCreateGuestId } from '@/_utils/guestUtils';
 
 // SpreadJS 라이선싱
 // var SpreadJSKey = "xxx";          // 라이선스 키 입력
@@ -24,6 +27,23 @@ export default function MainSpreadSheet() {
 
     // 채팅 가시성 제어
     const { isChatVisible, showChat } = useChatVisibility();
+    
+    // 파일 업로드 상태 관리 (Zustand)
+    const { isFileUploaded, setIsFileUploaded } = useSpreadsheetUploadStore();
+    
+    // 인증 상태 관리
+    const { user } = useAuthStore();
+    
+    // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
+    const getUserId = useCallback(() => {
+        if (user?.uid) {
+            // 로그인된 사용자의 경우 Firebase uid 사용
+            return user.uid;
+        } else {
+            // 비로그인 사용자의 경우 guest ID 생성/사용
+            return getOrCreateGuestId();
+        }
+    }, [user?.uid]);
     
     // Chat 버튼 표시 상태 (지연된 렌더링용)
     const [showChatButton, setShowChatButton] = useState(!isChatVisible);
@@ -291,11 +311,14 @@ export default function MainSpreadSheet() {
         onUploadSuccess: async (fileName: string, fileData: any) => {
             console.log(`✅ 파일 업로드 성공: ${fileName}`);
 
+            // 파일 업로드 상태 업데이트
+            setIsFileUploaded(true, fileName);
+
             // 파일 업로드 후 스프레드시트 생성 API 호출
             try {
-                // TODO: userId를 실제 인증된 사용자 ID로 변경 필요
-                // 참고: 백엔드에서는 req.user.sub에서 userId를 추출함
-                const userId = 'qweqwe12'; // 임시 하드코딩
+                // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
+                const userId = getUserId();
+                console.log('🔍 사용자 ID:', userId, user?.uid ? '(로그인)' : '(게스트)');
 
                 // 파일 데이터를 JSON으로 변환 (async 함수이므로 await 사용)
                 const jsonData = await convertFileDataToJson(fileData, fileName);
@@ -305,6 +328,7 @@ export default function MainSpreadSheet() {
                     fileName, // 업로드된 파일명을 스프레드시트명으로 사용
                     spreadSheetId, // URL에서 추출한 spreadSheetId
                     chatId, // URL에서 추출한 chatId
+                    userId, // 사용자 ID (로그인 또는 게스트)
                     jsonData // JSON으로 변환된 파일 데이터를 초기 데이터로 사용
                 );
             } catch (error) {
@@ -389,6 +413,24 @@ export default function MainSpreadSheet() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // 파일 업로드 모달 상태
+    const [showUploadModal, setShowUploadModal] = useState(false);
+
+    // 파일 업로드 상태에 따른 모달 표시/숨김 처리
+    useEffect(() => {
+        if (!isFileUploaded) {
+            // 파일이 업로드되지 않았다면 모달 표시
+            const timer = setTimeout(() => {
+                setShowUploadModal(true);
+            }, 500); // 컴포넌트가 완전히 렌더링된 후 실행
+
+            return () => clearTimeout(timer);
+        } else {
+            // 파일이 업로드되었다면 모달 숨김
+            setShowUploadModal(false);
+        }
+    }, [isFileUploaded]); // isFileUploaded 상태 변화 감지
+
     // 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리
     useEffect(() => {
         if (isChatVisible) {
@@ -468,6 +510,37 @@ export default function MainSpreadSheet() {
         sheet.setColumnWidth(2, 200);
     };
 
+    // 파일 업로드 모달에서 파일 선택 버튼 클릭
+    const handleUploadButtonClick = () => {
+        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+        if (fileInput && !uploadState.isUploading) {
+            // 파일 선택 취소 감지를 위한 이벤트 리스너 추가
+            const handleCancel = () => {
+                // 파일 선택이 취소되었는지 확인 (약간의 지연 후)
+                setTimeout(() => {
+                    if (!fileInput.files || fileInput.files.length === 0) {
+                        // 파일이 선택되지 않았다면 모달 다시 표시
+                        if (!isFileUploaded) {
+                            setShowUploadModal(true);
+                        }
+                    }
+                }, 100);
+                
+                // 이벤트 리스너 제거
+                fileInput.removeEventListener('cancel', handleCancel);
+                window.removeEventListener('focus', handleCancel);
+            };
+
+            // 파일 선택 취소 이벤트 리스너 등록
+            fileInput.addEventListener('cancel', handleCancel);
+            // 윈도우 포커스로도 취소 감지 (일부 브라우저에서 cancel 이벤트가 작동하지 않을 수 있음)
+            window.addEventListener('focus', handleCancel);
+            
+            fileInput.click();
+            setShowUploadModal(false); // 모달 닫기
+        }
+    };
+
     // 통합 파일 업로드 핸들러 (단일/다중 자동 처리)
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
@@ -500,8 +573,9 @@ export default function MainSpreadSheet() {
 
                 // 빈 스프레드시트로 백엔드에 생성 요청
                 try {
-                    // TODO: userId를 실제 인증된 사용자 ID로 변경 필요  
-                    // 참고: 백엔드에서는 req.user.sub에서 userId를 추출함
+                    // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
+                    const userId = getUserId();
+                    console.log('🔍 새 스프레드시트 생성 - 사용자 ID:', userId, user?.uid ? '(로그인)' : '(게스트)');
 
                     // 새 스프레드시트의 초기 JSON 데이터 구조
                     const initialJsonData = {
@@ -522,6 +596,7 @@ export default function MainSpreadSheet() {
                         '새 스프레드시트', // 기본 파일명
                         spreadSheetId, // URL에서 추출한 spreadSheetId
                         chatId, // URL에서 추출한 chatId
+                        userId, // 사용자 ID (로그인 또는 게스트)
                         initialJsonData // 구조화된 JSON 초기 데이터
                     );
                 } catch (error) {
@@ -559,29 +634,16 @@ export default function MainSpreadSheet() {
                             홈
                         </button>
 
-                        {/* 통합 파일 업로드 (단일/다중 자동 처리) - 파일이 업로드되면 숨김 */}
-                        {!uploadState.fileName && (
-                            <div className="relative">
-                                <label
-                                    htmlFor="file-upload"
-                                    className={`px-2 py-1 text-sm rounded-md inline-block ${uploadState.isUploading
-                                            ? 'text-gray-400 cursor-not-allowed bg-gray-50'
-                                            : 'text-gray-700 hover:bg-gray-100 cursor-pointer'
-                                        }`}
-                                >
-                                    파일 업로드
-                                </label>
-                                <input
-                                    id="file-upload"
-                                    type="file"
-                                    accept=".xlsx,.xls,.csv,.sjs,.json"
-                                    multiple
-                                    onChange={handleFileUpload}
-                                    disabled={uploadState.isUploading}
-                                    className="hidden"
-                                />
-                            </div>
-                        )}
+                        {/* 숨겨진 파일 업로드 input */}
+                        <input
+                            id="file-upload"
+                            type="file"
+                            accept=".xlsx,.xls,.csv,.sjs,.json"
+                            multiple
+                            onChange={handleFileUpload}
+                            disabled={uploadState.isUploading}
+                            className="hidden"
+                        />
 
                         {/* 내보내기 드롭다운 */}
                         <div className="relative group">
@@ -738,6 +800,34 @@ export default function MainSpreadSheet() {
                     hostStyle={hostStyle}>
                 </SpreadSheets>
             </div>
+
+            {/* 파일 업로드 확인 모달 */}
+            {showUploadModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+                        <div className="flex items-center mb-4">
+                            <svg className="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <h3 className="text-lg font-semibold text-gray-900">파일 업로드</h3>
+                        </div>
+                        
+                        <p className="text-gray-600 mb-6">
+                            파일을 업로드하세요
+                        </p>
+                        
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={handleUploadButtonClick}
+                                className="flex-1 text-white px-4 py-2 rounded-md hover:bg-[#005ed9] transition-colors"
+                                style={{ backgroundColor: '#005ed9' }}
+                            >
+                                로컬 파일에서 선택
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

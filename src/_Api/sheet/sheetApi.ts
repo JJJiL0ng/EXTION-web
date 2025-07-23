@@ -78,6 +78,7 @@ export interface CreateSpreadSheetRequest {
   fileName: string;
   spreadsheetId: string; // 백엔드와 일치하도록 수정 (spreadSheetId → spreadsheetId)
   chatId: string;
+  userId: string;
   initialData: Record<string, any>;
 }
 
