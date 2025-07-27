@@ -11,7 +11,7 @@ import { useFileExport } from '../../_hooks/sheet/useFileExport';
 import { useSheetCreate } from '../../_hooks/sheet/useSheetCreate';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useAuthStore } from '@/stores/authStore';
-import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadSheetUploadStore';
+import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
 
 // SpreadJS 라이선싱
