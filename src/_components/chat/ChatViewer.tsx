@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useRef, useEffect } from 'react';
-import { useMainChat, useChatStore } from '../../_hooks/chat/useChatStore';
+import { useChatStore } from '../../_hooks/chat/useChatStore';
 import { StreamingMarkdown } from './message/StreamingMarkdown';
 import { FileUploadWelcomeMessage } from './FileUploadWelcomeMessage';
-import { ChatInitMode } from '../../_types/chat.types';
+import { ChatInitMode, MessageType } from '../../_types/chat.types';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
 
 interface ChatViewerProps {
@@ -14,11 +14,8 @@ interface ChatViewerProps {
 const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // v2 호환 채팅 훅 사용
-  const { messages, error } = useMainChat(userId);
-  
-  // v2 스토어에서 초기화 모드와 파일 정보 가져오기
-  const { initMode, fileInfo } = useChatStore();
+  // V2 스토어에서 직접 데이터 가져오기
+  const { messages, error, initMode, fileInfo } = useChatStore();
 
   // 새 메시지가 올 때마다 스크롤을 맨 아래로
   useEffect(() => {
@@ -46,22 +43,22 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
             <div
               key={message.id}
               className={`flex ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
+                message.type === MessageType.USER ? 'justify-end' : 'justify-start'
               }`}
             >
               <div
                 className={`max-w-3xl rounded-lg px-4 py-2 ${
-                  message.role === 'user'
+                  message.type === MessageType.USER
                     ? 'bg-blue-500 text-white'
                     : 'bg-gray-100 text-gray-900'
                 }`}
               >
-                {message.role === 'user' ? (
+                {message.type === MessageType.USER ? (
                   <div className="whitespace-pre-wrap">{message.content}</div>
                 ) : (
                   <StreamingMarkdown
                     content={message.content}
-                    isStreaming={message.isTyping}
+                    isStreaming={message.status === 'streaming'}
                     className="text-gray-900"
                   />
                 )}
@@ -69,7 +66,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
                 {/* 메시지 타임스탬프 */}
                 <div
                   className={`text-xs mt-1 ${
-                    message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                    message.type === MessageType.USER ? 'text-blue-100' : 'text-gray-500'
                   }`}
                 >
                   {new Date(message.timestamp).toLocaleTimeString('ko-KR', {
@@ -87,7 +84,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
           <div className="flex justify-center">
             <div className="bg-red-100 border border-red-300 rounded-lg px-4 py-2 text-red-700">
               <div className="font-medium">오류가 발생했습니다</div>
-              <div className="text-sm">{error}</div>
+              <div className="text-sm">{error.message}</div>
             </div>
           </div>
         )}
