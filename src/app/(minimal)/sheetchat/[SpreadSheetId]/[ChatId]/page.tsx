@@ -4,8 +4,11 @@
 import MainChattingContainer from "@/_components/chat/MainChattingContainer";
 import FileUploadContainer from "@/_components/chat/FileUploadChattingContainer";
 import dynamic from "next/dynamic";
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisibilityContext";
+import { useParams } from "next/navigation";
+import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
+import useChatStore from "@/_store/chat/chatIdStore";
 
 
 const MainSpreadSheet = dynamic(
@@ -16,9 +19,35 @@ const MainSpreadSheet = dynamic(
 );
 
 export default function Home() {
+  const params = useParams();
+  const { setSpreadsheetId } = useSpreadsheetIdStore();
+  const { setChatId } = useChatStore();
+  
   const [leftWidth, setLeftWidth] = useState(75); // 초기값 70%
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // URL 파라미터에서 spreadsheetId와 chatId를 추출하여 store에 저장
+  useEffect(() => {
+    console.log('🔍 [Page] URL Parameters:', { params });
+    
+    if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
+      console.log('📊 [Page] Setting spreadsheetId:', params.SpreadSheetId);
+      setSpreadsheetId(params.SpreadSheetId);
+    }
+    
+    if (params?.ChatId && typeof params.ChatId === 'string') {
+      console.log('💬 [Page] Setting chatId:', params.ChatId);
+      setChatId(params.ChatId);
+    }
+
+    // 저장된 값 확인
+    setTimeout(() => {
+      const { spreadsheetId } = useSpreadsheetIdStore.getState();
+      const { chatId } = useChatStore.getState();
+      console.log('✅ [Page] Stored values:', { spreadsheetId, chatId });
+    }, 100);
+  }, [params, setSpreadsheetId, setChatId]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

@@ -40,7 +40,9 @@ export const useSheetCreate = (options?: UseSheetCreateOptions) => {
     }));
 
     try {
+      console.log('백엔드로 전송하는 스프레드시트 생성 요청 데이터:', request);
       const response = await SheetAPI.createSpreadSheet(request);
+      console.log('백엔드에서 받은 응답:', response);
       
       if (response.success) {
         setState(prev => ({
@@ -83,6 +85,8 @@ export const useSheetCreate = (options?: UseSheetCreateOptions) => {
       userId,
       initialData,
     };
+    
+    console.log('createSheetWithDefaults로 생성된 요청 데이터:', request);
     
     return createSheet(request);
   }, [createSheet]);

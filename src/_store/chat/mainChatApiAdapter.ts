@@ -15,6 +15,9 @@ import {
   MessageStatus,
   ChatSessionStatus
 } from '../../_types/chat.types'
+import useChatStore from './chatIdStore'
+import useSpreadsheetIdStore from '../sheet/spreadSheetIdStore'
+import { getOrCreateGuestId } from '../../_utils/guestUtils'
 
 /**
  * mainChatApi를 v2 인터페이스에 맞게 어댑터
@@ -30,8 +33,11 @@ export class MainChatApiAdapter {
    * 채팅 세션 생성 (실제로는 첫 메시지 전송 시 생성됨)
    */
   async createChat(request: CreateChatRequest): Promise<CreateChatResponse> {
-    // mainChatApi는 세션을 미리 생성하지 않고 첫 메시지 전송 시 생성
-    const chatId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    // 전역 상태에서 chatId 가져오기
+    const { chatId: globalChatId } = useChatStore.getState()
+    
+    // 전역 상태의 chatId 사용, 없으면 새로 생성
+    const chatId = globalChatId || `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
     return {
       chatId,
@@ -44,13 +50,17 @@ export class MainChatApiAdapter {
    * 채팅 세션 목록 로드 (Mock 데이터)
    */
   async loadChats(): Promise<LoadChatsResponse> {
+    // 전역 상태에서 chatId와 spreadsheetId 가져오기
+    const { chatId: globalChatId } = useChatStore.getState()
+    const { spreadsheetId: globalSpreadsheetId } = useSpreadsheetIdStore.getState()
+    
     // mainChatApi에서는 getUserChats 메서드 사용
     // 현재는 Mock 데이터로 대체
     await new Promise(resolve => setTimeout(resolve, 300))
     
     const sessions: ChatSession[] = [
       {
-        id: 'session_1',
+        id: globalChatId || 'session_1',
         title: '엑셀 데이터 분석',
         status: ChatSessionStatus.ACTIVE,
         createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -80,6 +90,13 @@ export class MainChatApiAdapter {
    * 메시지 목록 로드 (Mock 데이터)
    */
   async loadMessages(sessionId: string): Promise<LoadMessagesResponse> {
+    // 전역 상태에서 chatId와 spreadsheetId 가져오기
+    const { chatId: globalChatId } = useChatStore.getState()
+    const { spreadsheetId: globalSpreadsheetId } = useSpreadsheetIdStore.getState()
+    
+    // 전역 상태의 chatId 사용, 없으면 sessionId 사용
+    const chatId = globalChatId || sessionId
+    
     // mainChatApi에서는 getChatHistory 메서드 사용
     // 현재는 Mock 데이터로 대체
     await new Promise(resolve => setTimeout(resolve, 200))
@@ -87,7 +104,7 @@ export class MainChatApiAdapter {
     const messages: ChatMessage[] = [
       {
         id: `msg_${Date.now()}_1`,
-        chatId: sessionId,
+        chatId: chatId,
         type: MessageType.USER,
         content: '안녕하세요! 도움이 필요합니다.',
         status: MessageStatus.COMPLETED,
@@ -95,7 +112,7 @@ export class MainChatApiAdapter {
       },
       {
         id: `msg_${Date.now()}_2`,
-        chatId: sessionId,
+        chatId: chatId,
         type: MessageType.ASSISTANT,
         content: '안녕하세요! 어떤 도움이 필요하신지 말씀해 주세요.',
         status: MessageStatus.COMPLETED,
@@ -114,13 +131,34 @@ export class MainChatApiAdapter {
    * 메시지 전송
    */
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
+    // 전역 상태에서 chatId와 spreadsheetId 가져오기
+    const { chatId: globalChatId } = useChatStore.getState()
+    const { spreadsheetId: globalSpreadsheetId } = useSpreadsheetIdStore.getState()
+    
+    console.log('🔍 [MainChatApiAdapter] sendMessage - Global state values:', {
+      globalChatId,
+      globalSpreadsheetId,
+      requestChatId: request.chatId,
+      requestSpreadSheetId: request.spreadSheetId
+    });
+    
+    // 요청에서 온 값 또는 전역 상태값 사용 (null을 undefined로 변환)
+    const chatId = request.chatId || globalChatId || undefined
+    const spreadsheetId = request.spreadSheetId || globalSpreadsheetId || undefined
+
+    console.log('📤 [MainChatApiAdapter] sendMessage - Final values:', {
+      chatId,
+      spreadsheetId
+    });
+
     // mainChatApi의 ChatRequest 형식으로 변환
+    const userId = getOrCreateGuestId(); // Guest ID 사용
     const chatRequest: ChatRequest = createChatRequest(
       request.content,
-      'default-user', // 실제로는 request에서 userId를 받아야 함
+      userId,
       {
-        chatId: request.chatId,
-        spreadsheetId: request.spreadSheetId
+        chatId: chatId,
+        spreadsheetId: spreadsheetId
       }
     )
 
@@ -128,7 +166,7 @@ export class MainChatApiAdapter {
     
     return {
       messageId,
-      chatId: request.chatId || `new_chat_${Date.now()}`,
+      chatId: chatId || `new_chat_${Date.now()}`,
       status: 'accepted',
       streamUrl: `/api/chat/stream/${messageId}`
     }
@@ -148,12 +186,33 @@ export class MainChatApiAdapter {
       timestamp: new Date().toISOString()
     });
 
+    // 전역 상태에서 chatId와 spreadsheetId 가져오기
+    const { chatId: globalChatId } = useChatStore.getState()
+    const { spreadsheetId: globalSpreadsheetId } = useSpreadsheetIdStore.getState()
+    
+    console.log('🔍 [MainChatApiAdapter] streamChat - Global state values:', {
+      globalChatId,
+      globalSpreadsheetId,
+      requestChatId: request.chatId,
+      requestSpreadSheetId: request.spreadSheetId
+    });
+    
+    // 요청에서 온 값 또는 전역 상태값 사용 (null을 undefined로 변환)
+    const chatId = request.chatId || globalChatId || undefined
+    const spreadsheetId = request.spreadSheetId || globalSpreadsheetId || undefined
+
+    console.log('📤 [MainChatApiAdapter] streamChat - Final values:', {
+      chatId,
+      spreadsheetId
+    });
+
+    const userId = getOrCreateGuestId(); // Guest ID 사용
     const chatRequest: ChatRequest = createChatRequest(
       request.content,
-      'default-user',
+      userId,
       {
-        chatId: request.chatId,
-        spreadsheetId: request.spreadSheetId
+        chatId: chatId,
+        spreadsheetId: spreadsheetId
       }
     )
 

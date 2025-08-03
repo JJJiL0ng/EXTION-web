@@ -6,6 +6,7 @@ import ChatViewer from "./ChatViewer";
 import ChatTabBar from "./ChatTabBar";
 import { ChatInitMode, UploadedFileInfo } from "../../_types/chat.types";
 import { useChatFlow, useChatStore } from "../../_hooks/chat/useChatStore";
+import { getOrCreateGuestId } from "../../_utils/guestUtils";
 
 interface FileUploadChattingContainerProps {
   initMode?: ChatInitMode;
@@ -18,7 +19,7 @@ export default function FileUploadChattingContainer({
   initMode = ChatInitMode.FILE_UPLOAD,
   fileInfo,
   spreadSheetId,
-  userId = 'default-user'
+  userId = getOrCreateGuestId() // Guest ID 사용
 }: FileUploadChattingContainerProps) {
 
   // v2 채팅 플로우 훅 사용

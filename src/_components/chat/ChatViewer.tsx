@@ -5,12 +5,13 @@ import { useMainChat, useChatStore } from '../../_hooks/chat/useChatStore';
 import { StreamingMarkdown } from './message/StreamingMarkdown';
 import { FileUploadWelcomeMessage } from './FileUploadWelcomeMessage';
 import { ChatInitMode } from '../../_types/chat.types';
+import { getOrCreateGuestId } from '../../_utils/guestUtils';
 
 interface ChatViewerProps {
   userId?: string;
 }
 
-const ChatViewer: React.FC<ChatViewerProps> = ({ userId = 'default-user' }) => {
+const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // v2 호환 채팅 훅 사용

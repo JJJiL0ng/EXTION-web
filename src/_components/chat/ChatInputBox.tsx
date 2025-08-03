@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Send, Paperclip, Settings, ChevronDown } from 'lucide-react';
 import { useMainChat } from '../../_hooks/chat/useChatStore';
+import { getOrCreateGuestId } from '../../_utils/guestUtils';
 
 interface ChatInputBoxProps {
   onSendMessage?: (message: string, mode: string, model: string, selectedFile?: File) => void;
@@ -18,7 +19,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   onSendMessage,
   placeholder = "메시지를 입력하세요...",
   disabled = false,
-  userId = 'default-user'
+  userId = getOrCreateGuestId() // Guest ID 사용
 }) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
