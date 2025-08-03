@@ -2,6 +2,7 @@
 
 
 import MainChattingContainer from "@/_components/chat/MainChattingContainer";
+import FileUploadContainer from "@/_components/chat/FileUploadChattingContainer";
 import dynamic from "next/dynamic";
 import React, { useState, useRef, useCallback } from "react";
 import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisibilityContext";
@@ -121,7 +122,7 @@ function HomeContent({
           className="h-screen overflow-hidden transition-all duration-300"
           style={{ width: `${100 - leftWidth}%` }}
         >
-          <MainChattingContainer />
+          <FileUploadContainer />
         </div>
       )}
     </div>

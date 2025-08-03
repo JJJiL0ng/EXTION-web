@@ -2,11 +2,13 @@
 
 import React, { useState, useRef } from 'react';
 import { Send, Paperclip, Settings, ChevronDown } from 'lucide-react';
+import { useMainChat } from '../../_hooks/chat/useChatStore';
 
 interface ChatInputBoxProps {
   onSendMessage?: (message: string, mode: string, model: string, selectedFile?: File) => void;
   placeholder?: string;
   disabled?: boolean;
+  userId?: string;
 }
 
 type Mode = 'agent' | 'edit';
@@ -15,7 +17,8 @@ type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   onSendMessage,
   placeholder = "메시지를 입력하세요...",
-  disabled = false
+  disabled = false,
+  userId = 'default-user'
 }) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -27,6 +30,9 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
   const modelModalRef = useRef<HTMLDivElement>(null);
+
+  // v2 채팅 훅 사용
+  const { sendMessage: sendChatMessage, isLoading } = useMainChat(userId);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -42,9 +48,16 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (message.trim() || selectedFile) {
-      onSendMessage?.(message, mode, model, selectedFile || undefined);
+      // 외부 핸들러가 있으면 사용, 없으면 v2 스토어 사용
+      if (onSendMessage) {
+        onSendMessage(message, mode, model, selectedFile || undefined);
+      } else {
+        // v2 스토어로 메시지 전송
+        await sendChatMessage(message);
+      }
+      
       setMessage('');
       setSelectedFile(null);
       if (fileInputRef.current) {
@@ -246,14 +259,18 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
           {/* 전송 버튼 */}
           <button
             onClick={handleSend}
-            disabled={disabled || (!message.trim() && !selectedFile)}
+            disabled={disabled || isLoading || (!message.trim() && !selectedFile)}
             className={`flex items-center justify-center w-10 h-6 rounded-full transition-all ${
-              disabled || (!message.trim() && !selectedFile)
+              disabled || isLoading || (!message.trim() && !selectedFile)
                 ? 'bg-gray-300 text-white cursor-not-allowed'
                 : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
             }`}
           >
-            <Send size={18} />
+            {isLoading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send size={18} />
+            )}
           </button>
         </div>
       </div>

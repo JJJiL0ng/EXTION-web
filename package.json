@@ -30,6 +30,7 @@
     "firebase": "^11.8.1",
     "handsontable": "^15.3.0",
     "hyperformula": "^3.0.0",
+    "immer": "^10.1.1",
     "lodash": "^4.17.21",
     "lucide-react": "^0.510.0",
     "nanoid": "^5.1.5",

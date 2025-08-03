@@ -1,3 +1,5 @@
+// src/_components/chat/FileUploadChattingContainer.tsx
+// 파일 업로드일때 채팅 컨테이너
 import React from "react";
 import ChatInputBox from "./ChatInputBox";
 import ChatViewer from "./ChatViewer";
@@ -5,20 +7,20 @@ import ChatTabBar from "./ChatTabBar";
 import { ChatInitMode, UploadedFileInfo } from "../../_types/chat.types";
 import { useChatFlow, useChatStore } from "../../_hooks/chat/useChatStore";
 
-interface MainChattingContainerProps {
+interface FileUploadChattingContainerProps {
   initMode?: ChatInitMode;
   fileInfo?: UploadedFileInfo;
   spreadSheetId?: string;
   userId?: string;
 }
 
-export default function MainChattingContainer({
+export default function FileUploadChattingContainer({
   initMode = ChatInitMode.FILE_UPLOAD,
   fileInfo,
   spreadSheetId,
   userId = 'default-user'
-}: MainChattingContainerProps) {
-  
+}: FileUploadChattingContainerProps) {
+
   // v2 채팅 플로우 훅 사용
   const chatFlow = useChatFlow({
     mode: initMode,

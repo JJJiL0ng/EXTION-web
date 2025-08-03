@@ -115,7 +115,7 @@ export interface ChatApiConfig {
 // ==================== 기본 설정 ====================
 
 const DEFAULT_CONFIG: ChatApiConfig = {
-  baseUrl: '/v2/main-chat',
+  baseUrl: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/v2/main-chat`,
   timeout: 120000, // 2분
   retryAttempts: 3,
   retryDelay: 1000,
@@ -156,6 +156,19 @@ export class MainChatApi {
     
     this.updateStatus(ChatStatus.CONNECTING, handlers);
 
+    // 백엔드로 보내는 데이터 로깅
+    console.log('🚀 [MainChatApi] Sending request to backend:', {
+      url: `${this.config.baseUrl}/stream`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+      },
+      body: request,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       // fetch를 사용한 SSE 연결
       const response = await fetch(`${this.config.baseUrl}/stream`, {
@@ -169,7 +182,19 @@ export class MainChatApi {
         signal: AbortSignal.timeout(this.config.timeout)
       });
 
+      console.log('✅ [MainChatApi] Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        timestamp: new Date().toISOString()
+      });
+
       if (!response.ok) {
+        console.error('❌ [MainChatApi] HTTP Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          timestamp: new Date().toISOString()
+        });
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -177,6 +202,13 @@ export class MainChatApi {
       await this.processSSEStream(response, handlers);
 
     } catch (error) {
+      console.error('❌ [MainChatApi] Connection failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        request: request,
+        timestamp: new Date().toISOString()
+      });
+
       this.updateStatus(ChatStatus.ERROR, handlers);
       
       if (handlers.onError) {
@@ -274,6 +306,12 @@ export class MainChatApi {
     handlers: ChatEventHandlers
   ): Promise<void> {
     const { type, data } = event;
+
+    console.log('📡 [MainChatApi] SSE Event received:', {
+      type,
+      data,
+      timestamp: new Date().toISOString()
+    });
 
     switch (type) {
       case SSEEventType.CHAT_STARTED:
