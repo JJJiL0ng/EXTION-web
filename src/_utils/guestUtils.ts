@@ -64,7 +64,7 @@ export function getOrCreateGuestId(): string {
     saveGuestId(guestId);
     console.log('새로운 Guest ID 생성:', guestId);
   } else {
-    console.log('기존 Guest ID 사용:', guestId);
+    // console.log('기존 Guest ID 사용:', guestId);
   }
   
   return guestId;

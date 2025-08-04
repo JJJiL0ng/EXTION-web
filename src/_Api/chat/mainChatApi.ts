@@ -56,6 +56,58 @@ export interface AIUpdateData extends SSEEventData {
   updateType: string;
 }
 
+// 새로운 API 응답 형식 (v2.1.0)
+export interface NewChatResponseData extends SSEEventData {
+  success: boolean;
+  tokensUsed: number;
+  responseTime: number;
+  model: string;
+  cached: boolean;
+  confidence: number;
+  analysis?: {
+    detectedOperation: string;
+    dataRange?: string;
+    targetCells?: string;
+    operationType?: 'single_cell' | 'multiple_cells' | 'range_operation';
+  };
+  formulaDetails?: {
+    name: string;
+    description: string;
+    syntax: string;
+    parameters: Array<{
+      name: string;
+      description: string;
+      required: boolean;
+      example: string;
+    }>;
+    spreadjsCommand: string;
+  };
+  implementation?: {
+    steps: string[];
+    cellLocations: {
+      source: string;
+      target: string;
+      description: string;
+    };
+  };
+  codeGenerator?: {
+    pythonCode: string;
+    explanation: string;
+  };
+  dataTransformation?: {
+    transformedJsonData: string;
+  };
+  generalHelp?: {
+    directAnswer: string;
+    additionalResources?: Array<{
+      title: string;
+      description: string;
+      link?: string;
+    }>;
+  };
+}
+
+// 이전 버전 호환성을 위한 타입 (Deprecated)
 export interface ChatResponseData extends SSEEventData {
   message: string;
   intent: string;
@@ -86,7 +138,7 @@ export interface ChatEventHandlers {
   onChatStarted?: (data: ChatStartedData) => void;
   onAIProcessingStarted?: (data: AIProcessingStartedData) => void;
   onAIUpdate?: (data: AIUpdateData) => void;
-  onChatResponse?: (data: ChatResponseData) => void;
+  onChatResponse?: (data: NewChatResponseData) => void;
   onChatCompleted?: (data: ChatCompletedData) => void;
   onError?: (data: ErrorData) => void;
   onTypingEffect?: (currentText: string, isComplete: boolean) => void;
@@ -136,7 +188,7 @@ export class MainChatApi {
   private abortController: AbortController | null = null;
   private eventSource: EventSource | null = null;
   private currentStatus: ChatStatus = ChatStatus.IDLE;
-  private typingTimer: NodeJS.Timeout | null = null;
+  private typingTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(config?: Partial<ChatApiConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -351,34 +403,36 @@ export class MainChatApi {
    * 타이핑 효과 처리
    */
   private async handleTypingEffect(
-    data: ChatResponseData,
+    data: NewChatResponseData,
     handlers: ChatEventHandlers
   ): Promise<void> {
     // 먼저 전체 응답 데이터를 전달
     handlers.onChatResponse?.(data);
 
+    // 새로운 응답 형식에서 표시할 메시지 생성
+    const displayMessage = this.generateDisplayMessage(data);
+
     // 타이핑 효과가 비활성화된 경우 즉시 완료 처리
     if (!this.config.typing.enabled) {
-      handlers.onTypingEffect?.(data.message, true);
+      handlers.onTypingEffect?.(displayMessage, true);
       return;
     }
 
-    const message = data.message;
     let currentIndex = 0;
     
     const typeNextCharacter = () => {
-      if (currentIndex >= message.length) {
-        handlers.onTypingEffect?.(message, true);
+      if (currentIndex >= displayMessage.length) {
+        handlers.onTypingEffect?.(displayMessage, true);
         return;
       }
 
-      const currentText = message.substring(0, currentIndex + 1);
+      const currentText = displayMessage.substring(0, currentIndex + 1);
       handlers.onTypingEffect?.(currentText, false);
 
       currentIndex++;
 
       // 다음 문자 지연 시간 계산
-      const char = message[currentIndex - 1];
+      const char = displayMessage[currentIndex - 1];
       let delay = this.config.typing.speed;
 
       // 구두점 후 추가 지연
@@ -399,6 +453,29 @@ export class MainChatApi {
 
     // 타이핑 시작
     typeNextCharacter();
+  }
+
+  /**
+   * 새로운 API 응답 형식에서 표시할 메시지 생성
+   */
+  private generateDisplayMessage(data: NewChatResponseData): string {
+    if (data.formulaDetails) {
+      return `**${data.formulaDetails.name}**\n\n${data.formulaDetails.description}\n\n**Syntax:** ${data.formulaDetails.syntax}`;
+    }
+    
+    if (data.codeGenerator) {
+      return `**Python Code Generated:**\n\n\`\`\`python\n${data.codeGenerator.pythonCode}\n\`\`\`\n\n**Explanation:**\n${data.codeGenerator.explanation}`;
+    }
+    
+    if (data.generalHelp) {
+      return data.generalHelp.directAnswer;
+    }
+    
+    if (data.dataTransformation) {
+      return `**Data Transformation Completed**\n\nThe spreadsheet data has been successfully transformed.`;
+    }
+    
+    return 'AI processing completed successfully.';
   }
 
   /**

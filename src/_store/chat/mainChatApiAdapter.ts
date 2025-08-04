@@ -1,7 +1,7 @@
 // src/_store/chat/mainChatApiAdapter.ts
 // mainChatApi.ts와 v2 스토어 간의 어댑터
 
-import { MainChatApi, ChatRequest, createChatRequest } from '../../_Api/chat/mainChatApi'
+import { MainChatApi, ChatRequest, createChatRequest, NewChatResponseData } from '../../_Api/chat/mainChatApi'
 import {
   CreateChatRequest,
   CreateChatResponse,
@@ -234,7 +234,7 @@ export class MainChatApiAdapter {
         console.log('🔄 [MainChatApiAdapter] AI update:', data)
       },
       
-      onChatResponse: (data: any) => {
+      onChatResponse: (data: NewChatResponseData) => {
         console.log('💬 [MainChatApiAdapter] Chat response:', data)
       },
       
@@ -249,11 +249,11 @@ export class MainChatApiAdapter {
       },
       
       onTypingEffect: (currentText: string, isComplete: boolean) => {
-        console.log('⌨️ [MainChatApiAdapter] Typing effect:', {
-          textLength: currentText.length,
-          isComplete,
-          preview: currentText.substring(0, 50) + (currentText.length > 50 ? '...' : '')
-        })
+        // console.log('⌨️ [MainChatApiAdapter] Typing effect:', {
+        //   textLength: currentText.length,
+        //   isComplete,
+        //   preview: currentText.substring(0, 50) + (currentText.length > 50 ? '...' : '')
+        // })
         onMessage(currentText)
         if (isComplete) {
           onComplete()
