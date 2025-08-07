@@ -37,7 +37,7 @@ interface ExecutionResult {
 }
 
 // Hook 상태 타입
-interface SpreadjsCommandState {
+interface SpreadjsCommandEngineState {
   isExecuting: boolean;
   error: string | null;
   lastResult: ExecutionResult | null;
@@ -45,7 +45,7 @@ interface SpreadjsCommandState {
 }
 
 // Hook 옵션
-interface UseSpreadjsCommandOptions {
+interface UseSpreadjsCommandEngineOptions {
   onSuccess?: (result: ExecutionResult) => void;
   onError?: (error: Error) => void;
   enableHistory?: boolean;
@@ -53,9 +53,9 @@ interface UseSpreadjsCommandOptions {
   requireConfirmation?: boolean;
 }
 
-export const useSpreadjsCommand = (
+export const useSpreadjsCommandEngine = (
   spreadRef: RefObject<any>,
-  options: UseSpreadjsCommandOptions = {}
+  options: UseSpreadjsCommandEngineOptions = {}
 ) => {
   const {
     onSuccess,
@@ -65,7 +65,7 @@ export const useSpreadjsCommand = (
     requireConfirmation = false
   } = options;
 
-  const [state, setState] = useState<SpreadjsCommandState>({
+  const [state, setState] = useState<SpreadjsCommandEngineState>({
     isExecuting: false,
     error: null,
     lastResult: null,
@@ -82,6 +82,8 @@ export const useSpreadjsCommand = (
     if (command.includes('setValue')) return 'value';
     if (command.includes('setStyle')) return 'style';
     if (command.includes('copyTo') || command.includes('moveTo')) return 'copy_move';
+    if (command.includes('addRows') || command.includes('addColumns')) return 'add';
+    if (command.includes('deleteRows') || command.includes('deleteColumns')) return 'delete';
     return 'unknown';
   }, []);
 
@@ -178,7 +180,6 @@ export const useSpreadjsCommand = (
         }
 
         const commandType = identifyCommandType(command);
-        let result: any = null;
 
         // 페인팅 일시 중단 (성능 최적화)
         sheet.suspendPaint();
@@ -191,7 +192,7 @@ export const useSpreadjsCommand = (
               const formulaMatch = command.match(/setFormula\((\d+),\s*(\d+),\s*'([^']+)'/);
               if (formulaMatch) {
                 const [, row, col, formula] = formulaMatch;
-                result = sheet.setFormula(parseInt(row), parseInt(col), formula);
+                sheet.setFormula(parseInt(row), parseInt(col), formula);
               }
               break;
             }
@@ -202,7 +203,7 @@ export const useSpreadjsCommand = (
               if (sortMatch) {
                 const [, startRow, startCol, rowCount, colCount, byRows, sortInfo] = sortMatch;
                 const sortInfoObj = JSON.parse(sortInfo);
-                result = sheet.sortRange(
+                sheet.sortRange(
                   parseInt(startRow),
                   parseInt(startCol),
                   parseInt(rowCount),
@@ -225,16 +226,50 @@ export const useSpreadjsCommand = (
                 } else if (!isNaN(Number(value))) {
                   parsedValue = Number(value);
                 }
-                result = sheet.setValue(parseInt(row), parseInt(col), parsedValue);
+                sheet.setValue(parseInt(row), parseInt(col), parsedValue);
+              }
+              break;
+            }
+
+            case 'style': {
+              // setStyle 명령어 실행
+              const styleMatch = command.match(/setStyle\((\d+),\s*(\d+),\s*(.+)\)/);
+              if (styleMatch) {
+                const [, row, col, style] = styleMatch;
+                try {
+                  const styleObject = JSON.parse(style);
+                  sheet.setStyle(parseInt(row), parseInt(col), styleObject);
+                } catch (parseError) {
+                  throw new Error('스타일 객체 파싱 실패');
+                }
+              }
+              break;
+            }
+
+            case 'copy_move': {
+              // copyTo/moveTo 명령어 실행
+              const copyMatch = command.match(/(copyTo|moveTo)\((\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)/);
+              if (copyMatch) {
+                const [, operation, fromRow, fromCol, toRow, toCol, rowCount, colCount] = copyMatch;
+                if (operation === 'copyTo') {
+                  sheet.copyTo(
+                    parseInt(fromRow), parseInt(fromCol),
+                    parseInt(toRow), parseInt(toCol),
+                    parseInt(rowCount), parseInt(colCount)
+                  );
+                } else {
+                  sheet.moveTo(
+                    parseInt(fromRow), parseInt(fromCol),
+                    parseInt(toRow), parseInt(toCol),
+                    parseInt(rowCount), parseInt(colCount)
+                  );
+                }
               }
               break;
             }
 
             default: {
-              // 일반적인 eval 실행 (위험하지만 필요한 경우)
-              const cleanCommand = command.replace('worksheet.', 'sheet.');
-              result = eval(cleanCommand);
-              break;
+              throw new Error(`지원하지 않는 명령어 타입입니다: ${commandType}`);
             }
           }
 
@@ -419,4 +454,4 @@ export const useSpreadjsCommand = (
   };
 };
 
-export type { FormulaResponse, ExecutionResult, SpreadjsCommandState, UseSpreadjsCommandOptions };
+export type { FormulaResponse, ExecutionResult, SpreadjsCommandEngineState, UseSpreadjsCommandEngineOptions };
