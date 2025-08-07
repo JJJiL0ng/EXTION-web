@@ -36,9 +36,12 @@ export class MainChatApiAdapter {
     // 전역 상태에서 chatId 가져오기
     const { chatId: globalChatId } = useChatStore.getState()
     
-    // 전역 상태의 chatId 사용, 없으면 새로 생성
-    const chatId = globalChatId || `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
+    const chatId = globalChatId
+
+    if (!chatId) {
+      throw new Error('채팅 ID가 없습니다. 먼저 채팅을 시작해 주세요.')
+    }
+
     return {
       chatId,
       title: request.title || '새로운 채팅',
@@ -47,7 +50,7 @@ export class MainChatApiAdapter {
   }
 
   /**
-   * 채팅 세션 목록 로드 (Mock 데이터)
+   * 채팅 세션 목록 로드 (Mock 데이터) : todo
    */
   async loadChats(): Promise<LoadChatsResponse> {
     // 전역 상태에서 chatId와 spreadsheetId 가져오기
@@ -87,7 +90,7 @@ export class MainChatApiAdapter {
   }
 
   /**
-   * 메시지 목록 로드 (Mock 데이터)
+   * 메시지 목록 로드 (Mock 데이터) : todo
    */
   async loadMessages(sessionId: string): Promise<LoadMessagesResponse> {
     // 전역 상태에서 chatId와 spreadsheetId 가져오기

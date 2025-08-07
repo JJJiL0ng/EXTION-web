@@ -16,7 +16,7 @@ type Mode = 'agent' | 'edit';
 type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
 
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
-  onSendMessage,
+  // onSendMessage,
   placeholder = "메시지를 입력하세요...",
   disabled = false,
   userId = getOrCreateGuestId() // Guest ID 사용
@@ -52,12 +52,13 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
       // 외부 핸들러가 있으면 사용, 없으면 v2 스토어 사용
-      if (onSendMessage) {
-        onSendMessage(message, mode, model, selectedFile || undefined);
-      } else {
-        // v2 스토어로 메시지 전송
-        await sendChatMessage(message);
-      }
+      // if (onSendMessage) {
+      //   onSendMessage(message, mode, model, selectedFile || undefined);
+      // } else {
+      //   // v2 스토어로 메시지 전송
+      //   await sendChatMessage(message);
+      // }
+      await sendChatMessage(message);
       
       setMessage('');
       setSelectedFile(null);

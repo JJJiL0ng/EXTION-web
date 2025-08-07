@@ -63,7 +63,7 @@ const createError = (code: string, message: string, recoverable = true): ChatErr
  * 사용자 메시지 생성
  */
 const createUserMessage = (content: string, chatId: string): UserMessage => ({
-  id: generateId('msg'),
+  id: generateId('user_req_msg'),
   chatId,
   type: MessageType.USER,
   content,
@@ -75,7 +75,7 @@ const createUserMessage = (content: string, chatId: string): UserMessage => ({
  * AI 응답 메시지 생성
  */
 const createAssistantMessage = (chatId: string, content = ''): AssistantMessage => ({
-  id: generateId('msg'),
+  id: generateId('ai_res_msg'),
   chatId,
   type: MessageType.ASSISTANT,
   content,
@@ -362,12 +362,13 @@ export const useChatStore = create<ChatStore>()(
                 state.isInputDisabled = true
               })
 
+
               // mainChatApi를 통한 실제 스트리밍
-              await mainChatApiAdapter.streamChat(
+                await mainChatApiAdapter.streamChat(
                 {
                   chatId: sessionId!,
                   content,
-                  spreadSheetId: state.currentSpreadSheetId || undefined
+                  spreadSheetId: state.currentSpreadSheetId! 
                 },
                 (content: string) => {
                   // 스트리밍 콘텐츠 업데이트

@@ -196,9 +196,9 @@ export interface ChatError {
  * 메시지 전송 요청
  */
 export interface SendMessageRequest {
-  chatId?: string
+  chatId: string
   content: string
-  spreadSheetId?: string
+  spreadSheetId: string
   metadata?: Record<string, any>
 }
 
