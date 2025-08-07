@@ -4,8 +4,88 @@ import React, { useRef, useEffect } from 'react';
 import { useChatStore } from '../../_hooks/chat/useChatStore';
 import { StreamingMarkdown } from './message/StreamingMarkdown';
 import { FileUploadWelcomeMessage } from './FileUploadWelcomeMessage';
-import { ChatInitMode, MessageType } from '../../_types/chat.types';
+import { ChatInitMode, MessageType, AssistantMessage } from '../../_types/chat.types';
+import { ChatIntentType } from '../../_types/chat-response.types';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
+
+// Registry Pattern을 위한 타입 정의
+interface ResponseComponentConfig {
+  component: React.ComponentType<ResponseComponentProps>;
+  hook?: () => any;
+}
+
+interface ResponseComponentProps {
+  message: AssistantMessage;
+  onAction?: (action: string, data?: any) => void;
+  className?: string;
+}
+
+// 응답 타입별 컴포넌트 Registry
+const ResponseComponentRegistry: Record<string, ResponseComponentConfig> = {
+  // 컴포넌트가 준비되면 주석 해제
+  [ChatIntentType.EXCEL_FORMULA]: {
+    component: React.lazy(() => import('./message/formulaMessage')),
+    // hook: useFormulaMessage // 필요시 추가
+  },
+  // [ChatIntentType.PYTHON_CODE_GENERATOR]: {
+  //   component: React.lazy(() => import('./message/codeGeneratorMessage')),
+  //   // hook: useCodeGeneratorMessage // 필요시 추가
+  // },
+  // [ChatIntentType.WHOLE_DATA]: {
+  //   component: React.lazy(() => import('./message/wholeDataMessage')),
+  //   // hook: useWholeDataMessage // 필요시 추가
+  // },
+  // [ChatIntentType.GENERAL_HELP]: {
+  //   component: React.lazy(() => import('./message/generalHelpMessage')),
+  //   // hook: useGeneralHelpMessage // 필요시 추가
+  // }
+};
+
+// 구조화된 응답 렌더러 컴포넌트
+const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ message }) => {
+  const structuredContent = message.structuredContent;
+  
+  if (!structuredContent || !structuredContent.intent) {
+    // 구조화된 응답이 없으면 기본 마크다운 렌더링
+    return (
+      <StreamingMarkdown
+        content={message.content}
+        isStreaming={message.status === 'streaming'}
+        className="text-gray-900"
+      />
+    );
+  }
+
+  const config = ResponseComponentRegistry[structuredContent.intent];
+  
+  if (!config) {
+    // Registry에 없는 타입이면 기본 마크다운 렌더링
+    console.warn(`Unknown response intent: ${structuredContent.intent}`);
+    return (
+      <StreamingMarkdown
+        content={message.content}
+        isStreaming={message.status === 'streaming'}
+        className="text-gray-900"
+      />
+    );
+  }
+
+  const ResponseComponent = config.component;
+  
+  return (
+    <React.Suspense fallback={
+      <div className="animate-pulse">
+        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+      </div>
+    }>
+      <ResponseComponent 
+        message={message}
+        className="text-gray-900"
+      />
+    </React.Suspense>
+  );
+};
 
 interface ChatViewerProps {
   userId?: string;
@@ -56,11 +136,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
                 {message.type === MessageType.USER ? (
                   <div className="whitespace-pre-wrap">{message.content}</div>
                 ) : (
-                  <StreamingMarkdown
-                    content={message.content}
-                    isStreaming={message.status === 'streaming'}
-                    className="text-gray-900"
-                  />
+                  <StructuredResponseRenderer message={message as AssistantMessage} />
                 )}
                 
                 {/* 메시지 타임스탬프 */}
