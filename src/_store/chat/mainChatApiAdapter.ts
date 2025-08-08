@@ -182,7 +182,8 @@ export class MainChatApiAdapter {
     request: SendMessageRequest,
     onMessage: (content: string) => void,
     onComplete: () => void,
-    onError: (error: Error) => void
+    onError: (error: Error) => void,
+    onStructuredResponse?: (structuredContent: any) => void // 새로운 콜백 추가
   ): Promise<void> {
     console.log('🔄 [MainChatApiAdapter] Creating chat request:', {
       originalRequest: request,
@@ -237,8 +238,12 @@ export class MainChatApiAdapter {
         console.log('🔄 [MainChatApiAdapter] AI update:', data)
       },
       
-      onChatResponse: (data: NewChatResponseData) => {
+      onChatResponse: (data: NewChatResponseData & { intent?: string, structuredContent?: any }) => {
         console.log('💬 [MainChatApiAdapter] Chat response:', data)
+        // structuredContent가 있으면 콜백으로 전달
+        if (data.structuredContent && onStructuredResponse) {
+          onStructuredResponse(data.structuredContent)
+        }
       },
       
       onChatCompleted: (data: any) => {

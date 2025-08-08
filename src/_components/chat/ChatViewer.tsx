@@ -45,8 +45,16 @@ const ResponseComponentRegistry: Record<string, ResponseComponentConfig> = {
 const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ message }) => {
   const structuredContent = message.structuredContent;
   
-  if (!structuredContent || !structuredContent.intent) {
+  console.log('🔍 [StructuredResponseRenderer] Processing message:', {
+    messageId: message.id,
+    hasStructuredContent: !!structuredContent,
+    structuredContent: structuredContent,
+    messageContent: message.content.substring(0, 100) + '...'
+  });
+  
+  if (!structuredContent) {
     // 구조화된 응답이 없으면 기본 마크다운 렌더링
+    console.log('📝 [StructuredResponseRenderer] No structured content, using markdown');
     return (
       <StreamingMarkdown
         content={message.content}
@@ -56,11 +64,50 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
     );
   }
 
-  const config = ResponseComponentRegistry[structuredContent.intent];
+  // intent가 있는 경우 사용, 없으면 폴백 로직으로 감지
+  let detectedIntent = (structuredContent as any).intent;
+  
+  if (!detectedIntent) {
+    // 폴백 로직: 필드를 기반으로 intent 감지
+    const content = structuredContent as any;
+    console.log('🔄 [StructuredResponseRenderer] No intent found, trying fallback detection:', {
+      hasFormulaDetails: !!content.originalData?.formulaDetails,
+      hasFormulaName: !!content.formulaName,
+      hasName: !!content.name,
+      hasSyntax: !!content.syntax,
+      contentKeys: Object.keys(content)
+    });
+    
+    if (content.originalData?.formulaDetails || 
+        content.formulaName || 
+        content.formulaSyntax ||
+        content.spreadjsCommand ||
+        content.name || // formulaDetails.name
+        content.syntax) { // formulaDetails.syntax
+      detectedIntent = ChatIntentType.EXCEL_FORMULA;
+      console.log('✅ [StructuredResponseRenderer] Detected Excel formula intent');
+    } else if (content.originalData?.codeGenerator || 
+               content.pythonCode) {
+      detectedIntent = ChatIntentType.PYTHON_CODE_GENERATOR;
+      console.log('✅ [StructuredResponseRenderer] Detected Python code generator intent');
+    } else if (content.originalData?.dataTransformation ||
+               content.transformedJsonData) {
+      detectedIntent = ChatIntentType.WHOLE_DATA;
+      console.log('✅ [StructuredResponseRenderer] Detected whole data intent');
+    } else if (content.originalData?.generalHelp ||
+               content.directAnswer) {
+      detectedIntent = ChatIntentType.GENERAL_HELP;
+      console.log('✅ [StructuredResponseRenderer] Detected general help intent');
+    }
+  } else {
+    console.log('✅ [StructuredResponseRenderer] Intent found:', detectedIntent);
+  }
+
+  const config = detectedIntent ? ResponseComponentRegistry[detectedIntent] : null;
   
   if (!config) {
     // Registry에 없는 타입이면 기본 마크다운 렌더링
-    console.warn(`Unknown response intent: ${structuredContent.intent}`);
+    console.warn(`❌ [StructuredResponseRenderer] Unknown or unregistered response intent: ${detectedIntent}`);
     return (
       <StreamingMarkdown
         content={message.content}
@@ -70,6 +117,7 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
     );
   }
 
+  console.log('🎯 [StructuredResponseRenderer] Using specialized component for intent:', detectedIntent);
   const ResponseComponent = config.component;
   
   return (

@@ -406,8 +406,11 @@ export class MainChatApi {
     data: NewChatResponseData,
     handlers: ChatEventHandlers
   ): Promise<void> {
-    // 먼저 전체 응답 데이터를 전달
-    handlers.onChatResponse?.(data);
+    // intent 감지 및 structuredContent 생성
+    const enrichedData = this.enrichResponseWithIntent(data);
+    
+    // 먼저 전체 응답 데이터를 전달 (enriched된 데이터)
+    handlers.onChatResponse?.(enrichedData);
 
     // 새로운 응답 형식에서 표시할 메시지 생성
     const displayMessage = this.generateDisplayMessage(data);
@@ -476,6 +479,57 @@ export class MainChatApi {
     }
     
     return 'AI processing completed successfully.';
+  }
+
+  /**
+   * 응답 데이터에 intent와 structuredContent 추가
+   */
+  private enrichResponseWithIntent(data: NewChatResponseData): NewChatResponseData & { intent?: string, structuredContent?: any } {
+    let intent: string | undefined;
+    let structuredContent: any;
+
+    // 응답 타입별 intent 감지
+    if (data.formulaDetails) {
+      intent = 'excel_formula';
+      structuredContent = {
+        intent: 'excel_formula',
+        ...data.formulaDetails,
+        analysis: data.analysis,
+        implementation: data.implementation,
+        // 원본 데이터도 포함
+        originalData: data
+      };
+    } else if (data.codeGenerator) {
+      intent = 'python_code_generator';
+      structuredContent = {
+        intent: 'python_code_generator',
+        ...data.codeGenerator,
+        // 원본 데이터도 포함
+        originalData: data
+      };
+    } else if (data.dataTransformation) {
+      intent = 'whole_data';
+      structuredContent = {
+        intent: 'whole_data',
+        ...data.dataTransformation,
+        // 원본 데이터도 포함
+        originalData: data
+      };
+    } else if (data.generalHelp) {
+      intent = 'general_help';
+      structuredContent = {
+        intent: 'general_help',
+        ...data.generalHelp,
+        // 원본 데이터도 포함
+        originalData: data
+      };
+    }
+
+    return {
+      ...data,
+      intent,
+      structuredContent
+    };
   }
 
   /**

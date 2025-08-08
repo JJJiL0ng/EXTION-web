@@ -398,6 +398,15 @@ export const useChatStore = create<ChatStore>()(
                     state.isInputDisabled = false
                     state.error = createError('STREAM_ERROR', error.message)
                   })
+                },
+                (structuredContent: any) => {
+                  // 구조화된 응답 데이터 저장
+                  set((state) => {
+                    const message = state.messages.find(m => m.id === assistantMessage.id)
+                    if (message && message.type === MessageType.ASSISTANT) {
+                      (message as AssistantMessage).structuredContent = structuredContent
+                    }
+                  })
                 }
               )
 
