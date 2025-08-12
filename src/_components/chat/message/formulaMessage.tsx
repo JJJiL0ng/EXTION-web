@@ -26,6 +26,15 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
     return null;
   }
 
+  // 버튼 표시 조건 확인
+  const shouldShowButton = !isApplied && message.status === 'completed' && !isDenied && !executionError;
+  console.log('🔍 FormulaMessage Context 상태:', {
+    hasSpreadsheetContext: !!spreadsheetContext,
+    isReady: spreadsheetContext?.isReady,
+    shouldShowButton,
+    messageStatus: message.status
+  });
+
   const handleApplyFormula = async () => {
     // Context 및 데이터 검증
     if (!spreadsheetContext) {
@@ -97,26 +106,32 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="text-gray-800 font-medium">
-                이 수식을 스프레드시트에 적용하시겠습니까?
+                수식 적용
               </div>
             </div>
             <div className="flex space-x-2">
               <button
                 onClick={handleRejectFormula}
                 disabled={isExecuting}
-                className="px-3 py-1 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2 py-1 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 아니오
               </button>
               <button
                 onClick={handleApplyFormula}
                 disabled={isExecuting || !spreadsheetContext?.isReady}
-                className="px-3 py-1 text-sm font-medium text-white bg-[#005ed9] border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                className={`px-2 py-1 text-sm font-medium border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors ${
+                  !spreadsheetContext?.isReady 
+                    ? 'bg-gray-400 text-white cursor-not-allowed' 
+                    : 'text-white bg-[#005ed9] hover:bg-blue-700'
+                }`}
+                title={!spreadsheetContext?.isReady ? '스프레드시트 초기화 중...' : '수식 적용'}
               >
                 {isExecuting && (
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
                 )}
-                {isExecuting ? '실행 중...' : '예'}
+                {isExecuting ? '실행 중...' : 
+                 !spreadsheetContext?.isReady ? '준비 중...' : '예'}
               </button>
             </div>
           </div>

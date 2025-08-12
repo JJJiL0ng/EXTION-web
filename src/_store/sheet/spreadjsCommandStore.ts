@@ -3,6 +3,10 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { enableMapSet } from 'immer';
+
+// Immer MapSet 플러그인 활성화
+enableMapSet();
 
 // 스프레드시트 스냅샷 타입
 interface SpreadsheetSnapshot {
@@ -144,9 +148,30 @@ const initialState: SpreadjsCommandStoreState = {
   },
 };
 
-// 체크섬 생성 유틸리티
+// 체크섬 생성 유틸리티 (유니코드 안전)
 const generateChecksum = (data: any): string => {
-  return btoa(JSON.stringify(data)).slice(0, 16);
+  try {
+    // JSON 문자열화
+    const jsonString = JSON.stringify(data);
+    
+    // 유니코드 문자를 안전하게 Base64로 인코딩
+    // encodeURIComponent로 먼저 인코딩한 후 btoa 사용
+    const encodedString = encodeURIComponent(jsonString);
+    const base64String = btoa(encodedString);
+    
+    return base64String.slice(0, 16);
+  } catch (error) {
+    // btoa 실패 시 간단한 해시 생성
+    console.warn('Base64 인코딩 실패, 대체 해시 사용:', error);
+    const jsonString = JSON.stringify(data);
+    let hash = 0;
+    for (let i = 0; i < jsonString.length; i++) {
+      const char = jsonString.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 32비트 정수로 변환
+    }
+    return Math.abs(hash).toString(16).padStart(8, '0').slice(0, 16);
+  }
 };
 
 // Zustand 스토어 생성

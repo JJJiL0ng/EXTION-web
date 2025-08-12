@@ -1,12 +1,10 @@
-"use client";
-
-import React, { createContext, useContext, RefObject } from 'react';
+import React, { createContext, useContext, MutableRefObject, useEffect, useState } from 'react';
 import { UseSpreadjsCommandStoreReturn } from '@/_hooks/sheet/useSpreadjsCommandStore';
 import { FormulaResponse } from '@/_hooks/sheet/useSpreadjsCommandEngine';
 
 // Context 타입 정의
 interface SpreadsheetContextType {
-  spreadRef: RefObject<any> | null;
+  spreadRef: MutableRefObject<any> | null;
   commandManager: UseSpreadjsCommandStoreReturn | null;
   executeFormula: (formulaResponse: FormulaResponse) => Promise<void>;
   isReady: boolean;
@@ -18,7 +16,7 @@ const SpreadsheetContext = createContext<SpreadsheetContextType | null>(null);
 // Provider Props 타입
 interface SpreadsheetProviderProps {
   children: React.ReactNode;
-  spreadRef: RefObject<any>;
+  spreadRef: MutableRefObject<any>;
   commandManager: UseSpreadjsCommandStoreReturn;
 }
 
@@ -28,6 +26,36 @@ export const SpreadsheetProvider: React.FC<SpreadsheetProviderProps> = ({
   spreadRef,
   commandManager
 }) => {
+  // SpreadJS 인스턴스 준비 상태를 실시간으로 추적
+  const [isSpreadReady, setIsSpreadReady] = useState(false);
+
+  // SpreadJS 인스턴스 변화 감지
+  useEffect(() => {
+    const checkSpreadReady = () => {
+      const ready = !!(spreadRef?.current && commandManager);
+      setIsSpreadReady(ready);
+      if (ready) {
+        console.log('✅ SpreadsheetContext Ready:', { 
+          hasSpreadRef: !!spreadRef?.current, 
+          hasCommandManager: !!commandManager 
+        });
+      }
+    };
+
+    // 초기 체크
+    checkSpreadReady();
+
+    // SpreadJS 인스턴스가 설정될 때까지 주기적으로 체크
+    const interval = setInterval(checkSpreadReady, 100);
+
+    // 준비되면 interval 제거
+    if (isSpreadReady) {
+      clearInterval(interval);
+    }
+
+    return () => clearInterval(interval);
+  }, [spreadRef, commandManager, isSpreadReady]);
+
   // 수식 실행 통합 함수
   const executeFormula = async (formulaResponse: FormulaResponse): Promise<void> => {
     if (!spreadRef.current) {
@@ -46,14 +74,11 @@ export const SpreadsheetProvider: React.FC<SpreadsheetProviderProps> = ({
     }
   };
 
-  // Context 준비 상태 확인
-  const isReady = !!(spreadRef?.current && commandManager);
-
   const contextValue: SpreadsheetContextType = {
     spreadRef,
     commandManager,
     executeFormula,
-    isReady
+    isReady: isSpreadReady
   };
 
   return (

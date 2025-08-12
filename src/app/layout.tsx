@@ -3,6 +3,7 @@ import { generateMetadata } from '@/lending-libs/seo'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import AuthProvider from '@/components/AuthProvider'
+import ImmerSetup from '@/components/ImmerSetup'
 import './globals.css'
 
 export const metadata: Metadata = generateMetadata({
@@ -63,6 +64,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased min-h-screen">
+        <ImmerSetup />
         <AuthProvider>
           {children}
         </AuthProvider>

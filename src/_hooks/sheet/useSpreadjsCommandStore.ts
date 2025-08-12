@@ -63,8 +63,8 @@ interface UseSpreadjsCommandStoreReturn {
   createSnapshot: (description?: string) => Promise<SpreadsheetSnapshot>;
   restoreSnapshot: (snapshot: SpreadsheetSnapshot) => Promise<void>;
   
-  // 자동저장
-  triggerAutosave: () => Promise<void>;
+  // 자동저장 추후 연동 예정
+  // triggerAutosave: () => Promise<void>;
   
   // 히스토리 관리
   clearHistory: () => void;
@@ -445,7 +445,7 @@ export const useSpreadjsCommandManager = (
     canPerformRollback: canPerformRollback,
     createSnapshot,
     restoreSnapshot,
-    triggerAutosave,
+    // triggerAutosave, //자동저장로직은 추후 연동 예정
     
     // 히스토리 관리
     clearHistory: clearExecutionHistory,

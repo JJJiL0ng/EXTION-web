@@ -13,15 +13,17 @@ import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useAuthStore } from '@/stores/authStore';
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
-import { SpreadsheetProvider } from '@/_contexts/SpreadsheetContext';
-import { useSpreadjsCommandManager } from '@/_hooks/sheet/useSpreadjsCommandStore';
 
 // SpreadJS 라이선싱
 // var SpreadJSKey = "xxx";          // 라이선스 키 입력
 // GC.Spread.Sheets.LicenseKey = SpreadJSKey;
 GC.Spread.Common.CultureManager.culture("ko-kr");
 
-export default function MainSpreadSheet() {
+interface MainSpreadSheetProps {
+  spreadRef: React.MutableRefObject<any>;
+}
+
+export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // URL 파라미터 추출
     const params = useParams();
     const spreadSheetId = params.SpreadSheetId as string;
@@ -63,25 +65,11 @@ export default function MainSpreadSheet() {
         boxSizing: 'border-box' as const,
     });
 
-    // SpreadJS 인스턴스 참조
-    const spreadRef = useRef<any>(null);
+    // SpreadJS 인스턴스 참조 (props로 받음)
+    // const spreadRef = useRef<any>(null); // 제거됨 - props로 받음
     
-    // 명령어 관리 Hook
-    const commandManager = useSpreadjsCommandManager(spreadRef, {
-        enableAutosave: true,
-        requireConfirmation: false,
-        enableSnapshot: true,
-        autosaveDelay: 3000,
-        onCommandSuccess: (result, snapshot) => {
-            console.log('✅ 수식 적용 성공:', { result, snapshot });
-        },
-        onCommandError: (error, command) => {
-            console.error('❌ 수식 적용 실패:', { error, command });
-        },
-        onSnapshotCreated: (snapshot) => {
-            console.log('📸 스냅샷 생성:', snapshot.description);
-        }
-    });
+    // 명령어 관리 Hook (page.tsx로 이동됨)
+    // const commandManager = useSpreadjsCommandManager(...) 제거됨
 
     // 스프레드시트 생성 훅
     const {
@@ -392,7 +380,7 @@ export default function MainSpreadSheet() {
                 console.warn('Cleanup warning:', error);
             }
         }
-    }, [resetUploadState, resetExportState, resetCreateState, clearCreateError]);
+    }, [resetUploadState, resetExportState, resetCreateState, clearCreateError, spreadRef]);
 
     // 컴포넌트 언마운트 시 정리
     useEffect(() => {
@@ -430,7 +418,7 @@ export default function MainSpreadSheet() {
 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [spreadRef]);
 
     // 파일 업로드 모달 상태
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -633,8 +621,7 @@ export default function MainSpreadSheet() {
     };
 
     return (
-        <SpreadsheetProvider spreadRef={spreadRef} commandManager={commandManager}>
-            <div className="w-full h-screen box-border flex flex-col border-4 border-rounded border-gray-500 bg-gray-50">
+        <div className="w-full h-screen box-border flex flex-col border-4 border-rounded border-gray-500 bg-gray-50">
             {/* 구글 스프레드시트 스타일 상단 바 */}
             <div className="flex-shrink-0">
                 <div className="w-full h-6 bg-white border-b border-gray-200 flex items-center px-2 box-border">
@@ -849,6 +836,5 @@ export default function MainSpreadSheet() {
                 </div>
             )}
             </div>
-        </SpreadsheetProvider>
     );
 }
