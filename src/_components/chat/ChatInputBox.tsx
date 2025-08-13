@@ -4,15 +4,15 @@ import React, { useState, useRef } from 'react';
 import { Send, Paperclip, Settings, ChevronDown } from 'lucide-react';
 import { useMainChat } from '../../_hooks/chat/useChatStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
+import { useChatMode , ChatMode} from '../../_hooks/sheet/useChatMode';
 
 interface ChatInputBoxProps {
-  onSendMessage?: (message: string, mode: string, model: string, selectedFile?: File) => void;
+  onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
   placeholder?: string;
   disabled?: boolean;
   userId?: string;
 }
 
-type Mode = 'agent' | 'edit';
 type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
 
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
@@ -23,7 +23,6 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 }) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [mode, setMode] = useState<Mode>('agent');
   const [model, setModel] = useState<Model>('Claude-sonnet-4');
   const [showModeModal, setShowModeModal] = useState(false);
   const [showModelModal, setShowModelModal] = useState(false);
@@ -31,6 +30,9 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
   const modelModalRef = useRef<HTMLDivElement>(null);
+
+  // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
+  const { mode, setMode } = useChatMode();
 
   // v2 채팅 훅 사용
   const { sendMessage: sendChatMessage, isLoading } = useMainChat(userId);
@@ -112,7 +114,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
   return (
     <div className="p-2 mx-auto ">
-      <div className="bg-white border border-[#005DE9] rounded-3xl overflow-hidden border-2">
+      <div className="bg-white border-2 border-[#005DE9] rounded-3xl overflow-hidden">
         {/* 상단 영역 - 파일 선택 */}
         <div className="px-6 py-3 border-b border-gray-100">
           {selectedFile ? (
