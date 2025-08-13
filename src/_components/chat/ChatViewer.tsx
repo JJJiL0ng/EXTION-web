@@ -153,7 +153,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
   return (
     <div className="chat-viewer h-full flex flex-col">
       {/* 메시지 리스트 */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-2 space-y-3">
         {messages.length === 0 ? (
           // 파일 업로드 모드면 파일 업로드 환영 메시지, 아니면 기본 메시지
           initMode === ChatInitMode.FILE_UPLOAD ? (
@@ -170,35 +170,33 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
           messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${
-                message.type === MessageType.USER ? 'justify-end' : 'justify-start'
-              }`}
+              className="w-full"
             >
-              <div
-                className={`max-w-3xl rounded-lg px-4 py-2 ${
-                  message.type === MessageType.USER
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-900'
-                }`}
-              >
-                {message.type === MessageType.USER ? (
-                  <div className="whitespace-pre-wrap">{message.content}</div>
-                ) : (
-                  <StructuredResponseRenderer message={message as AssistantMessage} />
-                )}
-                
-                {/* 메시지 타임스탬프 */}
                 <div
-                  className={`text-xs mt-1 ${
-                    message.type === MessageType.USER ? 'text-blue-100' : 'text-gray-500'
+                  className={`w-full rounded-lg px-4 py-2 border ${
+                    message.type === MessageType.USER
+                      ? 'bg-white text-gray-900 border-gray-300'
+                      : 'bg-gray-100 text-gray-900 border-gray-300'
                   }`}
                 >
-                  {new Date(message.timestamp).toLocaleTimeString('ko-KR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
+                  {message.type === MessageType.USER ? (
+                    <div className="whitespace-pre-wrap">{message.content}</div>
+                  ) : (
+                    <StructuredResponseRenderer message={message as AssistantMessage} />
+                  )}
+
+                  {/* 메시지 타임스탬프 */}
+                  <div
+                    className={`text-xs mt-1 ${
+                      message.type === MessageType.USER ? 'text-blue-900' : 'text-gray-900'
+                    }`}
+                  >
+                    {new Date(message.timestamp).toLocaleTimeString('ko-KR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
                 </div>
-              </div>
             </div>
           ))
         )}
