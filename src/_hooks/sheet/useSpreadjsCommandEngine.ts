@@ -199,18 +199,28 @@ export const useSpreadjsCommandEngine = (
 
             case 'sort': {
               // sortRange 명령어 실행
-              const sortMatch = command.match(/sortRange\((\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(true|false),\s*(\[.*\])/);
+              const sortMatch = command.match(/sortRange\((\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(true|false),\s*(\[.*?\])/);
               if (sortMatch) {
                 const [, startRow, startCol, rowCount, colCount, byRows, sortInfo] = sortMatch;
-                const sortInfoObj = JSON.parse(sortInfo);
-                sheet.sortRange(
-                  parseInt(startRow),
-                  parseInt(startCol),
-                  parseInt(rowCount),
-                  parseInt(colCount),
-                  byRows === 'true',
-                  sortInfoObj
-                );
+                try {
+                  // JavaScript 객체 리터럴을 JSON으로 변환
+                  const normalizedSortInfo = sortInfo
+                    .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
+                    .replace(/;\s*\)\s*$/, ''); // 끝의 ;) 제거
+                  
+                  const sortInfoObj = JSON.parse(normalizedSortInfo);
+                  sheet.sortRange(
+                    parseInt(startRow),
+                    parseInt(startCol),
+                    parseInt(rowCount),
+                    parseInt(colCount),
+                    byRows === 'true',
+                    sortInfoObj
+                  );
+                } catch (parseError) {
+                  console.error('Sort info 파싱 실패:', parseError, 'Original:', sortInfo);
+                  throw new Error(`Sort 정보 파싱 실패: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+                }
               }
               break;
             }
