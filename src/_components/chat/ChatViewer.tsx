@@ -4,6 +4,7 @@ import React, { useRef, useEffect } from 'react';
 import { useChatStore } from '../../_hooks/chat/useChatStore';
 import { StreamingMarkdown } from './message/StreamingMarkdown';
 import { FileUploadWelcomeMessage } from './FileUploadWelcomeMessage';
+import TypingIndicator from './TypingIndicator';
 import { ChatInitMode, MessageType, AssistantMessage } from '../../_types/chat.types';
 import { ChatIntentType } from '../../_types/chat-response.types';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
@@ -143,7 +144,21 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // V2 스토어에서 직접 데이터 가져오기
-  const { messages, error, initMode, fileInfo } = useChatStore();
+  const { messages, error, initMode, fileInfo, isLoading, isStreaming } = useChatStore();
+
+  // 디버깅용 콘솔 로그
+  useEffect(() => {
+    console.log('🔍 [ChatViewer] State Debug:', {
+      isLoading,
+      isStreaming,
+      messagesLength: messages.length,
+      hasMessages: messages.length > 0,
+      shouldShowIndicator: isStreaming && messages.length > 0,
+      lastMessage: messages[messages.length - 1]?.type,
+      lastMessageStatus: messages[messages.length - 1]?.status,
+      timestamp: new Date().toISOString()
+    });
+  }, [isLoading, isStreaming, messages]);
 
   // 새 메시지가 올 때마다 스크롤을 맨 아래로
   useEffect(() => {
@@ -167,7 +182,15 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
             </div>
           )
         ) : (
-          messages.map((message) => (
+          messages
+            .filter((message) => {
+              // AI 메시지가 pending 상태일 때는 숨기기 (타이핑 인디케이터가 대신 표시)
+              if (message.type === MessageType.ASSISTANT && message.status === 'pending') {
+                return false;
+              }
+              return true;
+            })
+            .map((message) => (
             <div
               key={message.id}
               className="w-full"
@@ -200,6 +223,35 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
             </div>
           ))
         )}
+        
+        {/* 타이핑 인디케이터 - AI 메시지가 pending 상태일 때만 표시 */}
+        {(() => {
+          const lastMessage = messages[messages.length - 1];
+          const hasPendingAIMessage = messages.some(msg => 
+            msg.type === MessageType.ASSISTANT && msg.status === 'pending'
+          );
+          const shouldShow = hasPendingAIMessage && messages.length > 0;
+          
+          console.log('🎯 [TypingIndicator] Render Check:', {
+            isLoading,
+            isStreaming,
+            hasPendingAIMessage,
+            messagesLength: messages.length,
+            lastMessageType: lastMessage?.type,
+            lastMessageStatus: lastMessage?.status,
+            shouldShow,
+            allMessageStatuses: messages.map(m => ({ type: m.type, status: m.status })),
+            timestamp: new Date().toISOString()
+          });
+          
+          return shouldShow ? (
+            <div className="flex justify-start">
+              <div className="px-4 py-3">
+                <TypingIndicator />
+              </div>
+            </div>
+          ) : null;
+        })()}
         
         {/* 오류 메시지 표시 */}
         {error && (

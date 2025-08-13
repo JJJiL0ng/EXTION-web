@@ -86,7 +86,7 @@ export const StreamingMarkdown: React.FC<StreamingMarkdownProps> = ({
       </ReactMarkdown>
       
       {/* 스트리밍 상태 표시 */}
-      {(isStreaming || status === MessageStatus.STREAMING) && (
+      {/* {(isStreaming || status === MessageStatus.STREAMING) && (
         <div className="mt-2 flex items-center text-xs text-gray-500">
           <div className="flex space-x-1">
             <div className="w-1 h-1 bg-gray-400 rounded-full animate-pulse"></div>
@@ -95,7 +95,7 @@ export const StreamingMarkdown: React.FC<StreamingMarkdownProps> = ({
           </div>
           <span className="ml-2">AI가 응답하고 있습니다...</span>
         </div>
-      )}
+      )} */}
     </div>
   );
 };
