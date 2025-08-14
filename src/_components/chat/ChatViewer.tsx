@@ -104,6 +104,18 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
     console.log('✅ [StructuredResponseRenderer] Intent found:', detectedIntent);
   }
 
+  // GENERAL_HELP는 특별한 컴포넌트가 필요없으므로 기본 마크다운으로 렌더링
+  if (detectedIntent === ChatIntentType.GENERAL_HELP) {
+    console.log('📝 [StructuredResponseRenderer] Using default markdown for general help');
+    return (
+      <StreamingMarkdown
+        content={message.content}
+        isStreaming={message.status === 'streaming'}
+        className="text-gray-900"
+      />
+    );
+  }
+
   const config = detectedIntent ? ResponseComponentRegistry[detectedIntent] : null;
   
   if (!config) {

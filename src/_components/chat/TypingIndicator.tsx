@@ -8,7 +8,7 @@ interface TypingIndicatorProps {
 
 const TypingIndicator: React.FC<TypingIndicatorProps> = ({ className }) => {
   return (
-    <div className={`flex items-center space-x-2 ${className}`}>
+    <div className={`flex flex-col items-center space-y-2 ${className}`}>
       <div className="flex space-x-2">
         <div 
           className="w-3 h-3 rounded-full"
@@ -36,12 +36,12 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({ className }) => {
         />
       </div>
       <span 
-        className="text-base text-gray-500 ml-3 animate-pulse"
+        className="text-base text-gray-500 animate-pulse"
         style={{
           animationDuration: '2s'
         }}
       >
-        thinking...
+        생각중...
       </span>
       <style jsx>{`
         @keyframes bounce {

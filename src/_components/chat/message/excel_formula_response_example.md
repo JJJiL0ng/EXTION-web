@@ -284,3 +284,53 @@ data: {
     "chatId": "1b61c21f-8295-40ae-b5d0-ee2d12acaadd",
     "timestamp": "2025-08-13T03:15:31.200Z"
     }
+
+    =========================
+
+    data: {
+        "success": true,
+        "tokensUsed": 200,
+        "responseTime": 4905,
+        "model": "claude",
+        "cached": false,
+        "confidence": 0.95,
+        "analysis": {
+            "detectedOperation": "수량(E열)이 3인 항목의 개수 계산",
+            "dataRange": "A1:G51",
+            "targetCells": "결과를 표시할 셀 (예: H1)",
+            "operationType": "single_cell"
+        },
+        "formulaDetails": {
+            "name": "COUNTIF",
+            "description": "수량 열에서 값이 3인 항목의 개수를 계산합니다.",
+            "syntax": "=COUNTIF(range, criteria)",
+            "parameters": [
+                {
+                    "name": "range",
+                    "description": "검사할 셀 범위 (E2:E51)",
+                    "required": true,
+                    "example": "E2:E51"
+                },
+                {
+                    "name": "criteria",
+                    "description": "개수를 셀 조건 (3)",
+                    "required": true,
+                    "example": "3"
+                }
+            ],
+            "spreadjsCommand": "worksheet.setFormula(0, 7, \"=COUNTIF(E2:E51, 3)\", GC.Spread.Sheets.SheetArea.viewport);"
+        },
+        "implementation": {
+            "steps": [
+                "1단계: COUNTIF 함수를 사용하여 수량 열에서 3인 값을 계산합니다.",
+                "2단계: 결과를 H1 셀에 표시합니다."
+            ],
+            "cellLocations": {
+                "source": "E2:E51 (수량 열)",
+                "target": "H1 (결과 표시 셀)",
+                "description": "E열에서 값이 3인 셀의 개수를 계산합니다."
+            }
+        },
+        "chatId": "1b61c21f-8295-40ae-b5d0-ee2d12acaadd",
+        "timestamp": "2025-08-13T13:25:02.255Z"
+    }
