@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import StreamingMarkdown from "./StreamingMarkdown";
 import { AssistantMessage } from "../../../_types/chat.types";
 import { useSpreadsheetContextSafe } from '@/_contexts/SpreadsheetContext';
 import { transformStructuredContentToFormulaResponse, isValidFormulaContent, validateFormulaResponse } from '@/_utils/formulaTransformer';
+import useChatModeStore from "@/_store/chat/chatModeStore";
 
 interface FormulaMessageProps {
   message: AssistantMessage;
@@ -19,23 +20,12 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
   
   // SpreadsheetContext 사용 (안전한 버전)
   const spreadsheetContext = useSpreadsheetContextSafe();
+  
+  // ChatMode 상태 가져오기
+  const { mode } = useChatModeStore();
 
-
-  // 메시지가 존재하지 않거나 구조화된 응답이 없으면 null 반환
-  if (!message?.structuredContent || message.structuredContent.intent !== "excel_formula") {
-    return null;
-  }
-
-  // 버튼 표시 조건 확인
-  const shouldShowButton = !isApplied && message.status === 'completed' && !isDenied && !executionError;
-  console.log('🔍 FormulaMessage Context 상태:', {
-    hasSpreadsheetContext: !!spreadsheetContext,
-    isReady: spreadsheetContext?.isReady,
-    shouldShowButton,
-    messageStatus: message.status
-  });
-
-  const handleApplyFormula = async () => {
+  // 수식 적용 함수 정의
+  const handleApplyFormula = useCallback(async () => {
     // Context 및 데이터 검증
     if (!spreadsheetContext) {
       console.warn('SpreadsheetContext를 사용할 수 없습니다. MainSpreadSheet에서 열어주세요.');
@@ -84,7 +74,44 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
     } finally {
       setIsExecuting(false);
     }
-  };
+  }, [spreadsheetContext, message.structuredContent]);
+
+  // agent 모드일 때 자동으로 수식 적용
+  useEffect(() => {
+    const autoApplyFormula = async () => {
+      // agent 모드이고, 메시지가 완성되었으며, 아직 적용되지 않았고, 거부되지도 않았을 때
+      if (
+        mode === 'agent' && 
+        message.status === 'completed' && 
+        !isApplied && 
+        !isDenied && 
+        !executionError && 
+        !isExecuting &&
+        spreadsheetContext?.isReady &&
+        message?.structuredContent &&
+        message.structuredContent.intent === "excel_formula"
+      ) {
+        await handleApplyFormula();
+      }
+    };
+
+    autoApplyFormula();
+  }, [mode, message.status, isApplied, isDenied, executionError, isExecuting, spreadsheetContext?.isReady, message?.structuredContent, handleApplyFormula]);
+
+  // 메시지가 존재하지 않거나 구조화된 응답이 없으면 null 반환
+  if (!message?.structuredContent || message.structuredContent.intent !== "excel_formula") {
+    return null;
+  }
+
+  // 버튼 표시 조건 확인 (edit 모드일 때만)
+  const shouldShowButton = mode === 'edit' && !isApplied && message.status === 'completed' && !isDenied && !executionError;
+  console.log('🔍 FormulaMessage Context 상태:', {
+    hasSpreadsheetContext: !!spreadsheetContext,
+    isReady: spreadsheetContext?.isReady,
+    shouldShowButton,
+    messageStatus: message.status,
+    chatMode: mode
+  });
 
   const handleRejectFormula = () => {
     setIsDenied(true);
@@ -100,8 +127,8 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
         className={className}
       />
       
-      {/* 수식 적용 여부 확인 UI */}
-      {!isApplied && message.status === 'completed' && !isDenied && !executionError && (
+      {/* 수식 적용 여부 확인 UI (edit 모드일 때만 표시) */}
+      {shouldShowButton && (
         <div className="mt-4 border-gray-200 rounded-lg shadow-sm">
           <div className="flex flex-col space-y-3">
             <button

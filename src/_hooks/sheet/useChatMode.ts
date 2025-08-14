@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import useChatModeStore, { ChatMode } from '../../_store/userSetting/chatModeStore';
+import useChatModeStore, { ChatMode } from '../../_store/chat/chatModeStore';
 
 /**
  * ChatMode 관련 상태와 액션을 제공하는 커스텀 훅
