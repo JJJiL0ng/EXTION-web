@@ -186,15 +186,20 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
           initMode === ChatInitMode.FILE_UPLOAD ? (
             <FileUploadWelcomeMessage fileInfo={fileInfo || undefined} />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="flex items-center justify-center h-full text-gray-700">
               <div className="text-center">
-                <div className="text-lg font-medium mb-2">새로운 대화를 시작해보세요</div>
-                <div className="text-sm">아래 입력창에 메시지를 입력하세요</div>
+              <img
+                src="/logo.png"
+                alt="Extion Logo"
+                className="mx-auto mb-4 w-16 h-16"
+              />
+              <div className="text-xl mb-2">채팅으로 데이터 수정</div>
+              <div className="text-sm">아래 입력창에 메시지를 입력하세요</div>
               </div>
             </div>
-          )
-        ) : (
-          messages
+            )
+          ) : (
+            messages
             .filter((message) => {
               // AI 메시지가 pending 상태일 때는 숨기기 (타이핑 인디케이터가 대신 표시)
               if (message.type === MessageType.ASSISTANT && message.status === 'pending') {
