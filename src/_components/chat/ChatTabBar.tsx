@@ -16,7 +16,7 @@ const ChatTabBar = () => {
         <div>
             <div
             ref={tabBarRef}
-            className="flex items-center space-x-4 h-6 border-b"
+            className="px-2 flex items-center space-x-4 h-6"
             style={{ minHeight: '1.5rem' }} // 40px for better vertical alignment
             >
             <button 
@@ -46,7 +46,6 @@ const ChatTabBar = () => {
                 <X size={18} />
             </button>
             </div>
-            <div className="border-2 border-gray-200"></div>
         </div>
 
     );

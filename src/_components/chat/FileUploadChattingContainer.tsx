@@ -33,7 +33,7 @@ export default function FileUploadChattingContainer({
   const { error: storeError, clearError } = useChatStore();
 
   return (
-    <div className="border-4 border-gray-200 h-full flex flex-col">
+    <div className=" border-gray-200 h-full flex flex-col">
       {/* 초기화되지 않은 경우 로딩 표시 */}
       {!chatFlow.isInitialized ? (
         <div className="flex-1 flex items-center justify-center">

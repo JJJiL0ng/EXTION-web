@@ -179,6 +179,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
 
   return (
     <div className="chat-viewer h-full flex flex-col">
+      <div className="border-b-2 border-[#D9D9D9]"></div>
       {/* 메시지 리스트 */}
       <div className="flex-1 overflow-y-auto p-2 space-y-3">
         {messages.length === 0 ? (

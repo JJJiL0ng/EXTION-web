@@ -632,10 +632,10 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     };
 
     return (
-        <div className="w-full h-screen box-border flex flex-col border-4 border-rounded border-gray-500 bg-gray-50">
+        <div className="w-full h-screen box-border flex flex-col bg-gray-50">
             {/* 구글 스프레드시트 스타일 상단 바 */}
             <div className="flex-shrink-0">
-                <div className="w-full h-6 bg-white border-b border-gray-200 flex items-center px-2 box-border">
+                <div className="w-full h-6 bg-white flex items-center px-2 box-border">
                     <div className="flex items-center space-x-6">
                         {/* 홈으로 가기 */}
                         <button
@@ -733,40 +733,9 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                                 )}
                             </div>
                         )}
+        
 
-                        {/* 성공 상태 */}
-                        {uploadState.fileName && !uploadState.isUploading && !uploadState.isProcessing && !uploadState.error && !exportState.isExporting && !isCreating && (
-                            <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#005ed9' }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span className="text-sm font-medium" style={{ color: '#005ed9' }}>
-                                    {uploadState.fileName}
-                                </span>
-                            </div>
-                        )}
-
-                        {/* 스프레드시트 생성 성공 상태 */}
-                        {createdSheet && !isCreating && (
-                            <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#22c55e' }}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span className="text-sm font-medium" style={{ color: '#22c55e' }}>
-                                    스프레드시트 생성됨
-                                </span>
-                            </div>
-                        )}
-
-                        {/* 업로드된 파일 수 */}
-                        {/* {uploadState.uploadedFiles.length > 0 && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-600">
-                                    업로드된 파일: {uploadState.uploadedFiles.length}개
-                                </span>
-                            </div>
-                        )} */}
-
+                    
                         {/* 마지막 저장 시간 */}
                         {exportState.lastExportedAt && (
                             <div className="flex items-center gap-2">
@@ -809,7 +778,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 </div>
             </div>
 
-            <div className='border-2 border-gray-200'></div>
+            {/* <div className='border-2 border-gray-200'></div> */}
 
             {/* SpreadJS 컴포넌트 - 남은 공간 전체 사용 */}
             <div className="flex-1 w-full">
