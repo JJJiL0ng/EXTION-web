@@ -170,12 +170,12 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         <div className="px-4 py-2 flex items-center justify-between relative">
           <div className="flex items-center">
             {/* 모드 선택 */}
-            <div className="relative" ref={modeModalRef}>
+            <div className="py-2 relative" ref={modeModalRef}>
               <button
           onClick={() => setShowModeModal(!showModeModal)}
           className="flex items-center justify-between gap-2 rounded-lg px-2 text-base text-gray-700 hover:bg-gray-200 transition-colors w-20"
           disabled={disabled}
-          style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
+          // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
               >
           <span className="capitalize">{mode}</span>
           <span className="flex items-center" style={{ height: '32px' }}>
@@ -185,14 +185,14 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             
               {/* 모드 선택 모달 */}
               {showModeModal && (
-          <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[200px] w-max">
+          <div className="absolute bottom-full mb-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-48">
             <button
               onClick={() => {
                 setMode('agent');
                 setShowModeModal(false);
               }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                mode === 'agent' ? 'bg-gray-200 text-gray-700' : 'text-gray-400'
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-t-lg ${
+                mode === 'agent' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
               }`}
             >
               Agent: 변경사항 자동 적용
@@ -202,8 +202,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                 setMode('edit');
                 setShowModeModal(false);
               }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                mode === 'edit' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-b-lg ${
+                mode === 'edit' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
               }`}
             >
               Edit: 변경사항 수동 적용
