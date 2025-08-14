@@ -7,13 +7,14 @@ import { getOrCreateGuestId } from '../../_utils/guestUtils';
 import { useChatMode , ChatMode} from '../../_hooks/sheet/useChatMode';
 
 interface ChatInputBoxProps {
-  onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
+  // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
+  onSendMessage?: (message: string, mode: ChatMode, selectedFile?: File) => void;
   placeholder?: string;
   disabled?: boolean;
   userId?: string;
 }
 
-type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
+// type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
 
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   // onSendMessage,
@@ -23,13 +24,13 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 }) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [model, setModel] = useState<Model>('Claude-sonnet-4');
+  // const [model, setModel] = useState<Model>('Claude-sonnet-4');
   const [showModeModal, setShowModeModal] = useState(false);
-  const [showModelModal, setShowModelModal] = useState(false);
+  // const [showModelModal, setShowModelModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
-  const modelModalRef = useRef<HTMLDivElement>(null);
+  // const modelModalRef = useRef<HTMLDivElement>(null);
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
@@ -101,16 +102,16 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
       }
       
       // 모델 모달 외부 클릭 확인
-      if (showModelModal && modelModalRef.current && !modelModalRef.current.contains(target)) {
-        setShowModelModal(false);
-      }
+      // if (showModelModal && modelModalRef.current && !modelModalRef.current.contains(target)) {
+      //   setShowModelModal(false);
+      // }
     };
 
-    if (showModeModal || showModelModal) {
+    if (showModeModal) { // || showModelModal
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showModeModal, showModelModal]);
+  }, [showModeModal]); // , showModelModal
 
   return (
     <div className="p-2 mx-auto ">
@@ -166,50 +167,53 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         </div>
           
         {/* 하단 영역 - 컨트롤들 */}
-        <div className="px-6 py-3 flex items-center justify-between relative">
-          <div className="flex items-center gap-4">
+        <div className="px-4 py-2 flex items-center justify-between relative">
+          <div className="flex items-center">
             {/* 모드 선택 */}
             <div className="relative" ref={modeModalRef}>
               <button
-                onClick={() => setShowModeModal(!showModeModal)}
-                className="flex items-center justify-between gap-2 rounded-lg px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors w-20"
-                disabled={disabled}
+          onClick={() => setShowModeModal(!showModeModal)}
+          className="flex items-center justify-between gap-2 rounded-lg px-2 text-base text-gray-700 hover:bg-gray-200 transition-colors w-20"
+          disabled={disabled}
+          style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
               >
-                <span className="capitalize">{mode}</span>
-                <ChevronDown size={16} />
+          <span className="capitalize">{mode}</span>
+          <span className="flex items-center" style={{ height: '32px' }}>
+            <ChevronDown size={18} /> {/* 크기 크게 조정 */}
+          </span>
               </button>
             
               {/* 모드 선택 모달 */}
               {showModeModal && (
-                <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[200px] w-max">
-                  <button
-                    onClick={() => {
-                      setMode('agent');
-                      setShowModeModal(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                      mode === 'agent' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
-                  >
-                    Agent: 변경사항 자동 적용
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMode('edit');
-                      setShowModeModal(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                      mode === 'edit' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
-                  >
-                    Edit: 변경사항 수동 적용
-                  </button>
-                </div>
+          <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[200px] w-max">
+            <button
+              onClick={() => {
+                setMode('agent');
+                setShowModeModal(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                mode === 'agent' ? 'bg-gray-200 text-gray-700' : 'text-gray-400'
+              }`}
+            >
+              Agent: 변경사항 자동 적용
+            </button>
+            <button
+              onClick={() => {
+                setMode('edit');
+                setShowModeModal(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                mode === 'edit' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+              }`}
+            >
+              Edit: 변경사항 수동 적용
+            </button>
+          </div>
               )}
             </div>
 
             {/* 모델 선택 */}
-            <div className="relative" ref={modelModalRef}>
+            {/* <div className="relative" ref={modelModalRef}>
               <button
                 onClick={() => setShowModelModal(!showModelModal)}
                 className="flex items-center justify-between gap-2 rounded-lg px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors w-40"
@@ -220,7 +224,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
               </button>
               
               {/* 모델 선택 모달 */}
-              {showModelModal && (
+              {/* {showModelModal && (
                 <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 ">
                   <button
                     onClick={() => {
@@ -257,7 +261,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                   </button>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
 
           {/* 전송 버튼 */}
