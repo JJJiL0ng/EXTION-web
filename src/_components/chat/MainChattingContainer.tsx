@@ -53,11 +53,14 @@ export default function MainChattingContainer({
       ) : (
         <>
           {/* 채팅 탭바 - 기존 채팅 모드에서만 표시 */}
-          {chatFlow.availableActions.canShowChatList && (
+          {/* {chatFlow.availableActions.canShowChatList && (
             <div>
               <ChatTabBar />
             </div>
-          )}
+          )} */}
+          <div>
+              <ChatTabBar />
+            </div>
           
           {/* 채팅 뷰어 */}
           <div className="flex-1 overflow-y-auto">

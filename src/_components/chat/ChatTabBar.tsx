@@ -33,12 +33,12 @@ const ChatTabBar = () => {
                                 AI
             </button>
             <div className="flex-1" />
-            <button
+            {/* <button
                 className={`py-0 rounded ${activeTab === 'settings' ? 'text-white' : 'text-gray-700'} flex items-center h-full`}
                 onClick={() => handleTabClick('settings')}
             >
                 <Settings size={18} />
-            </button>
+            </button> */}
             <button
                 className={`pr-2 py-0 rounded ${activeTab === 'settings' ? 'text-white' : 'text-gray-700'} flex items-center h-full`}
                 onClick={hideChat}
