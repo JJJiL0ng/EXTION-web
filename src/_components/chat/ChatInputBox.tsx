@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Send, Paperclip, Settings, ChevronDown } from 'lucide-react';
+import { Paperclip, Settings, ChevronDown } from 'lucide-react';
 import { useMainChat } from '../../_hooks/chat/useChatStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
 import { useChatMode , ChatMode} from '../../_hooks/sheet/useChatMode';
@@ -116,14 +116,14 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
   return (
     <div className="p-2 mx-auto justify-center w-full max-w-2xl">
-      <div className="bg-white border-2 border-[#005DE9] rounded-3xl overflow-hidden">
+      <div className="bg-white border-2 border-[#005DE9] rounded-xl overflow-hidden">
         {/* 상단 영역 - 파일 선택 */}
-        <div className="px-4 py-2 flex items-center justify-between relative">
+        <div className="p-3 flex items-center justify-between relative">
            <FileUploadCard />
         </div>
         <div className="border-t border-gray-200"/>
         {/* 메인 입력 영역 */}
-        <div className="px-4 py-2">
+        <div className="p-3">
           <textarea
             ref={textareaRef}
             value={message}
@@ -137,19 +137,19 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         </div>
           
         {/* 하단 영역 - 컨트롤들 */}
-        <div className="px-4 py-2 flex items-center justify-between relative">
+        <div className="px-3 py-1 flex items-center justify-between relative">
           <div className="flex items-center">
             {/* 모드 선택 */}
             <div className="py-2 relative" ref={modeModalRef}>
               <button
           onClick={() => setShowModeModal(!showModeModal)}
-          className="flex items-center justify-between gap-2 rounded-lg px-2 text-base text-gray-700 hover:bg-gray-200 transition-colors w-20"
+          className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-600 hover:bg-gray-200 transition-colors w-20"
           disabled={disabled}
           // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
               >
           <span className="capitalize">{mode}</span>
-          <span className="flex items-center" style={{ height: '32px' }}>
-            <ChevronDown size={18} /> {/* 크기 크게 조정 */}
+          <span className="flex items-center" style={{ height: '24px' }}>
+            <ChevronDown size={16} /> {/* 크기 크게 조정 */}
           </span>
               </button>
             
@@ -238,7 +238,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
           <button
             onClick={handleSend}
             disabled={disabled || isLoading || (!message.trim() && !selectedFile)}
-            className={`flex items-center justify-center w-10 h-6 rounded-full transition-all ${
+            className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${
               disabled || isLoading || (!message.trim() && !selectedFile)
                 ? 'bg-gray-300 text-white cursor-not-allowed'
                 : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
@@ -247,7 +247,9 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             {isLoading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Send size={18} />
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8.99992 16V6.41407L5.70696 9.70704C5.31643 10.0976 4.68342 10.0976 4.29289 9.70704C3.90237 9.31652 3.90237 8.6835 4.29289 8.29298L9.29289 3.29298L9.36907 3.22462C9.76184 2.90427 10.3408 2.92686 10.707 3.29298L15.707 8.29298L15.7753 8.36915C16.0957 8.76192 16.0731 9.34092 15.707 9.70704C15.3408 10.0732 14.7618 10.0958 14.3691 9.7754L14.2929 9.70704L10.9999 6.41407V16C10.9999 16.5523 10.5522 17 9.99992 17C9.44764 17 8.99992 16.5523 8.99992 16Z"></path>
+              </svg>
             )}
           </button>
         </div>

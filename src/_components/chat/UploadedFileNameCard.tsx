@@ -15,7 +15,7 @@ export const FileUploadCard: React.FC<{ showIcon?: boolean }> = ({
   return (
     //현재 border 컬러가 적용이 안되는 에러가 있음 추후 확인해야함 : todo
     <div
-      className="inline-flex items-center px-2 py-1 bg-white border border-[#005ed9] text-xs font-medium rounded-lg"
+      className="inline-flex items-center px-2 py-1 bg-white border border-gray-500 text-xs font-medium rounded-lg"
     >
       {showIcon && (
       <Eye size={16} className={`mr-1 text-gray-700`} />
