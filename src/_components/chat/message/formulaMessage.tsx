@@ -130,18 +130,18 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
       {/* 수식 적용 여부 확인 UI (edit 모드일 때만 표시) */}
       {shouldShowButton && (
         <div className="mt-4 border-gray-200 rounded-lg shadow-sm">
-          <div className="flex flex-col space-y-3">
+          <div className="flex space-x-3">
             <button
               onClick={handleRejectFormula}
               disabled={isExecuting}
-              className="w-full px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               취소
             </button>
             <button
               onClick={handleApplyFormula}
               disabled={isExecuting || !spreadsheetContext?.isReady}
-              className={`w-full px-6 py-2 text-sm font-medium border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors ${
+              className={`flex-1 px-6 py-2 text-sm font-medium border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors ${
               !spreadsheetContext?.isReady 
                 ? 'bg-gray-400 text-white cursor-not-allowed' 
                 : 'text-white' // 기본 텍스트 색상
