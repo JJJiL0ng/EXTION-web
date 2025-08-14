@@ -51,6 +51,9 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     
     // Chat 버튼 표시 상태 (지연된 렌더링용)
     const [showChatButton, setShowChatButton] = useState(!isChatVisible);
+    
+    // 파일 업로드 후 자동 채팅 열기 상태 관리
+    const [hasAutoOpenedChat, setHasAutoOpenedChat] = useState(false);
 
     // AI 버튼 클릭 핸들러 - 즉시 버튼 숨김
     const handleShowChat = () => {
@@ -320,6 +323,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
             // 파일 업로드 상태 업데이트
             setIsFileUploaded(true, fileName);
+
+            // 파일 업로드 후 0.5초 뒤에 Chat 버튼 자동 클릭 (딱 한번만)
+            if (!hasAutoOpenedChat) {
+                setTimeout(() => {
+                    setHasAutoOpenedChat(true); // 자동 열기 완료 표시
+                    handleShowChat(); // Chat 버튼 자동 클릭
+                }, 500);
+            }
 
             // 파일 업로드 후 스프레드시트 생성 API 호출
             try {
