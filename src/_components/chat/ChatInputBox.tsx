@@ -5,6 +5,7 @@ import { Send, Paperclip, Settings, ChevronDown } from 'lucide-react';
 import { useMainChat } from '../../_hooks/chat/useChatStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
 import { useChatMode , ChatMode} from '../../_hooks/sheet/useChatMode';
+import FileUploadCard from './UploadedFileNameCard';
 
 interface ChatInputBoxProps {
   // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
@@ -114,46 +115,15 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   }, [showModeModal]); // , showModelModal
 
   return (
-    <div className="p-2 mx-auto ">
+    <div className="p-2 mx-auto justify-center w-full max-w-2xl">
       <div className="bg-white border-2 border-[#005DE9] rounded-3xl overflow-hidden">
         {/* 상단 영역 - 파일 선택 */}
-        <div className="px-6 py-3 border-b border-gray-100">
-          {selectedFile ? (
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
-                <Paperclip size={14} />
-                <span className="truncate max-w-xs">{selectedFile.name}</span>
-                <button
-                  onClick={handleRemoveFile}
-                  className="text-blue-500 hover:text-blue-700 ml-1"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="text-left">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center text-gray-500 hover:text-gray-700 text-sm transition-colors"
-                disabled={disabled}
-              >
-                <Paperclip size={16} />
-                <span>선택된 파일</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileSelect}
-                className="hidden"
-                disabled={disabled}
-              />
-            </div>
-          )}
+        <div className="px-4 py-2 flex items-center justify-between relative">
+           <FileUploadCard />
         </div>
-
+        <div className="border-t border-gray-200"/>
         {/* 메인 입력 영역 */}
-        <div className="px-4 py-[8px]">
+        <div className="px-4 py-2">
           <textarea
             ref={textareaRef}
             value={message}
