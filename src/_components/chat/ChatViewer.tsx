@@ -28,18 +28,6 @@ const ResponseComponentRegistry: Record<string, ResponseComponentConfig> = {
     component: React.lazy(() => import('./message/formulaMessage')),
     // hook: useFormulaMessage // 필요시 추가
   },
-  // [ChatIntentType.PYTHON_CODE_GENERATOR]: {
-  //   component: React.lazy(() => import('./message/codeGeneratorMessage')),
-  //   // hook: useCodeGeneratorMessage // 필요시 추가
-  // },
-  // [ChatIntentType.WHOLE_DATA]: {
-  //   component: React.lazy(() => import('./message/wholeDataMessage')),
-  //   // hook: useWholeDataMessage // 필요시 추가
-  // },
-  // [ChatIntentType.GENERAL_HELP]: {
-  //   component: React.lazy(() => import('./message/generalHelpMessage')),
-  //   // hook: useGeneralHelpMessage // 필요시 추가
-  // }
 };
 
 // 구조화된 응답 렌더러 컴포넌트
@@ -92,7 +80,9 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
       detectedIntent = ChatIntentType.PYTHON_CODE_GENERATOR;
       console.log('✅ [StructuredResponseRenderer] Detected Python code generator intent');
     } else if (content.originalData?.dataTransformation ||
-               content.transformedJsonData) {
+               content.transformedJsonData ||
+               content.answerAfterReadWholedata ||
+               content.answerAfterReadWholeData) {
       detectedIntent = ChatIntentType.WHOLE_DATA;
       console.log('✅ [StructuredResponseRenderer] Detected whole data intent');
     } else if (content.originalData?.generalHelp ||
@@ -104,12 +94,35 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
     console.log('✅ [StructuredResponseRenderer] Intent found:', detectedIntent);
   }
 
-  // GENERAL_HELP는 특별한 컴포넌트가 필요없으므로 기본 마크다운으로 렌더링
-  if (detectedIntent === ChatIntentType.GENERAL_HELP) {
-    console.log('📝 [StructuredResponseRenderer] Using default markdown for general help');
+  // GENERAL_HELP와 WHOLE_DATA는 특별한 컴포넌트가 필요없으므로 기본 마크다운으로 렌더링
+  if (detectedIntent === ChatIntentType.GENERAL_HELP || detectedIntent === ChatIntentType.WHOLE_DATA) {
+    const content = structuredContent as any;
+    
+    let displayContent = message.content;
+    
+    // WHOLE_DATA의 경우 answerAfterReadWholeData 또는 answerAfterReadWholedata를 사용
+    if (detectedIntent === ChatIntentType.WHOLE_DATA) {
+      if (content.answerAfterReadWholeData?.response) {
+        displayContent = content.answerAfterReadWholeData.response;
+      } else if (content.answerAfterReadWholedata?.response) {
+        displayContent = content.answerAfterReadWholedata.response;
+      } else if (typeof content.answerAfterReadWholeData === 'string') {
+        displayContent = content.answerAfterReadWholeData;
+      } else if (typeof content.answerAfterReadWholedata === 'string') {
+        displayContent = content.answerAfterReadWholedata;
+      }
+    }
+    
+    console.log('📝 [StructuredResponseRenderer] Using default markdown for:', {
+      intent: detectedIntent,
+      hasAnswerAfterReadWholeData: !!content.answerAfterReadWholeData,
+      hasAnswerAfterReadWholedata: !!content.answerAfterReadWholedata,
+      contentPreview: displayContent.substring(0, 100) + '...'
+    });
+    
     return (
       <StreamingMarkdown
-        content={message.content}
+        content={displayContent}
         isStreaming={message.status === 'streaming'}
         className="text-gray-900"
       />

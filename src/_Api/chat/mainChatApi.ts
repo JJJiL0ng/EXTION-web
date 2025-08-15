@@ -105,6 +105,9 @@ export interface NewChatResponseData extends SSEEventData {
       link?: string;
     }>;
   };
+  answerAfterReadWholeData?: {
+    response: string;
+  } | string;
 }
 
 // 이전 버전 호환성을 위한 타입 (Deprecated)
@@ -474,6 +477,25 @@ export class MainChatApi {
       return data.generalHelp.directAnswer;
     }
     
+    if (data.answerAfterReadWholeData) {
+      // Handle nested response structure
+      if (typeof data.answerAfterReadWholeData === 'object' && data.answerAfterReadWholeData.response) {
+        return data.answerAfterReadWholeData.response;
+      } else if (typeof data.answerAfterReadWholeData === 'string') {
+        return data.answerAfterReadWholeData;
+      }
+    }
+    
+    // Check alternative casing
+    if ((data as any).answerAfterReadWholedata) {
+      const answerData = (data as any).answerAfterReadWholedata;
+      if (typeof answerData === 'object' && answerData.response) {
+        return answerData.response;
+      } else if (typeof answerData === 'string') {
+        return answerData;
+      }
+    }
+    
     if (data.dataTransformation) {
       return `**Data Transformation Completed**\n\nThe spreadsheet data has been successfully transformed.`;
     }
@@ -507,11 +529,13 @@ export class MainChatApi {
         // 원본 데이터도 포함
         originalData: data
       };
-    } else if (data.dataTransformation) {
+    } else if (data.dataTransformation || data.answerAfterReadWholeData || (data as any).answerAfterReadWholedata) {
       intent = 'whole_data';
       structuredContent = {
         intent: 'whole_data',
+        // Include all possible whole data fields
         ...data.dataTransformation,
+        answerAfterReadWholeData: data.answerAfterReadWholeData || (data as any).answerAfterReadWholedata,
         // 원본 데이터도 포함
         originalData: data
       };

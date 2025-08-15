@@ -81,10 +81,17 @@ export interface DataTransformation {
   dataUsageTips?: string[];
 }
 
+// 전체 데이터 분석 결과 인터페이스
+export interface WholeDataAnalysis {
+  response: string;
+}
+
 // 전체 데이터 관련 응답 인터페이스
 export interface WholeDataResponse extends BaseChatResponse {
   intent: ChatIntentType.WHOLE_DATA;
   dataTransformation: DataTransformation;
+  answerAfterReadWholedata?: string | WholeDataAnalysis; // 백엔드에서 전체 데이터 분석 후 제공하는 답변 (문자열 또는 객체)
+  answerAfterReadWholeData?: string | WholeDataAnalysis; // 대소문자 다른 버전도 지원
 }
 
 // 일반 도움말 예제 인터페이스
