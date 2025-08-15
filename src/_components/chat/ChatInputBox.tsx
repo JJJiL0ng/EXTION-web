@@ -55,20 +55,17 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
-      // 외부 핸들러가 있으면 사용, 없으면 v2 스토어 사용
-      // if (onSendMessage) {
-      //   onSendMessage(message, mode, model, selectedFile || undefined);
-      // } else {
-      //   // v2 스토어로 메시지 전송
-      //   await sendChatMessage(message);
-      // }
-      await sendChatMessage(message);
-      
+
+      const messageToSend = message;
+      const fileToSend = selectedFile;
+
       setMessage('');
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+
+      await sendChatMessage(messageToSend);
     }
   };
 
