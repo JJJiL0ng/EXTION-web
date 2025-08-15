@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 const config: Config = {
@@ -6,6 +7,7 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: ['text-gray-300', 'text-gray-400', 'text-gray-500', 'text-gray-600', 'text-gray-700' ,'border-gray-300', 'border-gray-400', 'border-gray-500', 'border-gray-600', 'border-gray-700'],
   theme: {
     extend: {
       colors: {

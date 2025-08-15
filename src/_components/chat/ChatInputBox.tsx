@@ -143,7 +143,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             <div className="py-2 relative" ref={modeModalRef}>
               <button
           onClick={() => setShowModeModal(!showModeModal)}
-          className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-600 hover:bg-gray-200 transition-colors w-20"
+          className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors w-20"
           disabled={disabled}
           // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
               >
@@ -165,7 +165,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                 mode === 'agent' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
               }`}
             >
-              Agent: 변경사항 자동 적용
+              agent: 변경사항 자동 적용
             </button>
             <button
               onClick={() => {
@@ -176,7 +176,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                 mode === 'edit' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
               }`}
             >
-              Edit: 변경사항 수동 적용
+              edit: 변경사항 수동 적용
             </button>
           </div>
               )}

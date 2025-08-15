@@ -1,18 +1,17 @@
+@import '@mescius/spread-sheets/styles/gc.spread.sheets.excel2016colorful';
+
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import '@mescius/spread-sheets/styles/gc.spread.sheets.excel2016colorful';
 
 @layer base {
   :root {
     --background: #ffffff;
     --foreground: #020617;
     --border: #e5e7eb;
-  }
-  
-  * {
-    @apply border-border;
   }
   
   html {
