@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '../../_hooks/chat/useChatStore';
 import { StreamingMarkdown } from './message/StreamingMarkdown';
 import { FileUploadWelcomeMessage } from './FileUploadWelcomeMessage';
@@ -123,7 +123,7 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
     return (
       <StreamingMarkdown
         content={displayContent}
-        isStreaming={message.status === 'streaming'}
+        isStreaming={detectedIntent === ChatIntentType.WHOLE_DATA ? false : message.status === 'streaming'}
         className="text-gray-900"
       />
     );
@@ -167,9 +167,63 @@ interface ChatViewerProps {
 
 const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
   
   // V2 스토어에서 직접 데이터 가져오기
   const { messages, error, initMode, fileInfo, isLoading, isStreaming } = useChatStore();
+
+  // 스크롤이 맨 아래에 있는지 확인하는 함수
+  const isAtBottom = useCallback(() => {
+    if (!chatContainerRef.current) return true;
+    
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const threshold = 100; // 100px 여유분
+    return scrollHeight - scrollTop - clientHeight <= threshold;
+  }, []);
+
+  // 자동 스크롤 함수
+  const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' = 'smooth') => {
+    if (messagesEndRef.current && isAutoScrollEnabled) {
+      messagesEndRef.current.scrollIntoView({ behavior });
+    }
+  }, [isAutoScrollEnabled]);
+
+  // 사용자 스크롤 감지 핸들러
+  const handleScroll = useCallback(() => {
+    if (!chatContainerRef.current) return;
+
+    const atBottom = isAtBottom();
+    
+    // 사용자가 스크롤 중이라고 표시
+    setIsUserScrolling(true);
+    
+    // 사용자가 맨 아래에 있으면 자동 스크롤 다시 활성화
+    if (atBottom && !isAutoScrollEnabled) {
+      setIsAutoScrollEnabled(true);
+    }
+    // 사용자가 위쪽으로 스크롤했으면 자동 스크롤 비활성화
+    else if (!atBottom && isAutoScrollEnabled) {
+      setIsAutoScrollEnabled(false);
+    }
+
+    // 스크롤이 멈췄음을 감지하기 위한 타이머
+    setTimeout(() => {
+      setIsUserScrolling(false);
+    }, 150);
+  }, [isAtBottom, isAutoScrollEnabled]);
+
+  // 스크롤 이벤트 리스너 등록
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [handleScroll]);
 
   // 디버깅용 콘솔 로그
   useEffect(() => {
@@ -181,20 +235,34 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
       shouldShowIndicator: isStreaming && messages.length > 0,
       lastMessage: messages[messages.length - 1]?.type,
       lastMessageStatus: messages[messages.length - 1]?.status,
+      isAutoScrollEnabled,
+      isUserScrolling,
       timestamp: new Date().toISOString()
     });
-  }, [isLoading, isStreaming, messages]);
+  }, [isLoading, isStreaming, messages, isAutoScrollEnabled, isUserScrolling]);
 
-  // 새 메시지가 올 때마다 스크롤을 맨 아래로
+  // 새 메시지가 올 때마다 자동 스크롤 (자동 스크롤이 활성화된 경우에만)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (isAutoScrollEnabled && !isUserScrolling) {
+      scrollToBottom();
+    }
+  }, [messages, isAutoScrollEnabled, isUserScrolling, scrollToBottom]);
+
+  // 스트리밍 중일 때도 자동 스크롤 적용
+  useEffect(() => {
+    if (isStreaming && isAutoScrollEnabled && !isUserScrolling) {
+      scrollToBottom('auto'); // 스트리밍 중에는 부드러운 스크롤 대신 즉시 스크롤
+    }
+  }, [isStreaming, isAutoScrollEnabled, isUserScrolling, scrollToBottom]);
 
   return (
-    <div className="chat-viewer h-full flex flex-col">
+    <div className="chat-viewer h-full flex flex-col relative">
       <div className="border-b-2 border-[#D9D9D9]"></div>
       {/* 메시지 리스트 */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-3">
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto p-2 space-y-3"
+      >
         {messages.length === 0 ? (
           // 파일 업로드 모드면 파일 업로드 환영 메시지, 아니면 기본 메시지
           initMode === ChatInitMode.FILE_UPLOAD ? (
@@ -263,17 +331,17 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
           );
           const shouldShow = hasPendingAIMessage && messages.length > 0;
           
-          console.log('🎯 [TypingIndicator] Render Check:', {
-            isLoading,
-            isStreaming,
-            hasPendingAIMessage,
-            messagesLength: messages.length,
-            lastMessageType: lastMessage?.type,
-            lastMessageStatus: lastMessage?.status,
-            shouldShow,
-            allMessageStatuses: messages.map(m => ({ type: m.type, status: m.status })),
-            timestamp: new Date().toISOString()
-          });
+          // console.log('🎯 [TypingIndicator] Render Check:', {
+          //   isLoading,
+          //   isStreaming,
+          //   hasPendingAIMessage,
+          //   messagesLength: messages.length,
+          //   lastMessageType: lastMessage?.type,
+          //   lastMessageStatus: lastMessage?.status,
+          //   shouldShow,
+          //   allMessageStatuses: messages.map(m => ({ type: m.type, status: m.status })),
+          //   timestamp: new Date().toISOString()
+          // });
           
           return shouldShow ? (
             <div className="flex justify-start">
@@ -297,6 +365,24 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
         {/* 스크롤 앵커 */}
         <div ref={messagesEndRef} />
       </div>
+      
+      {/* 자동 스크롤 비활성화 시 맨 아래로 가기 버튼 */}
+      {!isAutoScrollEnabled && (
+        <div className="absolute bottom-4 right-4">
+          <button
+            onClick={() => {
+              setIsAutoScrollEnabled(true);
+              scrollToBottom();
+            }}
+            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
+            title="맨 아래로 이동하고 자동 스크롤 활성화"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

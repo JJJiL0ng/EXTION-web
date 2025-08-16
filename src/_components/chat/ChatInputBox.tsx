@@ -72,7 +72,10 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      handleSend();
+      // disabled 상태일 때는 전송하지 않음
+      if (!disabled && !isLoading && (message.trim() || selectedFile)) {
+        handleSend();
+      }
     }
   };
 
@@ -112,7 +115,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   }, [showModeModal]); // , showModelModal
 
   return (
-    <div className="p-2 mx-auto justify-center w-full max-w-2xl">
+    <div className="p-2 mx-auto justify-center w-full max-full">
       <div className="bg-white border-2 border-[#005DE9] rounded-xl overflow-hidden">
         {/* 상단 영역 - 파일 선택 */}
         <div className="p-3 flex items-center justify-between relative">
@@ -128,7 +131,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[24px] leading-6"
-            disabled={disabled}
+            disabled={false} // 항상 타이핑 가능하게 변경
             rows={1}
           />
         </div>
