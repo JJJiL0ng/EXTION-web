@@ -28,6 +28,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   // const [model, setModel] = useState<Model>('Claude-sonnet-4');
   const [showModeModal, setShowModeModal] = useState(false);
   // const [showModelModal, setShowModelModal] = useState(false);
+  const [isComposing, setIsComposing] = useState(false); // IME 입력 상태 추가
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
@@ -55,14 +56,22 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
-
       const messageToSend = message;
       const fileToSend = selectedFile;
 
+      // 메시지 전송 전에 입력창 초기화
       setMessage('');
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+
+      // textarea 포커스 해제 후 다시 포커스를 주어 IME 상태를 초기화
+      if (textareaRef.current) {
+        textareaRef.current.blur();
+        setTimeout(() => {
+          textareaRef.current?.focus();
+        }, 0);
       }
 
       await sendChatMessage(messageToSend);
@@ -70,13 +79,23 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
       event.preventDefault();
       // disabled 상태일 때는 전송하지 않음
       if (!disabled && !isLoading && (message.trim() || selectedFile)) {
         handleSend();
       }
     }
+  };
+
+  // IME 입력 시작 시 호출
+  const handleCompositionStart = () => {
+    setIsComposing(true);
+  };
+
+  // IME 입력 종료 시 호출
+  const handleCompositionEnd = () => {
+    setIsComposing(false);
   };
 
   const adjustTextareaHeight = () => {
@@ -123,14 +142,16 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         </div>
         <div className="border-t border-gray-200"/>
         {/* 메인 입력 영역 */}
-        <div className="p-3">
+        <div className="px-3 py-2">
           <textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             placeholder={placeholder}
-            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[24px] leading-6"
+            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[12px] leading-6"
             disabled={false} // 항상 타이핑 가능하게 변경
             rows={1}
           />

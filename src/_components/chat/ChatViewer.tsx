@@ -367,7 +367,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
       </div>
       
       {/* 자동 스크롤 비활성화 시 맨 아래로 가기 버튼 */}
-      {!isAutoScrollEnabled && (
+      {/* {!isAutoScrollEnabled && (
         <div className="absolute bottom-4 right-4">
           <button
             onClick={() => {
@@ -382,7 +382,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
             </svg>
           </button>
         </div>
-      )}
+      )} */}
     </div>
   );
 }
