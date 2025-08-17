@@ -34,12 +34,12 @@ const ResponseComponentRegistry: Record<string, ResponseComponentConfig> = {
 const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ message }) => {
   const structuredContent = message.structuredContent;
   
-  console.log('🔍 [StructuredResponseRenderer] Processing message:', {
-    messageId: message.id,
-    hasStructuredContent: !!structuredContent,
-    structuredContent: structuredContent,
-    messageContent: message.content.substring(0, 100) + '...'
-  });
+  // console.log('🔍 [StructuredResponseRenderer] Processing message:', {
+  //   messageId: message.id,
+  //   hasStructuredContent: !!structuredContent,
+  //   structuredContent: structuredContent,
+  //   messageContent: message.content.substring(0, 100) + '...'
+  // });
   
   if (!structuredContent) {
     // 구조화된 응답이 없으면 기본 마크다운 렌더링
@@ -91,7 +91,7 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
       console.log('✅ [StructuredResponseRenderer] Detected general help intent');
     }
   } else {
-    console.log('✅ [StructuredResponseRenderer] Intent found:', detectedIntent);
+    // console.log('✅ [StructuredResponseRenderer] Intent found:', detectedIntent);
   }
 
   // GENERAL_HELP와 WHOLE_DATA는 특별한 컴포넌트가 필요없으므로 기본 마크다운으로 렌더링
@@ -113,12 +113,12 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
       }
     }
     
-    console.log('📝 [StructuredResponseRenderer] Using default markdown for:', {
-      intent: detectedIntent,
-      hasAnswerAfterReadWholeData: !!content.answerAfterReadWholeData,
-      hasAnswerAfterReadWholedata: !!content.answerAfterReadWholedata,
-      contentPreview: displayContent.substring(0, 100) + '...'
-    });
+    // console.log('📝 [StructuredResponseRenderer] Using default markdown for:', {
+    //   intent: detectedIntent,
+    //   hasAnswerAfterReadWholeData: !!content.answerAfterReadWholeData,
+    //   hasAnswerAfterReadWholedata: !!content.answerAfterReadWholedata,
+    //   contentPreview: displayContent.substring(0, 100) + '...'
+    // });
     
     return (
       <StreamingMarkdown
@@ -143,7 +143,7 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
     );
   }
 
-  console.log('🎯 [StructuredResponseRenderer] Using specialized component for intent:', detectedIntent);
+  // console.log('🎯 [StructuredResponseRenderer] Using specialized component for intent:', detectedIntent);
   const ResponseComponent = config.component;
   
   return (
@@ -227,18 +227,18 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
 
   // 디버깅용 콘솔 로그
   useEffect(() => {
-    console.log('🔍 [ChatViewer] State Debug:', {
-      isLoading,
-      isStreaming,
-      messagesLength: messages.length,
-      hasMessages: messages.length > 0,
-      shouldShowIndicator: isStreaming && messages.length > 0,
-      lastMessage: messages[messages.length - 1]?.type,
-      lastMessageStatus: messages[messages.length - 1]?.status,
-      isAutoScrollEnabled,
-      isUserScrolling,
-      timestamp: new Date().toISOString()
-    });
+    // console.log('🔍 [ChatViewer] State Debug:', {
+    //   isLoading,
+    //   isStreaming,
+    //   messagesLength: messages.length,
+    //   hasMessages: messages.length > 0,
+    //   shouldShowIndicator: isStreaming && messages.length > 0,
+    //   lastMessage: messages[messages.length - 1]?.type,
+    //   lastMessageStatus: messages[messages.length - 1]?.status,
+    //   isAutoScrollEnabled,
+    //   isUserScrolling,
+    //   timestamp: new Date().toISOString()
+    // });
   }, [isLoading, isStreaming, messages, isAutoScrollEnabled, isUserScrolling]);
 
   // 새 메시지가 올 때마다 자동 스크롤 (자동 스크롤이 활성화된 경우에만)

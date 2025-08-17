@@ -105,13 +105,13 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
 
   // 버튼 표시 조건 확인 (edit 모드일 때만)
   const shouldShowButton = mode === 'edit' && !isApplied && message.status === 'completed' && !isDenied && !executionError;
-  console.log('🔍 FormulaMessage Context 상태:', {
-    hasSpreadsheetContext: !!spreadsheetContext,
-    isReady: spreadsheetContext?.isReady,
-    shouldShowButton,
-    messageStatus: message.status,
-    chatMode: mode
-  });
+  // console.log('🔍 FormulaMessage Context 상태:', {
+  //   hasSpreadsheetContext: !!spreadsheetContext,
+  //   isReady: spreadsheetContext?.isReady,
+  //   shouldShowButton,
+  //   messageStatus: message.status,
+  //   chatMode: mode
+  // });
 
   const handleRejectFormula = () => {
     setIsDenied(true);

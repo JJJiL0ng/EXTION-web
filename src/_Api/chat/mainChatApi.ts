@@ -362,11 +362,11 @@ export class MainChatApi {
   ): Promise<void> {
     const { type, data } = event;
 
-    console.log('📡 [MainChatApi] SSE Event received:', {
-      type,
-      data,
-      timestamp: new Date().toISOString()
-    });
+    // console.log('📡 [MainChatApi] SSE Event received:', {
+    //   type,
+    //   data,
+    //   timestamp: new Date().toISOString()
+    // });
 
     switch (type) {
       case SSEEventType.CHAT_STARTED:
@@ -388,6 +388,7 @@ export class MainChatApi {
         break;
 
       case SSEEventType.CHAT_COMPLETED:
+        console.log('✅ [MainChatApi] 채팅 완료됨');
         this.updateStatus(ChatStatus.COMPLETED, handlers);
         handlers.onChatCompleted?.(data);
         break;
@@ -420,6 +421,7 @@ export class MainChatApi {
 
     // 타이핑 효과가 비활성화된 경우 즉시 완료 처리
     if (!this.config.typing.enabled) {
+      this.logCompletedResponse(data);
       handlers.onTypingEffect?.(displayMessage, true);
       return;
     }
@@ -428,6 +430,8 @@ export class MainChatApi {
     
     const typeNextCharacter = () => {
       if (currentIndex >= displayMessage.length) {
+        // 타이핑 완료 시 전체 응답 데이터 로그 출력
+        this.logCompletedResponse(data);
         handlers.onTypingEffect?.(displayMessage, true);
         return;
       }
@@ -459,6 +463,39 @@ export class MainChatApi {
 
     // 타이핑 시작
     typeNextCharacter();
+  }
+
+  /**
+   * 응답 완료 시 전체 데이터 로그 출력
+   */
+  private logCompletedResponse(data: NewChatResponseData): void {
+    console.log('🎯 [MainChatApi] 백엔드 응답 완료 - 전체 데이터:', 
+      this.formatDataForLogging(data)
+    );
+  }
+
+  /**
+   * 로그 출력용 데이터 포맷팅 (긴 텍스트는 생략)
+   */
+  private formatDataForLogging(data: any): any {
+    const formatValue = (value: any, maxLength: number = 200): any => {
+      if (typeof value === 'string') {
+        return value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
+      }
+      if (Array.isArray(value)) {
+        return value.map(item => formatValue(item, maxLength));
+      }
+      if (value && typeof value === 'object') {
+        const formatted: any = {};
+        for (const [key, val] of Object.entries(value)) {
+          formatted[key] = formatValue(val, maxLength);
+        }
+        return formatted;
+      }
+      return value;
+    };
+
+    return formatValue(data);
   }
 
   /**
