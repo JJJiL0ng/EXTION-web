@@ -271,7 +271,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
             <div className="flex items-center justify-center h-full text-gray-700">
               <div className="text-center">
               <img
-                src="/logo.png"
+                src="/EXTION_new_logo.svg"
                 alt="Extion Logo"
                 className="mx-auto mb-4 w-16 h-16"
               />

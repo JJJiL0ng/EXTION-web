@@ -13,6 +13,7 @@ import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useAuthStore } from '@/stores/authStore';
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
+import { MessagesSquare} from 'lucide-react';
 
 // SpreadJS 라이선싱
 // var SpreadJSKey = "xxx";          // 라이선스 키 입력
@@ -642,7 +643,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                             onClick={() => window.location.href = '/dashboard'}
                             className="px-2 pl-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
                         >
-                            <Image src="/logo.png" alt="Logo" width={16} height={16} />
+                            <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
                         </button>
 
                         <button
@@ -763,14 +764,10 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                             <button
                                 onClick={handleShowChat}
                                 style={{ backgroundColor: '#005ed9' }}
-                                className="flex items-center gap-1 px-3 py-0 text-sm text-white bg-gray-500 hover:bg-[#005ed9] rounded-md transition-all duration-200 hover:scale-105"
+                                className="flex items-center gap-1 px-2 py-0 text-sm text-white bg-gray-500 hover:bg-[#005ed9] rounded-md transition-all duration-200 hover:scale-105"
                             >
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.97 4.29L1 23l6.71-1.97C9.02 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.38 0-2.68-.33-3.83-.91L4 20l.91-4.17C4.33 14.68 4 13.38 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z" />
-                                    <circle cx="8.5" cy="12" r="1" />
-                                    <circle cx="12" cy="12" r="1" />
-                                    <circle cx="15.5" cy="12" r="1" />
-                                </svg>
+                                {/* <MessagesSquare className="w-4 h-4" /> */}
+                                <img src="/EXTION_new_logo_white.svg" alt="Extion Logo" className="w-4 h-4" />
                                 AI
                             </button>
                         </div>

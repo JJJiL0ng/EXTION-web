@@ -19,7 +19,7 @@ interface ChatInputBoxProps {
 
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   // onSendMessage,
-  placeholder = "메시지를 입력하세요...",
+  placeholder = "수정사항을 입력하세요...",
   disabled = false,
   userId = getOrCreateGuestId() // Guest ID 사용
 }) => {
@@ -29,6 +29,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const [showModeModal, setShowModeModal] = useState(false);
   // const [showModelModal, setShowModelModal] = useState(false);
   const [isComposing, setIsComposing] = useState(false); // IME 입력 상태 추가
+  const [isFocused, setIsFocused] = useState(false); // 포커스 상태 관리
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
@@ -98,6 +99,15 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     setIsComposing(false);
   };
 
+  // 포커스 이벤트 핸들러
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
   const adjustTextareaHeight = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -135,7 +145,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
   return (
     <div className="p-2 mx-auto justify-center w-full max-full">
-      <div className="bg-white border-2 border-[#005DE9] rounded-xl overflow-hidden">
+      <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded-xl overflow-hidden transition-colors`}>
         {/* 상단 영역 - 파일 선택 */}
         <div className="p-3 flex items-center justify-between relative">
            <FileUploadCard />
@@ -150,6 +160,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             onKeyDown={handleKeyDown}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             placeholder={placeholder}
             className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[12px] leading-6"
             disabled={false} // 항상 타이핑 가능하게 변경
@@ -176,7 +188,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             
               {/* 모드 선택 모달 */}
               {showModeModal && (
-          <div className="absolute bottom-full mb-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-48">
+          <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-48">
             <button
               onClick={() => {
                 setMode('agent');
