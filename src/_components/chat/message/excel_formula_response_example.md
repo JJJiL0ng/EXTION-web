@@ -289,11 +289,11 @@ data: {
 
     data: {
         "success": true,
-        "tokensUsed": 200,
-        "responseTime": 4905,
-        "model": "claude",
-        "cached": false,
-        "confidence": 0.95,
+        "tokensUsed": 200, // 추후 리팩토링때 없어질 필드
+        "responseTime": 4905, // 추후 리팩토링때 없어질 필드
+        "model": "claude", // 추후 리팩토링때 없어질 필드
+        "cached": false, // 추후 리팩토링때 없어질 필드
+        "confidence": 0.95, // 추후 리팩토링때 없어질 필드
         "analysis": {
             "detectedOperation": "수량(E열)이 3인 항목의 개수 계산",
             "dataRange": "A1:G51",
@@ -334,3 +334,144 @@ data: {
         "chatId": "1b61c21f-8295-40ae-b5d0-ee2d12acaadd",
         "timestamp": "2025-08-13T13:25:02.255Z"
     }
+
+======
+data: {
+    "success": true,
+    "tokensUsed": 15,
+    "responseTime": 6784,
+    "model": "claude",
+    "cached": false,
+    "confidence": 0.95,
+    "analysis": {
+        "detectedOperation": "고객 이름 가운데에 * 문자 삽입",
+        "dataRange": "A2:A51",
+        "targetCells": "A2:A51",
+        "operationType": "multiple_cells",
+        "affectedRanges": ["A2:A51"]
+    },
+    "formulaDetails": {
+        "name": "replaceString",
+        "description": "고객 이름 가운데에 * 문자를 삽입합니다.",
+        "syntax": "replaceString(originalString)",
+        "parameters": [
+            {
+                "name": "originalString",
+                "description": "수정할 문자열",
+                "required": true,
+                "example": "정성훈"
+            }
+        ],
+        "commandType": "batch",
+        "spreadjsCommand": "worksheet.setValue(row, col, value, GC.Spread.Sheets.SheetArea.viewport)",
+        "commands": [
+            {
+                "id": "cmd_001",
+                "type": "setValue",
+                "description": "고객 이름 가운데에 * 삽입",
+                "command": "let customerName = worksheet.getValue(row, 0);\nif (customerName) {\n  let nameParts = customerName.split('');\n  let middleIndex = Math.floor(nameParts.length / 2);\n  nameParts.splice(middleIndex, 0, '*');\n  let newName = nameParts.join('');\n  worksheet.setValue(row, 0, newName, GC.Spread.Sheets.SheetArea.viewport);\n}",
+                "targetRange": "A2:A51",
+                "dependencies": [],
+                "order": 1
+            }
+        ],
+        "execution": {
+            "mode": "sequential",
+            "rollbackStrategy": "all_or_nothing",
+            "validation": "none",
+            "estimatedExecutionTime": "500"
+        }
+    },
+    "implementation": {
+        "steps": [
+            "1. 각 고객 이름 가져오기 (A2:A51)",
+            "2. 고객 이름 문자열을 문자로 분할",
+            "3. 중간 위치 계산",
+            "4. 중간 위치에 * 삽입",
+            "5. 수정된 이름 다시 조합",
+            "6. 수정된 이름을 해당 셀에 설정"
+        ],
+        "cellLocations": {
+            "source": "A2:A51",
+            "target": "A2:A51",
+            "description": "고객 이름 가운데에 * 삽입"
+        }
+    },
+    "chatId": "36ac9a44-ca20-4cfd-a42e-d7ccc48a91d4",
+    "timestamp": "2025-08-18T10:47:46.824Z"
+}
+============
+event: chat_response  
+data: {  
+    "success": true,  
+    "tokensUsed": 15,  
+    "responseTime": 6060,  
+    "model": "claude",  
+    "cached": false,  
+    "confidence": 0.95,  
+    "analysis": {  
+        "detectedOperation": "고객 이름 가운데에 * 표시 추가",  
+        "dataRange": "A2:A51",  
+        "targetCells": "A2:A51",  
+        "operationType": "multiple_cells"  
+    },  
+    "formulaDetails": {  
+        "name": "replaceString",  
+        "description": "고객 이름의 가운데에 * 문자를 삽입하여 표시합니다.",  
+        "syntax": "replaceString(text, oldText, newText)",  
+        "parameters": [  
+            {  
+                "name": "text",  
+                "description": "수정할 텍스트",  
+                "required": true,  
+                "example": "정성훈"  
+            },  
+            {  
+                "name": "oldText",  
+                "description": "찾을 텍스트",  
+                "required": true,  
+                "example": "성"  
+            },  
+            {  
+                "name": "newText",  
+                "description": "대체할 텍스트",  
+                "required": true,  
+                "example": "*성*"  
+            }  
+        ],  
+        "spreadjsCommand": """javascript
+    const worksheet = spread.getActiveSheet();
+    try {
+        spread.suspendPaint();
+        for (let row = 1; row < 52; row++) {
+            const customerName = worksheet.getValue(row, 0);
+            if (customerName) {
+                const nameParts = customerName.split('');
+                const middleIndex = Math.floor(nameParts.length / 2);
+                if (nameParts.length > 1) {
+                    nameParts.splice(middleIndex, 0, '*');
+                    worksheet.setValue(row, 0, nameParts.join(''), GC.Spread.Sheets.SheetArea.viewport);
+                }
+            }
+        }
+    } finally {
+        spread.resumePaint();
+    }
+"""
+    },  
+    "implementation": {  
+        "steps": [  
+            "1. 각 고객 이름 가져오기 (A2:A51)",  
+            "2. 이름의 가운데 글자 위치 계산",  
+            "3. 가운데 글자 위치에 * 삽입",  
+            "4. 수정된 이름 다시 설정"  
+        ],  
+        "cellLocations": {  
+            "source": "A2:A51",  
+            "target": "A2:A51",  
+            "description": "고객 이름 가운데 * 표시 삽입"  
+        }  
+    },  
+    "chatId": "36ac9a44-ca20-4cfd-a42e-d7ccc48a91d4",  
+    "timestamp": "2025-08-18T11:20:35.903Z"  
+}

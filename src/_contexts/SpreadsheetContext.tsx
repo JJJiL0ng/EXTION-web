@@ -24,7 +24,7 @@ interface SpreadsheetProviderProps {
 export const SpreadsheetProvider: React.FC<SpreadsheetProviderProps> = ({
   children,
   spreadRef,
-  commandManager
+  commandManager //spreadjs formula excute engine
 }) => {
   // SpreadJS 인스턴스 준비 상태를 실시간으로 추적
   const [isSpreadReady, setIsSpreadReady] = useState(false);
