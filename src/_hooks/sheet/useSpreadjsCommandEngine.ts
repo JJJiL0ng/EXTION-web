@@ -75,8 +75,55 @@ export const useSpreadjsCommandEngine = (
   // 실행 중인 명령어 추적용
   const executingCommandRef = useRef<string | null>(null);
 
+  // JavaScript 명령어 파싱 및 실행
+  const executeJavaScriptCommand = useCallback((command: string, worksheet: any, spread: any) => {
+    try {
+      console.log('🔧 JavaScript 명령어 파싱 시작...');
+      console.log('📝 원본 명령어:', command);
+      
+      // "javascript/" 접두사 완전 제거
+      const cleanedCommand = command.replace(/^\s*javascript\s*\/?\s*/i, '').trim();
+      console.log('✂️ 정리된 명령어:', cleanedCommand);
+      
+      // SpreadJS 글로벌 객체를 위한 컨텍스트 설정
+      const GC = (window as any).GC;
+      console.log('🔍 GC 객체 상태:', GC ? 'Available' : 'Undefined');
+      
+      // GC.Spread.Sheets.SheetArea.viewport 참조를 제거하고 기본값 사용
+      let processedCommand = cleanedCommand;
+      if (cleanedCommand.includes('GC.Spread.Sheets.SheetArea.viewport')) {
+        console.log('⚠️ GC.Spread.Sheets.SheetArea.viewport 참조 발견 - 제거 중...');
+        // setValue 호출에서 SheetArea.viewport 매개변수 제거
+        processedCommand = processedCommand.replace(
+          /worksheet\.setValue\(([^,]+),\s*([^,]+),\s*([^,]+),\s*GC\.Spread\.Sheets\.SheetArea\.viewport\s*\)/g,
+          'worksheet.setValue($1, $2, $3)'
+        );
+        console.log('✂️ 처리된 명령어:', processedCommand);
+      }
+      
+      // 안전한 실행을 위한 함수 생성
+      const executeInContext = new Function(
+        'worksheet', 
+        'spread', 
+        'GC',
+        processedCommand
+      );
+      
+      console.log('⚡ JavaScript 명령어 실행 시작...');
+      // 명령어 실행
+      executeInContext(worksheet, spread, GC);
+      
+      console.log('✅ JavaScript 명령어 실행 완료');
+    } catch (error) {
+      console.error('❌ JavaScript 명령어 실행 실패:', error);
+      throw new Error(`JavaScript 명령어 실행 실패: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, []);
+
   // 명령어 타입 식별
   const identifyCommandType = useCallback((command: string): string => {
+    // JavaScript 명령어 우선 확인 (javascript/ 접두사 포함)
+    if (command.includes('javascript')) return 'javascript';
     if (command.includes('setFormula')) return 'formula';
     if (command.includes('sortRange')) return 'sort';
     if (command.includes('setValue')) return 'value';
@@ -174,30 +221,33 @@ export const useSpreadjsCommandEngine = (
   const executeCommand = useCallback((command: string, response: FormulaResponse): Promise<ExecutionResult> => {
     return new Promise((resolve, reject) => {
       try {
-        const sheet = spreadRef.current?.getActiveSheet();
-        if (!sheet) {
+        const worksheet = spreadRef.current?.getActiveSheet();
+        if (!worksheet) {
           throw new Error('활성 시트가 없습니다.');
         }
 
         const commandType = identifyCommandType(command);
 
         // 페인팅 일시 중단 (성능 최적화)
-        sheet.suspendPaint();
+        worksheet.suspendPaint();
 
         try {
           // 명령어 타입별 실행
+          console.log(`🔍 실행할 명령어 타입: ${commandType}`);
           switch (commandType) {
             case 'formula': {
+              console.log('📊 Formula 명령어 실행 중...');
               // setFormula 명령어 실행
               const formulaMatch = command.match(/setFormula\((\d+),\s*(\d+),\s*'([^']+)'/);
               if (formulaMatch) {
                 const [, row, col, formula] = formulaMatch;
-                sheet.setFormula(parseInt(row), parseInt(col), formula);
+                worksheet.setFormula(parseInt(row), parseInt(col), formula);
               }
               break;
             }
 
             case 'sort': {
+              console.log('🔄 Sort 명령어 실행 중...');
               // sortRange 명령어 실행
               const sortMatch = command.match(/sortRange\((\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(true|false),\s*(\[.*?\])/);
               if (sortMatch) {
@@ -209,7 +259,7 @@ export const useSpreadjsCommandEngine = (
                     .replace(/;\s*\)\s*$/, ''); // 끝의 ;) 제거
                   
                   const sortInfoObj = JSON.parse(normalizedSortInfo);
-                  sheet.sortRange(
+                  worksheet.sortRange(
                     parseInt(startRow),
                     parseInt(startCol),
                     parseInt(rowCount),
@@ -226,6 +276,7 @@ export const useSpreadjsCommandEngine = (
             }
 
             case 'value': {
+              console.log('💾 Value 명령어 실행 중...');
               // setValue 명령어 실행
               const valueMatch = command.match(/setValue\((\d+),\s*(\d+),\s*(.+)\)/);
               if (valueMatch) {
@@ -236,19 +287,20 @@ export const useSpreadjsCommandEngine = (
                 } else if (!isNaN(Number(value))) {
                   parsedValue = Number(value);
                 }
-                sheet.setValue(parseInt(row), parseInt(col), parsedValue);
+                worksheet.setValue(parseInt(row), parseInt(col), parsedValue);
               }
               break;
             }
 
             case 'style': {
+              console.log('🎨 Style 명령어 실행 중...');
               // setStyle 명령어 실행
               const styleMatch = command.match(/setStyle\((\d+),\s*(\d+),\s*(.+)\)/);
               if (styleMatch) {
                 const [, row, col, style] = styleMatch;
                 try {
                   const styleObject = JSON.parse(style);
-                  sheet.setStyle(parseInt(row), parseInt(col), styleObject);
+                  worksheet.setStyle(parseInt(row), parseInt(col), styleObject);
                 } catch (parseError) {
                   throw new Error('스타일 객체 파싱 실패');
                 }
@@ -257,18 +309,19 @@ export const useSpreadjsCommandEngine = (
             }
 
             case 'copy_move': {
+              console.log('📋 Copy/Move 명령어 실행 중...');
               // copyTo/moveTo 명령어 실행
               const copyMatch = command.match(/(copyTo|moveTo)\((\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)/);
               if (copyMatch) {
                 const [, operation, fromRow, fromCol, toRow, toCol, rowCount, colCount] = copyMatch;
                 if (operation === 'copyTo') {
-                  sheet.copyTo(
+                  worksheet.copyTo(
                     parseInt(fromRow), parseInt(fromCol),
                     parseInt(toRow), parseInt(toCol),
                     parseInt(rowCount), parseInt(colCount)
                   );
                 } else {
-                  sheet.moveTo(
+                  worksheet.moveTo(
                     parseInt(fromRow), parseInt(fromCol),
                     parseInt(toRow), parseInt(toCol),
                     parseInt(rowCount), parseInt(colCount)
@@ -277,8 +330,16 @@ export const useSpreadjsCommandEngine = (
               }
               break;
             }
+            //멀티 셀들 수정 적용
+            case 'javascript': {
+              console.log('🚀 JavaScript 명령어 실행 중...');
+              // JavaScript 명령어 실행
+              executeJavaScriptCommand(command, worksheet, spreadRef.current);
+              break;
+            }
 
             default: {
+              console.log(`❌ 지원하지 않는 명령어 타입: ${commandType}`);
               throw new Error(`지원하지 않는 명령어 타입입니다: ${commandType}`);
             }
           }
@@ -305,8 +366,9 @@ export const useSpreadjsCommandEngine = (
           reject(executionResult);
         } finally {
           // 페인팅 재개
-          sheet.resumePaint();
+          worksheet.resumePaint();
         }
+
 
       } catch (error) {
         const executionResult: ExecutionResult = {
@@ -320,7 +382,7 @@ export const useSpreadjsCommandEngine = (
         reject(executionResult);
       }
     });
-  }, [spreadRef, identifyCommandType]);
+  }, [spreadRef, identifyCommandType, executeJavaScriptCommand]);
 
   // 히스토리 업데이트
   const updateHistory = useCallback((result: ExecutionResult) => {
@@ -415,6 +477,88 @@ export const useSpreadjsCommandEngine = (
     }
   }, [state.isExecuting, requireConfirmation, validateCommand, executeCommand, updateHistory, onSuccess, onError]);
 
+  // JavaScript 명령어 직접 실행 함수
+  const executeJavaScript = useCallback(async (jsCommand: string): Promise<void> => {
+    if (!spreadRef.current) {
+      throw new Error('SpreadJS 인스턴스가 없습니다.');
+    }
+
+    const worksheet = spreadRef.current.getActiveSheet();
+    if (!worksheet) {
+      throw new Error('활성 시트가 없습니다.');
+    }
+
+    // 이미 실행 중인 경우 중단
+    if (state.isExecuting) {
+      throw new Error('이미 명령어가 실행 중입니다.');
+    }
+
+    setState(prev => ({
+      ...prev,
+      isExecuting: true,
+      error: null
+    }));
+
+    executingCommandRef.current = jsCommand;
+
+    try {
+      // JavaScript 명령어 실행
+      executeJavaScriptCommand(jsCommand, worksheet, spreadRef.current);
+
+      // 실행 결과 생성
+      const result: ExecutionResult = {
+        success: true,
+        commandType: 'javascript',
+        targetRange: 'N/A',
+        executedAt: new Date().toISOString()
+      };
+
+      // 상태 업데이트
+      setState(prev => ({
+        ...prev,
+        isExecuting: false,
+        lastResult: result,
+        error: null
+      }));
+
+      // 히스토리 업데이트
+      updateHistory(result);
+
+      // 성공 콜백 호출
+      onSuccess?.(result);
+
+      console.log('✅ JavaScript 명령어 실행 성공');
+
+    } catch (error) {
+      const errorResult: ExecutionResult = {
+        success: false,
+        commandType: 'javascript',
+        targetRange: 'N/A',
+        error: error instanceof Error ? error.message : String(error),
+        executedAt: new Date().toISOString()
+      };
+
+      setState(prev => ({
+        ...prev,
+        isExecuting: false,
+        error: errorResult.error || '알 수 없는 오류가 발생했습니다.',
+        lastResult: errorResult
+      }));
+
+      // 실패한 경우에도 히스토리에 기록
+      updateHistory(errorResult);
+
+      // 에러 콜백 호출
+      onError?.(new Error(errorResult.error || 'JavaScript 명령어 실행 실패'));
+
+      console.error('❌ JavaScript 명령어 실행 실패:', errorResult);
+
+      throw error;
+    } finally {
+      executingCommandRef.current = null;
+    }
+  }, [state.isExecuting, spreadRef, executeJavaScriptCommand, updateHistory, onSuccess, onError]);
+
   // 실행 취소
   const cancelExecution = useCallback(() => {
     if (executingCommandRef.current) {
@@ -454,6 +598,7 @@ export const useSpreadjsCommandEngine = (
 
     // 메서드
     executeFormulaResponse,
+    executeJavaScript,
     cancelExecution,
     resetState,
     clearError,
