@@ -105,17 +105,18 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
 
   // 버튼 표시 조건 확인 (edit 모드일 때만)
   const shouldShowButton = mode === 'edit' && !isApplied && message.status === 'completed' && !isDenied && !executionError;
-  // console.log('🔍 FormulaMessage Context 상태:', {
-  //   hasSpreadsheetContext: !!spreadsheetContext,
-  //   isReady: spreadsheetContext?.isReady,
-  //   shouldShowButton,
-  //   messageStatus: message.status,
-  //   chatMode: mode
-  // });
 
   const handleRejectFormula = () => {
     setIsDenied(true);
     console.log("수식 적용이 거부되었습니다");
+  };
+
+  const handleCancelApply = () => {
+    //적용전 스냅샷으로 롤백
+  };
+
+  const handleStayApply = () => {
+    // 적용 유지 로직
   };
 
   // 수식 메시지 렌더링
@@ -190,6 +191,29 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <span className="text-green-800 font-medium">수식이 스프레드시트에 적용되었습니다.</span>
+          </div>
+        </div>
+      )}
+
+      {/* 적용 완료 후 액션 버튼들 */}
+      {isApplied && (
+        <div className="mt-3 border-gray-200 rounded-lg shadow-sm">
+          <div className="flex space-x-3">
+            <button
+              onClick={handleCancelApply}
+              className="flex-1 px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors"
+            >
+              적용 취소
+            </button>
+            <button
+              onClick={handleStayApply}
+              className="flex-1 px-6 py-2 text-sm font-medium text-white border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              style={{
+                backgroundColor: '#005ed9'
+              }}
+            >
+              적용 유지
+            </button>
           </div>
         </div>
       )}
