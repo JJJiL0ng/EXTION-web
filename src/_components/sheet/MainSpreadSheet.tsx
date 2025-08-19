@@ -1,7 +1,7 @@
 "use client";
 import '@mescius/spread-sheets-resources-ko';
 import '@mescius/spread-sheets-io';
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { SpreadSheets, Worksheet, Column } from "@mescius/spread-sheets-react";
 import * as GC from "@mescius/spread-sheets";
 import Image from 'next/image';
@@ -9,11 +9,11 @@ import { useParams } from 'next/navigation';
 import { useFileUpload } from '../../_hooks/sheet/useFileUpload';
 import { useFileExport } from '../../_hooks/sheet/useFileExport';
 import { useSheetCreate } from '../../_hooks/sheet/useSheetCreate';
+import { useSpreadSheetDelta } from '../../_hooks/sheet/useSpreadSheetDelta';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useAuthStore } from '@/stores/authStore';
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
-import { MessagesSquare} from 'lucide-react';
 
 // SpreadJS 라이선싱
 // var SpreadJSKey = "xxx";          // 라이선스 키 입력
@@ -39,8 +39,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // 인증 상태 관리
     const { user } = useAuthStore();
     
-    // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
-    const getUserId = useCallback(() => {
+    // 사용자 ID 가져오기 (로그인 사용자 또는 게스트) - 메모이제이션으로 무한 렌더링 방지
+    const userId = useMemo(() => {
         if (user?.uid) {
             // 로그인된 사용자의 경우 Firebase uid 사용
             return user.uid;
@@ -55,6 +55,12 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     
     // 파일 업로드 후 자동 채팅 열기 상태 관리
     const [hasAutoOpenedChat, setHasAutoOpenedChat] = useState(false);
+    
+    // resetUploadState 함수의 ref 저장 (무한 루프 방지)
+    const resetUploadStateRef = useRef<(() => void) | null>(null);
+    
+    // deltaManager ref 저장 (무한 루프 방지)
+    const deltaManagerRef = useRef<typeof deltaManager | null>(null);
 
     // AI 버튼 클릭 핸들러 - 즉시 버튼 숨김
     const handleShowChat = () => {
@@ -93,6 +99,29 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         }
     });
 
+    // 델타 자동저장 훅
+    const deltaManager = useSpreadSheetDelta({
+        userId: userId,
+        spreadsheetId: spreadSheetId,
+        batchTimeout: 500,
+        maxRetries: 3,
+        maxBatchSize: 50,
+        onDeltaApplied: (delta) => {
+            console.log('✅ 델타 적용 성공:', delta);
+        },
+        onError: (error, context) => {
+            console.error('❌ 델타 처리 실패:', error, context);
+            
+            // 서버 오류인 경우 사용자에게 알림
+            if (context?.serverError) {
+                console.warn('🚫 백엔드 서버 오류로 인해 자동저장이 비활성화되었습니다.');
+            }
+        },
+        onSync: (syncedDeltas) => {
+            console.log(`🔄 ${syncedDeltas}개 델타 동기화 완료`);
+        }
+    });
+
     // 파일 데이터를 JSON으로 변환하는 함수 (SpreadJS 유틸리티 활용)
     const convertFileDataToJson = useCallback(async (fileData: any, fileName: string): Promise<Record<string, any>> => {
         try {
@@ -108,13 +137,23 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             // Excel 파일 (.xlsx, .xls) 처리
             if (fileExtension === 'xlsx' || fileExtension === 'xls') {
                 return new Promise((resolve, reject) => {
+                    // SpreadJS 인스턴스 체크 강화
                     if (!spreadRef.current) {
-                        reject(new Error('SpreadJS 인스턴스가 없습니다.'));
-                        return;
+                        console.warn('SpreadJS 인스턴스가 아직 초기화되지 않았습니다. 임시 워크북을 사용합니다.');
                     }
 
                     // 임시 워크북 생성
-                    const tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
+                    let tempWorkbook;
+                    try {
+                        tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
+                        if (!tempWorkbook) {
+                            reject(new Error('임시 워크북 생성에 실패했습니다.'));
+                            return;
+                        }
+                    } catch (error) {
+                        reject(new Error(`임시 워크북 생성 실패: ${error}`));
+                        return;
+                    }
 
                     tempWorkbook.import(
                         fileData,
@@ -165,13 +204,23 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             // CSV 파일 처리
             if (fileExtension === 'csv') {
                 return new Promise((resolve, reject) => {
+                    // SpreadJS 인스턴스 체크 강화
                     if (!spreadRef.current) {
-                        reject(new Error('SpreadJS 인스턴스가 없습니다.'));
-                        return;
+                        console.warn('SpreadJS 인스턴스가 아직 초기화되지 않았습니다. 임시 워크북을 사용합니다.');
                     }
 
                     // 임시 워크북 생성
-                    const tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
+                    let tempWorkbook;
+                    try {
+                        tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
+                        if (!tempWorkbook) {
+                            reject(new Error('임시 워크북 생성에 실패했습니다.'));
+                            return;
+                        }
+                    } catch (error) {
+                        reject(new Error(`임시 워크북 생성 실패: ${error}`));
+                        return;
+                    }
 
                     tempWorkbook.import(
                         fileData,
@@ -336,8 +385,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             // 파일 업로드 후 스프레드시트 생성 API 호출
             try {
                 // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
-                const userId = getUserId();
-                console.log('🔍 사용자 ID:', userId, user?.uid ? '(로그인)' : '(게스트)');
+                const currentUserId = userId;
+                console.log('🔍 사용자 ID:', currentUserId, user?.uid ? '(로그인)' : '(게스트)');
 
                 // 파일 데이터를 JSON으로 변환 (async 함수이므로 await 사용)
                 const jsonData = await convertFileDataToJson(fileData, fileName);
@@ -347,7 +396,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                     fileName, // 업로드된 파일명을 스프레드시트명으로 사용
                     spreadSheetId, // URL에서 추출한 spreadSheetId
                     chatId, // URL에서 추출한 chatId
-                    userId, // 사용자 ID (로그인 또는 게스트)
+                    currentUserId, // 사용자 ID (로그인 또는 게스트)
                     jsonData // JSON으로 변환된 파일 데이터를 초기 데이터로 사용
                 );
             } catch (error) {
@@ -378,21 +427,54 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             alert(`파일 저장 중 오류가 발생했습니다: ${error.message}`);
         }
     });
+    
+    // 함수들을 ref에 저장 (무한 루프 방지)
+    resetUploadStateRef.current = resetUploadState;
+    deltaManagerRef.current = deltaManager;
 
     // 메모리 관리를 위한 cleanup 함수
     const handleCleanup = useCallback(() => {
-        resetUploadState();
-        resetExportState();
-        resetCreateState();
-        clearCreateError();
+        // resetUploadState를 ref를 통해 호출하여 의존성 제거
+        try {
+            resetUploadStateRef.current?.();
+        } catch (error) {
+            console.warn('resetUploadState cleanup warning:', error);
+        }
+        
+        try {
+            resetExportState();
+        } catch (error) {
+            console.warn('resetExportState cleanup warning:', error);
+        }
+        
+        try {
+            resetCreateState();
+        } catch (error) {
+            console.warn('resetCreateState cleanup warning:', error);
+        }
+        
+        try {
+            clearCreateError();
+        } catch (error) {
+            console.warn('clearCreateError cleanup warning:', error);
+        }
+        
         if (spreadRef.current) {
             try {
+                // 델타 이벤트 리스너 정리
+                if ((spreadRef.current as any)._deltaCleanup) {
+                    (spreadRef.current as any)._deltaCleanup();
+                }
+                
+                // 남은 델타들 강제 동기화
+                deltaManagerRef.current?.forcSync().catch(console.error);
+                
                 spreadRef.current.destroy && spreadRef.current.destroy();
             } catch (error) {
                 console.warn('Cleanup warning:', error);
             }
         }
-    }, [resetUploadState, resetExportState, resetCreateState, clearCreateError, spreadRef]);
+    }, [resetExportState, resetCreateState, clearCreateError, spreadRef]);
 
     // 컴포넌트 언마운트 시 정리
     useEffect(() => {
@@ -467,6 +549,12 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     const initSpread = function (spread: any) {
         try {
+            // SpreadJS 인스턴스 유효성 검사
+            if (!spread) {
+                console.error('❌ SpreadJS 인스턴스가 null 또는 undefined입니다.');
+                return;
+            }
+
             // SpreadJS 인스턴스 저장
             spreadRef.current = spread;
 
@@ -475,24 +563,44 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
             // 기본 시트 설정 - 성능 최적화된 크기
             const sheet = spread.getActiveSheet();
+            if (!sheet) {
+                console.error('❌ 활성 시트를 가져올 수 없습니다.');
+                return;
+            }
+
             sheet.setRowCount(100);  // 기본 100행
             sheet.setColumnCount(26); // 기본 26열
 
-            // 가상화 및 성능 설정
-            sheet.suspendPaint();
+            // 가상화 및 성능 설정 - null 체크 추가
+            if (sheet.suspendPaint && typeof sheet.suspendPaint === 'function') {
+                sheet.suspendPaint();
+            }
 
             try {
                 // 기본 데이터 설정
                 setupDefaultData(sheet);
                 setupDefaultStyles(sheet);
             } finally {
-                sheet.resumePaint();
+                // resumePaint도 null 체크
+                if (sheet.resumePaint && typeof sheet.resumePaint === 'function') {
+                    sheet.resumePaint();
+                }
             }
 
-            console.log('✅ SpreadJS 초기화 완료 - 최적화된 설정 적용');
+            // 델타 자동저장을 위한 이벤트 리스너 설정
+            const cleanupDeltaListeners = deltaManager.setupEventListeners(spread);
+            
+            // 정리 함수를 나중에 사용하기 위해 저장
+            (spread as any)._deltaCleanup = cleanupDeltaListeners;
+
+            console.log('✅ SpreadJS 초기화 완료 - 최적화된 설정 및 델타 자동저장 적용');
 
         } catch (error) {
             console.error('❌ SpreadJS 초기화 실패:', error);
+            // 에러 발생 시에도 기본 인스턴스는 저장
+            if (spread) {
+                spreadRef.current = spread;
+            }
         }
     };
 
@@ -580,9 +688,21 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     const handleNewSpreadsheet = async () => {
         if (spreadRef.current) {
             try {
+                // SpreadJS 인스턴스 유효성 재확인
+                if (!spreadRef.current.clearSheets || typeof spreadRef.current.clearSheets !== 'function') {
+                    console.error('SpreadJS 인스턴스가 올바르지 않습니다.');
+                    return;
+                }
+
                 spreadRef.current.clearSheets();
                 spreadRef.current.addSheet(0);
                 const sheet = spreadRef.current.getActiveSheet();
+                
+                if (!sheet) {
+                    console.error('새 시트 생성에 실패했습니다.');
+                    return;
+                }
+
                 sheet.name("Sheet1");
 
                 // 새 시트에 최적화 설정 적용
@@ -593,8 +713,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 // 빈 스프레드시트로 백엔드에 생성 요청
                 try {
                     // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
-                    const userId = getUserId();
-                    console.log('🔍 새 스프레드시트 생성 - 사용자 ID:', userId, user?.uid ? '(로그인)' : '(게스트)');
+                    const currentUserId = userId;
+                    console.log('🔍 새 스프레드시트 생성 - 사용자 ID:', currentUserId, user?.uid ? '(로그인)' : '(게스트)');
 
                     // 새 스프레드시트의 초기 JSON 데이터 구조
                     const initialJsonData = {
@@ -624,7 +744,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 }
 
                 // 업로드 상태 초기화
-                resetUploadState();
+                resetUploadStateRef.current?.();
                 console.log('✅ 새 스프레드시트 생성 완료 (최적화됨)');
             } catch (error) {
                 console.error('❌ 새 스프레드시트 생성 실패:', error);
@@ -734,27 +854,65 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                                 )}
                             </div>
                         )}
+
+                        {/* 델타 자동저장 상태 */}
+                        {(deltaManager.state.isProcessing || deltaManager.state.isPending) && (
+                            <div className="flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-500"></div>
+                                <span className="text-xs text-gray-600">
+                                    {deltaManager.state.isProcessing ? '동기화 중...' : 
+                                        `변경사항 ${deltaManager.state.queuedDeltas}개 대기`}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* 델타 실패 상태 */}
+                        {deltaManager.state.failedDeltas.length > 0 && (
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={deltaManager.retryFailedDeltas}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 rounded"
+                                    title="동기화 실패한 변경사항 재시도"
+                                >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    실패 {deltaManager.state.failedDeltas.length}개
+                                </button>
+                            </div>
+                        )}
         
 
                     
                         {/* 마지막 저장 시간 */}
-                        {exportState.lastExportedAt && (
+                        {(exportState.lastExportedAt || deltaManager.state.lastSyncAt) && (
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-gray-600">
-                                    저장: {exportState.lastExportedAt.toLocaleTimeString()}
+                                    {deltaManager.state.lastSyncAt ? 
+                                        `동기화: ${new Date(deltaManager.state.lastSyncAt).toLocaleTimeString()}` :
+                                        `저장: ${exportState.lastExportedAt?.toLocaleTimeString()}`
+                                    }
                                 </span>
                             </div>
                         )}
 
                         {/* 오류 상태 */}
-                        {(uploadState.error || exportState.error || createError) && (
+                        {(uploadState.error || exportState.error || createError || deltaManager.state.error) && (
                             <div className="flex items-center gap-2">
                                 <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                                 <span className="text-sm text-red-600 font-medium">
-                                    {createError || uploadState.error || exportState.error}
+                                    {deltaManager.state.error || createError || uploadState.error || exportState.error}
                                 </span>
+                                {deltaManager.state.error && (
+                                    <button 
+                                        onClick={deltaManager.clearFailedDeltas}
+                                        className="text-xs text-red-500 hover:text-red-700 underline ml-2"
+                                    >
+                                        닫기
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

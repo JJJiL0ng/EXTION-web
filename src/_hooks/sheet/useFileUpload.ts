@@ -160,7 +160,11 @@ export const useFileUpload = (
       }
 
       const sheet = spreadInstance.getActiveSheet();
-      sheet.suspendPaint();
+      
+      // suspendPaint 안전 체크
+      if (sheet && sheet.suspendPaint && typeof sheet.suspendPaint === 'function') {
+        sheet.suspendPaint();
+      }
 
       spreadInstance.import(
         file,
@@ -173,11 +177,17 @@ export const useFileUpload = (
             const jsonData = spreadInstance.toJSON();
             resolve(jsonData);
           } finally {
-            sheet.resumePaint();
+            // resumePaint 안전 체크
+            if (sheet && sheet.resumePaint && typeof sheet.resumePaint === 'function') {
+              sheet.resumePaint();
+            }
           }
         },
         (error: any) => {
-          sheet.resumePaint();
+          // resumePaint 안전 체크 (에러 핸들러에서도)
+          if (sheet && sheet.resumePaint && typeof sheet.resumePaint === 'function') {
+            sheet.resumePaint();
+          }
           console.error('❌ 파일 로드 실패:', error);
           reject(error);
         },
@@ -354,11 +364,90 @@ export const useFileUpload = (
 
   // 기존 함수들을 새로운 통합 함수로 래핑 (하위 호환성)
   const uploadFile = useCallback(async (file: File): Promise<any> => {
-    const results = await uploadFiles(file);
-    return results[0]?.data;
-  }, [uploadFiles]);
+    // uploadFiles 직접 참조 제거하여 순환 의존성 방지
+    const fileList = [file];
+    const results = [];
+    const totalFiles = fileList.length;
+
+    console.log(`📁 ${totalFiles}개 파일 업로드 시작`);
+
+    // 업로드 상태로 설정
+    setUploadState(prev => ({
+      ...prev,
+      isUploading: true,
+      isProcessing: true,
+      progress: 0,
+      fileName: file.name,
+      error: null
+    }));
+
+    try {
+      // 파일 검증
+      const validation = validateFile(file);
+      if (!validation.isValid) {
+        throw new Error(validation.error!);
+      }
+
+      // SpreadJS 인스턴스 검증
+      if (!spreadInstance) {
+        throw new Error('SpreadJS 인스턴스가 초기화되지 않았습니다.');
+      }
+
+      // 파일 처리
+      let data: any;
+      if (file.name.toLowerCase().endsWith('.json') || file.name.toLowerCase().endsWith('.sjs')) {
+        data = await processJSONFile(file);
+      } else {
+        data = await processExcelFile(file);
+      }
+
+      const result = { success: true, data, fileName: file.name };
+      results.push(result);
+
+      // 성공 콜백
+      if (onUploadSuccess) {
+        try {
+          onUploadSuccess(file.name, data);
+        } catch (callbackError) {
+          console.warn('onUploadSuccess 콜백 실패:', callbackError);
+        }
+      }
+
+      // 최종 상태 업데이트
+      setUploadState(prev => ({
+        ...prev,
+        isUploading: false,
+        isProcessing: false,
+        progress: 100,
+        uploadedFiles: [result]
+      }));
+
+      return result.data;
+    } catch (error) {
+      console.error('❌ 파일 업로드 실패:', error);
+      
+      setUploadState(prev => ({
+        ...prev,
+        isUploading: false,
+        isProcessing: false,
+        progress: 0,
+        error: error instanceof Error ? error.message : '파일 업로드 중 오류가 발생했습니다.'
+      }));
+
+      if (onUploadError) {
+        try {
+          onUploadError(error instanceof Error ? error : new Error('Unknown error'), file.name);
+        } catch (callbackError) {
+          console.warn('onUploadError 콜백 실패:', callbackError);
+        }
+      }
+
+      throw error;
+    }
+  }, [validateFile, spreadInstance, processJSONFile, processExcelFile, onUploadSuccess, onUploadError]);
 
   const uploadMultipleFiles = useCallback(async (files: FileList): Promise<any[]> => {
+    // uploadFiles를 직접 사용하여 순환 의존성 방지
     const results = await uploadFiles(files);
     return results.filter(r => r.success).map(r => r.data);
   }, [uploadFiles]);
