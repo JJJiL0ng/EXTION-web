@@ -184,12 +184,14 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
       console.log('  isRolledBack:', isRolledBack);
       console.log('  timeSinceRollback:', timeSinceRollback);
       console.log('  isRecentlyRolledBack:', isRecentlyRolledBack);
+      console.log('  hasNewerMessages:', hasNewerMessages);
       console.log('  spreadsheetReady:', spreadsheetContext?.isReady);
       console.log('  hasStructuredContent:', !!message?.structuredContent);
       console.log('  intentMatch:', message?.structuredContent?.intent === "excel_formula");
 
       // agent 모드이고, 메시지가 완성되었으며, 아직 적용되지 않았고, 거부되지도 않았을 때
       // 단, 롤백 중이거나 롤백 직후 5초간은 자동 적용하지 않음
+      // 그리고 새로운 메시지일 때만 자동 적용 가능
       if (
         mode === 'agent' && 
         message.status === 'completed' && 
@@ -200,6 +202,7 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
         !isRollingBack &&     // 롤백 중일 때 자동 적용 방지
         !isRolledBack &&      // 롤백 직후에도 자동 적용 방지
         !isRecentlyRolledBack && // 롤백 후 5초간 자동 적용 방지
+        !hasNewerMessages &&  // 새로운 메시지가 있으면 자동 적용 방지
         spreadsheetContext?.isReady &&
         message?.structuredContent &&
         message.structuredContent.intent === "excel_formula"
