@@ -160,9 +160,9 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
       const hasNewerMessages = currentMessageIndex < messages.length - 1;
       setHasNewerMessages(hasNewerMessages);
       
-      if (hasNewerMessages) {
-        console.log('🚫 새로운 메시지가 전송되어 이전 수식 버튼들을 비활성화합니다.');
-      }
+      // if (hasNewerMessages) {
+      //   console.log('🚫 새로운 메시지가 전송되어 이전 수식 버튼들을 비활성화합니다.');
+      // }
     }
   }, [messages, message.id]);
 
@@ -173,21 +173,21 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
       const timeSinceRollback = Date.now() - lastRollbackTime.current;
       const isRecentlyRolledBack = timeSinceRollback < 5000;
       
-      console.log('🔍 자동 적용 조건 체크:');
-      console.log('  mode:', mode);
-      console.log('  messageStatus:', message.status);
-      console.log('  isApplied:', isApplied);
-      console.log('  isDenied:', isDenied);
-      console.log('  executionError:', !!executionError);
-      console.log('  isExecuting:', isExecuting);
-      console.log('  isRollingBack:', isRollingBack);
-      console.log('  isRolledBack:', isRolledBack);
-      console.log('  timeSinceRollback:', timeSinceRollback);
-      console.log('  isRecentlyRolledBack:', isRecentlyRolledBack);
-      console.log('  hasNewerMessages:', hasNewerMessages);
-      console.log('  spreadsheetReady:', spreadsheetContext?.isReady);
-      console.log('  hasStructuredContent:', !!message?.structuredContent);
-      console.log('  intentMatch:', message?.structuredContent?.intent === "excel_formula");
+      // console.log('🔍 자동 적용 조건 체크:');
+      // console.log('  mode:', mode);
+      // console.log('  messageStatus:', message.status);
+      // console.log('  isApplied:', isApplied);
+      // console.log('  isDenied:', isDenied);
+      // console.log('  executionError:', !!executionError);
+      // console.log('  isExecuting:', isExecuting);
+      // console.log('  isRollingBack:', isRollingBack);
+      // console.log('  isRolledBack:', isRolledBack);
+      // console.log('  timeSinceRollback:', timeSinceRollback);
+      // console.log('  isRecentlyRolledBack:', isRecentlyRolledBack);
+      // console.log('  hasNewerMessages:', hasNewerMessages);
+      // console.log('  spreadsheetReady:', spreadsheetContext?.isReady);
+      // console.log('  hasStructuredContent:', !!message?.structuredContent);
+      // console.log('  intentMatch:', message?.structuredContent?.intent === "excel_formula");
 
       // agent 모드이고, 메시지가 완성되었으며, 아직 적용되지 않았고, 거부되지도 않았을 때
       // 단, 롤백 중이거나 롤백 직후 5초간은 자동 적용하지 않음
@@ -210,7 +210,7 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
         console.log('✅ 자동 적용 조건 만족, 수식 적용 실행');
         await handleApplyFormula();
       } else {
-        console.log('❌ 자동 적용 조건 불만족, 건너뜀');
+        // console.log('❌ 자동 적용 조건 불만족, 건너뜀');
       }
     };
 
