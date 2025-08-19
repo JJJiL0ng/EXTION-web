@@ -270,10 +270,10 @@ export const useSpreadjsCommandStore = create<
         },
 
         removeFromRollbackStack: (count = 1) => {
-          const state = get();
-          const removed = state.rollbackStack.splice(0, count);
+          let removed: ExecutionSnapshot[] = [];
           
           set((state) => {
+            removed = state.rollbackStack.splice(0, count);
             state.canRollback = state.rollbackStack.length > 0;
           });
           

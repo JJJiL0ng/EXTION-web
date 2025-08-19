@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import StreamingMarkdown from "./StreamingMarkdown";
 import { AssistantMessage } from "../../../_types/chat.types";
 import { useSpreadsheetContextSafe } from '@/_contexts/SpreadsheetContext';
@@ -16,7 +16,12 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
   const [isApplied, setIsApplied] = useState(false);
   const [isDenied, setIsDenied] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isRollingBack, setIsRollingBack] = useState(false);
+  const [isRolledBack, setIsRolledBack] = useState(false);
   const [executionError, setExecutionError] = useState<string | null>(null);
+  
+  // 롤백 후 자동 적용 차단을 위한 ref
+  const lastRollbackTime = useRef<number>(0);
   
   // SpreadsheetContext 사용 (안전한 버전)
   const spreadsheetContext = useSpreadsheetContextSafe();
@@ -76,10 +81,92 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
     }
   }, [spreadsheetContext, message.structuredContent]);
 
+  // 롤백 핸들러 (Hook 규칙을 위해 early return 이전에 정의)
+  const handleCancelApply = useCallback(async () => {
+    // 이미 롤백 중이면 무시
+    if (isRollingBack) {
+      console.log('이미 롤백이 진행 중입니다.');
+      return;
+    }
+
+    if (!spreadsheetContext?.commandManager) {
+      console.warn('CommandManager를 사용할 수 없습니다.');
+      setExecutionError('CommandManager를 사용할 수 없습니다.');
+      return;
+    }
+
+    if (!spreadsheetContext.commandManager.canRollback) {
+      console.warn('롤백할 수 있는 이전 상태가 없습니다.');
+      setExecutionError('롤백할 수 있는 이전 상태가 없습니다.');
+      return;
+    }
+
+    console.log('🔄 롤백을 시작합니다...');
+    setIsRollingBack(true);
+    setExecutionError(null);
+
+    try {
+      console.log('📞 rollback 함수를 호출하기 전...');
+      
+      // 타임아웃을 설정하여 무한 대기 방지  
+      const rollbackPromise = spreadsheetContext.commandManager.rollback({ type: 'single' });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('롤백 타임아웃 (5초)')), 5000)
+      );
+      
+      await Promise.race([rollbackPromise, timeoutPromise]);
+      
+      console.log('✅ 롤백 완료, 상태를 업데이트합니다...');
+      
+      // 상태 초기화 - 적용 전 상태로 되돌리기
+      setIsApplied(false);
+      setIsRolledBack(true);
+      
+      // 롤백 시간 기록 (5초간 자동 적용 차단)
+      lastRollbackTime.current = Date.now();
+      
+      console.log('✅ 수식 적용이 성공적으로 취소되었습니다.');
+      
+      // 3초 후 성공 메시지 숨기기
+      setTimeout(() => {
+        setIsRolledBack(false);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('❌ 롤백 실패:', error);
+      setExecutionError(
+        error instanceof Error ? error.message : '롤백 중 알 수 없는 오류가 발생했습니다.'
+      );
+    } finally {
+      console.log('🔄 롤백 상태를 false로 설정합니다...');
+      setIsRollingBack(false);
+    }
+  }, [spreadsheetContext, isRollingBack]);
+
   // agent 모드일 때 자동으로 수식 적용
   useEffect(() => {
     const autoApplyFormula = async () => {
+      // 롤백 후 5초간 자동 적용 차단
+      const timeSinceRollback = Date.now() - lastRollbackTime.current;
+      const isRecentlyRolledBack = timeSinceRollback < 5000;
+      
+      console.log('🔍 자동 적용 조건 체크:');
+      console.log('  mode:', mode);
+      console.log('  messageStatus:', message.status);
+      console.log('  isApplied:', isApplied);
+      console.log('  isDenied:', isDenied);
+      console.log('  executionError:', !!executionError);
+      console.log('  isExecuting:', isExecuting);
+      console.log('  isRollingBack:', isRollingBack);
+      console.log('  isRolledBack:', isRolledBack);
+      console.log('  timeSinceRollback:', timeSinceRollback);
+      console.log('  isRecentlyRolledBack:', isRecentlyRolledBack);
+      console.log('  spreadsheetReady:', spreadsheetContext?.isReady);
+      console.log('  hasStructuredContent:', !!message?.structuredContent);
+      console.log('  intentMatch:', message?.structuredContent?.intent === "excel_formula");
+
       // agent 모드이고, 메시지가 완성되었으며, 아직 적용되지 않았고, 거부되지도 않았을 때
+      // 단, 롤백 중이거나 롤백 직후 5초간은 자동 적용하지 않음
       if (
         mode === 'agent' && 
         message.status === 'completed' && 
@@ -87,16 +174,22 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
         !isDenied && 
         !executionError && 
         !isExecuting &&
+        !isRollingBack &&     // 롤백 중일 때 자동 적용 방지
+        !isRolledBack &&      // 롤백 직후에도 자동 적용 방지
+        !isRecentlyRolledBack && // 롤백 후 5초간 자동 적용 방지
         spreadsheetContext?.isReady &&
         message?.structuredContent &&
         message.structuredContent.intent === "excel_formula"
       ) {
+        console.log('✅ 자동 적용 조건 만족, 수식 적용 실행');
         await handleApplyFormula();
+      } else {
+        console.log('❌ 자동 적용 조건 불만족, 건너뜀');
       }
     };
 
     autoApplyFormula();
-  }, [mode, message.status, isApplied, isDenied, executionError, isExecuting, spreadsheetContext?.isReady, message?.structuredContent, handleApplyFormula]);
+  }, [mode, message.status, isApplied, isDenied, executionError, isExecuting, isRollingBack, isRolledBack, spreadsheetContext?.isReady, message?.structuredContent, handleApplyFormula]);
 
   // 메시지가 존재하지 않거나 구조화된 응답이 없으면 null 반환
   if (!message?.structuredContent || message.structuredContent.intent !== "excel_formula") {
@@ -109,10 +202,6 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
   const handleRejectFormula = () => {
     setIsDenied(true);
     console.log("수식 적용이 거부되었습니다");
-  };
-
-  const handleCancelApply = () => {
-    //적용전 스냅샷으로 롤백
   };
 
   const handleStayApply = () => {
@@ -195,19 +284,36 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
         </div>
       )}
 
+      {/* 롤백 완료 메시지 */}
+      {isRolledBack && (
+        <div className="mt-1 p-2 bg-yellow-50 border border-yellow-400 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span className="text-yellow-800 font-medium">수식 적용이 취소되었습니다. 이전 상태로 되돌렸습니다.</span>
+          </div>
+        </div>
+      )}
+
       {/* 적용 완료 후 액션 버튼들 */}
       {isApplied && (
         <div className="mt-3 border-gray-200 rounded-lg shadow-sm">
           <div className="flex space-x-3">
             <button
               onClick={handleCancelApply}
-              className="flex-1 px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors"
+              disabled={isRollingBack || !spreadsheetContext?.commandManager?.canRollback}
+              className="flex-1 px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             >
-              적용 취소
+              {isRollingBack && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600 mr-2"></div>
+              )}
+              {isRollingBack ? '취소 중...' : '적용 취소'}
             </button>
             <button
               onClick={handleStayApply}
-              className="flex-1 px-6 py-2 text-sm font-medium text-white border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              disabled={isRollingBack}
+              className="flex-1 px-6 py-2 text-sm font-medium text-white border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               style={{
                 backgroundColor: '#005ed9'
               }}
