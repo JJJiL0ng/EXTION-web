@@ -4,6 +4,7 @@ import { AssistantMessage } from "../../../_types/chat.types";
 import { useSpreadsheetContextSafe } from '@/_contexts/SpreadsheetContext';
 import { transformStructuredContentToFormulaResponse, isValidFormulaContent, validateFormulaResponse } from '@/_utils/formulaTransformer';
 import useChatModeStore from "@/_store/chat/chatModeStore";
+import { useChatStore } from "@/_store/chat/chatStore";
 
 interface FormulaMessageProps {
   message: AssistantMessage;
@@ -28,6 +29,12 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
   
   // ChatMode 상태 가져오기
   const { mode } = useChatModeStore();
+  
+  // 채팅 상태 - 새로운 메시지 전송 여부 확인
+  const { isStreaming, isInputDisabled, messages } = useChatStore();
+  
+  // 이 메시지 이후에 새로운 메시지가 있는지 확인
+  const [hasNewerMessages, setHasNewerMessages] = useState(false);
 
   // 수식 적용 함수 정의
   const handleApplyFormula = useCallback(async () => {
@@ -143,6 +150,22 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
     }
   }, [spreadsheetContext, isRollingBack]);
 
+  // 새로운 메시지 전송 확인 - 현재 메시지 이후에 새로운 메시지가 있으면 버튼 비활성화
+  useEffect(() => {
+    // 현재 메시지의 인덱스 찾기
+    const currentMessageIndex = messages.findIndex(msg => msg.id === message.id);
+    
+    if (currentMessageIndex !== -1) {
+      // 현재 메시지 이후에 새로운 메시지가 있는지 확인
+      const hasNewerMessages = currentMessageIndex < messages.length - 1;
+      setHasNewerMessages(hasNewerMessages);
+      
+      if (hasNewerMessages) {
+        console.log('🚫 새로운 메시지가 전송되어 이전 수식 버튼들을 비활성화합니다.');
+      }
+    }
+  }, [messages, message.id]);
+
   // agent 모드일 때 자동으로 수식 적용
   useEffect(() => {
     const autoApplyFormula = async () => {
@@ -196,8 +219,8 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
     return null;
   }
 
-  // 버튼 표시 조건 확인 (edit 모드일 때만)
-  const shouldShowButton = mode === 'edit' && !isApplied && message.status === 'completed' && !isDenied && !executionError;
+  // 버튼 표시 조건 확인 (edit 모드이고 새로운 메시지가 없을 때만)
+  const shouldShowButton = mode === 'edit' && !isApplied && message.status === 'completed' && !isDenied && !executionError && !hasNewerMessages;
 
   const handleRejectFormula = () => {
     setIsDenied(true);
@@ -296,8 +319,8 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
         </div>
       )}
 
-      {/* 적용 완료 후 액션 버튼들 */}
-      {isApplied && (
+      {/* 적용 완료 후 액션 버튼들 - 새로운 메시지가 있으면 숨김 */}
+      {isApplied && !hasNewerMessages && (
         <div className="mt-3 border-gray-200 rounded-lg shadow-sm">
           <div className="flex space-x-3">
             <button
