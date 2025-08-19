@@ -76,49 +76,101 @@ export const useSpreadjsCommandEngine = (
   const executingCommandRef = useRef<string | null>(null);
 
   // JavaScript 명령어 파싱 및 실행
-  const executeJavaScriptCommand = useCallback((command: string, worksheet: any, spread: any) => {
-    try {
-      console.log('🔧 JavaScript 명령어 파싱 시작...');
-      console.log('📝 원본 명령어:', command);
+  // const executeJavaScriptCommand = useCallback((command: string, worksheet: any, spread: any) => {
+  //   try {
+  //     console.log('🔧 JavaScript 명령어 파싱 시작...');
+  //     console.log('📝 원본 명령어:', command);
       
-      // "javascript/" 접두사 완전 제거
-      const cleanedCommand = command.replace(/^\s*javascript\s*\/?\s*/i, '').trim();
-      console.log('✂️ 정리된 명령어:', cleanedCommand);
+  //     // "javascript/" 접두사 완전 제거
+  //     const cleanedCommand = command.replace(/^\s*javascript\s*\/?\s*/i, '').trim();
+  //     console.log('✂️ 정리된 명령어:', cleanedCommand);
       
-      // SpreadJS 글로벌 객체를 위한 컨텍스트 설정
-      const GC = (window as any).GC;
-      console.log('🔍 GC 객체 상태:', GC ? 'Available' : 'Undefined');
+  //     // SpreadJS 글로벌 객체를 위한 컨텍스트 설정
+  //     const GC = (window as any).GC;
+  //     console.log('🔍 GC 객체 상태:', GC ? 'Available' : 'Undefined');
       
-      // GC.Spread.Sheets.SheetArea.viewport 참조를 제거하고 기본값 사용
-      let processedCommand = cleanedCommand;
-      if (cleanedCommand.includes('GC.Spread.Sheets.SheetArea.viewport')) {
-        console.log('⚠️ GC.Spread.Sheets.SheetArea.viewport 참조 발견 - 제거 중...');
-        // setValue 호출에서 SheetArea.viewport 매개변수 제거
-        processedCommand = processedCommand.replace(
-          /worksheet\.setValue\(([^,]+),\s*([^,]+),\s*([^,]+),\s*GC\.Spread\.Sheets\.SheetArea\.viewport\s*\)/g,
-          'worksheet.setValue($1, $2, $3)'
-        );
-        console.log('✂️ 처리된 명령어:', processedCommand);
-      }
+  //     // GC.Spread.Sheets.SheetArea.viewport 참조를 제거하고 기본값 사용
+  //     let processedCommand = cleanedCommand;
+  //     if (cleanedCommand.includes('GC.Spread.Sheets.SheetArea.viewport')) {
+  //       console.log('⚠️ GC.Spread.Sheets.SheetArea.viewport 참조 발견 - 제거 중...');
+  //       // setValue 호출에서 SheetArea.viewport 매개변수 제거
+  //       processedCommand = processedCommand.replace(
+  //         /worksheet\.setValue\(([^,]+),\s*([^,]+),\s*([^,]+),\s*GC\.Spread\.Sheets\.SheetArea\.viewport\s*\)/g,
+  //         'worksheet.setValue($1, $2, $3)'
+  //       );
+  //       console.log('✂️ 처리된 명령어:', processedCommand);
+  //     }
       
-      // 안전한 실행을 위한 함수 생성
-      const executeInContext = new Function(
-        'worksheet', 
-        'spread', 
-        'GC',
-        processedCommand
-      );
+  //     // 안전한 실행을 위한 함수 생성
+  //     const executeInContext = new Function(
+  //       'worksheet', 
+  //       'spread', 
+  //       'GC',
+  //       processedCommand
+  //     );
       
-      console.log('⚡ JavaScript 명령어 실행 시작...');
-      // 명령어 실행
-      executeInContext(worksheet, spread, GC);
+  //     console.log('⚡ JavaScript 명령어 실행 시작...');
+  //     // 명령어 실행
+  //     executeInContext(worksheet, spread, GC);
       
-      console.log('✅ JavaScript 명령어 실행 완료');
-    } catch (error) {
-      console.error('❌ JavaScript 명령어 실행 실패:', error);
-      throw new Error(`JavaScript 명령어 실행 실패: ${error instanceof Error ? error.message : String(error)}`);
+  //     console.log('✅ JavaScript 명령어 실행 완료');
+  //   } catch (error) {
+  //     console.error('❌ JavaScript 명령어 실행 실패:', error);
+  //     throw new Error(`JavaScript 명령어 실행 실패: ${error instanceof Error ? error.message : String(error)}`);
+  //   }
+  // }, []);
+  // JavaScript 명령어 파싱 및 실행
+const executeJavaScriptCommand = useCallback((command: string, worksheet: any, spread: any) => {
+  try {
+    console.log('🔧 JavaScript 명령어 파싱 시작...');
+    console.log('📝 원본 명령어:', command);
+    
+    // "javascript/" 접두사 완전 제거
+    let cleanedCommand = command.replace(/^\s*javascript\s*\/?\s*/i, '').trim();
+    console.log('✂️ 정리된 명령어:', cleanedCommand);
+    
+    // 명령어 끝에 세미콜론이 없으면 추가
+    if (!cleanedCommand.endsWith(';')) {
+      cleanedCommand += ';';
     }
-  }, []);
+    
+    console.log('🔧 최종 처리된 명령어:', cleanedCommand);
+    
+    // SpreadJS 글로벌 객체를 위한 컨텍스트 설정
+    const GC = (window as any).GC;
+    console.log('🔍 GC 객체 상태:', GC ? 'Available' : 'Undefined');
+    
+    // GC.Spread.Sheets.SheetArea.viewport 참조를 제거하고 기본값 사용
+    let processedCommand = cleanedCommand;
+    if (cleanedCommand.includes('GC.Spread.Sheets.SheetArea.viewport')) {
+      console.log('⚠️ GC.Spread.Sheets.SheetArea.viewport 참조 발견 - 제거 중...');
+      // setValue 호출에서 SheetArea.viewport 매개변수 제거
+      processedCommand = processedCommand.replace(
+        /worksheet\.setValue\(([^,]+),\s*([^,]+),\s*([^,]+),\s*GC\.Spread\.Sheets\.SheetArea\.viewport\s*\)/g,
+        'worksheet.setValue($1, $2, $3)'
+      );
+      console.log('✂️ 처리된 명령어:', processedCommand);
+    }
+    
+    // 안전한 실행을 위한 함수 생성 - 엄격 모드 사용
+    const executeInContext = new Function(
+      'worksheet', 
+      'spread', 
+      'GC',
+      `"use strict"; ${processedCommand}`
+    );
+    
+    console.log('⚡ JavaScript 명령어 실행 시작...');
+    // 명령어 실행
+    executeInContext(worksheet, spread, GC);
+    
+    console.log('✅ JavaScript 명령어 실행 완료');
+  } catch (error) {
+    console.error('❌ JavaScript 명령어 실행 실패:', error);
+    console.error('❌ 실행 시도한 명령어:', command);
+    throw new Error(`JavaScript 명령어 실행 실패: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}, []);
 
   // 명령어 타입 식별
   const identifyCommandType = useCallback((command: string): string => {
