@@ -419,7 +419,7 @@ export const useFileUpload = (
         isUploading: false,
         isProcessing: false,
         progress: 100,
-        uploadedFiles: [result]
+        uploadedFiles: [...prev.uploadedFiles, file.name]
       }));
 
       return result.data;
