@@ -224,41 +224,66 @@ const FunctionResultMessage: React.FC<{
             </div>
             
             <div>
-                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                    <p className="text-sm font-medium text-gray-900">
-                        셀 <code className="text-sm bg-gray-100 p-1 rounded">{functionDetails.targetCell}</code>에 함수 결과 적용
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                        결과 미리보기: {resultPreview}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                        생성된 수식: <code className="text-xs bg-gray-100 p-1 rounded">{functionDetails.formula}</code>
-                    </p>
+                {/* 함수 카드 UI */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                    {/* 함수명 헤더 */}
+                    <div className="text-center mb-6">
+                        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                            {functionDetails.formula?.match(/^=(\w+)/)?.[1] || 'FUNCTION'}
+                        </h2>
+                    </div>
+
+                    {/* 수식 표시 영역 */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+                        <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                                <code className="text-lg font-mono text-blue-600 font-semibold">
+                                    {functionDetails.formula}
+                                </code>
+                            </div>
+                            <button className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                복사
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* 결과 미리보기 */}
+                    <div className="text-center mb-6">
+                        <p className="text-sm text-gray-500 mb-2">계산 결과</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                            {typeof functionDetails.result === 'number' 
+                                ? functionDetails.result.toLocaleString()
+                                : resultPreview
+                            }
+                        </p>
+                    </div>
                     
                     {/* 백엔드에서 불러온 메시지가 아닌 경우에만 적용 버튼 표시 */}
                     {!isFromBackend && (
                         <button
                             onClick={() => onFunctionApply(message.id)}
                             disabled={isApplied}
-                            className={`mt-4 w-full text-center px-4 py-2 text-sm font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2
+                            className={`w-full px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2
                                 ${isApplied 
-                                    ? 'bg-[#e6f0ff] text-[#005de9] cursor-not-allowed' 
-                                    : 'bg-[#005de9] text-white hover:bg-[#004bc1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#005de9]'
+                                    ? 'bg-green-50 text-green-700 border border-green-200 cursor-not-allowed' 
+                                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
                                 }`}
                         >
                             {isApplied ? (
                                 <>
-                                    <span>✓ 적용 완료</span>
+                                    <span>✓ 셀에 적용 완료</span>
                                 </>
                             ) : (
-                                '결과 적용하기'
+                                <>
+                                    <span>셀 {functionDetails.targetCell}에 함수 적용</span>
+                                </>
                             )}
                         </button>
                     )}
                     
                     {/* 백엔드에서 불러온 메시지인 경우 적용 완료 표시 */}
                     {isFromBackend && (
-                        <div className="mt-4 w-full text-center px-4 py-2 text-sm font-medium rounded-lg bg-green-50 text-green-700 border border-green-200">
+                        <div className="w-full px-6 py-3 text-sm font-medium rounded-xl bg-green-50 text-green-700 border border-green-200 text-center">
                             <span>✓ 과거 적용된 함수 결과</span>
                         </div>
                     )}
@@ -408,4 +433,4 @@ export default function MessageDisplay({
             )}
         </div>
     );
-} 
+}

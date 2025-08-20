@@ -35,6 +35,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
 
   // 텍스트 에어리어 높이 자동 조절
   const adjustTextareaHeight = () => {
@@ -54,14 +55,32 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
     onSend(inputValue, uploadedFiles);
     setInputValue('');
     setUploadedFiles([]);
+    
+    // textarea 포커스 해제 후 다시 포커스를 주어 IME 상태를 초기화
+    if (textareaRef.current) {
+      textareaRef.current.blur();
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 0);
+    }
   };
 
   // Enter 키 처리
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
       e.preventDefault();
       handleSendClick();
     }
+  };
+
+  // IME 입력 시작 시 호출
+  const handleCompositionStart = () => {
+    setIsComposing(true);
+  };
+
+  // IME 입력 종료 시 호출
+  const handleCompositionEnd = () => {
+    setIsComposing(false);
   };
 
   const handleSearchClick = () => {
@@ -110,6 +129,8 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           disabled={disabled}
           className="w-full bg-transparent border-none outline-none resize-none px-6 py-6 text-gray-900 text-lg relative z-10"
           style={{ 

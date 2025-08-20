@@ -1,0 +1,9 @@
+<?xml version="1.0" standalone="no"?>
+<svg id="Frame15" width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; max-height: 100%;">
+<path d="M150 0L279.904 225H20.0962L150 0Z" fill="#005DE9" stroke-dasharray="0,0,0,779.423095703125"><animate attributeType="XML" attributeName="stroke-dasharray" repeatCount="1" dur="0.78125s" values="0,0,0,779.423095703125; 
+          0,389.7115478515625,389.7115478515625,0; 
+          779.423095703125,0,0,0" keyTimes="0; 0.5; 1" fill="freeze"></animate></path>
+<path d="M85.3076 111.478L215.201 113.099L148.851 224.78L85.3076 111.478Z" fill="#50E092" stroke-dasharray="0,0,0,389.71142578125"><animate attributeType="XML" attributeName="stroke-dasharray" repeatCount="1" dur="0.78125s" values="0,0,0,389.71142578125; 
+          0,194.855712890625,194.855712890625,0; 
+          389.71142578125,0,0,0" keyTimes="0; 0.5; 1" fill="freeze"></animate></path>
+</svg>
