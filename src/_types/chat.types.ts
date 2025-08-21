@@ -173,6 +173,10 @@ export interface ChatStoreState {
   isStreaming: boolean
   isInputDisabled: boolean
   
+  // Reasoning Preview 상태
+  reasoningPreview: string | null
+  reasoningComplete: boolean
+  
   // 오류 처리
   error: ChatError | null
 }
@@ -334,6 +338,11 @@ export type ChatSelectors = {
   // 오류 조회
   getError: () => ChatError | null
   getHasError: () => boolean
+  
+  // Reasoning Preview 조회
+  getReasoningPreview: () => string | null
+  getReasoningComplete: () => boolean
+  getHasReasoningPreview: () => boolean
 }
 
 // =============================================================================

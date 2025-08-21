@@ -5,6 +5,7 @@ import { useChatStore } from '../../_hooks/chat/useChatStore';
 import { StreamingMarkdown } from './message/StreamingMarkdown';
 import { FileUploadWelcomeMessage } from './FileUploadWelcomeMessage';
 import TypingIndicator from './TypingIndicator';
+import ReasoningPreview from './ReasoningPreview';
 import { ChatInitMode, MessageType, AssistantMessage } from '../../_types/chat.types';
 import { ChatIntentType } from '../../_types/chat-response.types';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
@@ -172,7 +173,20 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   
   // V2 스토어에서 직접 데이터 가져오기
-  const { messages, error, initMode, fileInfo, isLoading, isStreaming } = useChatStore();
+  const { 
+    messages, 
+    error, 
+    initMode, 
+    fileInfo, 
+    isLoading, 
+    isStreaming,
+    getReasoningPreview,
+    getReasoningComplete 
+  } = useChatStore();
+
+  // Reasoning preview 상태 가져오기
+  const reasoningPreview = getReasoningPreview();
+  const reasoningComplete = getReasoningComplete();
 
   // 스크롤이 맨 아래에 있는지 확인하는 함수
   const isAtBottom = useCallback(() => {
@@ -227,19 +241,22 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
 
   // 디버깅용 콘솔 로그
   useEffect(() => {
-    // console.log('🔍 [ChatViewer] State Debug:', {
-    //   isLoading,
-    //   isStreaming,
-    //   messagesLength: messages.length,
-    //   hasMessages: messages.length > 0,
-    //   shouldShowIndicator: isStreaming && messages.length > 0,
-    //   lastMessage: messages[messages.length - 1]?.type,
-    //   lastMessageStatus: messages[messages.length - 1]?.status,
-    //   isAutoScrollEnabled,
-    //   isUserScrolling,
-    //   timestamp: new Date().toISOString()
-    // });
-  }, [isLoading, isStreaming, messages, isAutoScrollEnabled, isUserScrolling]);
+    console.log('🔍 [ChatViewer] State Debug:', {
+      isLoading,
+      isStreaming,
+      messagesLength: messages.length,
+      hasMessages: messages.length > 0,
+      shouldShowIndicator: isStreaming && messages.length > 0,
+      lastMessage: messages[messages.length - 1]?.type,
+      lastMessageStatus: messages[messages.length - 1]?.status,
+      reasoningPreview: reasoningPreview ? reasoningPreview.substring(0, 50) + '...' : null,
+      reasoningComplete,
+      hasReasoningPreview: !!reasoningPreview,
+      isAutoScrollEnabled,
+      isUserScrolling,
+      timestamp: new Date().toISOString()
+    });
+  }, [isLoading, isStreaming, messages, reasoningPreview, reasoningComplete, isAutoScrollEnabled, isUserScrolling]);
 
   // 새 메시지가 올 때마다 자동 스크롤 (자동 스크롤이 활성화된 경우에만)
   useEffect(() => {
@@ -351,6 +368,18 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
             </div>
           ) : null;
         })()}
+        
+        {/* AI 추론 과정 표시 - TypingIndicator와 분리 */}
+        {reasoningPreview && (
+          <div className="flex justify-start">
+            <div className="px-4 py-1">
+              <ReasoningPreview
+                reasoning={reasoningPreview}
+                isComplete={reasoningComplete}
+              />
+            </div>
+          </div>
+        )}
         
         {/* 오류 메시지 표시 */}
         {error && (

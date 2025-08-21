@@ -231,6 +231,8 @@ export const createInitialState = (): InitialStoreState => ({
   fileInfo: null,
   isStreaming: false,
   isInputDisabled: false,
+  reasoningPreview: null,
+  reasoningComplete: false,
   error: null
 })
 

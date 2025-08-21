@@ -8,7 +8,7 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
-    'text-gray-300', 'text-gray-400', 'text-gray-500', 'text-gray-600', 'text-gray-700' ,'border-gray-300', 'border-gray-400', 'border-gray-500', 'border-gray-600', 'border-gray-700', 'left-[70%]', ' border-[#D9D9D9] '
+    'text-gray-300', 'text-gray-400', 'text-gray-500', 'text-gray-600', 'text-gray-700' ,'border-gray-300', 'border-gray-400', 'border-gray-500', 'border-gray-600', 'border-gray-700', 'left-[70%]', ' border-[#D9D9D9] ','space-x-3'
   ],
   theme: {
     extend: {
