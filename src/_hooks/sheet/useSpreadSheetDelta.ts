@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import * as GC from "@mescius/spread-sheets";
 import { SheetAPI, ApplyDeltaRequest } from '@/_Api/sheet/sheetApi';
 import { useSpreadjsCommandStore } from '@/_store/sheet/spreadjsCommandStore';
 import { useSpreadSheetDeltaApply } from './useSpreadSheetDeltaApply';
-import { useAuthStore } from '@/stores/authStore';
-import { getOrCreateGuestId } from '@/_utils/guestUtils';
 import { 
   CellDelta, 
   DeltaAction, 
@@ -16,8 +14,8 @@ import {
 } from '@/_types/delta';
 
 interface UseSpreadSheetDeltaConfig {
-  userId: string;
-  spreadsheetId?: string;
+  userId: string; // 필수: 외부에서 전달받는 사용자 ID
+  spreadsheetId: string; // 필수: 외부에서 전달받는 스프레드시트 ID
   batchTimeout?: number;
   maxRetries?: number;
   maxBatchSize?: number;
@@ -42,8 +40,8 @@ export const useSpreadSheetDelta = (
   config: UseSpreadSheetDeltaConfig
 ): UseSpreadSheetDeltaReturn => {
   const {
-    userId: configUserId, // config에서 받은 userId (MainSpreadsheet에서 전달)
-    spreadsheetId,
+    userId, // 외부에서 전달받는 사용자 ID (MainSpreadsheet에서 계산된 값)
+    spreadsheetId, // 외부에서 전달받는 스프레드시트 ID
     batchTimeout = 500,
     maxRetries = 3,
     maxBatchSize = 50,
@@ -51,25 +49,6 @@ export const useSpreadSheetDelta = (
     onError,
     onSync
   } = config;
-
-  // 인증 상태 관리
-  const { user } = useAuthStore();
-  
-  // 사용자 ID 가져오기 (MainSpreadsheet.tsx와 동일한 패턴)
-  const userId = useMemo(() => {
-    // config에서 userId가 전달된 경우 우선 사용
-    if (configUserId) {
-      return configUserId;
-    }
-    
-    if (user?.uid) {
-      // 로그인된 사용자의 경우 Firebase uid 사용
-      return user.uid;
-    } else {
-      // 비로그인 사용자의 경우 guest ID 생성/사용
-      return getOrCreateGuestId();
-    }
-  }, [configUserId, user?.uid]);
 
   // 상태 관리
   const [state, setState] = useState<DeltaState>({
