@@ -60,7 +60,6 @@ export interface AIUpdateData extends SSEEventData {
 export interface NewChatResponseData extends SSEEventData {
   success: boolean;
   model: string;
-  cached: boolean;
   confidence: number;
   analysis?: {
     detectedOperation: string;
