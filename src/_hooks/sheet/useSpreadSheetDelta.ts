@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import * as GC from "@mescius/spread-sheets";
 import { SheetAPI, ApplyDeltaRequest } from '@/_Api/sheet/sheetApi';
 import { useSpreadjsCommandStore } from '@/_store/sheet/spreadjsCommandStore';
 import { useSpreadSheetDeltaApply } from './useSpreadSheetDeltaApply';
+import { useAuthStore } from '@/stores/authStore';
+import { getOrCreateGuestId } from '@/_utils/guestUtils';
 import { 
   CellDelta, 
   DeltaAction, 
@@ -40,8 +42,8 @@ export const useSpreadSheetDelta = (
   config: UseSpreadSheetDeltaConfig
 ): UseSpreadSheetDeltaReturn => {
   const {
-    userId: _userId, // 현재 사용하지 않지만 향후 사용 예정
-    spreadsheetId: _spreadsheetId, // 현재 사용하지 않지만 향후 사용 예정
+    userId: configUserId, // config에서 받은 userId (MainSpreadsheet에서 전달)
+    spreadsheetId,
     batchTimeout = 500,
     maxRetries = 3,
     maxBatchSize = 50,
@@ -49,6 +51,25 @@ export const useSpreadSheetDelta = (
     onError,
     onSync
   } = config;
+
+  // 인증 상태 관리
+  const { user } = useAuthStore();
+  
+  // 사용자 ID 가져오기 (MainSpreadsheet.tsx와 동일한 패턴)
+  const userId = useMemo(() => {
+    // config에서 userId가 전달된 경우 우선 사용
+    if (configUserId) {
+      return configUserId;
+    }
+    
+    if (user?.uid) {
+      // 로그인된 사용자의 경우 Firebase uid 사용
+      return user.uid;
+    } else {
+      // 비로그인 사용자의 경우 guest ID 생성/사용
+      return getOrCreateGuestId();
+    }
+  }, [configUserId, user?.uid]);
 
   // 상태 관리
   const [state, setState] = useState<DeltaState>({
@@ -173,6 +194,7 @@ export const useSpreadSheetDelta = (
       }));
 
       const response = await SheetAPI.applyBatchDeltas({
+        userId: userId, // userId 추가
         deltas: apiDeltas
       });
 
@@ -239,7 +261,7 @@ export const useSpreadSheetDelta = (
         retryBatch(batchId);
       }, Math.min(1000 * Math.pow(2, 0), 30000));
     }
-  }, [onSync, onDeltaApplied, onError, setAutosaveInProgress, setLastSavedAt, setAutosaveError]);
+  }, [userId, onSync, onDeltaApplied, onError, setAutosaveInProgress, setLastSavedAt, setAutosaveError]);
 
   // 개별 배치 재시도
   const retryBatch = useCallback(async (batchId: string) => {
@@ -266,6 +288,7 @@ export const useSpreadSheetDelta = (
       }));
 
       const response = await SheetAPI.applyBatchDeltas({
+        userId: userId, // userId 추가
         deltas: apiDeltas
       });
 
@@ -295,7 +318,7 @@ export const useSpreadSheetDelta = (
         console.error('배치 최대 재시도 횟수 도달:', batchId);
       }
     }
-  }, [maxRetries, onSync]);
+  }, [userId, maxRetries, onSync]);
 
   // 서버에서 받은 델타 적용
   const applyServerDelta = useCallback((delta: CellDelta) => {
@@ -358,6 +381,7 @@ export const useSpreadSheetDelta = (
       }));
 
       const response = await SheetAPI.applyBatchDeltas({
+        userId: userId, // userId 추가
         deltas: apiDeltas
       });
 
@@ -381,7 +405,7 @@ export const useSpreadSheetDelta = (
       }));
       onError?.(error instanceof Error ? error : new Error('Retry failed'));
     }
-  }, [state.failedDeltas, onSync, onError]);
+  }, [userId, state.failedDeltas, onSync, onError]);
 
   // 좌표 변환 유틸리티 함수들
   const convertToAddress = useCallback((row: number, col: number): string => {
