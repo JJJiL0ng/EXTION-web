@@ -59,7 +59,6 @@ export interface AIUpdateData extends SSEEventData {
 // 새로운 API 응답 형식 (v2.1.0)
 export interface NewChatResponseData extends SSEEventData {
   success: boolean;
-  tokensUsed: number;
   responseTime: number;
   model: string;
   cached: boolean;
