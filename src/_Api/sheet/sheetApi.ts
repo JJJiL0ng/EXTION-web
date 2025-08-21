@@ -109,6 +109,7 @@ export interface ApplyDeltaRequest {
 }
 
 export interface BatchDeltasRequest {
+  userId: string; // 백엔드에서 필요한 userId 추가
   deltas: ApplyDeltaRequest[];
 }
 

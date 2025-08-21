@@ -14,8 +14,8 @@ import {
 } from '@/_types/delta';
 
 interface UseSpreadSheetDeltaConfig {
-  userId: string;
-  spreadsheetId?: string;
+  userId: string; // 필수: 외부에서 전달받는 사용자 ID
+  spreadsheetId: string; // 필수: 외부에서 전달받는 스프레드시트 ID
   batchTimeout?: number;
   maxRetries?: number;
   maxBatchSize?: number;
@@ -40,8 +40,8 @@ export const useSpreadSheetDelta = (
   config: UseSpreadSheetDeltaConfig
 ): UseSpreadSheetDeltaReturn => {
   const {
-    userId: _userId, // 현재 사용하지 않지만 향후 사용 예정
-    spreadsheetId: _spreadsheetId, // 현재 사용하지 않지만 향후 사용 예정
+    userId, // 외부에서 전달받는 사용자 ID (MainSpreadsheet에서 계산된 값)
+    spreadsheetId, // 외부에서 전달받는 스프레드시트 ID
     batchTimeout = 500,
     maxRetries = 3,
     maxBatchSize = 50,
@@ -173,6 +173,7 @@ export const useSpreadSheetDelta = (
       }));
 
       const response = await SheetAPI.applyBatchDeltas({
+        userId: userId, // userId 추가
         deltas: apiDeltas
       });
 
@@ -239,7 +240,7 @@ export const useSpreadSheetDelta = (
         retryBatch(batchId);
       }, Math.min(1000 * Math.pow(2, 0), 30000));
     }
-  }, [onSync, onDeltaApplied, onError, setAutosaveInProgress, setLastSavedAt, setAutosaveError]);
+  }, [userId, onSync, onDeltaApplied, onError, setAutosaveInProgress, setLastSavedAt, setAutosaveError]);
 
   // 개별 배치 재시도
   const retryBatch = useCallback(async (batchId: string) => {
@@ -266,6 +267,7 @@ export const useSpreadSheetDelta = (
       }));
 
       const response = await SheetAPI.applyBatchDeltas({
+        userId: userId, // userId 추가
         deltas: apiDeltas
       });
 
@@ -295,7 +297,7 @@ export const useSpreadSheetDelta = (
         console.error('배치 최대 재시도 횟수 도달:', batchId);
       }
     }
-  }, [maxRetries, onSync]);
+  }, [userId, maxRetries, onSync]);
 
   // 서버에서 받은 델타 적용
   const applyServerDelta = useCallback((delta: CellDelta) => {
@@ -358,6 +360,7 @@ export const useSpreadSheetDelta = (
       }));
 
       const response = await SheetAPI.applyBatchDeltas({
+        userId: userId, // userId 추가
         deltas: apiDeltas
       });
 
@@ -381,7 +384,7 @@ export const useSpreadSheetDelta = (
       }));
       onError?.(error instanceof Error ? error : new Error('Retry failed'));
     }
-  }, [state.failedDeltas, onSync, onError]);
+  }, [userId, state.failedDeltas, onSync, onError]);
 
   // 좌표 변환 유틸리티 함수들
   const convertToAddress = useCallback((row: number, col: number): string => {
