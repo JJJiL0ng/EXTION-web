@@ -35,9 +35,6 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
 
   const dots = Array.from({ length: dotCount });
 
-  // 디버깅 로그
-  console.log('💭 [TypingIndicator] Rendering');
-
   return (
     <div
       className={`relative pb-7 ${className}`}

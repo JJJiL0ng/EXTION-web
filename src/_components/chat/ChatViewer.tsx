@@ -35,16 +35,11 @@ const ResponseComponentRegistry: Record<string, ResponseComponentConfig> = {
 const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ message }) => {
   const structuredContent = message.structuredContent;
   
-  // console.log('🔍 [StructuredResponseRenderer] Processing message:', {
-  //   messageId: message.id,
-  //   hasStructuredContent: !!structuredContent,
-  //   structuredContent: structuredContent,
-  //   messageContent: message.content.substring(0, 100) + '...'
-  // });
+  // Debug log removed for production
   
   if (!structuredContent) {
     // 구조화된 응답이 없으면 기본 마크다운 렌더링
-    console.log('📝 [StructuredResponseRenderer] No structured content, using markdown');
+    // Debug log removed for production
     return (
       <StreamingMarkdown
         content={message.content}
@@ -60,13 +55,7 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
   if (!detectedIntent) {
     // 폴백 로직: 필드를 기반으로 intent 감지
     const content = structuredContent as any;
-    console.log('🔄 [StructuredResponseRenderer] No intent found, trying fallback detection:', {
-      hasFormulaDetails: !!content.originalData?.formulaDetails,
-      hasFormulaName: !!content.formulaName,
-      hasName: !!content.name,
-      hasSyntax: !!content.syntax,
-      contentKeys: Object.keys(content)
-    });
+    // Debug log removed for production
     
     if (content.originalData?.formulaDetails || 
         content.formulaName || 
@@ -75,24 +64,24 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
         content.name || // formulaDetails.name
         content.syntax) { // formulaDetails.syntax
       detectedIntent = ChatIntentType.EXCEL_FORMULA;
-      console.log('✅ [StructuredResponseRenderer] Detected Excel formula intent');
+      // Debug log removed for production
     } else if (content.originalData?.codeGenerator || 
                content.pythonCode) {
       detectedIntent = ChatIntentType.PYTHON_CODE_GENERATOR;
-      console.log('✅ [StructuredResponseRenderer] Detected Python code generator intent');
+      // Debug log removed for production
     } else if (content.originalData?.dataTransformation ||
                content.transformedJsonData ||
                content.answerAfterReadWholedata ||
                content.answerAfterReadWholeData) {
       detectedIntent = ChatIntentType.WHOLE_DATA;
-      console.log('✅ [StructuredResponseRenderer] Detected whole data intent');
+      // Debug log removed for production
     } else if (content.originalData?.generalHelp ||
                content.directAnswer) {
       detectedIntent = ChatIntentType.GENERAL_HELP;
-      console.log('✅ [StructuredResponseRenderer] Detected general help intent');
+      // Debug log removed for production
     }
   } else {
-    // console.log('✅ [StructuredResponseRenderer] Intent found:', detectedIntent);
+    // Debug log removed for production
   }
 
   // GENERAL_HELP와 WHOLE_DATA는 특별한 컴포넌트가 필요없으므로 기본 마크다운으로 렌더링
@@ -134,7 +123,7 @@ const StructuredResponseRenderer: React.FC<{ message: AssistantMessage }> = ({ m
   
   if (!config) {
     // Registry에 없는 타입이면 기본 마크다운 렌더링
-    console.warn(`❌ [StructuredResponseRenderer] Unknown or unregistered response intent: ${detectedIntent}`);
+    // Warning log removed for production
     return (
       <StreamingMarkdown
         content={message.content}
@@ -171,6 +160,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [isScrollingToBottom, setIsScrollingToBottom] = useState(false);
   
   // V2 스토어에서 직접 데이터 가져오기
   const { 
@@ -197,12 +187,85 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
     return scrollHeight - scrollTop - clientHeight <= threshold;
   }, []);
 
-  // 자동 스크롤 함수
-  const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' = 'smooth') => {
+  // 자동 스크롤 함수 (애니메이션 강화)
+  const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' | 'instant' = 'smooth') => {
     if (messagesEndRef.current && isAutoScrollEnabled) {
-      messagesEndRef.current.scrollIntoView({ behavior });
+      if (behavior === 'instant') {
+        // 즉시 스크롤 (애니메이션 없음)
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+      } else {
+        // 부드러운 스크롤 애니메이션
+        messagesEndRef.current.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'end',
+          inline: 'nearest'
+        });
+      }
     }
   }, [isAutoScrollEnabled]);
+
+  // 강제 스크롤 함수 (자동 스크롤 상태와 관계없이 실행)
+  const forceScrollToBottom = useCallback((animated: boolean = true) => {
+    if (chatContainerRef.current && messagesEndRef.current) {
+      if (animated) {
+        // 스크롤 애니메이션 시작 표시
+        setIsScrollingToBottom(true);
+        
+        // 더 부드러운 애니메이션을 위해 직접 스크롤 제어
+        const container = chatContainerRef.current;
+        const targetScrollTop = container.scrollHeight - container.clientHeight;
+        
+        // 현재 위치에서 목표 위치까지의 거리 계산
+        const currentScrollTop = container.scrollTop;
+        const distance = targetScrollTop - currentScrollTop;
+        
+        // 거리가 짧으면 기본 smooth 스크롤, 길면 더 빠른 애니메이션
+        if (Math.abs(distance) < 500) {
+          messagesEndRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'end',
+            inline: 'nearest'
+          });
+          // 스크롤 완료 후 상태 초기화
+          setTimeout(() => setIsScrollingToBottom(false), 500);
+        } else {
+          // 긴 거리는 더 빠른 커스텀 애니메이션 (슝! 효과)
+          const duration = 800; // 0.8초로 조금 더 길게
+          const startTime = performance.now();
+          
+          // Debug log removed for production
+          
+          const animateScroll = (currentTime: number) => {
+            const elapsedTime = currentTime - startTime;
+            const progress = Math.min(elapsedTime / duration, 1);
+            
+            // easeOutQuart 이징 함수로 변경 (더 빠른 시작, 부드러운 끝)
+            const easeOutQuart = (t: number) => {
+              return 1 - Math.pow(1 - t, 4);
+            };
+            
+            const easedProgress = easeOutQuart(progress);
+            const currentPos = currentScrollTop + (distance * easedProgress);
+            
+            container.scrollTop = currentPos;
+            
+            if (progress < 1) {
+              requestAnimationFrame(animateScroll);
+            } else {
+              // 애니메이션 완료
+              setIsScrollingToBottom(false);
+              // Debug log removed for production
+            }
+          };
+          
+          requestAnimationFrame(animateScroll);
+        }
+      } else {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+        setIsScrollingToBottom(false);
+      }
+    }
+  }, []);
 
   // 사용자 스크롤 감지 핸들러
   const handleScroll = useCallback(() => {
@@ -239,46 +302,87 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
     };
   }, [handleScroll]);
 
-  // 디버깅용 콘솔 로그
-  useEffect(() => {
-    console.log('🔍 [ChatViewer] State Debug:', {
-      isLoading,
-      isStreaming,
-      messagesLength: messages.length,
-      hasMessages: messages.length > 0,
-      shouldShowIndicator: isStreaming && messages.length > 0,
-      lastMessage: messages[messages.length - 1]?.type,
-      lastMessageStatus: messages[messages.length - 1]?.status,
-      reasoningPreview: reasoningPreview ? reasoningPreview.substring(0, 50) + '...' : null,
-      reasoningComplete,
-      hasReasoningPreview: !!reasoningPreview,
-      isAutoScrollEnabled,
-      isUserScrolling,
-      timestamp: new Date().toISOString()
-    });
-  }, [isLoading, isStreaming, messages, reasoningPreview, reasoningComplete, isAutoScrollEnabled, isUserScrolling]);
+  // // 디버깅용 콘솔 로그
+  // useEffect(() => {
+  //   console.log('🔍 [ChatViewer] State Debug:', {
+  //     isLoading,
+  //     isStreaming,
+  //     messagesLength: messages.length,
+  //     hasMessages: messages.length > 0,
+  //     shouldShowIndicator: isStreaming && messages.length > 0,
+  //     lastMessage: messages[messages.length - 1]?.type,
+  //     lastMessageStatus: messages[messages.length - 1]?.status,
+  //     reasoningPreview: reasoningPreview ? reasoningPreview.substring(0, 50) + '...' : null,
+  //     reasoningComplete,
+  //     hasReasoningPreview: !!reasoningPreview,
+  //     isAutoScrollEnabled,
+  //     isUserScrolling,
+  //     timestamp: new Date().toISOString()
+  //   });
+  // }, [isLoading, isStreaming, messages, reasoningPreview, reasoningComplete, isAutoScrollEnabled, isUserScrolling]);
 
-  // 새 메시지가 올 때마다 자동 스크롤 (자동 스크롤이 활성화된 경우에만)
+  // 새 메시지가 올 때마다 자동 스크롤 처리
   useEffect(() => {
+    if (messages.length === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+    
+    // 새로운 사용자 메시지가 추가되면 무조건 맨 아래로 애니메이션 스크롤
+    if (lastMessage && lastMessage.type === MessageType.USER) {
+      // Debug log removed for production
+      setIsAutoScrollEnabled(true);
+      // 강제 스크롤 (애니메이션 포함)
+      forceScrollToBottom(true);
+      return;
+    }
+
+    // 그 외의 경우는 자동 스크롤이 활성화된 경우에만 스크롤
     if (isAutoScrollEnabled && !isUserScrolling) {
       scrollToBottom();
     }
   }, [messages, isAutoScrollEnabled, isUserScrolling, scrollToBottom]);
 
-  // 스트리밍 중일 때도 자동 스크롤 적용
+  // 스트리밍 시작 시 자동 스크롤 강제 활성화 및 적용
   useEffect(() => {
-    if (isStreaming && isAutoScrollEnabled && !isUserScrolling) {
-      scrollToBottom('auto'); // 스트리밍 중에는 부드러운 스크롤 대신 즉시 스크롤
+    if (isStreaming) {
+      // 스트리밍이 시작되면 자동 스크롤을 강제로 활성화
+      if (!isAutoScrollEnabled) {
+        // Debug log removed for production
+        setIsAutoScrollEnabled(true);
+      }
+      
+      if (isAutoScrollEnabled && !isUserScrolling) {
+        scrollToBottom('auto'); // 스트리밍 중에는 부드러운 스크롤 대신 즉시 스크롤
+      }
     }
   }, [isStreaming, isAutoScrollEnabled, isUserScrolling, scrollToBottom]);
 
   return (
     <div className="chat-viewer h-full flex flex-col relative">
       <div className="border-b-2 border-[#D9D9D9]"></div>
+      
+      {/* 스크롤 애니메이션 표시 */}
+      {isScrollingToBottom && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
+          <div className="bg-blue-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-pulse">
+            <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+            <span className="text-sm">최신 메시지로 이동 중...</span>
+          </div>
+        </div>
+      )}
+      
       {/* 메시지 리스트 */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-2 space-y-3"
+        className={`flex-1 overflow-y-auto p-2 space-y-3 transition-all duration-300 ${
+          isScrollingToBottom ? 'blur-sm' : ''
+        }`}
+        style={{
+          scrollBehavior: 'smooth',
+          scrollPaddingBottom: '20px'
+        }}
       >
         {messages.length === 0 ? (
           // 파일 업로드 모드면 파일 업로드 환영 메시지, 아니면 기본 메시지
