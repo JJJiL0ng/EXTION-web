@@ -1,20 +1,127 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+interface GridLineProps {
+  isVertical?: boolean;
+  position: number;
+  isActive: boolean;
+  cellSize: number;
+}
+
+const GridLine: React.FC<GridLineProps> = ({ isVertical, position, isActive, cellSize }) => {
+  const style = isVertical 
+    ? {
+        position: 'absolute' as const,
+        left: `${position * cellSize}px`,
+        top: 0,
+        bottom: 0,
+        width: isActive ? '3px' : '1px',
+        backgroundColor: isActive ? 'rgba(59, 130, 246, 0.8)' : '#BEC3C6',
+        transition: 'background-color 0.3s ease-out, width 0.3s ease-out',
+        boxShadow: isActive ? '0 0 15px rgba(59, 130, 246, 0.6)' : 'none',
+        zIndex: isActive ? 10 : 1,
+        transform: isActive ? 'translateX(-1px)' : 'translateX(0)', // 중앙 정렬 보정
+      }
+    : {
+        position: 'absolute' as const,
+        top: `${position * cellSize}px`,
+        left: 0,
+        right: 0,
+        height: isActive ? '3px' : '1px',
+        backgroundColor: isActive ? 'rgba(59, 130, 246, 0.8)' : '#BEC3C6', // 세로 스캔도 파란색으로 통일
+        transition: 'background-color 0.3s ease-out, height 0.3s ease-out',
+        boxShadow: isActive ? '0 0 15px rgba(59, 130, 246, 0.6)' : 'none',
+        zIndex: isActive ? 10 : 1,
+        transform: isActive ? 'translateY(-1px)' : 'translateY(0)', // 중앙 정렬 보정
+      };
+
+  return <div style={style} />;
+};
 
 const HeroSection = () => {
+    const [activeColumn, setActiveColumn] = useState(0);
+    const [activeRow, setActiveRow] = useState(0);
+    const [isClient, setIsClient] = useState(false);
+    
+    // 클라이언트 측에서만 실행되도록 보장
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+    
+    // 뷰포트 크기에 맞춘 그리드 설정 (기본값 설정)
+    const cellWidth = 96;
+    const cellHeight = 24;
+    const viewportWidth = isClient ? window.innerWidth : 1200;
+    const viewportHeight = isClient ? window.innerHeight : 800;
+    
+    const cols = Math.ceil(viewportWidth / cellWidth) + 2;
+    const rows = Math.ceil(viewportHeight / cellHeight) + 2;
+
+    // 가로 스캔 (세로 선들의 색상 변경)
+    useEffect(() => {
+        if (!isClient) return;
+        
+        const interval = setInterval(() => {
+            setActiveColumn(prev => (prev + 1) % cols);
+        }, 4000 / cols); // 4초 동안 전체 스캔
+
+        return () => clearInterval(interval);
+    }, [cols, isClient]);
+
+    // 세로 스캔 (가로 선들의 색상 변경)
+    useEffect(() => {
+        if (!isClient) return;
+        
+        const interval = setInterval(() => {
+            setActiveRow(prev => (prev + 1) % rows);
+        }, 5000 / rows); // 5초 동안 전체 스캔
+
+        return () => clearInterval(interval);
+    }, [rows, isClient]);
+
     return (
         <section className="min-h-screen bg-gray-50 py-20 relative overflow-hidden flex items-center justify-center">
-            <div
-                className="absolute inset-0 opacity-10"
-                style={{
-                    backgroundImage: `
-            linear-gradient(to right, #BEC3C6 1px, transparent 1px),
-            linear-gradient(to bottom, #BEC3C6 1px, transparent 1px)
-            `,
-                    backgroundSize: '96px 24px' // Excel-like cell proportions (4:1 ratio)
-                }}
-            />
+            {/* 동적 그리드 스캔 배경 - 클라이언트에서만 렌더링 */}
+            {isClient && (
+                <div className="absolute inset-0 opacity-10">
+                    {/* 세로 선들 (가로 스캔) */}
+                    {Array.from({ length: cols }, (_, i) => (
+                        <GridLine
+                            key={`v-${i}`}
+                            isVertical={true}
+                            position={i}
+                            isActive={i === activeColumn}
+                            cellSize={cellWidth}
+                        />
+                    ))}
+                    
+                    {/* 가로 선들 (세로 스캔) */}
+                    {Array.from({ length: rows }, (_, i) => (
+                        <GridLine
+                            key={`h-${i}`}
+                            isVertical={false}
+                            position={i}
+                            isActive={i === activeRow}
+                            cellSize={cellHeight}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* 서버 사이드 렌더링용 정적 백업 그리드 */}
+            {!isClient && (
+                <div
+                    className="absolute inset-0 opacity-10"
+                    style={{
+                        backgroundImage: `
+                            linear-gradient(to right, #BEC3C6 1px, transparent 1px),
+                            linear-gradient(to bottom, #BEC3C6 1px, transparent 1px)
+                        `,
+                        backgroundSize: '96px 24px' // Excel-like cell proportions (4:1 ratio)
+                    }}
+                />
+            )}
 
             {/* Main Content */}
             <div
@@ -37,10 +144,10 @@ const HeroSection = () => {
                     </span> */}
                 </h1>
                 <h2 className="text-5xl font-bold text-black mb-6 leading-none -mt-2">
-                    what you want for Excel
+                    what you want for Cells
                 </h2>
                 <p className="text-xl md:text-2xl text-gray-900 font-light mb-6">
-                    The Excel AI loved by professionals.
+                    The Cells AI loved by professionals.
                 </p>
                 
                 {/* Buttons */}
