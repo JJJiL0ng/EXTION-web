@@ -1,11 +1,13 @@
 import React from 'react';
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
+import { useActiveSheetHook } from '../../_hooks/sheet/useActveSheetStore';
 import { Eye } from 'lucide-react';
 
 export const FileUploadCard: React.FC<{ showIcon?: boolean }> = ({
   showIcon = true,
 }) => {
   const { isFileUploaded, uploadedFileName } = useSpreadsheetUploadStore();
+  const { activeSheetName } = useActiveSheetHook();
 
   // 파일이 업로드되고 파일명이 있을 때만 표시
   if (!isFileUploaded || !uploadedFileName) {
@@ -21,7 +23,13 @@ export const FileUploadCard: React.FC<{ showIcon?: boolean }> = ({
       <Eye size={16} className={`mr-1 text-gray-700`} />
       )}
       <span className={`text-gray-700`}>
-      {uploadedFileName}
+        {uploadedFileName}
+        {activeSheetName && (
+          <>
+            <span className="mx-1">·</span>
+            <span>{activeSheetName}</span>
+          </>
+        )}
       </span>
     </div>
   );
