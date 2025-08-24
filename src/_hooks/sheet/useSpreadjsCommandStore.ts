@@ -76,6 +76,9 @@ interface UseSpreadjsCommandStoreReturn {
   
   // 상태 리셋
   resetStore: () => void;
+  
+  // 시각적 피드백
+  clearHighlightBorder: (targetRange: string) => void;
 }
 
 // 메인 Hook
@@ -530,6 +533,9 @@ export const useSpreadjsCommandManager = (
     // 설정
     updateSettings: updateSettings,
     resetStore: resetStore,
+    
+    // 시각적 피드백
+    clearHighlightBorder: commandEngine.clearHighlightBorder,
   };
 };
 

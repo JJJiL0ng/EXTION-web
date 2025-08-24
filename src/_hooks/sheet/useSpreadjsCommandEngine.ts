@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, RefObject } from 'react';
+import GC from '@mescius/spread-sheets';
 
 // 응답 데이터 타입 정의
 interface FormulaResponse {
@@ -133,8 +134,7 @@ export const useSpreadjsCommandEngine = (
       
       console.log('🔧 최종 처리된 명령어:', processedCommand);
       
-      // SpreadJS 글로벌 객체를 위한 컨텍스트 설정
-      const GC = (window as any).GC;
+      // SpreadJS 글로벌 객체를 위한 컨텍스트 설정 (import된 GC 사용)
       console.log('🔍 GC 객체 상태:', GC ? 'Available' : 'Undefined');
       
       // 안전한 실행을 위한 함수 생성 - 엄격 모드 사용
@@ -146,7 +146,7 @@ export const useSpreadjsCommandEngine = (
       );
       
       console.log('⚡ JavaScript 명령어 실행 시작...');
-      // 명령어 실행
+      // 명령어 실행 (import된 GC 객체 전달)
       executeInContext(worksheet, spread, GC);
       
       console.log('✅ JavaScript 명령어 실행 완료');
@@ -165,16 +165,20 @@ export const useSpreadjsCommandEngine = (
   // 셀 범위 추출 (A1 형식에서 행/열 인덱스로 변환)
   const parseCellRange = useCallback((range: string) => {
     try {
+      console.log('🔤 셀 범위 파싱 시작:', range);
+
       // A1:B10 형식 파싱
       const rangeMatch = range.match(/([A-Z]+)(\d+):([A-Z]+)(\d+)/);
       if (rangeMatch) {
         const [, startCol, startRow, endCol, endRow] = rangeMatch;
-        return {
+        const result = {
           startRow: parseInt(startRow) - 1,
           startCol: startCol.charCodeAt(0) - 65,
           endRow: parseInt(endRow) - 1,
           endCol: endCol.charCodeAt(0) - 65
         };
+        console.log('📊 범위 형식 파싱 결과:', result);
+        return result;
       }
 
       // A1 형식 파싱
@@ -183,43 +187,203 @@ export const useSpreadjsCommandEngine = (
         const [, col, row] = cellMatch;
         const rowIndex = parseInt(row) - 1;
         const colIndex = col.charCodeAt(0) - 65;
-        return {
+        const result = {
           startRow: rowIndex,
           startCol: colIndex,
           endRow: rowIndex,
           endCol: colIndex
         };
+        console.log('🎯 단일 셀 파싱 결과:', result);
+        return result;
       }
 
+      console.warn('⚠️ 셀 범위 파싱 실패 - 패턴 매치 실패:', range);
       return null;
     } catch (error) {
-      console.warn('셀 범위 파싱 실패:', error);
+      console.error('❌ 셀 범위 파싱 중 오류:', error);
       return null;
     }
   }, []);
 
+  // 변경사항 시각화 함수 - 변경되는 영역에 애니메이션 테두리 효과
+  const highlightChangedArea = useCallback((targetRange: string, worksheet: any) => {
+    try {
+      console.log('🎯 하이라이트 효과 시작:', { targetRange, worksheet: !!worksheet });
+      
+      console.log('🔍 GC 객체 확인:', { 
+        GC: !!GC, 
+        Sheets: GC?.Spread?.Sheets ? 'Available' : 'Unavailable',
+        LineBorder: GC?.Spread?.Sheets?.LineBorder ? 'Available' : 'Unavailable',
+        LineStyle: GC?.Spread?.Sheets?.LineStyle ? 'Available' : 'Unavailable'
+      });
+
+      if (!worksheet) {
+        console.warn('⚠️ worksheet가 없음:', { worksheet: !!worksheet });
+        return;
+      }
+
+      const parsedRange = parseCellRange(targetRange);
+      console.log('📍 파싱된 범위:', parsedRange);
+      
+      if (!parsedRange) {
+        console.warn('⚠️ 범위 파싱 실패');
+        return;
+      }
+
+      const { startRow, startCol, endRow, endCol } = parsedRange;
+      
+      // 변경 영역에 하이라이트 테두리 적용
+      const range = worksheet.getRange(startRow, startCol, endRow - startRow + 1, endCol - startCol + 1);
+      console.log('📊 SpreadJS 범위 객체 생성:', { 
+        range: !!range,
+        startRow,
+        startCol,
+        rowCount: endRow - startRow + 1,
+        colCount: endCol - startCol + 1
+      });
+
+      // 애니메이션용 테두리 스타일 (파란색 얇은 테두리)
+      const highlightBorder = new GC.Spread.Sheets.LineBorder('#005de9', GC.Spread.Sheets.LineStyle.thin);
+      console.log('🎨 하이라이트 테두리 생성:', highlightBorder);
+      
+      // 테두리 적용 (모든 면에 적용) - 파란색 테두리 영구 유지
+      console.log('🖌️ 테두리 적용 시작...');
+      range.setBorder(highlightBorder, { outline: true });
+      console.log('✅ 테두리 적용 완료 - 파란색 테두리 영구 유지');
+
+      console.log(`✅ 변경사항 하이라이트 적용 성공: ${targetRange}`);
+    } catch (error) {
+      console.error('❌ 하이라이트 효과 적용 실패:', error);
+    }
+  }, [parseCellRange]);
+
+  // 실행 전 예고 효과 - 점선 테두리로 실행 예정 영역 표시
+  const previewChangedArea = useCallback((targetRange: string, worksheet: any) => {
+    try {
+      console.log('👀 예고 효과 시작:', { targetRange, worksheet: !!worksheet });
+      
+      console.log('🔍 예고 효과 GC 객체 확인:', { 
+        GC: !!GC, 
+        Sheets: GC?.Spread?.Sheets ? 'Available' : 'Unavailable'
+      });
+
+      if (!worksheet) {
+        console.warn('⚠️ 예고 효과 - worksheet가 없음:', { worksheet: !!worksheet });
+        return;
+      }
+
+      const parsedRange = parseCellRange(targetRange);
+      console.log('📍 예고 효과 파싱된 범위:', parsedRange);
+      
+      if (!parsedRange) {
+        console.warn('⚠️ 예고 효과 범위 파싱 실패');
+        return;
+      }
+
+      const { startRow, startCol, endRow, endCol } = parsedRange;
+      
+      // 예고 영역에 점선 테두리 적용
+      const range = worksheet.getRange(startRow, startCol, endRow - startRow + 1, endCol - startCol + 1);
+      console.log('📊 예고 효과 범위 객체 생성:', { 
+        range: !!range,
+        startRow,
+        startCol,
+        rowCount: endRow - startRow + 1,
+        colCount: endCol - startCol + 1
+      });
+      
+      // 예고용 테두리 스타일 (주황색 점선)
+      const previewBorder = new GC.Spread.Sheets.LineBorder('#ff6600', GC.Spread.Sheets.LineStyle.dashed);
+      console.log('🎨 예고 테두리 생성:', previewBorder);
+      
+      // 점선 테두리 적용
+      console.log('🖌️ 예고 테두리 적용 시작...');
+      range.setBorder(previewBorder, { outline: true });
+      console.log('✅ 예고 테두리 적용 완료');
+
+      console.log(`✅ 변경사항 예고 효과 적용 성공: ${targetRange}`);
+      
+      // 예고 효과는 실행 직후에 제거됨 (highlightChangedArea에서 덮어쓰게 됨)
+    } catch (error) {
+      console.error('❌ 예고 효과 적용 실패:', error);
+    }
+  }, [parseCellRange]);
+
+  // 테두리 제거 함수 - 사용자가 "적용 유지"를 눌렀을 때 사용
+  const clearHighlightBorder = useCallback((targetRange: string) => {
+    try {
+      console.log('🗑️ 테두리 제거 시작:', targetRange);
+      
+      if (!spreadRef.current) {
+        console.warn('⚠️ SpreadJS 인스턴스가 없음');
+        return;
+      }
+
+      const worksheet = spreadRef.current.getActiveSheet();
+      if (!worksheet) {
+        console.warn('⚠️ 활성 시트가 없음');
+        return;
+      }
+
+      const parsedRange = parseCellRange(targetRange);
+      if (!parsedRange) {
+        console.warn('⚠️ 범위 파싱 실패');
+        return;
+      }
+
+      const { startRow, startCol, endRow, endCol } = parsedRange;
+      const range = worksheet.getRange(startRow, startCol, endRow - startRow + 1, endCol - startCol + 1);
+      
+      // 테두리 완전 제거
+      range.setBorder(null, { outline: true });
+      
+      console.log('✅ 테두리 제거 완료:', targetRange);
+    } catch (error) {
+      console.error('❌ 테두리 제거 실패:', error);
+    }
+  }, [parseCellRange, spreadRef]);
+
   // 명령어 안전성 검사
   const validateCommand = useCallback((command: string, response: FormulaResponse): boolean => {
     try {
+      console.log('🔍 명령어 검증 시작...', { command, response });
+
       // SpreadJS 인스턴스 확인
       if (!spreadRef.current) {
+        console.error('❌ SpreadJS 인스턴스가 없습니다.');
         throw new Error('SpreadJS 인스턴스가 없습니다.');
       }
+      console.log('✅ SpreadJS 인스턴스 확인 완료');
 
       const sheet = spreadRef.current.getActiveSheet();
       if (!sheet) {
+        console.error('❌ 활성 시트가 없습니다.');
         throw new Error('활성 시트가 없습니다.');
       }
+      console.log('✅ 활성 시트 확인 완료');
 
       // 대상 범위 검증
-      const targetRange = parseCellRange(response.implementation.cellLocations.target);
-      if (targetRange) {
-        const maxRow = sheet.getRowCount();
-        const maxCol = sheet.getColumnCount();
+      const targetCells = response.implementation?.cellLocations?.target;
+      console.log('🎯 대상 셀:', targetCells);
 
-        if (targetRange.startRow >= maxRow || targetRange.startCol >= maxCol ||
-            targetRange.endRow >= maxRow || targetRange.endCol >= maxCol) {
-          throw new Error('대상 범위가 시트 범위를 벗어납니다.');
+      if (targetCells) {
+        const targetRange = parseCellRange(targetCells);
+        console.log('📍 파싱된 범위:', targetRange);
+
+        if (targetRange) {
+          const maxRow = sheet.getRowCount();
+          const maxCol = sheet.getColumnCount();
+          console.log('📊 시트 크기:', { maxRow, maxCol });
+
+          if (targetRange.startRow >= maxRow || targetRange.startCol >= maxCol ||
+              targetRange.endRow >= maxRow || targetRange.endCol >= maxCol) {
+            console.error('❌ 대상 범위가 시트 범위를 벗어남:', {
+              targetRange,
+              sheetSize: { maxRow, maxCol }
+            });
+            throw new Error('대상 범위가 시트 범위를 벗어납니다.');
+          }
+          console.log('✅ 범위 검증 통과');
         }
       }
 
@@ -231,15 +395,22 @@ export const useSpreadjsCommandEngine = (
         'destroy'
       ];
 
-      if (dangerousPatterns.some(pattern => command.includes(pattern))) {
+      const hasDangerousPattern = dangerousPatterns.some(pattern => command.includes(pattern));
+      if (hasDangerousPattern) {
+        console.error('❌ 위험한 명령어 감지:', command);
         throw new Error('위험한 명령어가 감지되었습니다.');
       }
+      console.log('✅ 위험한 명령어 체크 통과');
 
+      console.log('✅ 명령어 검증 완료 성공');
       return true;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ 명령어 검증 실패:', errorMessage);
+      
       setState(prev => ({
         ...prev,
-        error: error instanceof Error ? error.message : String(error)
+        error: errorMessage
       }));
       return false;
     }
@@ -324,11 +495,20 @@ export const useSpreadjsCommandEngine = (
     }
 
     const command = response.formulaDetails.spreadjsCommand;
+    const targetRange = response.implementation.cellLocations.target;
 
     // 이미 실행 중인 경우 중단
     if (state.isExecuting) {
       throw new Error('이미 명령어가 실행 중입니다.');
     }
+
+    const worksheet = spreadRef.current?.getActiveSheet();
+    if (!worksheet) {
+      throw new Error('활성 시트가 없습니다.');
+    }
+
+    // 실행 예고 효과 - 점선 테두리로 변경될 영역 미리 표시
+    previewChangedArea(targetRange, worksheet);
 
     // 사용자 확인이 필요한 경우
     if (requireConfirmation) {
@@ -336,6 +516,18 @@ export const useSpreadjsCommandEngine = (
         `다음 작업을 실행하시겠습니까?\n\n${response.analysis.detectedOperation}\n대상: ${response.implementation.cellLocations.target}`
       );
       if (!confirmed) {
+        // 취소 시 예고 효과 제거
+        try {
+          const parsedRange = parseCellRange(targetRange);
+          if (parsedRange) {
+            const { startRow, startCol, endRow, endCol } = parsedRange;
+            const range = worksheet.getRange(startRow, startCol, endRow - startRow + 1, endCol - startCol + 1);
+            const transparentBorder = new GC.Spread.Sheets.LineBorder('transparent', GC.Spread.Sheets.LineStyle.thin);
+            range.setBorder(transparentBorder, { outline: true });
+          }
+        } catch (error) {
+          console.warn('예고 효과 제거 실패:', error);
+        }
         throw new Error('사용자가 실행을 취소했습니다.');
       }
     }
@@ -357,6 +549,9 @@ export const useSpreadjsCommandEngine = (
       // 명령어 실행
       const result = await executeCommand(command, response);
 
+      // 성공 시 변경 영역 하이라이트 효과 적용
+      highlightChangedArea(targetRange, worksheet);
+
       // 상태 업데이트
       setState(prev => ({
         ...prev,
@@ -375,6 +570,19 @@ export const useSpreadjsCommandEngine = (
 
     } catch (error) {
       const errorResult = error as ExecutionResult;
+
+      // 실패 시에도 예고 효과 제거
+      try {
+        const parsedRange = parseCellRange(targetRange);
+        if (parsedRange) {
+          const { startRow, startCol, endRow, endCol } = parsedRange;
+          const range = worksheet.getRange(startRow, startCol, endRow - startRow + 1, endCol - startCol + 1);
+          const transparentBorder = new GC.Spread.Sheets.LineBorder('transparent', GC.Spread.Sheets.LineStyle.thin);
+          range.setBorder(transparentBorder, { outline: true });
+        }
+      } catch (borderError) {
+        console.warn('실패 후 테두리 제거 실패:', borderError);
+      }
 
       setState(prev => ({
         ...prev,
@@ -395,7 +603,7 @@ export const useSpreadjsCommandEngine = (
     } finally {
       executingCommandRef.current = null;
     }
-  }, [state.isExecuting, requireConfirmation, validateCommand, executeCommand, updateHistory, onSuccess, onError]);
+  }, [state.isExecuting, requireConfirmation, validateCommand, executeCommand, updateHistory, onSuccess, onError, parseCellRange, previewChangedArea, highlightChangedArea, spreadRef]);
 
   // JavaScript 명령어 직접 실행 함수
   const executeJavaScript = useCallback(async (jsCommand: string): Promise<void> => {
@@ -522,6 +730,11 @@ export const useSpreadjsCommandEngine = (
     cancelExecution,
     resetState,
     clearError,
+
+    // 시각적 피드백 함수들
+    highlightChangedArea,
+    previewChangedArea,
+    clearHighlightBorder,
 
     // 유틸리티
     parseCellRange,

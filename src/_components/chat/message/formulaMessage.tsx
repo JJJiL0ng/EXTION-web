@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import StreamingMarkdown from "./StreamingMarkdown";
 import { AssistantMessage } from "../../../_types/chat.types";
@@ -19,6 +21,7 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
   const [isExecuting, setIsExecuting] = useState(false);
   const [isRollingBack, setIsRollingBack] = useState(false);
   const [isRolledBack, setIsRolledBack] = useState(false);
+  const [isStayApplied, setIsStayApplied] = useState(false); // 적용 유지 상태
   const [executionError, setExecutionError] = useState<string | null>(null);
   
   // 롤백 후 자동 적용 차단을 위한 ref
@@ -31,7 +34,7 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
   const { mode } = useChatModeStore();
   
   // 채팅 상태 - 새로운 메시지 전송 여부 확인
-  const { isStreaming, isInputDisabled, messages } = useChatStore();
+  const { messages } = useChatStore();
   
   // 이 메시지 이후에 새로운 메시지가 있는지 확인
   const [hasNewerMessages, setHasNewerMessages] = useState(false);
@@ -159,12 +162,40 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
       // 현재 메시지 이후에 새로운 메시지가 있는지 확인
       const hasNewerMessages = currentMessageIndex < messages.length - 1;
       setHasNewerMessages(hasNewerMessages);
-      
-      // if (hasNewerMessages) {
-      //   console.log('🚫 새로운 메시지가 전송되어 이전 수식 버튼들을 비활성화합니다.');
-      // }
     }
   }, [messages, message.id]);
+
+  // 새로운 메시지가 감지되면 테두리 자동 제거 (사용자가 새 채팅을 보내면 수락으로 간주)
+  useEffect(() => {
+    if (hasNewerMessages && isApplied && !isStayApplied) {
+      console.log('📨 새로운 채팅 감지 - 테두리 자동 제거 시작');
+      
+      // 테두리 제거 로직 실행
+      if (message.structuredContent) {
+        const structuredContent = message.structuredContent;
+        let targetRange: string | undefined;
+        
+        // targetRange 추출
+        if ('targetRange' in structuredContent && typeof structuredContent.targetRange === 'string') {
+          targetRange = structuredContent.targetRange;
+        } else {
+          try {
+            const formulaResponse = transformStructuredContentToFormulaResponse(structuredContent as any);
+            targetRange = formulaResponse.implementation.cellLocations.target;
+          } catch (error) {
+            console.warn('⚠️ 새로운 채팅 시 targetRange 추출 실패:', error);
+          }
+        }
+        
+        // 테두리 제거 실행
+        if (targetRange && spreadsheetContext?.commandManager?.clearHighlightBorder) {
+          spreadsheetContext.commandManager.clearHighlightBorder(targetRange);
+          setIsStayApplied(true); // 자동 수락 상태로 변경
+          console.log('✅ 새로운 채팅으로 인한 테두리 자동 제거 완료:', targetRange);
+        }
+      }
+    }
+  }, [hasNewerMessages, isApplied, isStayApplied, message.structuredContent, spreadsheetContext]);
 
   // agent 모드일 때 자동으로 수식 적용
   useEffect(() => {
@@ -217,6 +248,53 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
     autoApplyFormula();
   }, [mode, message.status, isApplied, isDenied, executionError, isExecuting, isRollingBack, isRolledBack, spreadsheetContext?.isReady, message?.structuredContent, handleApplyFormula]);
 
+  const handleStayApply = useCallback(() => {
+    try {
+      console.log('🔒 적용 유지 버튼 클릭됨');
+      
+      if (!message.structuredContent) {
+        console.warn('⚠️ structuredContent가 없음');
+        return;
+      }
+      
+      // structuredContent에서 targetRange 추출
+      const structuredContent = message.structuredContent;
+      let targetRange: string;
+      
+      // 타입 안전성을 위한 체크 - targetRange 속성이 직접 있는지 확인
+      if ('targetRange' in structuredContent && typeof structuredContent.targetRange === 'string') {
+        targetRange = structuredContent.targetRange;
+      } else {
+        // FormulaResponse로 변환해서 가져오기
+        try {
+          const formulaResponse = transformStructuredContentToFormulaResponse(structuredContent as any);
+          targetRange = formulaResponse.implementation.cellLocations.target;
+        } catch (error) {
+          console.warn('⚠️ targetRange를 찾을 수 없음:', error);
+          return;
+        }
+      }
+      
+      console.log('🎯 테두리 제거 대상:', targetRange);
+      
+      // SpreadsheetContext에서 commandManager를 통해 테두리 제거 함수에 접근
+      if (spreadsheetContext?.commandManager?.clearHighlightBorder) {
+        spreadsheetContext.commandManager.clearHighlightBorder(targetRange);
+        console.log('✅ 테두리 제거 완료');
+      } else {
+        console.warn('⚠️ clearHighlightBorder 함수에 접근할 수 없음');
+      }
+      
+      // 적용 유지 상태로 변경 (버튼들 숨김)
+      setIsStayApplied(true);
+      console.log('🔒 적용 유지 상태로 변경됨');
+      
+    } catch (error) {
+      console.error('❌ 적용 유지 처리 실패:', error);
+      setExecutionError('적용 유지 처리 중 오류가 발생했습니다.');
+    }
+  }, [spreadsheetContext, message.structuredContent]);
+
   // 메시지가 존재하지 않거나 구조화된 응답이 없으면 null 반환
   if (!message?.structuredContent || message.structuredContent.intent !== "excel_formula") {
     return null;
@@ -228,10 +306,6 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
   const handleRejectFormula = () => {
     setIsDenied(true);
     console.log("수식 적용이 거부되었습니다");
-  };
-
-  const handleStayApply = () => {
-    // 적용 유지 로직
   };
 
   // 수식 메시지 렌더링
@@ -322,8 +396,8 @@ export default function FormulaMessage({ message, className = "" }: FormulaMessa
         </div>
       )}
 
-      {/* 적용 완료 후 액션 버튼들 - 새로운 메시지가 있으면 숨김 */}
-      {isApplied && !hasNewerMessages && (
+      {/* 적용 완료 후 액션 버튼들 - 새로운 메시지가 있거나 적용 유지 상태면 숨김 */}
+      {isApplied && !hasNewerMessages && !isStayApplied && (
         <div className="mt-3 border-gray-200 rounded-lg shadow-sm">
           <div className="flex space-x-3">
             <button
