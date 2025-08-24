@@ -162,6 +162,8 @@ export interface InitialStoreState extends Partial<ChatStoreState> {
   fileInfo: null
   isStreaming: false
   isInputDisabled: false
+  reasoningPreview: null
+  reasoningComplete: false
   error: null
 }
 
