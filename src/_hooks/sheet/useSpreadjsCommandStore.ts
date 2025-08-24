@@ -493,9 +493,6 @@ export const useSpreadjsCommandManager = (
     settings.confirmBeforeRollback,
     restoreSnapshot,
     removeFromRollbackStack,
-    enableAutosave,
-    setAutosavePending,
-    triggerAutosave,
     onRollbackSuccess,
     onRollbackError
   ]);

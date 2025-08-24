@@ -75,7 +75,7 @@ export const useSpreadjsCommandEngine = (
   // 실행 중인 명령어 추적용
   const executingCommandRef = useRef<string | null>(null);
 
-  // JavaScript 명령어 파싱 및 실행
+  // JavaScript 명령어 파싱 및 실행 - 주석 처리 (백엔드에서 일관된 명령어 형식으로 전송)
   // const executeJavaScriptCommand = useCallback((command: string, worksheet: any, spread: any) => {
   //   try {
   //     console.log('🔧 JavaScript 명령어 파싱 시작...');
@@ -119,71 +119,47 @@ export const useSpreadjsCommandEngine = (
   //     throw new Error(`JavaScript 명령어 실행 실패: ${error instanceof Error ? error.message : String(error)}`);
   //   }
   // }, []);
-  // JavaScript 명령어 파싱 및 실행
-const executeJavaScriptCommand = useCallback((command: string, worksheet: any, spread: any) => {
-  try {
-    console.log('🔧 JavaScript 명령어 파싱 시작...');
-    console.log('📝 원본 명령어:', command);
-    
-    // "javascript/" 접두사 완전 제거
-    let cleanedCommand = command.replace(/^\s*javascript\s*\/?\s*/i, '').trim();
-    console.log('✂️ 정리된 명령어:', cleanedCommand);
-    
-    // 명령어 끝에 세미콜론이 없으면 추가
-    if (!cleanedCommand.endsWith(';')) {
-      cleanedCommand += ';';
-    }
-    
-    console.log('🔧 최종 처리된 명령어:', cleanedCommand);
-    
-    // SpreadJS 글로벌 객체를 위한 컨텍스트 설정
-    const GC = (window as any).GC;
-    console.log('🔍 GC 객체 상태:', GC ? 'Available' : 'Undefined');
-    
-    // GC.Spread.Sheets.SheetArea.viewport 참조를 제거하고 기본값 사용
-    let processedCommand = cleanedCommand;
-    if (cleanedCommand.includes('GC.Spread.Sheets.SheetArea.viewport')) {
-      console.log('⚠️ GC.Spread.Sheets.SheetArea.viewport 참조 발견 - 제거 중...');
-      // setValue 호출에서 SheetArea.viewport 매개변수 제거
-      processedCommand = processedCommand.replace(
-        /worksheet\.setValue\(([^,]+),\s*([^,]+),\s*([^,]+),\s*GC\.Spread\.Sheets\.SheetArea\.viewport\s*\)/g,
-        'worksheet.setValue($1, $2, $3)'
+  // JavaScript 명령어 실행 (모든 명령어는 이제 JS 형식으로 통일)
+  const executeJavaScriptCommand = useCallback((command: string, worksheet: any, spread: any) => {
+    try {
+      console.log('🔧 JavaScript 명령어 실행 시작...');
+      console.log('📝 명령어:', command);
+      
+      // 명령어 끝에 세미콜론이 없으면 추가
+      let processedCommand = command;
+      if (!processedCommand.endsWith(';')) {
+        processedCommand += ';';
+      }
+      
+      console.log('🔧 최종 처리된 명령어:', processedCommand);
+      
+      // SpreadJS 글로벌 객체를 위한 컨텍스트 설정
+      const GC = (window as any).GC;
+      console.log('🔍 GC 객체 상태:', GC ? 'Available' : 'Undefined');
+      
+      // 안전한 실행을 위한 함수 생성 - 엄격 모드 사용
+      const executeInContext = new Function(
+        'worksheet', 
+        'spread', 
+        'GC',
+        `"use strict"; ${processedCommand}`
       );
-      console.log('✂️ 처리된 명령어:', processedCommand);
+      
+      console.log('⚡ JavaScript 명령어 실행 시작...');
+      // 명령어 실행
+      executeInContext(worksheet, spread, GC);
+      
+      console.log('✅ JavaScript 명령어 실행 완료');
+    } catch (error) {
+      console.error('❌ JavaScript 명령어 실행 실패:', error);
+      console.error('❌ 실행 시도한 명령어:', command);
+      throw new Error(`JavaScript 명령어 실행 실패: ${error instanceof Error ? error.message : String(error)}`);
     }
-    
-    // 안전한 실행을 위한 함수 생성 - 엄격 모드 사용
-    const executeInContext = new Function(
-      'worksheet', 
-      'spread', 
-      'GC',
-      `"use strict"; ${processedCommand}`
-    );
-    
-    console.log('⚡ JavaScript 명령어 실행 시작...');
-    // 명령어 실행
-    executeInContext(worksheet, spread, GC);
-    
-    console.log('✅ JavaScript 명령어 실행 완료');
-  } catch (error) {
-    console.error('❌ JavaScript 명령어 실행 실패:', error);
-    console.error('❌ 실행 시도한 명령어:', command);
-    throw new Error(`JavaScript 명령어 실행 실패: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}, []);
+  }, []);
 
-  // 명령어 타입 식별
+  // 명령어 타입 식별 - 모든 명령어는 이제 JavaScript 형식으로 통일
   const identifyCommandType = useCallback((command: string): string => {
-    // JavaScript 명령어 우선 확인 (javascript/ 접두사 포함)
-    if (command.includes('javascript')) return 'javascript';
-    if (command.includes('setFormula')) return 'formula';
-    if (command.includes('sortRange')) return 'sort';
-    if (command.includes('setValue')) return 'value';
-    if (command.includes('setStyle')) return 'style';
-    if (command.includes('copyTo') || command.includes('moveTo')) return 'copy_move';
-    if (command.includes('addRows') || command.includes('addColumns')) return 'add';
-    if (command.includes('deleteRows') || command.includes('deleteColumns')) return 'delete';
-    return 'unknown';
+    return 'javascript';
   }, []);
 
   // 셀 범위 추출 (A1 형식에서 행/열 인덱스로 변환)
@@ -278,123 +254,15 @@ const executeJavaScriptCommand = useCallback((command: string, worksheet: any, s
           throw new Error('활성 시트가 없습니다.');
         }
 
-        const commandType = identifyCommandType(command);
+        const commandType = 'javascript'; // 모든 명령어는 JavaScript 형식으로 통일
 
         // 페인팅 일시 중단 (성능 최적화)
         worksheet.suspendPaint();
 
         try {
-          // 명령어 타입별 실행
-          console.log(`🔍 실행할 명령어 타입: ${commandType}`);
-          switch (commandType) {
-            case 'formula': {
-              console.log('📊 Formula 명령어 실행 중...');
-              // setFormula 명령어 실행
-              const formulaMatch = command.match(/setFormula\((\d+),\s*(\d+),\s*'([^']+)'/);
-              if (formulaMatch) {
-                const [, row, col, formula] = formulaMatch;
-                worksheet.setFormula(parseInt(row), parseInt(col), formula);
-              }
-              break;
-            }
-
-            case 'sort': {
-              console.log('🔄 Sort 명령어 실행 중...');
-              // sortRange 명령어 실행
-              const sortMatch = command.match(/sortRange\((\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(true|false),\s*(\[.*?\])/);
-              if (sortMatch) {
-                const [, startRow, startCol, rowCount, colCount, byRows, sortInfo] = sortMatch;
-                try {
-                  // JavaScript 객체 리터럴을 JSON으로 변환
-                  const normalizedSortInfo = sortInfo
-                    .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
-                    .replace(/;\s*\)\s*$/, ''); // 끝의 ;) 제거
-                  
-                  const sortInfoObj = JSON.parse(normalizedSortInfo);
-                  worksheet.sortRange(
-                    parseInt(startRow),
-                    parseInt(startCol),
-                    parseInt(rowCount),
-                    parseInt(colCount),
-                    byRows === 'true',
-                    sortInfoObj
-                  );
-                } catch (parseError) {
-                  console.error('Sort info 파싱 실패:', parseError, 'Original:', sortInfo);
-                  throw new Error(`Sort 정보 파싱 실패: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-                }
-              }
-              break;
-            }
-
-            case 'value': {
-              console.log('💾 Value 명령어 실행 중...');
-              // setValue 명령어 실행
-              const valueMatch = command.match(/setValue\((\d+),\s*(\d+),\s*(.+)\)/);
-              if (valueMatch) {
-                const [, row, col, value] = valueMatch;
-                let parsedValue: any = value;
-                if (value.startsWith('"') && value.endsWith('"')) {
-                  parsedValue = value.slice(1, -1);
-                } else if (!isNaN(Number(value))) {
-                  parsedValue = Number(value);
-                }
-                worksheet.setValue(parseInt(row), parseInt(col), parsedValue);
-              }
-              break;
-            }
-
-            case 'style': {
-              console.log('🎨 Style 명령어 실행 중...');
-              // setStyle 명령어 실행
-              const styleMatch = command.match(/setStyle\((\d+),\s*(\d+),\s*(.+)\)/);
-              if (styleMatch) {
-                const [, row, col, style] = styleMatch;
-                try {
-                  const styleObject = JSON.parse(style);
-                  worksheet.setStyle(parseInt(row), parseInt(col), styleObject);
-                } catch (parseError) {
-                  throw new Error('스타일 객체 파싱 실패');
-                }
-              }
-              break;
-            }
-
-            case 'copy_move': {
-              console.log('📋 Copy/Move 명령어 실행 중...');
-              // copyTo/moveTo 명령어 실행
-              const copyMatch = command.match(/(copyTo|moveTo)\((\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)/);
-              if (copyMatch) {
-                const [, operation, fromRow, fromCol, toRow, toCol, rowCount, colCount] = copyMatch;
-                if (operation === 'copyTo') {
-                  worksheet.copyTo(
-                    parseInt(fromRow), parseInt(fromCol),
-                    parseInt(toRow), parseInt(toCol),
-                    parseInt(rowCount), parseInt(colCount)
-                  );
-                } else {
-                  worksheet.moveTo(
-                    parseInt(fromRow), parseInt(fromCol),
-                    parseInt(toRow), parseInt(toCol),
-                    parseInt(rowCount), parseInt(colCount)
-                  );
-                }
-              }
-              break;
-            }
-            //멀티 셀들 수정 적용
-            case 'javascript': {
-              console.log('🚀 JavaScript 명령어 실행 중...');
-              // JavaScript 명령어 실행
-              executeJavaScriptCommand(command, worksheet, spreadRef.current);
-              break;
-            }
-
-            default: {
-              console.log(`❌ 지원하지 않는 명령어 타입: ${commandType}`);
-              throw new Error(`지원하지 않는 명령어 타입입니다: ${commandType}`);
-            }
-          }
+          // 모든 명령어는 JavaScript 형식으로 통일되어 실행
+          console.log('🚀 JavaScript 명령어 실행 중...');
+          executeJavaScriptCommand(command, worksheet, spreadRef.current);
 
           // 실행 결과 생성
           const executionResult: ExecutionResult = {
@@ -434,7 +302,7 @@ const executeJavaScriptCommand = useCallback((command: string, worksheet: any, s
         reject(executionResult);
       }
     });
-  }, [spreadRef, identifyCommandType, executeJavaScriptCommand]);
+  }, [spreadRef, executeJavaScriptCommand]);
 
   // 히스토리 업데이트
   const updateHistory = useCallback((result: ExecutionResult) => {
