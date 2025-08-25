@@ -124,10 +124,15 @@ export const useSpreadjsCommandEngine = (
   const executeJavaScriptCommand = useCallback((command: string, worksheet: any, spread: any) => {
     try {
       console.log('🔧 JavaScript 명령어 실행 시작...');
-      console.log('📝 명령어:', command);
+      console.log('📝 원본 명령어:', command);
+      
+      // 명령어에서 'javascript/' 접두사 제거 (있다면)
+      let processedCommand = command;
+      if (processedCommand.startsWith('javascript/')) {
+        processedCommand = processedCommand.replace('javascript/', '');
+      }
       
       // 명령어 끝에 세미콜론이 없으면 추가
-      let processedCommand = command;
       if (!processedCommand.endsWith(';')) {
         processedCommand += ';';
       }
