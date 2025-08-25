@@ -37,39 +37,43 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
 
   return (
     <div
-      className={`relative pb-7 flex items-center gap-3 ${className}`}
+      className={`relative pb-7 ${className}`}
       role="status"
       aria-live="polite"
       aria-label="AI가 답변을 생성 중입니다"
     >
-      {/* 점 3개 인디케이터 */}
-      <div className="flex space-x-2">
-        {dots.map((_, i) => (
-          <div
-            key={i}
-            className="rounded-full ti-dot"
-            style={
-              {
-                width: sizePx,
-                height: sizePx,
-                backgroundColor: color,
-                ["--d" as any]: `${i * 140}ms`, // 각 점 딜레이 (스태거)
-              } as React.CSSProperties
-            }
-            data-variant={variant}
-          />
-        ))}
+      {/* 타이핑 인디케이터와 보조 텍스트 */}
+      <div className="flex px-2 items-center gap-3">
+        {/* 점 3개 인디케이터 */}
+        <div className="flex space-x-3">
+          {dots.map((_, i) => (
+            <div
+              key={i}
+              className="rounded-full ti-dot"
+              style={
+                {
+                  width: sizePx,
+                  height: sizePx,
+                  backgroundColor: color,
+                  ["--d" as any]: `${i * 120}ms`, // 각 점 딜레이 (스태거)
+                } as React.CSSProperties
+              }
+              data-variant={variant}
+            />
+          ))}
+        </div>
+
+        {/* 보조 텍스트: wave 애니메이션 오른쪽에 배치 */}
+        {/* {showHelper && (
+          <span
+            className="text-sm text-gray-500 ti-helper select-none whitespace-nowrap"
+            style={{ opacity: showText ? 1 : 0, pointerEvents: "none" }}
+          >
+            {message}
+          </span>
+        )} */}
       </div>
 
-      {/* 보조 텍스트: wave 애니메이션 오른쪽에 배치 */}
-      {showHelper && (
-        <span
-          className="text-sm text-gray-500 ti-helper select-none whitespace-nowrap"
-          style={{ opacity: showText ? 1 : 0, pointerEvents: "none" }}
-        >
-          {message}
-        </span>
-      )}
 
       <style jsx>{`
         /* 접근성: 모션 감소 선호 시 정적 표시 */

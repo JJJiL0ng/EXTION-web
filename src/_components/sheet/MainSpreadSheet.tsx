@@ -10,6 +10,7 @@ import { useFileUpload } from '../../_hooks/sheet/useFileUpload';
 import { useFileExport } from '../../_hooks/sheet/useFileExport';
 import { useSheetCreate } from '../../_hooks/sheet/useSheetCreate';
 import { useSpreadSheetDelta } from '../../_hooks/sheet/useSpreadSheetDelta';
+import { useActiveSheetHook } from '../../_hooks/sheet/useActveSheetStore';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useAuthStore } from '@/stores/authStore';
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
@@ -38,6 +39,9 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     
     // 인증 상태 관리
     const { user } = useAuthStore();
+    
+    // 활성 시트 상태 관리
+    const { handleActiveSheetChange } = useActiveSheetHook();
     
     // 사용자 ID 가져오기 (로그인 사용자 또는 게스트) - 메모이제이션으로 무한 렌더링 방지
     const userId = useMemo(() => {
@@ -592,6 +596,20 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             
             // 정리 함수를 나중에 사용하기 위해 저장
             (spread as any)._deltaCleanup = cleanupDeltaListeners;
+
+            // 활성 시트 변경 이벤트 리스너 추가
+            spread.bind(GC.Spread.Sheets.Events.ActiveSheetChanged, (sender: any, args: any) => {
+                const activeSheet = spread.getActiveSheet();
+                const activeSheetIndex = spread.getActiveSheetIndex();
+                if (activeSheet) {
+                    const sheetName = activeSheet.name();
+                    console.log('Active Sheet Name:', sheetName);
+                    console.log('Active Sheet Index:', activeSheetIndex);
+                    
+                    // 전역 상태에 활성 시트 정보 저장
+                    handleActiveSheetChange(sheetName, activeSheetIndex);
+                }
+            });
 
             console.log('✅ SpreadJS 초기화 완료 - 최적화된 설정 및 델타 자동저장 적용');
 

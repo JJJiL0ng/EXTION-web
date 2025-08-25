@@ -162,6 +162,8 @@ export interface InitialStoreState extends Partial<ChatStoreState> {
   fileInfo: null
   isStreaming: false
   isInputDisabled: false
+  reasoningPreview: null
+  reasoningComplete: false
   error: null
 }
 
@@ -231,6 +233,8 @@ export const createInitialState = (): InitialStoreState => ({
   fileInfo: null,
   isStreaming: false,
   isInputDisabled: false,
+  reasoningPreview: null,
+  reasoningComplete: false,
   error: null
 })
 

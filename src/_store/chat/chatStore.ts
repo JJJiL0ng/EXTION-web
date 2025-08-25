@@ -389,6 +389,9 @@ export const useChatStore = create<ChatStore>()(
                     }
                     state.isStreaming = false
                     state.isInputDisabled = false
+                    // Reasoning preview 초기화
+                    state.reasoningPreview = null
+                    state.reasoningComplete = false
                   })
                 },
                 (error: Error) => {
@@ -397,6 +400,9 @@ export const useChatStore = create<ChatStore>()(
                     state.isStreaming = false
                     state.isInputDisabled = false
                     state.error = createError('STREAM_ERROR', error.message)
+                    // 에러 시에도 reasoning preview 초기화
+                    state.reasoningPreview = null
+                    state.reasoningComplete = false
                   })
                 },
                 (structuredContent: any) => {
@@ -406,6 +412,17 @@ export const useChatStore = create<ChatStore>()(
                     if (message && message.type === MessageType.ASSISTANT) {
                       (message as AssistantMessage).structuredContent = structuredContent
                     }
+                  })
+                },
+                (reasoning: string, isComplete: boolean) => {
+                  // Reasoning preview 상태 업데이트
+                  console.log('🧠 [ChatStore] Reasoning preview update:', {
+                    reasoning: reasoning.substring(0, 100) + (reasoning.length > 100 ? '...' : ''),
+                    isComplete
+                  })
+                  set((state) => {
+                    state.reasoningPreview = reasoning
+                    state.reasoningComplete = isComplete
                   })
                 }
               )
@@ -562,7 +579,12 @@ export const useChatStore = create<ChatStore>()(
           },
 
           getError: () => get().error,
-          getHasError: () => get().error !== null
+          getHasError: () => get().error !== null,
+
+          // Reasoning Preview 셀렉터들
+          getReasoningPreview: () => get().reasoningPreview,
+          getReasoningComplete: () => get().reasoningComplete,
+          getHasReasoningPreview: () => !!get().reasoningPreview
 
         }))
       ),

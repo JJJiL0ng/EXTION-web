@@ -29,6 +29,7 @@ export enum SSEEventType {
   CHAT_STARTED = 'chat_started',
   AI_PROCESSING_STARTED = 'ai_processing_started',
   AI_UPDATE = 'ai_update',
+  REASONING_PREVIEW = 'reasoning_preview',
   CHAT_RESPONSE = 'chat_response',
   CHAT_COMPLETED = 'chat_completed',
   ERROR = 'error'
@@ -56,14 +57,16 @@ export interface AIUpdateData extends SSEEventData {
   updateType: string;
 }
 
+export interface ReasoningPreviewData extends SSEEventData {
+  userMessageId: string;
+  reasoning: string;
+  isComplete: boolean;
+}
+
 // 새로운 API 응답 형식 (v2.1.0)
 export interface NewChatResponseData extends SSEEventData {
   success: boolean;
-  tokensUsed: number;
-  responseTime: number;
   model: string;
-  cached: boolean;
-  confidence: number;
   analysis?: {
     detectedOperation: string;
     dataRange?: string;
@@ -141,6 +144,7 @@ export interface ChatEventHandlers {
   onChatStarted?: (data: ChatStartedData) => void;
   onAIProcessingStarted?: (data: AIProcessingStartedData) => void;
   onAIUpdate?: (data: AIUpdateData) => void;
+  onReasoningPreview?: (data: ReasoningPreviewData) => void;
   onChatResponse?: (data: NewChatResponseData) => void;
   onChatCompleted?: (data: ChatCompletedData) => void;
   onError?: (data: ErrorData) => void;
@@ -328,27 +332,55 @@ export class MainChatApi {
     let i = 0;
     let remainingBuffer = '';
 
+    console.log('🔍 [MainChatApi] SSE Buffer parsing:', {
+      bufferLength: buffer.length,
+      linesCount: lines.length,
+      firstFewLines: lines.slice(0, 5).map((line, idx) => `${idx}: "${line}"`)
+    });
+
     while (i < lines.length) {
       if (lines[i].startsWith('event:') && i + 1 < lines.length && lines[i + 1].startsWith('data:')) {
         const eventType = lines[i].substring(6).trim();
         const eventData = lines[i + 1].substring(5).trim();
         
+        console.log('📨 [MainChatApi] SSE Event parsed:', {
+          eventType,
+          eventDataPreview: eventData.substring(0, 200) + (eventData.length > 200 ? '...' : ''),
+          lineIndex: i
+        });
+        
         try {
           const parsedData = JSON.parse(eventData);
           events.push({ type: eventType, data: parsedData });
+          console.log('✅ [MainChatApi] SSE Event successfully parsed:', {
+            type: eventType,
+            dataKeys: Object.keys(parsedData),
+            hasReasoning: 'reasoning' in parsedData
+          });
           i += 3; // event, data, empty line
         } catch (error) {
-          console.warn('Failed to parse SSE event data:', eventData);
+          console.warn('❌ [MainChatApi] Failed to parse SSE event data:', {
+            eventType,
+            eventData: eventData.substring(0, 500),
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
           i++;
         }
       } else if (i === lines.length - 1 && !lines[i].includes('\n')) {
         // 마지막 불완전한 라인
         remainingBuffer = lines[i];
+        console.log('📝 [MainChatApi] Remaining buffer:', remainingBuffer.substring(0, 100));
         break;
       } else {
         i++;
       }
     }
+
+    console.log('📋 [MainChatApi] SSE Parsing result:', {
+      eventsCount: events.length,
+      eventTypes: events.map(e => e.type),
+      remainingBufferLength: remainingBuffer.length
+    });
 
     return { events, remainingBuffer };
   }
@@ -362,11 +394,11 @@ export class MainChatApi {
   ): Promise<void> {
     const { type, data } = event;
 
-    // console.log('📡 [MainChatApi] SSE Event received:', {
-    //   type,
-    //   data,
-    //   timestamp: new Date().toISOString()
-    // });
+    console.log('📡 [MainChatApi] SSE Event received:', {
+      type,
+      data,
+      timestamp: new Date().toISOString()
+    });
 
     switch (type) {
       case SSEEventType.CHAT_STARTED:
@@ -380,6 +412,16 @@ export class MainChatApi {
 
       case SSEEventType.AI_UPDATE:
         handlers.onAIUpdate?.(data);
+        break;
+
+      case SSEEventType.REASONING_PREVIEW:
+        console.log('🧠 [MainChatApi] Reasoning Preview 이벤트 처리:', {
+          reasoning: data.reasoning,
+          isComplete: data.isComplete,
+          userMessageId: data.userMessageId,
+          handlerExists: !!handlers.onReasoningPreview
+        });
+        handlers.onReasoningPreview?.(data);
         break;
 
       case SSEEventType.CHAT_RESPONSE:
@@ -399,7 +441,11 @@ export class MainChatApi {
         break;
 
       default:
-        console.warn('Unknown SSE event type:', type);
+        console.warn('❓ [MainChatApi] Unknown SSE event type:', {
+          type,
+          data,
+          knownTypes: Object.values(SSEEventType)
+        });
     }
   }
 

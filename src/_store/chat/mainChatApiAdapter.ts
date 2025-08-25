@@ -183,7 +183,8 @@ export class MainChatApiAdapter {
     onMessage: (content: string) => void,
     onComplete: () => void,
     onError: (error: Error) => void,
-    onStructuredResponse?: (structuredContent: any) => void // 새로운 콜백 추가
+    onStructuredResponse?: (structuredContent: any) => void, // 새로운 콜백 추가
+    onReasoningPreview?: (reasoning: string, isComplete: boolean) => void // Reasoning Preview 콜백 추가
   ): Promise<void> {
     console.log('🔄 [MainChatApiAdapter] Creating chat request:', {
       originalRequest: request,
@@ -236,6 +237,18 @@ export class MainChatApiAdapter {
       
       onAIUpdate: (data: any) => {
         console.log('🔄 [MainChatApiAdapter] AI update:', data)
+      },
+
+      onReasoningPreview: (data: any) => {
+        console.log('🧠 [MainChatApiAdapter] Reasoning preview:', {
+          reasoning: data.reasoning?.substring(0, 100) + (data.reasoning?.length > 100 ? '...' : ''),
+          isComplete: data.isComplete,
+          userMessageId: data.userMessageId,
+          hasCallback: !!onReasoningPreview
+        })
+        if (onReasoningPreview) {
+          onReasoningPreview(data.reasoning || '', data.isComplete || false)
+        }
       },
       
       onChatResponse: (data: NewChatResponseData & { intent?: string, structuredContent?: any }) => {
