@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Paperclip, Settings, ChevronDown } from 'lucide-react';
+import { Paperclip, Settings, ChevronDown, CirclePlus} from 'lucide-react';
 import { useMainChat } from '../../_hooks/chat/useChatStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
-import { useChatMode , ChatMode} from '../../_hooks/sheet/useChatMode';
+import { useChatMode, ChatMode } from '../../_hooks/sheet/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
+import { useGetActiveSheetName } from '@/_hooks/sheet/useGetActiveSheetName'
+import FileAddButton from './FileAddButton';
 
 interface ChatInputBoxProps {
   // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
@@ -35,6 +37,9 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
+
+  const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
+
   // const modelModalRef = useRef<HTMLDivElement>(null);
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
@@ -127,12 +132,12 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      
+
       // 모드 모달 외부 클릭 확인
       if (showModeModal && modeModalRef.current && !modeModalRef.current.contains(target)) {
         setShowModeModal(false);
       }
-      
+
       // 모델 모달 외부 클릭 확인
       // if (showModelModal && modelModalRef.current && !modelModalRef.current.contains(target)) {
       //   setShowModelModal(false);
@@ -145,14 +150,42 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     }
   }, [showModeModal]); // , showModelModal
 
+  const { activeSheetName } = useGetActiveSheetName({ spreadRef: spreadRef ?? null });
+
   return (
     <div className="p-2 mx-auto justify-center w-full max-full">
       <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded-xl overflow-hidden transition-colors`}>
-        {/* 상단 영역 - 파일 선택 */}
+        {/* 상단 영역 - 파일 선택 + 활성 시트 카드 + 추가 파일명들 */}
         <div className="p-3 flex items-center justify-between relative">
-           <SelectedSheetNameCard spreadRef={spreadRef} />
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* 파일 선택 버튼을 가장 왼쪽에 배치 */}
+            <FileAddButton />
+
+            {/* 활성 시트 카드 */}
+            <SelectedSheetNameCard spreadRef={spreadRef} fileName={activeSheetName} />
+
+            {/* 추가 파일명들을 탭 형태로 표시 */}
+            {selectedFileNames.slice(1).map((fileName, index) => (
+              <div
+          key={`file-${index}`}
+          className="flex items-center gap-1 px-2 py-1 bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-700 transition-all duration-200 ease-in-out"
+              >
+          <span className="truncate max-w-[120px]">{fileName}</span>
+          <button
+            onClick={() => {
+              setSelectedFileNames(prev => prev.filter((_, i) => i !== index + 1));
+            }}
+            className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+              <path d="M9 3L3 9M3 3l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="border-t border-gray-200"/>
+        <div className="border-t border-gray-200" />
         {/* 메인 입력 영역 */}
         <div className="px-3 py-2">
           <textarea
@@ -170,50 +203,48 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             rows={1}
           />
         </div>
-          
+
         {/* 하단 영역 - 컨트롤들 */}
         <div className="px-3 py-1 flex items-center justify-between relative">
           <div className="flex items-center">
             {/* 모드 선택 */}
             <div className="py-2 relative" ref={modeModalRef}>
               <button
-          onClick={() => setShowModeModal(!showModeModal)}
-          className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors w-20"
-          disabled={disabled}
-          // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
+                onClick={() => setShowModeModal(!showModeModal)}
+                className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors w-20"
+                disabled={disabled}
+              // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
               >
-          <span className="capitalize">{mode}</span>
-          <span className="flex items-center" style={{ height: '24px' }}>
-            <ChevronDown size={16} /> {/* 크기 크게 조정 */}
-          </span>
+                <span className="capitalize">{mode}</span>
+                <span className="flex items-center" style={{ height: '24px' }}>
+                  <ChevronDown size={16} /> {/* 크기 크게 조정 */}
+                </span>
               </button>
-            
+
               {/* 모드 선택 모달 */}
               {showModeModal && (
-          <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-48">
-            <button
-              onClick={() => {
-                setMode('agent');
-                setShowModeModal(false);
-              }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-t-lg ${
-                mode === 'agent' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
-              }`}
-            >
-              agent: 변경사항 자동 적용
-            </button>
-            <button
-              onClick={() => {
-                setMode('edit');
-                setShowModeModal(false);
-              }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-b-lg ${
-                mode === 'edit' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
-              }`}
-            >
-              edit: 변경사항 수동 적용
-            </button>
-          </div>
+                <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-48">
+                  <button
+                    onClick={() => {
+                      setMode('agent');
+                      setShowModeModal(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-t-lg ${mode === 'agent' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
+                      }`}
+                  >
+                    agent: 변경사항 자동 적용
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMode('edit');
+                      setShowModeModal(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-b-lg ${mode === 'edit' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
+                      }`}
+                  >
+                    edit: 변경사항 수동 적용
+                  </button>
+                </div>
               )}
             </div>
 
@@ -229,7 +260,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
               </button>
               
               {/* 모델 선택 모달 */}
-              {/* {showModelModal && (
+            {/* {showModelModal && (
                 <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 ">
                   <button
                     onClick={() => {
@@ -273,11 +304,10 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
           <button
             onClick={handleSend}
             disabled={disabled || isLoading || (!message.trim() && !selectedFile)}
-            className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${
-              disabled || isLoading || (!message.trim() && !selectedFile)
-                ? 'bg-gray-300 text-white cursor-not-allowed'
-                : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
-            }`}
+            className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${disabled || isLoading || (!message.trim() && !selectedFile)
+              ? 'bg-gray-300 text-white cursor-not-allowed'
+              : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
+              }`}
           >
             {isLoading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

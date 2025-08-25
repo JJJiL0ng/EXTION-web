@@ -1,14 +1,15 @@
 import React, { use } from 'react';
-import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
 import { useGetActiveSheetName } from '@/_hooks/sheet/useGetActiveSheetName'
-import { Eye } from 'lucide-react';
+import { File } from 'lucide-react';
 
 export const SelectedSheetNameCard: React.FC<{ 
   showIcon?: boolean;
   spreadRef?: React.MutableRefObject<any> | React.RefObject<any> | null;
+  fileName?: string;
 }> = ({
   showIcon = true,
   spreadRef: propSpreadRef,
+  fileName,
 }) => {
   
   // props로 받은 spreadRef가 있으면 우선 사용, 없으면 context에서 가져온 것 사용
@@ -28,10 +29,10 @@ export const SelectedSheetNameCard: React.FC<{
       className="inline-flex items-center px-2 py-1 bg-white border border-gray-300 text-xs font-medium rounded-lg"
     >
       {showIcon && (
-      <Eye size={16} className={`mr-1 text-gray-700`} />
+      <File size={16} className={`mr-1 text-gray-700`} />
       )}
       <span className={`text-gray-700`}>
-        {activeSheetName}
+        {fileName}
       </span>
     </div>
   );
