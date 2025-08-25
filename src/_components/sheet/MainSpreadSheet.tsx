@@ -22,7 +22,7 @@ GC.Spread.Sheets.LicenseKey = SpreadJSKey;
 GC.Spread.Common.CultureManager.culture("ko-kr");
 
 interface MainSpreadSheetProps {
-  spreadRef: React.MutableRefObject<any>;
+    spreadRef: React.MutableRefObject<any>;
 }
 
 export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
@@ -33,16 +33,16 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     // 채팅 가시성 제어
     const { isChatVisible, showChat } = useChatVisibility();
-    
+
     // 파일 업로드 상태 관리 (Zustand)
     const { isFileUploaded, setIsFileUploaded } = useSpreadsheetUploadStore();
-    
+
     // 인증 상태 관리
     const { user } = useAuthStore();
-    
+
     // 활성 시트 상태 관리
     const { handleActiveSheetChange } = useActiveSheetHook();
-    
+
     // 사용자 ID 가져오기 (로그인 사용자 또는 게스트) - 메모이제이션으로 무한 렌더링 방지
     const userId = useMemo(() => {
         if (user?.uid) {
@@ -53,16 +53,16 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             return getOrCreateGuestId();
         }
     }, [user?.uid]);
-    
+
     // Chat 버튼 표시 상태 (지연된 렌더링용)
     const [showChatButton, setShowChatButton] = useState(!isChatVisible);
-    
+
     // 파일 업로드 후 자동 채팅 열기 상태 관리
     const [hasAutoOpenedChat, setHasAutoOpenedChat] = useState(false);
-    
+
     // resetUploadState 함수의 ref 저장 (무한 루프 방지)
     const resetUploadStateRef = useRef<(() => void) | null>(null);
-    
+
     // deltaManager ref 저장 (무한 루프 방지)
     const deltaManagerRef = useRef<typeof deltaManager | null>(null);
 
@@ -81,7 +81,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     // SpreadJS 인스턴스 참조 (props로 받음)
     // const spreadRef = useRef<any>(null); // 제거됨 - props로 받음
-    
+
     // 명령어 관리 Hook (page.tsx로 이동됨)
     // const commandManager = useSpreadjsCommandManager(...) 제거됨
 
@@ -115,7 +115,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         },
         onError: (error, context) => {
             console.error('❌ 델타 처리 실패:', error, context);
-            
+
             // 서버 오류인 경우 사용자에게 알림
             if (context?.serverError) {
                 console.warn('🚫 백엔드 서버 오류로 인해 자동저장이 비활성화되었습니다.');
@@ -375,6 +375,11 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         onUploadSuccess: async (fileName: string, fileData: any) => {
             console.log(`✅ 파일 업로드 성공: ${fileName}`);
 
+
+            // 첫번째 시트를 활성 시트로 설정
+            spreadRef.current.setActiveSheet(0);
+
+
             // 파일 업로드 상태 업데이트
             setIsFileUploaded(true, fileName);
 
@@ -431,7 +436,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             alert(`파일 저장 중 오류가 발생했습니다: ${error.message}`);
         }
     });
-    
+
     // 함수들을 ref에 저장 (무한 루프 방지)
     resetUploadStateRef.current = resetUploadState;
     deltaManagerRef.current = deltaManager;
@@ -444,35 +449,35 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         } catch (error) {
             console.warn('resetUploadState cleanup warning:', error);
         }
-        
+
         try {
             resetExportState();
         } catch (error) {
             console.warn('resetExportState cleanup warning:', error);
         }
-        
+
         try {
             resetCreateState();
         } catch (error) {
             console.warn('resetCreateState cleanup warning:', error);
         }
-        
+
         try {
             clearCreateError();
         } catch (error) {
             console.warn('clearCreateError cleanup warning:', error);
         }
-        
+
         if (spreadRef.current) {
             try {
                 // 델타 이벤트 리스너 정리
                 if ((spreadRef.current as any)._deltaCleanup) {
                     (spreadRef.current as any)._deltaCleanup();
                 }
-                
+
                 // 남은 델타들 강제 동기화
                 deltaManagerRef.current?.forcSync().catch(console.error);
-                
+
                 spreadRef.current.destroy && spreadRef.current.destroy();
             } catch (error) {
                 console.warn('Cleanup warning:', error);
@@ -593,7 +598,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
             // 델타 자동저장을 위한 이벤트 리스너 설정
             const cleanupDeltaListeners = deltaManager.setupEventListeners(spread);
-            
+
             // 정리 함수를 나중에 사용하기 위해 저장
             (spread as any)._deltaCleanup = cleanupDeltaListeners;
 
@@ -605,7 +610,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                     const sheetName = activeSheet.name();
                     console.log('Active Sheet Name:', sheetName);
                     console.log('Active Sheet Index:', activeSheetIndex);
-                    
+
                     // 전역 상태에 활성 시트 정보 저장
                     handleActiveSheetChange(sheetName, activeSheetIndex);
                 }
@@ -670,7 +675,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                         }
                     }
                 }, 100);
-                
+
                 // 이벤트 리스너 제거
                 fileInput.removeEventListener('cancel', handleCancel);
                 window.removeEventListener('focus', handleCancel);
@@ -680,7 +685,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             fileInput.addEventListener('cancel', handleCancel);
             // 윈도우 포커스로도 취소 감지 (일부 브라우저에서 cancel 이벤트가 작동하지 않을 수 있음)
             window.addEventListener('focus', handleCancel);
-            
+
             fileInput.click();
             setShowUploadModal(false); // 모달 닫기
         }
@@ -715,7 +720,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 spreadRef.current.clearSheets();
                 spreadRef.current.addSheet(0);
                 const sheet = spreadRef.current.getActiveSheet();
-                
+
                 if (!sheet) {
                     console.error('새 시트 생성에 실패했습니다.');
                     return;
@@ -878,7 +883,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                             <div className="flex items-center gap-2">
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-500"></div>
                                 <span className="text-xs text-gray-600">
-                                    {deltaManager.state.isProcessing ? '동기화 중...' : 
+                                    {deltaManager.state.isProcessing ? '동기화 중...' :
                                         `변경사항 ${deltaManager.state.queuedDeltas}개 대기`}
                                 </span>
                             </div>
@@ -887,7 +892,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                         {/* 델타 실패 상태 */}
                         {deltaManager.state.failedDeltas.length > 0 && (
                             <div className="flex items-center gap-2">
-                                <button 
+                                <button
                                     onClick={deltaManager.retryFailedDeltas}
                                     className="flex items-center gap-1 px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 rounded"
                                     title="동기화 실패한 변경사항 재시도"
@@ -899,14 +904,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                                 </button>
                             </div>
                         )}
-        
 
-                    
+
+
                         {/* 마지막 저장 시간 */}
                         {(exportState.lastExportedAt || deltaManager.state.lastSyncAt) && (
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-gray-600">
-                                    {deltaManager.state.lastSyncAt ? 
+                                    {deltaManager.state.lastSyncAt ?
                                         `동기화: ${new Date(deltaManager.state.lastSyncAt).toLocaleTimeString()}` :
                                         `저장: ${exportState.lastExportedAt?.toLocaleTimeString()}`
                                     }
@@ -924,7 +929,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                                     {deltaManager.state.error || createError || uploadState.error || exportState.error}
                                 </span>
                                 {deltaManager.state.error && (
-                                    <button 
+                                    <button
                                         onClick={deltaManager.clearFailedDeltas}
                                         className="text-xs text-red-500 hover:text-red-700 underline ml-2"
                                     >
@@ -971,11 +976,11 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                             </svg>
                             <h3 className="text-lg font-semibold text-gray-900">파일 업로드</h3>
                         </div>
-                        
+
                         <p className="text-gray-600 mb-6">
                             파일을 업로드하세요
                         </p>
-                        
+
                         <div className="flex space-x-3">
                             <button
                                 onClick={handleUploadButtonClick}
@@ -988,6 +993,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                     </div>
                 </div>
             )}
-            </div>
+        </div>
     );
 }
