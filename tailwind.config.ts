@@ -23,7 +23,10 @@ const config: Config = {
     'space-x-3',
     'text-6xl',
     'border-5',
-    'max-w-6xl'
+    'max-w-6xl',
+    'px-1',
+    'pl-2'
+
   ],
   theme: {
     extend: {

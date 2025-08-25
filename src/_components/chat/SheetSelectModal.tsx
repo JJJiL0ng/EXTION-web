@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGetSheetNames } from '../../_hooks/sheet/useGetSheetNames';
-import { File } from 'lucide-react';
+import SelectedSheetNameCard from './SelectedSheetNameCard';
 
 interface FileSelectModalProps {
   isOpen: boolean;
@@ -33,21 +33,22 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="absolute bottom-full mb-1 left-0 right-0 z-50">
-      <div className="sheet-select-modal bg-white border-2 border-gray-200 rounded-xl p-3 w-96 max-h-96 overflow-auto shadow-lg">
-        <div className="flex justify-between items-center px-3 py-2">
-          <h2 className="text-lg font-semibold text-gray-800">시트 선택</h2>
+    <div className="p-2 absolute bottom-full left-0 right-0 z-50">
+      <div className="sheet-select-modal bg-white border-2 border-gray-200 rounded-xl p-2 w-64 max-h-96 overflow-auto shadow-lg">
+        <div className="px-2 flex justify-between items-center mb-1">
+          <span className="text-sm text-gray-700 font-semibold">시트 추가</span>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-xl"
+            aria-label="닫기"
           >
             ×
           </button>
         </div>
 
-        <div className="border-t border-gray-200"/>
 
-        <div className="px-3 py-2 space-y-2">
+        <div className="space-y-2 ">
+          <div className="border-t border-gray-200 mb-1" />
           {sheetNames.length === 0 ? (
             <p className="text-gray-400 text-center py-4">
               사용 가능한 시트가 없습니다.
@@ -57,23 +58,16 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
               <button
                 key={index}
                 onClick={() => handleSheetSelect(sheetName)}
-                className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#005DE9] transition-colors"
+                className="hover:bg-gray-50 rounded-lg px-1 transition-colors"
               >
-                <div className="font-medium text-gray-800">{sheetName}</div>
+                <SelectedSheetNameCard
+                  fileName={sheetName}
+                  showIcon={true}
+                  spreadRef={spreadRef}
+                />
               </button>
             ))
           )}
-        </div>
-
-        <div className="border-t border-gray-200"/>
-
-        <div className="px-3 py-1 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            취소
-          </button>
         </div>
       </div>
     </div>
