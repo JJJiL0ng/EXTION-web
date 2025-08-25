@@ -34,9 +34,9 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">시트 선택</h2>
+      <div className="bg-white border-2 border-gray-200 rounded-xl p-3 w-96 max-h-96 overflow-auto">
+        <div className="flex justify-between items-center px-3 py-2">
+          <h2 className="text-lg font-semibold text-gray-800">시트 선택</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-xl"
@@ -45,9 +45,11 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
           </button>
         </div>
 
-        <div className="space-y-2">
+        <div className="border-t border-gray-200"/>
+
+        <div className="px-3 py-2 space-y-2">
           {sheetNames.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">
+            <p className="text-gray-400 text-center py-4">
               사용 가능한 시트가 없습니다.
             </p>
           ) : (
@@ -55,15 +57,17 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
               <button
                 key={index}
                 onClick={() => handleSheetSelect(sheetName)}
-                className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-[#005DE9] transition-colors"
               >
-                <div className="font-medium">{sheetName}</div>
+                <div className="font-medium text-gray-800">{sheetName}</div>
               </button>
             ))
           )}
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="border-t border-gray-200"/>
+
+        <div className="px-3 py-1 flex justify-end">
           <button
             onClick={onClose}
             className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"

@@ -5,7 +5,7 @@ import { Paperclip, Settings, ChevronDown } from 'lucide-react';
 import { useMainChat } from '../../_hooks/chat/useChatStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
 import { useChatMode , ChatMode} from '../../_hooks/sheet/useChatMode';
-import FileUploadCard from './UploadedFileNameCard';
+import SelectedSheetNameCard from './SelectedSheetNameCard';
 
 interface ChatInputBoxProps {
   // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
@@ -13,6 +13,7 @@ interface ChatInputBoxProps {
   placeholder?: string;
   disabled?: boolean;
   userId?: string;
+  spreadRef?: React.MutableRefObject<any> | React.RefObject<any> | null;
 }
 
 // type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
@@ -21,7 +22,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   // onSendMessage,
   placeholder = "수정사항을 입력하세요...",
   disabled = false,
-  userId = getOrCreateGuestId() // Guest ID 사용
+  userId = getOrCreateGuestId(), // Guest ID 사용
+  spreadRef
 }) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -148,7 +150,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
       <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded-xl overflow-hidden transition-colors`}>
         {/* 상단 영역 - 파일 선택 */}
         <div className="p-3 flex items-center justify-between relative">
-           <FileUploadCard />
+           <SelectedSheetNameCard spreadRef={spreadRef} />
         </div>
         <div className="border-t border-gray-200"/>
         {/* 메인 입력 영역 */}
