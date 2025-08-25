@@ -2,7 +2,6 @@ import React, { use } from 'react';
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
 import { useGetActiveSheetName } from '@/_hooks/sheet/useGetActiveSheetName'
 import { Eye } from 'lucide-react';
-import {useSpreadsheetContext} from '@/_contexts/SpreadsheetContext';
 
 export const SelectedSheetNameCard: React.FC<{ 
   showIcon?: boolean;
@@ -11,12 +10,9 @@ export const SelectedSheetNameCard: React.FC<{
   showIcon = true,
   spreadRef: propSpreadRef,
 }) => {
-  // const { isFileUploaded, uploadedFileName } = useSpreadsheetUploadStore();
   
   // props로 받은 spreadRef가 있으면 우선 사용, 없으면 context에서 가져온 것 사용
-  // const spreadRef = propSpreadRef || null;
-
-  const spreadRef = useSpreadsheetContext().spreadRef;
+  const spreadRef = propSpreadRef || null;
 
   // Hook은 항상 최상위에서 호출되어야 함
   const { activeSheetName } = useGetActiveSheetName({ spreadRef });
@@ -35,13 +31,6 @@ export const SelectedSheetNameCard: React.FC<{
       <Eye size={16} className={`mr-1 text-gray-700`} />
       )}
       <span className={`text-gray-700`}>
-        {/* {uploadedFileName} */}
-        {/* {activeSheetName && (
-          <>
-            <span className="mx-1">·</span>
-            <span>{activeSheetName}</span>
-          </>
-        )} */}
         {activeSheetName}
       </span>
     </div>
