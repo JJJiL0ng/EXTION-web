@@ -1,9 +1,10 @@
 // src/_components/chat/FileUploadChattingContainer.tsx
 // 파일 업로드일때 채팅 컨테이너
-import React from "react";
+import React, { useState, useEffect } from "react";
 import ChatInputBox from "./ChatInputBox";
 import ChatViewer from "./ChatViewer";
 import ChatTabBar from "./ChatTabBar";
+import { FileSelectModal } from "./SheetSelectModal";
 import { ChatInitMode, UploadedFileInfo } from "../../_types/chat.types";
 import { useChatFlow, useChatStore } from "../../_hooks/chat/useChatStore";
 import { getOrCreateGuestId } from "../../_utils/guestUtils";
@@ -23,6 +24,9 @@ export default function FileUploadChattingContainer({
   userId = getOrCreateGuestId() // Guest ID 사용
 }: FileUploadChattingContainerProps) {
 
+  // 모달 상태 관리
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // SpreadsheetContext에서 spreadRef 가져오기
   const { spreadRef } = useSpreadsheetContext();
 
@@ -35,6 +39,34 @@ export default function FileUploadChattingContainer({
 
   // v2 스토어에서 에러 상태 가져오기
   const { error: storeError, clearError } = useChatStore();
+
+  // 모달 열기/닫기 함수
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+
+  // 시트 선택 핸들러
+  const handleSelectSheet = (sheetName: string) => {
+    console.log('Selected sheet:', sheetName);
+    // 여기에 시트 선택 로직 추가
+  };
+
+  // 모달 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isModalOpen) {
+        // 모달 외부 클릭 시 닫기 (모달 자체 내부 클릭은 제외)
+        const target = event.target as Element;
+        if (!target.closest('.sheet-select-modal')) {
+          setIsModalOpen(false);
+        }
+      }
+    };
+
+    if (isModalOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isModalOpen]);
 
   return (
     <div className=" border-gray-200 h-full flex flex-col">
@@ -73,12 +105,23 @@ export default function FileUploadChattingContainer({
             <ChatViewer userId={userId} />
           </div>
           
-          {/* 채팅 입력 박스 - 최하단 */}
-          <div>
+          {/* 채팅 입력 박스와 모달을 포함하는 컨테이너 - 최하단 */}
+          <div className="relative">
+            {/* 파일 선택 모달 - ChatInputBox 바로 위에 위치 */}
+            {isModalOpen && (
+              <FileSelectModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                onSelectSheet={handleSelectSheet}
+                spreadRef={spreadRef as React.RefObject<any>}
+              />
+            )}
+            
             <ChatInputBox 
               userId={userId}
               disabled={!chatFlow.canSendMessage}
               spreadRef={spreadRef}
+              onFileAddClick={handleOpenModal}
             />
           </div>
         </>

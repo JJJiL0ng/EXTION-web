@@ -33,8 +33,8 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white border-2 border-gray-200 rounded-xl p-3 w-96 max-h-96 overflow-auto">
+    <div className="absolute bottom-full mb-1 left-0 right-0 z-50">
+      <div className="sheet-select-modal bg-white border-2 border-gray-200 rounded-xl p-3 w-96 max-h-96 overflow-auto shadow-lg">
         <div className="flex justify-between items-center px-3 py-2">
           <h2 className="text-lg font-semibold text-gray-800">시트 선택</h2>
           <button

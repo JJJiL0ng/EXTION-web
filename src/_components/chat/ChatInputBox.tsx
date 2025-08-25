@@ -16,6 +16,7 @@ interface ChatInputBoxProps {
   disabled?: boolean;
   userId?: string;
   spreadRef?: React.MutableRefObject<any> | React.RefObject<any> | null;
+  onFileAddClick?: () => void;
 }
 
 // type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
@@ -25,7 +26,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   placeholder = "수정사항을 입력하세요...",
   disabled = false,
   userId = getOrCreateGuestId(), // Guest ID 사용
-  spreadRef
+  spreadRef,
+  onFileAddClick
 }) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -159,7 +161,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         <div className="p-3 flex items-center justify-between relative">
           <div className="flex items-center gap-2 flex-wrap">
             {/* 파일 선택 버튼을 가장 왼쪽에 배치 */}
-            <FileAddButton />
+            <FileAddButton onClick={onFileAddClick} />
 
             {/* 활성 시트 카드 */}
             <SelectedSheetNameCard spreadRef={spreadRef} fileName={activeSheetName} />
