@@ -41,6 +41,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const modeModalRef = useRef<HTMLDivElement>(null);
 
   const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
+  const [showSheetCard, setShowSheetCard] = useState(true);
 
   // const modelModalRef = useRef<HTMLDivElement>(null);
 
@@ -164,7 +165,14 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             <FileAddButton onClick={onFileAddClick} />
 
             {/* 활성 시트 카드 */}
-            <SelectedSheetNameCard spreadRef={spreadRef} fileName={activeSheetName} />
+            {showSheetCard && (
+              <SelectedSheetNameCard 
+                spreadRef={spreadRef} 
+                fileName={activeSheetName}
+                onRemove={() => setShowSheetCard(false)}
+                mode='chatInputBox'
+              />
+            )}
 
             {/* 추가 파일명들을 탭 형태로 표시 */}
             {selectedFileNames.slice(1).map((fileName, index) => (

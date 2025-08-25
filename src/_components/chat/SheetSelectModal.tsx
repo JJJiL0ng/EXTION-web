@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGetSheetNames } from '../../_hooks/sheet/useGetSheetNames';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
+import { X } from 'lucide-react';
 
 interface FileSelectModalProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
             className="text-gray-500 hover:text-gray-700 text-xl"
             aria-label="닫기"
           >
-            ×
+            <X />
           </button>
         </div>
 
@@ -64,6 +65,7 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
                   fileName={sheetName}
                   showIcon={true}
                   spreadRef={spreadRef}
+                  mode='modal'
                 />
               </button>
             ))
