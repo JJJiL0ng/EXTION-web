@@ -47,7 +47,7 @@ export default function FileUploadChattingContainer({
   // 시트 선택 핸들러
   const handleSelectSheet = (sheetName: string) => {
     console.log('Selected sheet:', sheetName);
-    // 여기에 시트 선택 로직 추가
+    // 시트 선택/해제는 모달 내부에서 처리되므로 여기서는 별도 로직 불필요
   };
 
   // 모달 외부 클릭 시 닫기

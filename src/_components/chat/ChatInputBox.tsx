@@ -8,6 +8,7 @@ import { useChatMode, ChatMode } from '../../_hooks/sheet/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { useGetActiveSheetName } from '@/_hooks/sheet/useGetActiveSheetName'
 import FileAddButton from './FileAddButton';
+import { useSelectedSheetInfoStore } from '../../_hooks/sheet/useSelectedSheetInfoStore';
 
 interface ChatInputBoxProps {
   // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
@@ -40,13 +41,11 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
 
-  const [selectedFileNames, setSelectedFileNames] = useState<string[]>([]);
-  const [showSheetCard, setShowSheetCard] = useState(true);
-
-  // const modelModalRef = useRef<HTMLDivElement>(null);
-
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
+
+  // useSelectedSheetInfoStore 훅 사용
+  const { selectedSheets, removeSelectedSheet } = useSelectedSheetInfoStore();
 
   // v2 채팅 훅 사용
   const { sendMessage: sendChatMessage, isLoading } = useMainChat(userId);
@@ -69,6 +68,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     if (message.trim() || selectedFile) {
       const messageToSend = message;
       const fileToSend = selectedFile;
+      const selectedSheetsToSend = selectedSheets; // 선택된 시트 정보 포함
 
       // 메시지 전송 전에 입력창 초기화
       setMessage('');
@@ -85,6 +85,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         }, 0);
       }
 
+      // 선택된 시트 정보와 함께 메시지 전송
+      console.log('Sending message with selected sheets:', selectedSheetsToSend);
       await sendChatMessage(messageToSend);
     }
   };
@@ -158,40 +160,24 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   return (
     <div className="p-2 mx-auto justify-center w-full max-full">
       <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded-xl overflow-hidden transition-colors`}>
-        {/* 상단 영역 - 파일 선택 + 활성 시트 카드 + 추가 파일명들 */}
+        {/* 상단 영역 - 파일 선택 + 선택된 시트들 */}
         <div className="p-3 flex items-center justify-between relative">
           <div className="flex items-center gap-2 flex-wrap">
             {/* 파일 선택 버튼을 가장 왼쪽에 배치 */}
-            <FileAddButton onClick={onFileAddClick} />
+            <FileAddButton 
+              onClick={onFileAddClick} 
+              isSelected={selectedSheets.length > 0}
+            />
 
-            {/* 활성 시트 카드 */}
-            {showSheetCard && (
+            {/* 선택된 시트들 표시 */}
+            {selectedSheets.map((sheet) => (
               <SelectedSheetNameCard 
+                key={sheet.name}
                 spreadRef={spreadRef} 
-                fileName={activeSheetName}
-                onRemove={() => setShowSheetCard(false)}
+                fileName={sheet.name}
+                onRemove={() => removeSelectedSheet(sheet.name)}
                 mode='chatInputBox'
               />
-            )}
-
-            {/* 추가 파일명들을 탭 형태로 표시 */}
-            {selectedFileNames.slice(1).map((fileName, index) => (
-              <div
-          key={`file-${index}`}
-          className="flex items-center gap-1 px-2 py-1 bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-700 transition-all duration-200 ease-in-out"
-              >
-          <span className="truncate max-w-[120px]">{fileName}</span>
-          <button
-            onClick={() => {
-              setSelectedFileNames(prev => prev.filter((_, i) => i !== index + 1));
-            }}
-            className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-              <path d="M9 3L3 9M3 3l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-              </div>
             ))}
           </div>
         </div>

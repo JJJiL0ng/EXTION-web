@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useGetSheetNames } from '../../_hooks/sheet/useGetSheetNames';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { X } from 'lucide-react';
+import { useSelectedSheetInfoStore } from '../../_hooks/sheet/useSelectedSheetInfoStore';
 
 interface FileSelectModalProps {
   isOpen: boolean;
@@ -18,6 +19,9 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
 }) => {
   const [sheetNames, setSheetNames] = useState<string[]>([]);
   const { getSheetNames } = useGetSheetNames({ spreadRef });
+  
+  // useSelectedSheetInfoStore 훅 사용
+  const { selectedSheets, addSelectedSheet, removeSelectedSheet, isSheetSelected, addAllSheets, clearSelectedSheets } = useSelectedSheetInfoStore();
 
   useEffect(() => {
     if (isOpen && spreadRef.current) {
@@ -26,10 +30,23 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
     }
   }, [isOpen, getSheetNames, spreadRef]);
 
-  const handleSheetSelect = (sheetName: string) => {
+  const handleSheetToggle = (sheetName: string, sheetIndex: number) => {
+    if (isSheetSelected(sheetName)) {
+      removeSelectedSheet(sheetName);
+    } else {
+      addSelectedSheet(sheetName, sheetIndex);
+    }
     onSelectSheet(sheetName);
-    onClose();
   };
+
+  const handleAddAllSheets = () => {
+    const allSheets = sheetNames.map((name, index) => ({ name, index }));
+    addAllSheets(allSheets);
+    // 모든 시트에 대해 onSelectSheet 호출
+    sheetNames.forEach(sheetName => onSelectSheet(sheetName));
+  };
+
+  const isAllSheetsSelected = sheetNames.length > 0 && sheetNames.every(name => isSheetSelected(name));
 
   if (!isOpen) return null;
 
@@ -48,27 +65,49 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
         </div>
 
 
-        <div className="space-y-2 ">
-          <div className="border-t border-gray-200 mb-1" />
+        <div>
+          <div className="border-t border-gray-200 mb-1 px-1" />
           {sheetNames.length === 0 ? (
             <p className="text-gray-400 text-center py-4">
               사용 가능한 시트가 없습니다.
             </p>
           ) : (
-            sheetNames.map((sheetName, index) => (
-              <button
-                key={index}
-                onClick={() => handleSheetSelect(sheetName)}
-                className="hover:bg-gray-50 rounded-lg px-1 transition-colors"
-              >
-                <SelectedSheetNameCard
-                  fileName={sheetName}
-                  showIcon={true}
-                  spreadRef={spreadRef}
-                  mode='modal'
-                />
-              </button>
-            ))
+            <div className="px-1 flex flex-wrap gap-2 items-start justify-start">
+              {/* 시트가 2개 이상일 때만 "모든 파일 추가" 카드 표시 */}
+              {sheetNames.length >= 2 && (
+                <button
+                  type="button"
+                  onClick={handleAddAllSheets}
+                  className="hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <SelectedSheetNameCard
+                    fileName="모든 파일 추가"
+                    showIcon={true}
+                    spreadRef={spreadRef}
+                    mode='modal'
+                    isSelected={isAllSheetsSelected}
+                  />
+                </button>
+              )}
+
+              {/* 개별 시트들 */}
+              {sheetNames.map((sheetName, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleSheetToggle(sheetName, index)}
+                  className="hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <SelectedSheetNameCard
+                    fileName={sheetName}
+                    showIcon={true}
+                    spreadRef={spreadRef}
+                    mode='modal'
+                    isSelected={isSheetSelected(sheetName)}
+                  />
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>
