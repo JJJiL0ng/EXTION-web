@@ -19,14 +19,12 @@ export const SelectedSheetNameCard: React.FC<{
   const spreadRef = useSpreadsheetContext().spreadRef;
 
   // Hook은 항상 최상위에서 호출되어야 함
-  const { getActiveSheetName } = useGetActiveSheetName({ spreadRef });
+  const { activeSheetName } = useGetActiveSheetName({ spreadRef });
 
   if (!spreadRef) {
     console.error('No spreadRef provided');
     return null;
   }
-
-  const activeSheetName = getActiveSheetName();
 
   return (  
     //현재 border 컬러가 적용이 안되는 에러가 있음 추후 확인해야함 : todo
