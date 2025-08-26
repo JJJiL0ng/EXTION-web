@@ -161,7 +161,7 @@ export const useSpreadSheetDelta = (
       // SpreadJS 델타를 API 델타로 변환
       const apiDeltas: ApplyDeltaRequest[] = deltasToSend.map(delta => ({
         action: delta.action,
-        sheetName: delta.sheetName,
+        parsedSheetName: delta.parsedSheetName,
         cellAddress: delta.cellAddress,
         range: delta.range,
         value: delta.value,
@@ -255,7 +255,7 @@ export const useSpreadSheetDelta = (
     try {
       const apiDeltas: ApplyDeltaRequest[] = batch.deltas.map(delta => ({
         action: delta.action,
-        sheetName: delta.sheetName,
+        parsedSheetName: delta.parsedSheetName,
         cellAddress: delta.cellAddress,
         range: delta.range,
         value: delta.value,
@@ -348,7 +348,7 @@ export const useSpreadSheetDelta = (
     try {
       const apiDeltas: ApplyDeltaRequest[] = failedDeltas.map(delta => ({
         action: delta.action,
-        sheetName: delta.sheetName,
+        parsedSheetName: delta.parsedSheetName,
         cellAddress: delta.cellAddress,
         range: delta.range,
         value: delta.value,
@@ -421,7 +421,7 @@ export const useSpreadSheetDelta = (
       
       const delta: CellDelta = {
         action: formula ? DeltaAction.SET_CELL_FORMULA : DeltaAction.SET_CELL_VALUE,
-        sheetName,
+        parsedSheetName: sheetName,
         cellAddress,
         value: formula ? undefined : newValue,
         formula: formula || undefined,
@@ -452,7 +452,7 @@ export const useSpreadSheetDelta = (
 
       const delta: CellDelta = {
         action: DeltaAction.SET_CELL_STYLE,
-        sheetName: sheet.name(),
+        parsedSheetName: sheet.name(),
         cellAddress,
         range,
         style: convertSpreadJSStyleToCellStyle(style),
@@ -471,7 +471,7 @@ export const useSpreadSheetDelta = (
       
       const delta: CellDelta = {
         action: action === 'insert' ? DeltaAction.INSERT_ROWS : DeltaAction.DELETE_ROWS,
-        sheetName,
+        parsedSheetName: sheetName,
         rowIndex: row,
         count: rowCount,
         timestamp: Date.now()
@@ -489,7 +489,7 @@ export const useSpreadSheetDelta = (
       
       const delta: CellDelta = {
         action: action === 'insert' ? DeltaAction.INSERT_COLUMNS : DeltaAction.DELETE_COLUMNS,
-        sheetName,
+        parsedSheetName: sheetName,
         columnIndex: col,
         count: colCount,
         timestamp: Date.now()

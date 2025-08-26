@@ -88,7 +88,7 @@ export interface LoadSpreadSheetRequest {
 
 export interface ApplyDeltaRequest {
   action: string;
-  sheetName: string;
+  parsedSheetName: string;
   cellAddress?: string;
   range?: string;
   value?: any;
