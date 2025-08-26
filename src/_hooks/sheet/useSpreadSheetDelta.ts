@@ -174,6 +174,7 @@ export const useSpreadSheetDelta = (
 
       const response = await SheetAPI.applyBatchDeltas({
         userId: userId, // userId 추가
+        spreadsheetId: spreadsheetId, 
         deltas: apiDeltas
       });
 
@@ -268,6 +269,7 @@ export const useSpreadSheetDelta = (
 
       const response = await SheetAPI.applyBatchDeltas({
         userId: userId, // userId 추가
+        spreadsheetId: spreadsheetId,
         deltas: apiDeltas
       });
 
@@ -361,6 +363,7 @@ export const useSpreadSheetDelta = (
 
       const response = await SheetAPI.applyBatchDeltas({
         userId: userId, // userId 추가
+        spreadsheetId: spreadsheetId,
         deltas: apiDeltas
       });
 
