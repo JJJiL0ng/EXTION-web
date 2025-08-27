@@ -17,6 +17,7 @@ import {
 } from '../../_types/chat.types'
 import useChatStore from './chatIdStore'
 import useSpreadsheetIdStore from '../sheet/spreadSheetIdStore'
+import useSpreadsheetNamesStore from '../sheet/spreadSheetNamesStore'
 import { getOrCreateGuestId } from '../../_utils/guestUtils'
 
 /**
@@ -35,7 +36,7 @@ export class MainChatApiAdapter {
   async createChat(request: CreateChatRequest): Promise<CreateChatResponse> {
     // 전역 상태에서 chatId 가져오기
     const { chatId: globalChatId } = useChatStore.getState()
-    
+
     const chatId = globalChatId
 
     if (!chatId) {
@@ -56,11 +57,11 @@ export class MainChatApiAdapter {
     // 전역 상태에서 chatId와 spreadsheetId 가져오기
     const { chatId: globalChatId } = useChatStore.getState()
     const { spreadsheetId: globalSpreadsheetId } = useSpreadsheetIdStore.getState()
-    
+
     // mainChatApi에서는 getUserChats 메서드 사용
     // 현재는 Mock 데이터로 대체
     await new Promise(resolve => setTimeout(resolve, 300))
-    
+
     const sessions: ChatSession[] = [
       {
         id: globalChatId || 'session_1',
@@ -81,7 +82,7 @@ export class MainChatApiAdapter {
         lastMessage: '안녕하세요!'
       }
     ]
-    
+
     return {
       sessions,
       totalCount: sessions.length,
@@ -96,14 +97,14 @@ export class MainChatApiAdapter {
     // 전역 상태에서 chatId와 spreadsheetId 가져오기
     const { chatId: globalChatId } = useChatStore.getState()
     const { spreadsheetId: globalSpreadsheetId } = useSpreadsheetIdStore.getState()
-    
+
     // 전역 상태의 chatId 사용, 없으면 sessionId 사용
     const chatId = globalChatId || sessionId
-    
+
     // mainChatApi에서는 getChatHistory 메서드 사용
     // 현재는 Mock 데이터로 대체
     await new Promise(resolve => setTimeout(resolve, 200))
-    
+
     const messages: ChatMessage[] = [
       {
         id: `msg_${Date.now()}_1`,
@@ -122,7 +123,7 @@ export class MainChatApiAdapter {
         timestamp: new Date(Date.now() - 240000).toISOString()
       }
     ]
-    
+
     return {
       messages,
       totalCount: messages.length,
@@ -137,14 +138,18 @@ export class MainChatApiAdapter {
     // 전역 상태에서 chatId와 spreadsheetId 가져오기
     const { chatId: globalChatId } = useChatStore.getState()
     const { spreadsheetId: globalSpreadsheetId } = useSpreadsheetIdStore.getState()
-    
+
+    // 현재 선택된 시트 이름들을 공용 저장소에서 가져오기
+    const selectedNames = useSpreadsheetNamesStore.getState().selectedSheets.map(s => s.name)
+    const parsedSheetNames = selectedNames
+
     console.log('🔍 [MainChatApiAdapter] sendMessage - Global state values:', {
       globalChatId,
       globalSpreadsheetId,
       requestChatId: request.chatId,
       requestSpreadSheetId: request.spreadSheetId
     });
-    
+
     // 요청에서 온 값 또는 전역 상태값 사용 (null을 undefined로 변환)
     const chatId = request.chatId || globalChatId || undefined
     const spreadsheetId = request.spreadSheetId || globalSpreadsheetId || undefined
@@ -159,6 +164,7 @@ export class MainChatApiAdapter {
     const chatRequest: ChatRequest = createChatRequest(
       request.content,
       userId,
+      parsedSheetNames,
       {
         chatId: chatId,
         spreadsheetId: spreadsheetId
@@ -166,7 +172,7 @@ export class MainChatApiAdapter {
     )
 
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
+
     return {
       messageId,
       chatId: chatId || `new_chat_${Date.now()}`,
@@ -194,14 +200,18 @@ export class MainChatApiAdapter {
     // 전역 상태에서 chatId와 spreadsheetId 가져오기
     const { chatId: globalChatId } = useChatStore.getState()
     const { spreadsheetId: globalSpreadsheetId } = useSpreadsheetIdStore.getState()
-    
+
+    // 현재 선택된 시트 이름들을 공용 저장소에서 가져오기
+    const selectedNames = useSpreadsheetNamesStore.getState().selectedSheets.map(s => s.name)
+    const parsedSheetNames = selectedNames
+
     console.log('🔍 [MainChatApiAdapter] streamChat - Global state values:', {
       globalChatId,
       globalSpreadsheetId,
       requestChatId: request.chatId,
       requestSpreadSheetId: request.spreadSheetId
     });
-    
+
     // 요청에서 온 값 또는 전역 상태값 사용 (null을 undefined로 변환)
     const chatId = request.chatId || globalChatId || undefined
     const spreadsheetId = request.spreadSheetId || globalSpreadsheetId || undefined
@@ -215,6 +225,7 @@ export class MainChatApiAdapter {
     const chatRequest: ChatRequest = createChatRequest(
       request.content,
       userId,
+      parsedSheetNames,
       {
         chatId: chatId,
         spreadsheetId: spreadsheetId
@@ -230,11 +241,11 @@ export class MainChatApiAdapter {
       onChatStarted: (data: any) => {
         console.log('🟢 [MainChatApiAdapter] Chat started:', data)
       },
-      
+
       onAIProcessingStarted: (data: any) => {
         console.log('🧠 [MainChatApiAdapter] AI processing started:', data)
       },
-      
+
       onAIUpdate: (data: any) => {
         console.log('🔄 [MainChatApiAdapter] AI update:', data)
       },
@@ -250,7 +261,7 @@ export class MainChatApiAdapter {
           onReasoningPreview(data.reasoning || '', data.isComplete || false)
         }
       },
-      
+
       onChatResponse: (data: NewChatResponseData & { intent?: string, structuredContent?: any }) => {
         console.log('💬 [MainChatApiAdapter] Chat response:', data)
         // structuredContent가 있으면 콜백으로 전달
@@ -258,17 +269,17 @@ export class MainChatApiAdapter {
           onStructuredResponse(data.structuredContent)
         }
       },
-      
+
       onChatCompleted: (data: any) => {
         console.log('✅ [MainChatApiAdapter] Chat completed:', data)
         onComplete()
       },
-      
+
       onError: (data: any) => {
         console.error('❌ [MainChatApiAdapter] Chat error:', data)
         onError(new Error(data.error || 'Chat error occurred'))
       },
-      
+
       onTypingEffect: (currentText: string, isComplete: boolean) => {
         // console.log('⌨️ [MainChatApiAdapter] Typing effect:', {
         //   textLength: currentText.length,
@@ -280,7 +291,7 @@ export class MainChatApiAdapter {
           onComplete()
         }
       },
-      
+
       onStatusChange: (status: any) => {
         console.log('📊 [MainChatApiAdapter] Status change:', status)
       }

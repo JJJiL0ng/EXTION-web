@@ -1,6 +1,8 @@
 // mainChatApi.ts - React용 메인 채팅 API 클라이언트
 // SSE 스트리밍을 통한 실시간 타이핑 효과 구현
 
+import { parse } from "path";
+
 // ==================== 타입 정의 ====================
 
 export interface ChatRequest {
@@ -9,6 +11,7 @@ export interface ChatRequest {
   chatId?: string;
   userId: string;
   timestamp: string;
+  parsedSheetNames: string[];
 }
 
 export interface ChatHistoryRequest {
@@ -775,15 +778,18 @@ export class MainChatApi {
 export function createChatRequest(
   message: string,
   userId: string,
+  //선택된 시트 이름들
+  parsedSheetNames: string[],
   options?: {
     spreadsheetId?: string;
     chatId?: string;
-  }
+  },
 ): ChatRequest {
   return {
     chatInputMessage: message,
     userId,
     timestamp: new Date().toISOString(),
+    parsedSheetNames,
     ...options
   };
 }
