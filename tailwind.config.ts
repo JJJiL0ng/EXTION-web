@@ -25,7 +25,9 @@ const config: Config = {
     'border-5',
     'max-w-6xl',
     'px-1',
-    'pl-2'
+    'pl-2',
+    'gap-3',
+    'w-56'
 
   ],
   theme: {

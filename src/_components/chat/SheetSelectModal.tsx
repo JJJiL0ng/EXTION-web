@@ -70,7 +70,7 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
 
 
         <div>
-          <div className="border-t border-gray-200 mb-1 px-1" />
+          <div className="border-t border-gray-200 py-1 px-2" />
       {spreadSheetNames.length === 0 ? (
             <p className="text-gray-400 text-center py-4">
               사용 가능한 시트가 없습니다.

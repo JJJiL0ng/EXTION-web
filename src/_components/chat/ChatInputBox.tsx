@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Paperclip, Settings, ChevronDown, CirclePlus} from 'lucide-react';
+import { ChevronDown, Check} from 'lucide-react';
 import { useMainChat } from '../../_hooks/chat/useChatStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
 import { useChatMode, ChatMode } from '../../_hooks/sheet/useChatMode';
@@ -45,7 +45,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const { mode, setMode } = useChatMode();
 
   // useSelectedSheetInfoStore 훅 사용
-  const { selectedSheets, removeSelectedSheet } = useSelectedSheetInfoStore();
+  const { selectedSheets, removeSelectedSheet, addSelectedSheet, renameSelectedSheet } = useSelectedSheetInfoStore();
 
   // v2 채팅 훅 사용
   const { sendMessage: sendChatMessage, isLoading } = useMainChat(userId);
@@ -156,6 +156,28 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   }, [showModeModal]); // , showModelModal
 
   const { activeSheetName } = useGetActiveSheetName({ spreadRef: spreadRef ?? null });
+  // 최초 1회만 activeSheetName을 기본 선택으로 추가
+  const didInitDefaultSelection = React.useRef(false);
+  React.useEffect(() => {
+    if (didInitDefaultSelection.current) return;
+    if (!activeSheetName) return;
+    if (selectedSheets.length > 0) {
+      didInitDefaultSelection.current = true;
+      return;
+    }
+    addSelectedSheet(activeSheetName);
+    didInitDefaultSelection.current = true;
+  }, [activeSheetName, selectedSheets.length, addSelectedSheet]);
+
+  // 활성 시트명이 변경될 때, 선택된 칩이 하나인 경우 실시간으로 이름 동기화
+  React.useEffect(() => {
+    if (!activeSheetName) return;
+    if (selectedSheets.length !== 1) return; // 여러 개 선택된 경우엔 사용자 선택을 존중
+    const currentName = selectedSheets[0]?.name;
+    if (currentName && currentName !== activeSheetName) {
+      renameSelectedSheet(currentName, activeSheetName);
+    }
+  }, [activeSheetName, selectedSheets, renameSelectedSheet]);
 
   return (
     <div className="p-2 mx-auto justify-center w-full max-full">
@@ -219,26 +241,41 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
               {/* 모드 선택 모달 */}
               {showModeModal && (
-                <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-48">
+                <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-56">
+                  {/* agent 옵션 */}
                   <button
                     onClick={() => {
                       setMode('agent');
                       setShowModeModal(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-t-lg ${mode === 'agent' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
-                      }`}
+                    className="w-full px-3 py-2 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
                   >
-                    agent: 변경사항 자동 적용
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-left">
+                        agent: 변경사항 자동 적용
+                      </span>
+                      {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
+                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                        {mode === 'agent' ? <Check size={16} /> : null}
+                      </span>
+                    </div>
                   </button>
+                  {/* edit 옵션 */}
                   <button
                     onClick={() => {
                       setMode('edit');
                       setShowModeModal(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-b-lg ${mode === 'edit' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
-                      }`}
+                    className="w-full px-3 py-2 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
                   >
-                    edit: 변경사항 수동 적용
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-left">
+                        edit: 변경사항 수동 적용
+                      </span>
+                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                        {mode === 'edit' ? <Check size={16} /> : null}
+                      </span>
+                    </div>
                   </button>
                 </div>
               )}

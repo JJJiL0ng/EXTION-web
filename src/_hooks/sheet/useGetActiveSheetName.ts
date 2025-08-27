@@ -24,37 +24,53 @@ export const useGetActiveSheetName = ({ spreadRef }: UseGetSheetNamesProps) => {
   }, [getActiveSheetName]);
 
   useEffect(() => {
-    if (!spreadRef?.current) return;
+    const spread = spreadRef?.current;
+    if (!spread) return;
 
     // 초기 시트명 설정
     updateActiveSheetName();
 
-    // SpreadJS의 시트 변경 이벤트 리스너 등록
-    const spread = spreadRef.current;
-    
-    // 시트 활성화 이벤트 감지
-    const handleSheetActivated = () => {
-      updateActiveSheetName();
-    };
+    // 활성화/탭 클릭/시트명 변경 시 업데이트
+    const handleSheetActivated = () => updateActiveSheetName();
+    const handleSheetRenamed = () => updateActiveSheetName();
 
-    // 이벤트 리스너 등록 (SpreadJS의 실제 이벤트명에 따라 조정 필요)
     try {
       spread.bind('ActiveSheetChanged', handleSheetActivated);
       spread.bind('SheetTabClick', handleSheetActivated);
+      // 시트 이름이 변경될 때도 최신 이름을 반영
+      spread.bind('SheetNameChanged', handleSheetRenamed);
     } catch (error) {
       console.warn('Failed to bind sheet change events:', error);
     }
 
-    // 클린업 함수
     return () => {
       try {
         spread.unbind('ActiveSheetChanged', handleSheetActivated);
         spread.unbind('SheetTabClick', handleSheetActivated);
+        spread.unbind('SheetNameChanged', handleSheetRenamed);
       } catch (error) {
         console.warn('Failed to unbind sheet change events:', error);
       }
     };
   }, [spreadRef, updateActiveSheetName]);
+
+  // ref가 늦게 준비되는 경우를 대비한 폴백: 최초 마운트 후 짧게 폴링하여 값 세팅
+  useEffect(() => {
+    if (activeSheetName) return; // 이미 세팅되었으면 스킵
+    if (!spreadRef) return;
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      if (spreadRef.current) {
+        updateActiveSheetName();
+        clearInterval(timer);
+      }
+      if (tries > 20) {
+        clearInterval(timer);
+      }
+    }, 100);
+    return () => clearInterval(timer);
+  }, [spreadRef, activeSheetName, updateActiveSheetName]);
 
   return { 
     getActiveSheetName, 

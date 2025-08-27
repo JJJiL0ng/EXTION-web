@@ -12,6 +12,7 @@ export const useSelectedSheetInfoStore = () => {
     const removeSelectedSheet = useSpreadsheetNamesStore((s) => s.removeSelectedSheet);
     const clearSelectedSheets = useSpreadsheetNamesStore((s) => s.clearSelectedSheets);
     const addAllSheets = useSpreadsheetNamesStore((s) => s.addAllSheets);
+    const renameSelectedSheet = useSpreadsheetNamesStore((s) => s.renameSelectedSheet);
 
     // 시트가 선택되어 있는지 확인하는 헬퍼 함수
     const isSheetSelected = useCallback((sheetName: string): boolean => {
@@ -46,6 +47,7 @@ export const useSelectedSheetInfoStore = () => {
         removeSelectedSheet,
         clearSelectedSheets,
         addAllSheets,
+    renameSelectedSheet,
         
         // 헬퍼 함수들
         isSheetSelected,
