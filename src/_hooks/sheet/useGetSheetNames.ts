@@ -18,8 +18,8 @@ export const useGetSheetNames = ({ spreadRef }: UseGetSheetNamesProps) => {
       var sheet = spreadRef.current.getSheet(i);
       sheetNames.push(sheet.name());
     }
-    
-    console.log(sheetNames);
+
+    console.log(`현재 시트들의 이름: ${sheetNames}`);
     return sheetNames;
   }, [spreadRef]);
 
