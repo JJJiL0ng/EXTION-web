@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import useSelectedSheetInfo from '../../_store/chat/selectedSheetInfo';
+import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore';
 
 interface SheetInfo {
     name: string;
@@ -7,11 +7,11 @@ interface SheetInfo {
 }
 
 export const useSelectedSheetInfoStore = () => {
-    const selectedSheets = useSelectedSheetInfo((state) => state.selectedSheets);
-    const addSelectedSheet = useSelectedSheetInfo((state) => state.addSelectedSheet);
-    const removeSelectedSheet = useSelectedSheetInfo((state) => state.removeSelectedSheet);
-    const clearSelectedSheets = useSelectedSheetInfo((state) => state.clearSelectedSheets);
-    const addAllSheets = useSelectedSheetInfo((state) => state.addAllSheets);
+    const selectedSheets = useSpreadsheetNamesStore((s) => s.selectedSheets);
+    const addSelectedSheet = useSpreadsheetNamesStore((s) => s.addSelectedSheet);
+    const removeSelectedSheet = useSpreadsheetNamesStore((s) => s.removeSelectedSheet);
+    const clearSelectedSheets = useSpreadsheetNamesStore((s) => s.clearSelectedSheets);
+    const addAllSheets = useSpreadsheetNamesStore((s) => s.addAllSheets);
 
     // 시트가 선택되어 있는지 확인하는 헬퍼 함수
     const isSheetSelected = useCallback((sheetName: string): boolean => {

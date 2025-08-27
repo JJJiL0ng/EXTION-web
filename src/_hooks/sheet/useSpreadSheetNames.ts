@@ -8,6 +8,7 @@ export const useSpreadSheetNames = () => {
     // store selectors (components won't import the store directly)
     const spreadSheetNames = useSpreadsheetNamesStore((s) => s.spreadSheetNames)
     const setSpreadSheetNames = useSpreadsheetNamesStore((s) => s.setSpreadSheetNames)
+        const renameSelectedSheet = useSpreadsheetNamesStore((s) => s.renameSelectedSheet)
 
     // util: extract names from current spread
     const getNamesFromSpread = (spread: any): string[] => {
@@ -45,9 +46,8 @@ export const useSpreadSheetNames = () => {
                 ]
                 const extraEvents = extraEventKeys.map(resolveEvent)
 
-        const onSheetNameChanged = (_sender: any, args: any) => {
-            const names = getNamesFromSpread(spread)
-            setSpreadSheetNames(names)
+            const onSheetNameChanged = (_sender: any, args: any) => {
+                const names = getNamesFromSpread(spread)
             const oldName = args?.oldValue ?? args?.oldName ?? args?.oldText ?? args?.old ?? '(unknown)'
             const newName = args?.newValue ?? args?.newName ?? args?.newText ?? args?.new ?? '(unknown)'
             const sheetIndex =
@@ -55,6 +55,12 @@ export const useSpreadSheetNames = () => {
                 args?.sheet?.getIndex?.() ??
                 args?.sheetIndex ??
                 '(unknown)'
+                // 먼저 선택 상태의 이름을 old -> new로 매핑해 끊김을 방지
+                        if (oldName && newName && oldName !== '(unknown)' && newName !== '(unknown)') {
+                            try { renameSelectedSheet(oldName, newName) } catch (e) { console.warn('renameSelectedSheet failed', e) }
+                        }
+                // 그 다음 최신 목록으로 동기화 및 인덱스 재계산
+                setSpreadSheetNames(names)
             // 로그
             console.log('[useSpreadSheetNames] Sheet name changed', { sheetIndex, oldName, newName, names })
         }
@@ -108,7 +114,7 @@ export const useSpreadSheetNames = () => {
                         }
                     })
         }
-        }, [spreadRef, setSpreadSheetNames])
+            }, [spreadRef, setSpreadSheetNames, renameSelectedSheet])
 
     return {
         spreadRef,
