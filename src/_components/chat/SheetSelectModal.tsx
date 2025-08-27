@@ -37,10 +37,17 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
   };
 
   const handleAddAllSheets = () => {
-    const allSheets = spreadSheetNames.map((name, index) => ({ name, index }));
-    addAllSheets(allSheets);
-    // 모든 시트에 대해 onSelectSheet 호출
-    spreadSheetNames.forEach(sheetName => onSelectSheet(sheetName));
+    // 모두 선택된 상태면 전체 해제, 아니면 전체 선택
+    if (spreadSheetNames.length > 0 && spreadSheetNames.every(name => isSheetSelected(name))) {
+      clearSelectedSheets();
+      // 해제 시에도 콜백 동작을 기존 토글 패턴과 동일하게 유지
+      spreadSheetNames.forEach(sheetName => onSelectSheet(sheetName));
+    } else {
+      const allSheets = spreadSheetNames.map((name, index) => ({ name, index }));
+      addAllSheets(allSheets);
+      // 모든 시트에 대해 onSelectSheet 호출
+      spreadSheetNames.forEach(sheetName => onSelectSheet(sheetName));
+    }
   };
 
   const isAllSheetsSelected = spreadSheetNames.length > 0 && spreadSheetNames.every(name => isSheetSelected(name));
