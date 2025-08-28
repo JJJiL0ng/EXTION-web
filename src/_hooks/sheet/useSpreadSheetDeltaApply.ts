@@ -17,9 +17,9 @@ export const useSpreadSheetDeltaApply = () => {
     isApplyingServerDelta.current = true;
     
     try {
-      const sheet = spreadjs.getSheetFromName?.(delta.sheetName) || spreadjs.getActiveSheet();
+      const sheet = spreadjs.getSheetFromName?.(delta.parsedSheetName) || spreadjs.getActiveSheet();
       if (!sheet) {
-        console.warn(`시트를 찾을 수 없습니다: ${delta.sheetName}`);
+        console.warn(`시트를 찾을 수 없습니다: ${delta.parsedSheetName}`);
         return;
       }
 
@@ -99,15 +99,15 @@ export const useSpreadSheetDeltaApply = () => {
           break;
           
         case DeltaAction.ADD_SHEET:
-          if (delta.sheetName) {
-            const newSheet = new GC.Spread.Sheets.Worksheet(delta.sheetName);
+          if (delta.parsedSheetName) {
+            const newSheet = new GC.Spread.Sheets.Worksheet(delta.parsedSheetName);
             spreadjs.addSheet(spreadjs.getSheetCount(), newSheet);
           }
           break;
           
         case DeltaAction.DELETE_SHEET:
-          if (delta.sheetName) {
-            const sheetIndex = spreadjs.getSheetIndex(delta.sheetName);
+          if (delta.parsedSheetName) {
+            const sheetIndex = spreadjs.getSheetIndex(delta.parsedSheetName);
             if (sheetIndex >= 0) {
               spreadjs.removeSheet(sheetIndex);
             }
@@ -115,8 +115,8 @@ export const useSpreadSheetDeltaApply = () => {
           break;
           
         case DeltaAction.RENAME_SHEET:
-          if (delta.sheetName && delta.value) {
-            const currentSheet = spreadjs.getSheetFromName(delta.sheetName);
+          if (delta.parsedSheetName && delta.value) {
+            const currentSheet = spreadjs.getSheetFromName(delta.parsedSheetName);
             if (currentSheet) {
               currentSheet.name(delta.value);
             }

@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Paperclip, Settings, ChevronDown } from 'lucide-react';
+import { ChevronDown, Check} from 'lucide-react';
 import { useMainChat } from '../../_hooks/chat/useChatStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
-import { useChatMode , ChatMode} from '../../_hooks/sheet/useChatMode';
-import FileUploadCard from './UploadedFileNameCard';
+import { useChatMode, ChatMode } from '../../_hooks/sheet/useChatMode';
+import SelectedSheetNameCard from './SelectedSheetNameCard';
+import { useGetActiveSheetName } from '@/_hooks/sheet/useGetActiveSheetName'
+import FileAddButton from './FileAddButton';
+import { useSelectedSheetInfoStore } from '../../_hooks/sheet/useSelectedSheetInfoStore';
 
 interface ChatInputBoxProps {
   // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
@@ -13,6 +16,8 @@ interface ChatInputBoxProps {
   placeholder?: string;
   disabled?: boolean;
   userId?: string;
+  spreadRef?: React.MutableRefObject<any> | React.RefObject<any> | null;
+  onFileAddClick?: () => void;
 }
 
 // type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
@@ -21,7 +26,9 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   // onSendMessage,
   placeholder = "수정사항을 입력하세요...",
   disabled = false,
-  userId = getOrCreateGuestId() // Guest ID 사용
+  userId = getOrCreateGuestId(), // Guest ID 사용
+  spreadRef,
+  onFileAddClick
 }) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -33,10 +40,12 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
-  // const modelModalRef = useRef<HTMLDivElement>(null);
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
+
+  // useSelectedSheetInfoStore 훅 사용
+  const { selectedSheets, removeSelectedSheet, addSelectedSheet, renameSelectedSheet } = useSelectedSheetInfoStore();
 
   // v2 채팅 훅 사용
   const { sendMessage: sendChatMessage, isLoading } = useMainChat(userId);
@@ -59,6 +68,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     if (message.trim() || selectedFile) {
       const messageToSend = message;
       const fileToSend = selectedFile;
+      const selectedSheetsToSend = selectedSheets; // 선택된 시트 정보 포함
 
       // 메시지 전송 전에 입력창 초기화
       setMessage('');
@@ -75,6 +85,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         }, 0);
       }
 
+      // 선택된 시트 정보와 함께 메시지 전송
+      console.log('Sending message with selected sheets:', selectedSheetsToSend);
       await sendChatMessage(messageToSend);
     }
   };
@@ -125,12 +137,12 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      
+
       // 모드 모달 외부 클릭 확인
       if (showModeModal && modeModalRef.current && !modeModalRef.current.contains(target)) {
         setShowModeModal(false);
       }
-      
+
       // 모델 모달 외부 클릭 확인
       // if (showModelModal && modelModalRef.current && !modelModalRef.current.contains(target)) {
       //   setShowModelModal(false);
@@ -143,14 +155,55 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     }
   }, [showModeModal]); // , showModelModal
 
+  const { activeSheetName } = useGetActiveSheetName({ spreadRef: spreadRef ?? null });
+  // 최초 1회만 activeSheetName을 기본 선택으로 추가
+  const didInitDefaultSelection = React.useRef(false);
+  React.useEffect(() => {
+    if (didInitDefaultSelection.current) return;
+    if (!activeSheetName) return;
+    if (selectedSheets.length > 0) {
+      didInitDefaultSelection.current = true;
+      return;
+    }
+    addSelectedSheet(activeSheetName);
+    didInitDefaultSelection.current = true;
+  }, [activeSheetName, selectedSheets.length, addSelectedSheet]);
+
+  // 활성 시트명이 변경될 때, 선택된 칩이 하나인 경우 실시간으로 이름 동기화
+  React.useEffect(() => {
+    if (!activeSheetName) return;
+    if (selectedSheets.length !== 1) return; // 여러 개 선택된 경우엔 사용자 선택을 존중
+    const currentName = selectedSheets[0]?.name;
+    if (currentName && currentName !== activeSheetName) {
+      renameSelectedSheet(currentName, activeSheetName);
+    }
+  }, [activeSheetName, selectedSheets, renameSelectedSheet]);
+
   return (
     <div className="p-2 mx-auto justify-center w-full max-full">
       <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded-xl overflow-hidden transition-colors`}>
-        {/* 상단 영역 - 파일 선택 */}
+        {/* 상단 영역 - 파일 선택 + 선택된 시트들 */}
         <div className="p-3 flex items-center justify-between relative">
-           <FileUploadCard />
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* 파일 선택 버튼을 가장 왼쪽에 배치 */}
+            <FileAddButton 
+              onClick={onFileAddClick} 
+              isSelected={selectedSheets.length > 0}
+            />
+
+            {/* 선택된 시트들 표시 */}
+            {selectedSheets.map((sheet) => (
+              <SelectedSheetNameCard 
+                key={sheet.name}
+                spreadRef={spreadRef} 
+                fileName={sheet.name}
+                onRemove={() => removeSelectedSheet(sheet.name)}
+                mode='chatInputBox'
+              />
+            ))}
+          </div>
         </div>
-        <div className="border-t border-gray-200"/>
+        <div className="border-t border-gray-200" />
         {/* 메인 입력 영역 */}
         <div className="px-3 py-2">
           <textarea
@@ -168,50 +221,63 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             rows={1}
           />
         </div>
-          
+
         {/* 하단 영역 - 컨트롤들 */}
         <div className="px-3 py-1 flex items-center justify-between relative">
           <div className="flex items-center">
             {/* 모드 선택 */}
             <div className="py-2 relative" ref={modeModalRef}>
               <button
-          onClick={() => setShowModeModal(!showModeModal)}
-          className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors w-20"
-          disabled={disabled}
-          // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
+                onClick={() => setShowModeModal(!showModeModal)}
+                className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors w-20"
+                disabled={disabled}
+              // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
               >
-          <span className="capitalize">{mode}</span>
-          <span className="flex items-center" style={{ height: '24px' }}>
-            <ChevronDown size={16} /> {/* 크기 크게 조정 */}
-          </span>
+                <span className="capitalize">{mode}</span>
+                <span className="flex items-center" style={{ height: '24px' }}>
+                  <ChevronDown size={16} /> {/* 크기 크게 조정 */}
+                </span>
               </button>
-            
+
               {/* 모드 선택 모달 */}
               {showModeModal && (
-          <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-48">
-            <button
-              onClick={() => {
-                setMode('agent');
-                setShowModeModal(false);
-              }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-t-lg ${
-                mode === 'agent' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
-              }`}
-            >
-              agent: 변경사항 자동 적용
-            </button>
-            <button
-              onClick={() => {
-                setMode('edit');
-                setShowModeModal(false);
-              }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-b-lg ${
-                mode === 'edit' ? 'bg-gray-200 text-gray-700' : 'text-gray-700'
-              }`}
-            >
-              edit: 변경사항 수동 적용
-            </button>
-          </div>
+                <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-56">
+                  {/* agent 옵션 */}
+                  <button
+                    onClick={() => {
+                      setMode('agent');
+                      setShowModeModal(false);
+                    }}
+                    className="w-full px-3 py-2 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-left">
+                        agent: 변경사항 자동 적용
+                      </span>
+                      {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
+                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                        {mode === 'agent' ? <Check size={16} /> : null}
+                      </span>
+                    </div>
+                  </button>
+                  {/* edit 옵션 */}
+                  <button
+                    onClick={() => {
+                      setMode('edit');
+                      setShowModeModal(false);
+                    }}
+                    className="w-full px-3 py-2 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-left">
+                        edit: 변경사항 수동 적용
+                      </span>
+                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                        {mode === 'edit' ? <Check size={16} /> : null}
+                      </span>
+                    </div>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -227,7 +293,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
               </button>
               
               {/* 모델 선택 모달 */}
-              {/* {showModelModal && (
+            {/* {showModelModal && (
                 <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 ">
                   <button
                     onClick={() => {
@@ -271,11 +337,10 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
           <button
             onClick={handleSend}
             disabled={disabled || isLoading || (!message.trim() && !selectedFile)}
-            className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${
-              disabled || isLoading || (!message.trim() && !selectedFile)
-                ? 'bg-gray-300 text-white cursor-not-allowed'
-                : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
-            }`}
+            className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${disabled || isLoading || (!message.trim() && !selectedFile)
+              ? 'bg-gray-300 text-white cursor-not-allowed'
+              : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
+              }`}
           >
             {isLoading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

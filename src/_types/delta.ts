@@ -31,7 +31,7 @@ export interface CellStyle {
 
 export interface CellDelta {
   action: DeltaAction;
-  sheetName: string;
+  parsedSheetName: string;
   cellAddress?: string;
   range?: string;
   value?: any;

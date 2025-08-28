@@ -88,7 +88,8 @@ export interface LoadSpreadSheetRequest {
 
 export interface ApplyDeltaRequest {
   action: string;
-  sheetName: string;
+  parsedSheetName: string;
+  
   cellAddress?: string;
   range?: string;
   value?: any;
@@ -110,6 +111,7 @@ export interface ApplyDeltaRequest {
 
 export interface BatchDeltasRequest {
   userId: string; // 백엔드에서 필요한 userId 추가
+  spreadsheetId: string; // 백엔드에서 필요한 spreadsheetId 추가
   deltas: ApplyDeltaRequest[];
 }
 
