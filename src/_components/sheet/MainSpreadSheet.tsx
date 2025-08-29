@@ -575,8 +575,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 return;
             }
 
-            sheet.setRowCount(100);  // 기본 100행
-            sheet.setColumnCount(26); // 기본 26열
+            sheet.setRowCount(500);  // 기본 250행
+            sheet.setColumnCount(50); // 기본 50열
 
             // 가상화 및 성능 설정 - null 체크 추가
             if (sheet.suspendPaint && typeof sheet.suspendPaint === 'function') {
@@ -640,8 +640,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     // 기본 스타일 설정
     const setupDefaultStyles = (sheet: any) => {
-        sheet.setColumnWidth(1, 200);
-        sheet.setColumnWidth(2, 200);
+        // sheet.setColumnWidth(1, 200);
+        // sheet.setColumnWidth(2, 200);
     };
 
     // 파일 업로드 모달에서 파일 선택 버튼 클릭
@@ -713,8 +713,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 sheet.name("Sheet1");
 
                 // 새 시트에 최적화 설정 적용
-                sheet.setRowCount(100);
-                sheet.setColumnCount(26);
+                // sheet.setRowCount(100);
+                // sheet.setColumnCount(26);
                 configurePerformanceSettings(spreadRef.current);
 
                 // 빈 스프레드시트로 백엔드에 생성 요청
@@ -730,8 +730,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                             {
                                 name: 'Sheet1',
                                 data: {},
-                                rowCount: 100,
-                                columnCount: 26
+                                // rowCount: 100,
+                                // columnCount: 26
                             }
                         ],
                         createdAt: new Date().toISOString(),
