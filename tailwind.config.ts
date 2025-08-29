@@ -29,7 +29,8 @@ const config: Config = {
     'px-1',
     'pl-2',
     'gap-3',
-    'w-56'
+    'w-56',
+    'bg-gray-200'
 
   ],
   theme: {
