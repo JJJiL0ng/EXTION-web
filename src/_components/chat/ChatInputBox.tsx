@@ -249,34 +249,34 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                       setShowModeModal(false);
                     }}
                     className="w-full px-3 py-2 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
-                  >
+                    >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-left">
-                        agent: 변경사항 자동 적용
+                      <span className="text-left ">
+                      agent <span className="text-xs text-gray-500">변경사항 자동 적용</span>
                       </span>
                       {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
                       <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                        {mode === 'agent' ? <Check size={16} /> : null}
+                      {mode === 'agent' ? <Check size={16} /> : null}
                       </span>
                     </div>
-                  </button>
-                  {/* edit 옵션 */}
-                  <button
+                    </button>
+                    {/* edit 옵션 */}
+                    <button
                     onClick={() => {
                       setMode('edit');
                       setShowModeModal(false);
                     }}
                     className="w-full px-3 py-2 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
-                  >
+                    >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left">
-                        edit: 변경사항 수동 적용
+                      edit <span className="text-xs text-gray-500">변경사항 수동 적용</span>
                       </span>
                       <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                        {mode === 'edit' ? <Check size={16} /> : null}
+                      {mode === 'edit' ? <Check size={16} /> : null}
                       </span>
                     </div>
-                  </button>
+                    </button>
                 </div>
               )}
             </div>

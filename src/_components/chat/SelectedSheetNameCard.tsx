@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { File, X, Check } from 'lucide-react';
+import { Sheet, X, Check } from 'lucide-react';
 
 
 export const SelectedSheetNameCard: React.FC<{
@@ -63,7 +63,7 @@ export const SelectedSheetNameCard: React.FC<{
             ) : mode === 'modal' && isClicked ? (
               <Check size={16} className="mr-1 text-gray-500" />
             ) : (
-              <File size={16} className="mr-1 text-gray-700" />
+              <Sheet size={16} className="mr-1 text-gray-700" />
             )
             )}
           <span className={`${(isHovered && mode === 'chatInputBox') || (mode === 'modal' && isClicked) ? 'text-gray-400' : 'text-gray-700'}`}>
