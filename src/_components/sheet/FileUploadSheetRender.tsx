@@ -1,7 +1,7 @@
 import React from 'react';
 import { SpreadSheets } from "@mescius/spread-sheets-react";
 
-interface FileUploadZoneProps {
+interface FileUploadSheetRenderProps {
     // 파일 업로드 상태
     isFileUploaded: boolean;
     isDragActive: boolean;
@@ -28,7 +28,7 @@ interface FileUploadZoneProps {
 /**
  * 파일 업로드 영역 컴포넌트
  */
-export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
+export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
     isFileUploaded,
     isDragActive,
     uploadState,

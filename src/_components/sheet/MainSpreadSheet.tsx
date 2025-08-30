@@ -25,7 +25,7 @@ import { configureLicense } from '../../_utils/sheet/spreadJSConfig';
 import { SpreadSheetToolbar } from './SpreadSheetToolbar';
 import { StatusDisplay } from './StatusDisplay';
 import { ChatButton } from './ChatButton';
-import { FileUploadZone } from './FileUploadZone';
+import { FileUploadSheetRender } from './FileUploadSheetRender';
 
 // SpreadJS 라이선싱 초기화
 configureLicense();
@@ -438,7 +438,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             </div>
 
             {/* 파일 업로드 영역 및 SpreadJS */}
-            <FileUploadZone
+            <FileUploadSheetRender
                 isFileUploaded={isFileUploaded}
                 isDragActive={uiState.isDragActive}
                 uploadState={uploadState}
