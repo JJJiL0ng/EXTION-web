@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { ChevronDown, Check} from 'lucide-react';
 import { useMainChat } from '../../_hooks/chat/useChatStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
-import { useChatMode, ChatMode } from '../../_hooks/sheet/useChatMode';
+import { useChatMode, ChatMode } from '../../_hooks/chat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { useGetActiveSheetName } from '@/_hooks/sheet/useGetActiveSheetName'
 import FileAddButton from './FileAddButton';

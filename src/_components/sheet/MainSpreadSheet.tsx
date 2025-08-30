@@ -1,87 +1,38 @@
 "use client";
 import '@mescius/spread-sheets-resources-ko';
 import '@mescius/spread-sheets-io';
-import React, { useState, useRef, useEffect, useCallback, useMemo, useReducer } from "react";
-import { SpreadSheets, Worksheet, Column } from "@mescius/spread-sheets-react";
-import * as GC from "@mescius/spread-sheets";
-import Image from 'next/image';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useParams } from 'next/navigation';
+// Hooks
 import { useFileUpload } from '../../_hooks/sheet/useFileUpload';
 import { useFileExport } from '../../_hooks/sheet/useFileExport';
 import { useSheetCreate } from '../../_hooks/sheet/useSheetCreate';
 import { useSpreadSheetDelta } from '../../_hooks/sheet/useSpreadSheetDelta';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
+import { useUIState } from '../../_hooks/sheet/useUIState';
+import { useSpreadJSInit } from '../../_hooks/sheet/useSpreadJSInit';
+
+// Stores
 import { useAuthStore } from '@/stores/authStore';
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
-import { getOrCreateGuestId } from '@/_utils/guestUtils';
 
-// SpreadJS 라이선싱
-var SpreadJSKey = "extion.ai|www.extion.ai,994437339345835#B14QusSMWhke8lnc4pUc8EXSwo7dVZTdiBzLYN6U5dHN6Q4bVhmTjRWRYJGauVkawIFdNl7b7V6YzoGWkRjUM9mTxEUe4J6UE3ENLtyK6U6Twg6V6ZkVoFnMRZDULh7UVpHcyBlTJd4S9s6dvMTSnJ7LalkRJJ5TUhzcE3EcHdDRwQDe6dHTxEGeycDMsJEbiFFV92SOXJGZ5llMwg7M9VzMsJGSrEkds36R7h5dnJGTtxGZ69EcpFFcvcHe0JVU52me9gzZ5J4KaFmZVRlQStUciNlRwYmQZt6VWdDWuFFVklzVtdFdxRzNqV6UZJVb83UeZdkI0IyUiwiI6EDMCBTNFdjI0ICSiwyM4UTN7YDO4kTM0IicfJye#4Xfd5nIIlkSCJiOiMkIsICOx8idgMlSgQWYlJHcTJiOi8kI1tlOiQmcQJCLiYjM6UDNwACMygDM5IDMyIiOiQncDJCLikWYu86bpRHel9yd7dHLpFmLu3Wa4hXZiojIz5GRiwiIkqI1cSI1sa00wyY1iojIh94QiwiI5MDO5QzM9MzM7MDN4kTOiojIklkIs4XXbpjInxmZiwSZzxWYmpjIyNHZisnOiwmbBJye0ICRiwiI34zdIlDas9GerImVuF7alljavpFOKVlbSNVOJtWcsdjN4cFNWplZ6FTUrEzcsNFW5EEc8M7UGREaDFHULp7L9JHZnpGU9p4dVVHO8FTSNFGa8VzROVURx5GR4EESHlTNjRWULt";
-GC.Spread.Sheets.LicenseKey = SpreadJSKey;
-GC.Spread.Common.CultureManager.culture("ko-kr");
+// Utils
+import { getOrCreateGuestId } from '@/_utils/guestUtils';
+import { FileConverter } from '../../_utils/sheet/fileConverters';
+import { configureLicense } from '../../_utils/sheet/spreadJSConfig';
+
+// Components
+import { SpreadSheetToolbar } from './SpreadSheetToolbar';
+import { StatusDisplay } from './StatusDisplay';
+import { ChatButton } from './ChatButton';
+import { FileUploadZone } from './FileUploadZone';
+
+// SpreadJS 라이선싱 초기화
+configureLicense();
 
 interface MainSpreadSheetProps {
     spreadRef: React.MutableRefObject<any>;
 }
-
-// 통합된 UI 상태 관리를 위한 타입 정의
-interface UIState {
-    isDragActive: boolean;
-    dragCounter: number;
-    showChatButton: boolean;
-    hasAutoOpenedChat: boolean;
-}
-
-// UI 상태 액션 타입
-type UIAction =
-    | { type: 'SET_DRAG_ACTIVE'; payload: boolean }
-    | { type: 'INCREMENT_DRAG_COUNTER' }
-    | { type: 'DECREMENT_DRAG_COUNTER' }
-    | { type: 'RESET_DRAG_COUNTER' }
-    | { type: 'SET_SHOW_CHAT_BUTTON'; payload: boolean }
-    | { type: 'SET_AUTO_OPENED_CHAT'; payload: boolean }
-    | { type: 'RESET_UI_STATE' };
-
-// UI 상태 reducer
-const uiReducer = (state: UIState, action: UIAction): UIState => {
-    switch (action.type) {
-        case 'SET_DRAG_ACTIVE':
-            return { ...state, isDragActive: action.payload };
-        case 'INCREMENT_DRAG_COUNTER':
-            return { ...state, dragCounter: state.dragCounter + 1 };
-        case 'DECREMENT_DRAG_COUNTER': {
-            const newDragCounter = Math.max(0, state.dragCounter - 1);
-            return { 
-                ...state, 
-                dragCounter: newDragCounter,
-                isDragActive: newDragCounter > 0 && state.isDragActive
-            };
-        }
-        case 'RESET_DRAG_COUNTER':
-            return { ...state, dragCounter: 0, isDragActive: false };
-        case 'SET_SHOW_CHAT_BUTTON':
-            return { ...state, showChatButton: action.payload };
-        case 'SET_AUTO_OPENED_CHAT':
-            return { ...state, hasAutoOpenedChat: action.payload };
-        case 'RESET_UI_STATE':
-            return {
-                isDragActive: false,
-                dragCounter: 0,
-                showChatButton: true,
-                hasAutoOpenedChat: false,
-            };
-        default:
-            return state;
-    }
-};
-
-// 초기 UI 상태
-const initialUIState: UIState = {
-    isDragActive: false,
-    dragCounter: 0,
-    showChatButton: true,
-    hasAutoOpenedChat: false,
-};
 
 export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // URL 파라미터 추출
@@ -93,7 +44,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     const { isChatVisible, showChat } = useChatVisibility();
 
     // 통합된 UI 상태 관리
-    const [uiState, uiDispatch] = useReducer(uiReducer, initialUIState);
+    const { uiState, actions: uiActions } = useUIState();
 
     // 파일 업로드 상태 관리 (Zustand)
     const { isFileUploaded, setIsFileUploaded } = useSpreadsheetUploadStore();
@@ -120,9 +71,9 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     // AI 버튼 클릭 핸들러 - 통합된 상태 사용
     const handleShowChat = useCallback(() => {
-        uiDispatch({ type: 'SET_SHOW_CHAT_BUTTON', payload: false }); // 즉시 버튼 제거
+        uiActions.setShowChatButton(false); // 즉시 버튼 제거
         showChat(); // 채팅 열기
-    }, [showChat]);
+    }, [showChat, uiActions]);
 
     const [hostStyle, setHostStyle] = useState({
         width: '100vw',
@@ -141,7 +92,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     const {
         isCreating,
         error: createError,
-        createdSheet,
         createSheetWithDefaults,
         resetState: resetCreateState,
         clearError: clearCreateError
@@ -178,243 +128,11 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         }
     });
 
-    // 파일 데이터를 JSON으로 변환하는 함수 (SpreadJS 유틸리티 활용)
-    const convertFileDataToJson = useCallback(async (fileData: any, fileName: string): Promise<Record<string, any>> => {
-        try {
-            // 이미 JSON 객체인 경우 그대로 반환 (Blob이나 File 객체가 아닌 경우)
-            if (typeof fileData === 'object' && fileData !== null &&
-                !(fileData instanceof Blob) && !(fileData instanceof File)) {
-                return fileData;
-            }
-
-            // 파일 확장자 확인
-            const fileExtension = fileName.toLowerCase().split('.').pop();
-
-            // Excel 파일 (.xlsx, .xls) 처리
-            if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-                return new Promise((resolve, reject) => {
-                    // SpreadJS 인스턴스 체크 강화
-                    if (!spreadRef.current) {
-                        console.warn('SpreadJS 인스턴스가 아직 초기화되지 않았습니다. 임시 워크북을 사용합니다.');
-                    }
-
-                    // 임시 워크북 생성
-                    let tempWorkbook;
-                    try {
-                        tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
-                        if (!tempWorkbook) {
-                            reject(new Error('임시 워크북 생성에 실패했습니다.'));
-                            return;
-                        }
-                    } catch (error) {
-                        reject(new Error(`임시 워크북 생성 실패: ${error}`));
-                        return;
-                    }
-
-                    tempWorkbook.import(
-                        fileData,
-                        (result: any) => {
-                            try {
-                                // SpreadJS JSON 형태로 변환
-                                const jsonData = tempWorkbook.toJSON({
-                                    includeBindingSource: true,
-                                    ignoreFormula: false,
-                                    ignoreStyle: false,
-                                    saveAsView: true,
-                                    rowHeadersAsFrozenColumns: true,
-                                    columnHeadersAsFrozenRows: true,
-                                    includeAutoMergedCells: true,
-                                    saveR1C1Formula: true
-                                });
-
-                                // 메타데이터 추가
-                                const result = {
-                                    fileName: fileName,
-                                    originalType: 'excel',
-                                    spreadsheetData: jsonData,
-                                    timestamp: new Date().toISOString(),
-                                    fileExtension: fileExtension
-                                };
-
-                                // 임시 워크북 정리
-                                tempWorkbook.destroy();
-                                resolve(result);
-                            } catch (error) {
-                                tempWorkbook.destroy();
-                                reject(error);
-                            }
-                        },
-                        (error: any) => {
-                            tempWorkbook.destroy();
-                            reject(new Error(`Excel 파일 변환 실패: ${error.message || error}`));
-                        },
-                        {
-                            fileType: fileExtension === 'xlsx' ?
-                                GC.Spread.Sheets.FileType.excel :
-                                GC.Spread.Sheets.FileType.excel
-                        }
-                    );
-                });
-            }
-
-            // CSV 파일 처리
-            if (fileExtension === 'csv') {
-                return new Promise((resolve, reject) => {
-                    // SpreadJS 인스턴스 체크 강화
-                    if (!spreadRef.current) {
-                        console.warn('SpreadJS 인스턴스가 아직 초기화되지 않았습니다. 임시 워크북을 사용합니다.');
-                    }
-
-                    // 임시 워크북 생성
-                    let tempWorkbook;
-                    try {
-                        tempWorkbook = new GC.Spread.Sheets.Workbook(document.createElement('div'));
-                        if (!tempWorkbook) {
-                            reject(new Error('임시 워크북 생성에 실패했습니다.'));
-                            return;
-                        }
-                    } catch (error) {
-                        reject(new Error(`임시 워크북 생성 실패: ${error}`));
-                        return;
-                    }
-
-                    tempWorkbook.import(
-                        fileData,
-                        (result: any) => {
-                            try {
-                                // SpreadJS JSON 형태로 변환
-                                const jsonData = tempWorkbook.toJSON({
-                                    includeBindingSource: true,
-                                    ignoreFormula: false,
-                                    ignoreStyle: false,
-                                    saveAsView: true,
-                                    rowHeadersAsFrozenColumns: true,
-                                    columnHeadersAsFrozenRows: true,
-                                    includeAutoMergedCells: true,
-                                    saveR1C1Formula: true
-                                });
-
-                                // 메타데이터 추가
-                                const result = {
-                                    fileName: fileName,
-                                    originalType: 'csv',
-                                    spreadsheetData: jsonData,
-                                    timestamp: new Date().toISOString(),
-                                    fileExtension: fileExtension
-                                };
-
-                                // 임시 워크북 정리
-                                tempWorkbook.destroy();
-                                resolve(result);
-                            } catch (error) {
-                                tempWorkbook.destroy();
-                                reject(error);
-                            }
-                        },
-                        (error: any) => {
-                            tempWorkbook.destroy();
-                            reject(new Error(`CSV 파일 변환 실패: ${error.message || error}`));
-                        },
-                        {
-                            fileType: GC.Spread.Sheets.FileType.csv
-                        }
-                    );
-                });
-            }
-
-            // JSON 파일 처리
-            if (fileExtension === 'json') {
-                if (typeof fileData === 'string') {
-                    try {
-                        const parsedJson = JSON.parse(fileData);
-                        return {
-                            fileName: fileName,
-                            originalType: 'json',
-                            spreadsheetData: parsedJson,
-                            timestamp: new Date().toISOString(),
-                            fileExtension: fileExtension
-                        };
-                    } catch {
-                        return {
-                            fileName: fileName,
-                            originalType: 'json',
-                            content: fileData,
-                            error: 'JSON 파싱 실패',
-                            timestamp: new Date().toISOString(),
-                            fileExtension: fileExtension
-                        };
-                    }
-                }
-            }
-
-            // SJS (SpreadJS 네이티브) 파일 처리
-            if (fileExtension === 'sjs') {
-                if (typeof fileData === 'string') {
-                    try {
-                        const parsedSjs = JSON.parse(fileData);
-                        return {
-                            fileName: fileName,
-                            originalType: 'sjs',
-                            spreadsheetData: parsedSjs,
-                            timestamp: new Date().toISOString(),
-                            fileExtension: fileExtension
-                        };
-                    } catch {
-                        return {
-                            fileName: fileName,
-                            originalType: 'sjs',
-                            content: fileData,
-                            error: 'SJS 파싱 실패',
-                            timestamp: new Date().toISOString(),
-                            fileExtension: fileExtension
-                        };
-                    }
-                }
-            }
-
-            // 문자열인 경우 JSON 파싱 시도
-            if (typeof fileData === 'string') {
-                try {
-                    const parsedData = JSON.parse(fileData);
-                    return {
-                        fileName: fileName,
-                        originalType: 'text',
-                        spreadsheetData: parsedData,
-                        timestamp: new Date().toISOString(),
-                        fileExtension: fileExtension
-                    };
-                } catch {
-                    // JSON 파싱 실패 시 문자열을 객체로 감싸서 반환
-                    return {
-                        fileName: fileName,
-                        originalType: 'text',
-                        content: fileData,
-                        timestamp: new Date().toISOString(),
-                        fileExtension: fileExtension
-                    };
-                }
-            }
-
-            // 기타 타입의 경우 기본 구조로 감싸서 반환
-            return {
-                fileName: fileName,
-                originalType: typeof fileData,
-                data: fileData,
-                timestamp: new Date().toISOString(),
-                fileExtension: fileExtension
-            };
-
-        } catch (error) {
-            console.warn('파일 데이터 JSON 변환 실패:', error);
-            // 변환 실패 시 기본 구조 반환
-            return {
-                fileName: fileName,
-                originalType: 'unknown',
-                error: `Failed to convert file data: ${error instanceof Error ? error.message : error}`,
-                timestamp: new Date().toISOString()
-            };
-        }
-    }, [spreadRef]);
+    // SpreadJS 초기화 훅
+    const { initSpread, createNewSpreadsheet } = useSpreadJSInit({
+        spreadRef,
+        deltaManager
+    });
 
     // 파일 업로드 훅
     const {
@@ -438,7 +156,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             // 파일 업로드 후 0.5초 뒤에 Chat 버튼 자동 클릭 (딱 한번만)
             if (!uiState.hasAutoOpenedChat) {
                 setTimeout(() => {
-                    uiDispatch({ type: 'SET_AUTO_OPENED_CHAT', payload: true }); // 자동 열기 완료 표시
+                    uiActions.setAutoOpenedChat(true); // 자동 열기 완료 표시
                     handleShowChat(); // Chat 버튼 자동 클릭
                 }, 500);
             }
@@ -449,8 +167,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 const currentUserId = userId;
                 console.log('🔍 사용자 ID:', currentUserId, user?.uid ? '(로그인)' : '(게스트)');
 
-                // 파일 데이터를 JSON으로 변환 (async 함수이므로 await 사용)
-                const jsonData = await convertFileDataToJson(fileData, fileName);
+                // 파일 데이터를 JSON으로 변환 (새로운 FileConverter 사용)
+                const jsonData = await FileConverter.convertToJson(fileData, fileName);
                 console.log('🔄 JSON 변환된 데이터:', jsonData);
 
                 await createSheetWithDefaults(
@@ -576,7 +294,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     }, [spreadRef]);
 
 
-    // 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리 - 통합된 상태 사용
+    // 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리
     useEffect(() => {
         if (isChatVisible) {
             // 채팅이 열릴 때는 handleShowChat에서 이미 처리했으므로 아무것도 하지 않음
@@ -584,119 +302,29 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         } else {
             // 채팅이 닫힐 때는 300ms 지연 후 버튼 표시 (채팅 닫힘 애니메이션 시간과 맞춤)
             const timer = setTimeout(() => {
-                uiDispatch({ type: 'SET_SHOW_CHAT_BUTTON', payload: true });
+                uiActions.setShowChatButton(true);
             }, 300); // 300ms 지연
 
             return () => clearTimeout(timer);
         }
-    }, [isChatVisible]);
+    }, [isChatVisible, uiActions]);
 
-    const initSpread = function (spread: any) {
-        try {
-            // SpreadJS 인스턴스 유효성 검사
-            if (!spread) {
-                console.error('❌ SpreadJS 인스턴스가 null 또는 undefined입니다.');
-                return;
-            }
 
-            // SpreadJS 인스턴스 저장
-            spreadRef.current = spread;
-
-            // 성능 최적화 설정
-            configurePerformanceSettings(spread);
-
-            // 기본 시트 설정 - 성능 최적화된 크기
-            const sheet = spread.getActiveSheet();
-            if (!sheet) {
-                console.error('❌ 활성 시트를 가져올 수 없습니다.');
-                return;
-            }
-
-            sheet.setRowCount(500);  // 기본 250행
-            sheet.setColumnCount(50); // 기본 50열
-
-            // 가상화 및 성능 설정 - null 체크 추가
-            if (sheet.suspendPaint && typeof sheet.suspendPaint === 'function') {
-                sheet.suspendPaint();
-            }
-
-            try {
-                // 기본 데이터 설정
-                setupDefaultData(sheet);
-                setupDefaultStyles(sheet);
-            } finally {
-                // resumePaint도 null 체크
-                if (sheet.resumePaint && typeof sheet.resumePaint === 'function') {
-                    sheet.resumePaint();
-                }
-            }
-
-            // 델타 자동저장을 위한 이벤트 리스너 설정
-            const cleanupDeltaListeners = deltaManager.setupEventListeners(spread);
-
-            // 정리 함수를 나중에 사용하기 위해 저장
-            (spread as any)._deltaCleanup = cleanupDeltaListeners;
-
-            console.log('✅ SpreadJS 초기화 완료 - 최적화된 설정 및 델타 자동저장 적용');
-
-        } catch (error) {
-            console.error('❌ SpreadJS 초기화 실패:', error);
-            // 에러 발생 시에도 기본 인스턴스는 저장
-            if (spread) {
-                spreadRef.current = spread;
-            }
-        }
-    };
-
-    // 성능 최적화 설정
-    const configurePerformanceSettings = (spread: any) => {
-        try {
-            const options = spread.options;
-            options.calcOnDemand = true;
-            options.allowUserResize = true;
-            options.allowUserDragDrop = false;
-            options.allowUserDragFill = true;
-            options.scrollIgnoreHidden = true;
-            options.scrollByPixel = false;
-            options.referenceStyle = GC.Spread.Sheets.ReferenceStyle.a1;
-
-            spread.getHost().style.overflow = 'auto';
-            spread.getHost().style.rowHeaderVisible = true;
-            spread.getHost().style.colHeaderVisible = true;
-
-            console.log('🔧 성능 최적화 설정 완료');
-        } catch (error) {
-            console.warn('⚠️ 성능 설정 경고:', error);
-        }
-    };
-
-    // 기본 데이터 설정
-    const setupDefaultData = (sheet: any) => {
-        sheet.setValue(1, 1, "");
-    };
-
-    // 기본 스타일 설정
-    const setupDefaultStyles = (sheet: any) => {
-        // sheet.setColumnWidth(1, 200);
-        // sheet.setColumnWidth(2, 200);
-    };
-
-    // 드래그&드롭 이벤트 핸들러들 - 통합된 상태 사용
+    // 드래그&드롭 이벤트 핸들러들
     const handleDragEnter = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        uiDispatch({ type: 'INCREMENT_DRAG_COUNTER' });
+        uiActions.incrementDragCounter();
         if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-            uiDispatch({ type: 'SET_DRAG_ACTIVE', payload: true });
+            uiActions.setDragActive(true);
         }
-    }, []);
+    }, [uiActions]);
 
     const handleDragLeave = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        uiDispatch({ type: 'DECREMENT_DRAG_COUNTER' });
-        // 드래그 카운터가 0이 되면 자동으로 isDragActive가 false로 설정됨 (reducer에서 처리)
-    }, []);
+        uiActions.decrementDragCounter();
+    }, [uiActions]);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -706,7 +334,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     const handleDrop = useCallback(async (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        uiDispatch({ type: 'RESET_DRAG_COUNTER' });
+        uiActions.resetDragCounter();
 
         const files = e.dataTransfer.files;
         if (!files || files.length === 0) return;
@@ -716,7 +344,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         } catch (error) {
             console.error('드래그&드롭 업로드 실패:', error);
         }
-    }, [uploadFiles]);
+    }, [uploadFiles, uiActions]);
 
     // 파일 선택 버튼 클릭 (단순화됨)
     const handleUploadButtonClick = () => {
@@ -742,360 +370,86 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         event.target.value = '';
     };
 
-    // 새 스프레드시트 생성 (최적화됨)
+    // 새 스프레드시트 생성 핸들러
     const handleNewSpreadsheet = async () => {
-        if (spreadRef.current) {
-            try {
-                // SpreadJS 인스턴스 유효성 재확인
-                if (!spreadRef.current.clearSheets || typeof spreadRef.current.clearSheets !== 'function') {
-                    console.error('SpreadJS 인스턴스가 올바르지 않습니다.');
-                    return;
-                }
+        const success = createNewSpreadsheet();
+        if (!success) return;
 
-                spreadRef.current.clearSheets();
-                spreadRef.current.addSheet(0);
-                const sheet = spreadRef.current.getActiveSheet();
+        try {
+            // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
+            const currentUserId = userId;
+            console.log('🔍 새 스프레드시트 생성 - 사용자 ID:', currentUserId, user?.uid ? '(로그인)' : '(게스트)');
 
-                if (!sheet) {
-                    console.error('새 시트 생성에 실패했습니다.');
-                    return;
-                }
+            // 새 스프레드시트의 초기 JSON 데이터 구조
+            const initialJsonData = {
+                fileName: '새 스프레드시트',
+                sheets: [
+                    {
+                        name: 'Sheet1',
+                        data: {}
+                    }
+                ],
+                createdAt: new Date().toISOString(),
+                type: 'new_spreadsheet'
+            };
 
-                sheet.name("Sheet1");
+            await createSheetWithDefaults(
+                '새 스프레드시트',
+                spreadSheetId,
+                chatId,
+                userId,
+                initialJsonData
+            );
 
-                // 새 시트에 최적화 설정 적용
-                // sheet.setRowCount(100);
-                // sheet.setColumnCount(26);
-                configurePerformanceSettings(spreadRef.current);
-
-                // 빈 스프레드시트로 백엔드에 생성 요청
-                try {
-                    // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
-                    const currentUserId = userId;
-                    console.log('🔍 새 스프레드시트 생성 - 사용자 ID:', currentUserId, user?.uid ? '(로그인)' : '(게스트)');
-
-                    // 새 스프레드시트의 초기 JSON 데이터 구조
-                    const initialJsonData = {
-                        fileName: '새 스프레드시트',
-                        sheets: [
-                            {
-                                name: 'Sheet1',
-                                data: {},
-                                // rowCount: 100,
-                                // columnCount: 26
-                            }
-                        ],
-                        createdAt: new Date().toISOString(),
-                        type: 'new_spreadsheet'
-                    };
-
-                    await createSheetWithDefaults(
-                        '새 스프레드시트', // 기본 파일명
-                        spreadSheetId, // URL에서 추출한 spreadSheetId
-                        chatId, // URL에서 추출한 chatId
-                        userId, // 사용자 ID (로그인 또는 게스트)
-                        initialJsonData // 구조화된 JSON 초기 데이터
-                    );
-                } catch (error) {
-                    console.error('스프레드시트 생성 실패:', error);
-                    // createSheetWithDefaults의 onError에서 이미 처리됨
-                }
-
-                // 업로드 상태 초기화
-                resetUploadStateRef.current?.();
-                console.log('✅ 새 스프레드시트 생성 완료 (최적화됨)');
-            } catch (error) {
-                console.error('❌ 새 스프레드시트 생성 실패:', error);
-            }
+            // 업로드 상태 초기화
+            resetUploadStateRef.current?.();
+            console.log('✅ 새 스프레드시트 생성 완료');
+        } catch (error) {
+            console.error('스프레드시트 생성 실패:', error);
         }
     };
 
     return (
         <div className="w-full h-screen box-border flex flex-col bg-gray-50">
-            {/* 구글 스프레드시트 스타일 상단 바 */}
-            <div className="flex-shrink-0">
-                <div className="w-full h-6 bg-white flex items-center px-2 box-border">
-                    <div className="flex items-center space-x-6">
-                        {/* 홈으로 가기 */}
-                        <button
-                            onClick={() => window.location.href = '/dashboard'}
-                            className="px-2 pl-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
-                        >
-                            <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
-                        </button>
+            {/* 상단 툴바 및 상태 표시 통합 */}
+            <div className="flex-shrink-0 w-full h-6 bg-white flex items-center justify-between ">
+                <SpreadSheetToolbar
+                    onSaveAsExcel={() => saveAsExcel()}
+                    onSaveAsCSV={() => saveAsCSV()}
+                    onSaveAsJSON={() => saveAsJSON()}
+                    isExporting={exportState.isExporting}
+                    onNewSpreadsheet={handleNewSpreadsheet}
+                    onFileUpload={handleFileUpload}
+                    isUploading={uploadState.isUploading}
+                />
 
-                        <button
-                            onClick={() => window.location.href = '/dashboard'}
-                            className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-                        >
-                            홈
-                        </button>
+                {/* <StatusDisplay
+                    uploadState={uploadState}
+                    exportState={exportState}
+                    isCreating={isCreating}
+                    createError={createError}
+                    deltaManager={deltaManager}
+                /> */}
 
-                        {/* 숨겨진 파일 업로드 input */}
-                        <input
-                            id="file-upload"
-                            type="file"
-                            accept=".xlsx,.xls,.csv,.sjs,.json"
-                            multiple
-                            onChange={handleFileUpload}
-                            disabled={uploadState.isUploading}
-                            className="hidden"
-                        />
-
-                        {/* 내보내기 드롭다운 */}
-                        <div className="relative group">
-                            <button className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center">
-                                내보내기
-                                <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-
-                            {/* 드롭다운 메뉴 */}
-                            <div className="absolute left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
-                                <div className="py-1">
-                                    <button
-                                        onClick={() => saveAsExcel()}
-                                        disabled={exportState.isExporting}
-                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Excel (.xlsx)
-                                    </button>
-                                    <button
-                                        onClick={() => saveAsCSV()}
-                                        disabled={exportState.isExporting}
-                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        CSV (.csv)
-                                    </button>
-                                    <button
-                                        onClick={() => saveAsJSON()}
-                                        disabled={exportState.isExporting}
-                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        JSON (.json)
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 새 스프레드시트 */}
-                        <button
-                            onClick={handleNewSpreadsheet}
-                            className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-                        >
-                            시트 초기화
-                        </button>
-
-                    </div>
-
-
-
-                    {/* 오른쪽 상태 표시 영역 - 분리된 훅 상태 */}
-                    <div className="flex items-center space-x-4">
-                        {/* 업로드/저장/생성 상태 */}
-                        {(uploadState.isUploading || uploadState.isProcessing || exportState.isExporting || isCreating) && (
-                            <div className="flex items-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                <span className="text-sm text-gray-600">
-                                    {isCreating ? '스프레드시트 생성 중...' :
-                                        exportState.isExporting ? '저장 중...' :
-                                            uploadState.isProcessing ? `처리 중... ${uploadState.progress}%` : '업로드 중...'}
-                                </span>
-                                {uploadState.progress > 0 && !exportState.isExporting && !isCreating && (
-                                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-blue-600 transition-all duration-300"
-                                            style={{ width: `${uploadState.progress}%` }}
-                                        ></div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* 델타 자동저장 상태 */}
-                        {(deltaManager.state.isProcessing || deltaManager.state.isPending) && (
-                            <div className="flex items-center gap-2">
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-500"></div>
-                                <span className="text-xs text-gray-600">
-                                    {deltaManager.state.isProcessing ? '동기화 중...' :
-                                        `변경사항 ${deltaManager.state.queuedDeltas}개 대기`}
-                                </span>
-                            </div>
-                        )}
-
-                        {/* 델타 실패 상태 */}
-                        {deltaManager.state.failedDeltas.length > 0 && (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={deltaManager.retryFailedDeltas}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs text-orange-600 hover:bg-orange-50 rounded"
-                                    title="동기화 실패한 변경사항 재시도"
-                                >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                    실패 {deltaManager.state.failedDeltas.length}개
-                                </button>
-                            </div>
-                        )}
-
-
-
-                        {/* 마지막 저장 시간 */}
-                        {(exportState.lastExportedAt || deltaManager.state.lastSyncAt) && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-600">
-                                    {deltaManager.state.lastSyncAt ?
-                                        `동기화: ${new Date(deltaManager.state.lastSyncAt).toLocaleTimeString()}` :
-                                        `저장: ${exportState.lastExportedAt?.toLocaleTimeString()}`
-                                    }
-                                </span>
-                            </div>
-                        )}
-
-                        {/* 오류 상태 */}
-                        {(uploadState.error || exportState.error || createError || deltaManager.state.error) && (
-                            <div className="flex items-center gap-2">
-                                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                <span className="text-sm text-red-600 font-medium">
-                                    {deltaManager.state.error || createError || uploadState.error || exportState.error}
-                                </span>
-                                {deltaManager.state.error && (
-                                    <button
-                                        onClick={deltaManager.clearFailedDeltas}
-                                        className="text-xs text-red-500 hover:text-red-700 underline ml-2"
-                                    >
-                                        닫기
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    {/* Chat 버튼 - 채팅이 숨겨져 있을 때만 표시 (지연된 렌더링) */}
-                    {uiState.showChatButton && (
-                        <div className="ml-auto py-3 transition-all duration-500 ease-in-out opacity-100 translate-x-0 scale-100">
-                            <button
-                                onClick={handleShowChat}
-                                style={{ backgroundColor: '#005ed9' }}
-                                className="flex items-center gap-1 px-2 py-0 text-sm text-white bg-gray-500 hover:bg-[#005ed9] rounded-md transition-all duration-200 hover:scale-105"
-                            >
-                                {/* <MessagesSquare className="w-4 h-4" /> */}
-                                <img src="/EXTION_new_logo_white.svg" alt="Extion Logo" className="w-4 h-4" />
-                                AI
-                            </button>
-                        </div>
-                    )}
-                </div>
+                <ChatButton
+                    onClick={handleShowChat}
+                    isVisible={uiState.showChatButton}
+                />
             </div>
 
-            {/* <div className='border-2 border-gray-200'></div> */}
-
-            {/* SpreadJS 컴포넌트 및 업로드 영역 */}
-            <div 
-                className="flex-1 w-full relative"
+            {/* 파일 업로드 영역 및 SpreadJS */}
+            <FileUploadZone
+                isFileUploaded={isFileUploaded}
+                isDragActive={uiState.isDragActive}
+                uploadState={uploadState}
+                onUploadButtonClick={handleUploadButtonClick}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-            >
-                {/* 파일이 업로드되지 않았을 때 표시되는 업로드 안내 영역 */}
-                {!isFileUploaded && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                        <div className="text-center max-w-md mx-4">
-                            <div className="mb-8">
-                                <svg 
-                                    className="w-16 h-16 text-gray-400 mx-auto mb-4" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path 
-                                        strokeLinecap="round" 
-                                        strokeLinejoin="round" 
-                                        strokeWidth={1.5} 
-                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" 
-                                    />
-                                </svg>
-                                <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                                    파일을 업로드하여 시작하세요
-                                </h3>
-                                <p className="text-gray-500 text-sm">
-                                    Excel, CSV, JSON 파일을 지원합니다
-                                </p>
-                            </div>
-
-                            {/* 드래그&드롭 영역 */}
-                            <div 
-                                className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${
-                                    uiState.isDragActive 
-                                        ? 'border-blue-500 bg-blue-50' 
-                                        : 'border-gray-300 hover:border-gray-400'
-                                }`}
-                            >
-                                {uiState.isDragActive ? (
-                                    <div className="text-blue-600">
-                                        <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                        </svg>
-                                        <p className="font-medium">파일을 여기에 놓아주세요</p>
-                                    </div>
-                                ) : (
-                                    <div className="text-gray-500">
-                                        <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                        </svg>
-                                        <p className="font-medium mb-1">파일을 드래그하여 놓거나</p>
-                                        <button
-                                            onClick={handleUploadButtonClick}
-                                            disabled={uploadState.isUploading}
-                                            className="text-blue-600 hover:text-blue-700 font-medium underline disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            여기를 클릭하여 선택
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 업로드 중 상태 표시 */}
-                            {(uploadState.isUploading || uploadState.isProcessing) && (
-                                <div className="flex items-center justify-center gap-2 text-blue-600">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                    <span className="text-sm">
-                                        {uploadState.isProcessing ? `처리 중... ${uploadState.progress}%` : '업로드 중...'}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* 지원 파일 형식 안내 */}
-                            <div className="text-xs text-gray-400 mt-4">
-                                지원 형식: .xlsx, .xls, .csv, .json (최대 50MB)
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* 드래그 오버레이 */}
-                {uiState.isDragActive && (
-                    <div className="absolute inset-0 bg-blue-500 bg-opacity-10 border-2 border-blue-500 border-dashed z-20 flex items-center justify-center">
-                        <div className="bg-white rounded-lg p-4 shadow-lg">
-                            <div className="text-blue-600 text-center">
-                                <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
-                                <p className="font-semibold">파일을 여기에 놓아주세요</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <SpreadSheets
-                    workbookInitialized={(spread) => initSpread(spread)}
-                    hostStyle={hostStyle}>
-                </SpreadSheets>
-            </div>
+                initSpread={initSpread}
+                hostStyle={hostStyle}
+            />
         </div>
     );
 }
