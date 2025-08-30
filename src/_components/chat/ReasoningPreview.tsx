@@ -88,7 +88,7 @@ const ReasoningPreview: React.FC<ReasoningPreviewProps> = ({
 
   return (
     <div
-      className={`px-1 py-2 ${className}`}
+      className={`px-1 py-1 ${className}`}
       role="status"
       aria-live="polite"
       aria-label="AI 추론 과정"

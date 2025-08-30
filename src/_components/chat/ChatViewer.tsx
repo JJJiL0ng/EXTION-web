@@ -416,10 +416,15 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
               className="w-full"
             >
                 <div
-                  className={`w-full rounded-lg px-4 py-2 border ${
+                  // className={`w-full rounded-lg px-4 py-2 border ${
+                  //   message.type === MessageType.USER
+                  //     ? 'bg-white text-gray-900 border-gray-300'
+                  //     : 'bg-gray-100 text-gray-900 border-gray-300'
+                  // }`}
+                   className={`w-full rounded-lg px-4 py-2  ${
                     message.type === MessageType.USER
-                      ? 'bg-white text-gray-900 border-gray-300'
-                      : 'bg-gray-100 text-gray-900 border-gray-300'
+                      ? 'bg-white text-gray-900 border border-gray-300'
+                      : ''
                   }`}
                 >
                   {message.type === MessageType.USER ? (
@@ -476,7 +481,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
         {/* AI 추론 과정 표시 - TypingIndicator와 분리 */}
         {reasoningPreview && (
           <div className="flex justify-start">
-            <div className="px-4 py-1">
+            <div className="px-2">
               <ReasoningPreview
                 reasoning={reasoningPreview}
                 isComplete={reasoningComplete}
