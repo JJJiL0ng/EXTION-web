@@ -1,7 +1,7 @@
 "use client";
 import '@mescius/spread-sheets-resources-ko';
 import '@mescius/spread-sheets-io';
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, useReducer } from "react";
 import { SpreadSheets, Worksheet, Column } from "@mescius/spread-sheets-react";
 import * as GC from "@mescius/spread-sheets";
 import Image from 'next/image';
@@ -24,6 +24,65 @@ interface MainSpreadSheetProps {
     spreadRef: React.MutableRefObject<any>;
 }
 
+// 통합된 UI 상태 관리를 위한 타입 정의
+interface UIState {
+    isDragActive: boolean;
+    dragCounter: number;
+    showChatButton: boolean;
+    hasAutoOpenedChat: boolean;
+}
+
+// UI 상태 액션 타입
+type UIAction =
+    | { type: 'SET_DRAG_ACTIVE'; payload: boolean }
+    | { type: 'INCREMENT_DRAG_COUNTER' }
+    | { type: 'DECREMENT_DRAG_COUNTER' }
+    | { type: 'RESET_DRAG_COUNTER' }
+    | { type: 'SET_SHOW_CHAT_BUTTON'; payload: boolean }
+    | { type: 'SET_AUTO_OPENED_CHAT'; payload: boolean }
+    | { type: 'RESET_UI_STATE' };
+
+// UI 상태 reducer
+const uiReducer = (state: UIState, action: UIAction): UIState => {
+    switch (action.type) {
+        case 'SET_DRAG_ACTIVE':
+            return { ...state, isDragActive: action.payload };
+        case 'INCREMENT_DRAG_COUNTER':
+            return { ...state, dragCounter: state.dragCounter + 1 };
+        case 'DECREMENT_DRAG_COUNTER': {
+            const newDragCounter = Math.max(0, state.dragCounter - 1);
+            return { 
+                ...state, 
+                dragCounter: newDragCounter,
+                isDragActive: newDragCounter > 0 && state.isDragActive
+            };
+        }
+        case 'RESET_DRAG_COUNTER':
+            return { ...state, dragCounter: 0, isDragActive: false };
+        case 'SET_SHOW_CHAT_BUTTON':
+            return { ...state, showChatButton: action.payload };
+        case 'SET_AUTO_OPENED_CHAT':
+            return { ...state, hasAutoOpenedChat: action.payload };
+        case 'RESET_UI_STATE':
+            return {
+                isDragActive: false,
+                dragCounter: 0,
+                showChatButton: true,
+                hasAutoOpenedChat: false,
+            };
+        default:
+            return state;
+    }
+};
+
+// 초기 UI 상태
+const initialUIState: UIState = {
+    isDragActive: false,
+    dragCounter: 0,
+    showChatButton: true,
+    hasAutoOpenedChat: false,
+};
+
 export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // URL 파라미터 추출
     const params = useParams();
@@ -33,13 +92,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // 채팅 가시성 제어
     const { isChatVisible, showChat } = useChatVisibility();
 
+    // 통합된 UI 상태 관리
+    const [uiState, uiDispatch] = useReducer(uiReducer, initialUIState);
+
     // 파일 업로드 상태 관리 (Zustand)
     const { isFileUploaded, setIsFileUploaded } = useSpreadsheetUploadStore();
 
     // 인증 상태 관리
     const { user } = useAuthStore();
-
-    // 활성 시트 상태 관리
 
     // 사용자 ID 가져오기 (로그인 사용자 또는 게스트) - 메모이제이션으로 무한 렌더링 방지
     const userId = useMemo(() => {
@@ -52,23 +112,17 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         }
     }, [user?.uid]);
 
-    // Chat 버튼 표시 상태 (지연된 렌더링용)
-    const [showChatButton, setShowChatButton] = useState(!isChatVisible);
-
-    // 파일 업로드 후 자동 채팅 열기 상태 관리
-    const [hasAutoOpenedChat, setHasAutoOpenedChat] = useState(false);
-
     // resetUploadState 함수의 ref 저장 (무한 루프 방지)
     const resetUploadStateRef = useRef<(() => void) | null>(null);
 
     // deltaManager ref 저장 (무한 루프 방지)
     const deltaManagerRef = useRef<typeof deltaManager | null>(null);
 
-    // AI 버튼 클릭 핸들러 - 즉시 버튼 숨김
-    const handleShowChat = () => {
-        setShowChatButton(false); // 즉시 버튼 제거
+    // AI 버튼 클릭 핸들러 - 통합된 상태 사용
+    const handleShowChat = useCallback(() => {
+        uiDispatch({ type: 'SET_SHOW_CHAT_BUTTON', payload: false }); // 즉시 버튼 제거
         showChat(); // 채팅 열기
-    };
+    }, [showChat]);
 
     const [hostStyle, setHostStyle] = useState({
         width: '100vw',
@@ -382,9 +436,9 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             setIsFileUploaded(true, fileName);
 
             // 파일 업로드 후 0.5초 뒤에 Chat 버튼 자동 클릭 (딱 한번만)
-            if (!hasAutoOpenedChat) {
+            if (!uiState.hasAutoOpenedChat) {
                 setTimeout(() => {
-                    setHasAutoOpenedChat(true); // 자동 열기 완료 표시
+                    uiDispatch({ type: 'SET_AUTO_OPENED_CHAT', payload: true }); // 자동 열기 완료 표시
                     handleShowChat(); // Chat 버튼 자동 클릭
                 }, 500);
             }
@@ -521,25 +575,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         return () => window.removeEventListener('resize', handleResize);
     }, [spreadRef]);
 
-    // 파일 업로드 모달 상태
-    const [showUploadModal, setShowUploadModal] = useState(false);
 
-    // 파일 업로드 상태에 따른 모달 표시/숨김 처리
-    useEffect(() => {
-        if (!isFileUploaded) {
-            // 파일이 업로드되지 않았다면 모달 표시
-            const timer = setTimeout(() => {
-                setShowUploadModal(true);
-            }, 500); // 컴포넌트가 완전히 렌더링된 후 실행
-
-            return () => clearTimeout(timer);
-        } else {
-            // 파일이 업로드되었다면 모달 숨김
-            setShowUploadModal(false);
-        }
-    }, [isFileUploaded]); // isFileUploaded 상태 변화 감지
-
-    // 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리
+    // 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리 - 통합된 상태 사용
     useEffect(() => {
         if (isChatVisible) {
             // 채팅이 열릴 때는 handleShowChat에서 이미 처리했으므로 아무것도 하지 않음
@@ -547,7 +584,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         } else {
             // 채팅이 닫힐 때는 300ms 지연 후 버튼 표시 (채팅 닫힘 애니메이션 시간과 맞춤)
             const timer = setTimeout(() => {
-                setShowChatButton(true);
+                uiDispatch({ type: 'SET_SHOW_CHAT_BUTTON', payload: true });
             }, 300); // 300ms 지연
 
             return () => clearTimeout(timer);
@@ -644,34 +681,48 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         // sheet.setColumnWidth(2, 200);
     };
 
-    // 파일 업로드 모달에서 파일 선택 버튼 클릭
+    // 드래그&드롭 이벤트 핸들러들 - 통합된 상태 사용
+    const handleDragEnter = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uiDispatch({ type: 'INCREMENT_DRAG_COUNTER' });
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+            uiDispatch({ type: 'SET_DRAG_ACTIVE', payload: true });
+        }
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uiDispatch({ type: 'DECREMENT_DRAG_COUNTER' });
+        // 드래그 카운터가 0이 되면 자동으로 isDragActive가 false로 설정됨 (reducer에서 처리)
+    }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
+
+    const handleDrop = useCallback(async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uiDispatch({ type: 'RESET_DRAG_COUNTER' });
+
+        const files = e.dataTransfer.files;
+        if (!files || files.length === 0) return;
+
+        try {
+            await uploadFiles(files);
+        } catch (error) {
+            console.error('드래그&드롭 업로드 실패:', error);
+        }
+    }, [uploadFiles]);
+
+    // 파일 선택 버튼 클릭 (단순화됨)
     const handleUploadButtonClick = () => {
         const fileInput = document.getElementById('file-upload') as HTMLInputElement;
         if (fileInput && !uploadState.isUploading) {
-            // 파일 선택 취소 감지를 위한 이벤트 리스너 추가
-            const handleCancel = () => {
-                // 파일 선택이 취소되었는지 확인 (약간의 지연 후)
-                setTimeout(() => {
-                    if (!fileInput.files || fileInput.files.length === 0) {
-                        // 파일이 선택되지 않았다면 모달 다시 표시
-                        if (!isFileUploaded) {
-                            setShowUploadModal(true);
-                        }
-                    }
-                }, 100);
-
-                // 이벤트 리스너 제거
-                fileInput.removeEventListener('cancel', handleCancel);
-                window.removeEventListener('focus', handleCancel);
-            };
-
-            // 파일 선택 취소 이벤트 리스너 등록
-            fileInput.addEventListener('cancel', handleCancel);
-            // 윈도우 포커스로도 취소 감지 (일부 브라우저에서 cancel 이벤트가 작동하지 않을 수 있음)
-            window.addEventListener('focus', handleCancel);
-
             fileInput.click();
-            setShowUploadModal(false); // 모달 닫기
         }
     };
 
@@ -924,7 +975,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                         )}
                     </div>
                     {/* Chat 버튼 - 채팅이 숨겨져 있을 때만 표시 (지연된 렌더링) */}
-                    {showChatButton && (
+                    {uiState.showChatButton && (
                         <div className="ml-auto py-3 transition-all duration-500 ease-in-out opacity-100 translate-x-0 scale-100">
                             <button
                                 onClick={handleShowChat}
@@ -942,41 +993,109 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
             {/* <div className='border-2 border-gray-200'></div> */}
 
-            {/* SpreadJS 컴포넌트 - 남은 공간 전체 사용 */}
-            <div className="flex-1 w-full">
+            {/* SpreadJS 컴포넌트 및 업로드 영역 */}
+            <div 
+                className="flex-1 w-full relative"
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+            >
+                {/* 파일이 업로드되지 않았을 때 표시되는 업로드 안내 영역 */}
+                {!isFileUploaded && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                        <div className="text-center max-w-md mx-4">
+                            <div className="mb-8">
+                                <svg 
+                                    className="w-16 h-16 text-gray-400 mx-auto mb-4" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        strokeWidth={1.5} 
+                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" 
+                                    />
+                                </svg>
+                                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                                    파일을 업로드하여 시작하세요
+                                </h3>
+                                <p className="text-gray-500 text-sm">
+                                    Excel, CSV, JSON 파일을 지원합니다
+                                </p>
+                            </div>
+
+                            {/* 드래그&드롭 영역 */}
+                            <div 
+                                className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${
+                                    uiState.isDragActive 
+                                        ? 'border-blue-500 bg-blue-50' 
+                                        : 'border-gray-300 hover:border-gray-400'
+                                }`}
+                            >
+                                {uiState.isDragActive ? (
+                                    <div className="text-blue-600">
+                                        <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <p className="font-medium">파일을 여기에 놓아주세요</p>
+                                    </div>
+                                ) : (
+                                    <div className="text-gray-500">
+                                        <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <p className="font-medium mb-1">파일을 드래그하여 놓거나</p>
+                                        <button
+                                            onClick={handleUploadButtonClick}
+                                            disabled={uploadState.isUploading}
+                                            className="text-blue-600 hover:text-blue-700 font-medium underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            여기를 클릭하여 선택
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 업로드 중 상태 표시 */}
+                            {(uploadState.isUploading || uploadState.isProcessing) && (
+                                <div className="flex items-center justify-center gap-2 text-blue-600">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                    <span className="text-sm">
+                                        {uploadState.isProcessing ? `처리 중... ${uploadState.progress}%` : '업로드 중...'}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* 지원 파일 형식 안내 */}
+                            <div className="text-xs text-gray-400 mt-4">
+                                지원 형식: .xlsx, .xls, .csv, .json (최대 50MB)
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 드래그 오버레이 */}
+                {uiState.isDragActive && (
+                    <div className="absolute inset-0 bg-blue-500 bg-opacity-10 border-2 border-blue-500 border-dashed z-20 flex items-center justify-center">
+                        <div className="bg-white rounded-lg p-4 shadow-lg">
+                            <div className="text-blue-600 text-center">
+                                <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <p className="font-semibold">파일을 여기에 놓아주세요</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <SpreadSheets
                     workbookInitialized={(spread) => initSpread(spread)}
                     hostStyle={hostStyle}>
                 </SpreadSheets>
             </div>
-
-            {/* 파일 업로드 확인 모달 */}
-            {showUploadModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-                        <div className="flex items-center mb-4">
-                            <svg className="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            <h3 className="text-lg font-semibold text-gray-900">파일 업로드</h3>
-                        </div>
-
-                        <p className="text-gray-600 mb-6">
-                            파일을 업로드하세요
-                        </p>
-
-                        <div className="flex space-x-3">
-                            <button
-                                onClick={handleUploadButtonClick}
-                                className="flex-1 text-white px-4 py-2 rounded-md hover:bg-[#005ed9] transition-colors"
-                                style={{ backgroundColor: '#005ed9' }}
-                            >
-                                로컬 파일에서 선택
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
