@@ -1,6 +1,5 @@
 "use client";
 
-import MainChattingContainer from "@/_components/chat/MainChattingContainer";
 import FileUploadContainer from "@/_components/chat/FileUploadChattingContainer";
 import dynamic from "next/dynamic";
 import React, { useState, useRef, useCallback, useEffect } from "react";
@@ -9,7 +8,6 @@ import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
 import { useParams } from "next/navigation";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdStore";
-import { useSpreadjsCommandManager } from "@/_hooks/sheet/useSpreadjsCommandStore";
 import { enableMapSet } from 'immer';
 
 // Immer MapSet 플러그인 활성화
@@ -31,20 +29,9 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // SpreadJS 관련 상태 (MainSpreadSheet에서 이동)
+  // spreadjs 컨텍스트 인스턴스를 담은 인스턴스
   const spreadRef = useRef<any>(null);
-  const commandManager = useSpreadjsCommandManager(spreadRef, {
-    enableAutosave: true,
-    requireConfirmation: false,
-    enableSnapshot: true,
-    autosaveDelay: 3000,
-    onCommandSuccess: (result, snapshot) => {
-      console.log('✅ 수식 적용 성공:', { result, snapshot });
-    },
-    onCommandError: (error, command) => {
-      console.error('❌ 수식 적용 실패:', { error, command });
-    },
-  });
+
 
   // URL 파라미터에서 spreadsheetId와 chatId를 추출하여 store에 저장
   useEffect(() => {
@@ -107,7 +94,7 @@ export default function Home() {
 
   return (
     <ChatVisibilityProvider initialVisible={false}>
-      <SpreadsheetProvider spreadRef={spreadRef} commandManager={commandManager}>
+  <SpreadsheetProvider spreadRef={spreadRef}>
         <HomeContent 
           leftWidth={leftWidth}
           setLeftWidth={setLeftWidth}

@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { Sheet, X, Check , Layers} from 'lucide-react';
 
+import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
+
 
 export const SelectedSheetNameCard: React.FC<{
   showIcon?: boolean;
-  spreadRef?: React.MutableRefObject<any> | React.RefObject<any> | null;
   fileName?: string;
   onRemove?: () => void;
   mode?: 'chatInputBox' | 'modal' | 'modal-whole-file' | 'modal-whole-data';
   isSelected?: boolean;
 }> = ({
   showIcon = true,
-  spreadRef: propSpreadRef,
   fileName,
   onRemove,
   mode,
@@ -22,11 +22,10 @@ export const SelectedSheetNameCard: React.FC<{
   const [localClicked, setLocalClicked] = useState(false);
   const isClicked = (mode === 'modal' || mode === 'modal-whole-data' || mode === 'modal-whole-file') ? isSelected : localClicked;
 
-    // props로 받은 spreadRef가 있으면 우선 사용, 없으면 context에서 가져온 것 사용
-    const spreadRef = propSpreadRef || null;
+    const spread = useSpreadsheetContext();
 
-    if (!spreadRef) {
-      console.error('No spreadRef provided');
+    if (!spread) {
+      console.error('No spread context instance provided');
       return null;
     }
 
@@ -48,7 +47,7 @@ export const SelectedSheetNameCard: React.FC<{
 
     const handleChangeSheet = () => {
       if (mode === 'chatInputBox') {
-          spreadRef.current?.setActiveSheet(fileName);
+          spread.spread.setActiveSheet(fileName);
         return;
       } 
     };

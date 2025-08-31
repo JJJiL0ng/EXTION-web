@@ -25,10 +25,10 @@ interface ResponseComponentProps {
 // 응답 타입별 컴포넌트 Registry
 const ResponseComponentRegistry: Record<string, ResponseComponentConfig> = {
   // 컴포넌트가 준비되면 주석 해제
-  [ChatIntentType.EXCEL_FORMULA]: {
-    component: React.lazy(() => import('./message/formulaMessage')),
-    // hook: useFormulaMessage // 필요시 추가
-  },
+  // [ChatIntentType.EXCEL_FORMULA]: {
+  //   component: React.lazy(() => import('./message/formulaMessage')),
+  //   // hook: useFormulaMessage // 필요시 추가
+  // },
 };
 
 // 구조화된 응답 렌더러 컴포넌트
