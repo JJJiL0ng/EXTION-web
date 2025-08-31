@@ -8,7 +8,6 @@ import { FileSelectModal } from "./SheetSelectModal";
 import { ChatInitMode, UploadedFileInfo } from "../../_types/chat.types";
 import { useChatFlow, useChatStore } from "../../_hooks/chat/useChatStore";
 import { getOrCreateGuestId } from "../../_utils/guestUtils";
-import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 
 interface FileUploadChattingContainerProps {
   initMode?: ChatInitMode;
@@ -26,9 +25,6 @@ export default function FileUploadChattingContainer({
 
   // 모달 상태 관리
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // SpreadsheetContext에서 spreadRef 가져오기
-  const { spreadRef } = useSpreadsheetContext();
 
   // v2 채팅 플로우 훅 사용
   const chatFlow = useChatFlow({
@@ -113,14 +109,12 @@ export default function FileUploadChattingContainer({
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
                 onSelectSheet={handleSelectSheet}
-                spreadRef={spreadRef as React.RefObject<any>}
               />
             )}
             
             <ChatInputBox 
               userId={userId}
               disabled={!chatFlow.canSendMessage}
-              spreadRef={spreadRef}
               onFileAddClick={handleOpenModal}
             />
           </div>

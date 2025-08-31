@@ -9,6 +9,8 @@ import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { useGetActiveSheetName } from '@/_hooks/sheet/useGetActiveSheetName'
 import FileAddButton from './FileAddButton';
 import { useSelectedSheetInfoStore } from '../../_hooks/sheet/useSelectedSheetInfoStore';
+import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
+
 
 interface ChatInputBoxProps {
   // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
@@ -16,7 +18,6 @@ interface ChatInputBoxProps {
   placeholder?: string;
   disabled?: boolean;
   userId?: string;
-  spreadRef?: React.MutableRefObject<any> | React.RefObject<any> | null;
   onFileAddClick?: () => void;
 }
 
@@ -27,7 +28,6 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   placeholder = "수정사항을 입력하세요...",
   disabled = false,
   userId = getOrCreateGuestId(), // Guest ID 사용
-  spreadRef,
   onFileAddClick
 }) => {
   const [message, setMessage] = useState('');
@@ -40,6 +40,9 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
+
+  // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
+  const spread = useSpreadsheetContext();
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
@@ -155,7 +158,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     }
   }, [showModeModal]); // , showModelModal
 
-  const { activeSheetName } = useGetActiveSheetName({ spreadRef: spreadRef ?? null });
+  const { activeSheetName } = useGetActiveSheetName();
   // 최초 1회만 activeSheetName을 기본 선택으로 추가
   const didInitDefaultSelection = React.useRef(false);
   React.useEffect(() => {
@@ -195,7 +198,6 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             {selectedSheets.map((sheet) => (
               <SelectedSheetNameCard 
                 key={sheet.name}
-                spreadRef={spreadRef} 
                 fileName={sheet.name}
                 onRemove={() => removeSelectedSheet(sheet.name)}
                 mode='chatInputBox'

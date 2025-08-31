@@ -1,21 +1,21 @@
 import { useCallback, useState, useEffect } from 'react';
+import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 
-interface UseGetSheetNamesProps {
-  spreadRef: React.RefObject<any> | React.MutableRefObject<any> | null;
-}
-
-export const useGetActiveSheetName = ({ spreadRef }: UseGetSheetNamesProps) => {
+export const useGetActiveSheetName = () => {
   const [activeSheetName, setActiveSheetName] = useState<string>('');
+  const { spread } = useSpreadsheetContext();
 
   const getActiveSheetName = useCallback(() => {
-    if (!spreadRef?.current) {
-      console.log('SpreadRef is not available');
+    if (!spread) return '';
+    try {
+      const sheet = spread.getActiveSheet?.();
+      const name = sheet?.name?.();
+      return typeof name === 'string' ? name : '';
+    } catch (e) {
+      console.warn('Failed to get active sheet name:', e);
       return '';
     }
-    var sheetName = spreadRef.current.getActiveSheet().name();
-    console.log(sheetName);
-    return sheetName;
-  }, [spreadRef]);
+  }, [spread]);
 
   // 실시간으로 활성 시트명을 추적
   const updateActiveSheetName = useCallback(() => {
@@ -24,7 +24,6 @@ export const useGetActiveSheetName = ({ spreadRef }: UseGetSheetNamesProps) => {
   }, [getActiveSheetName]);
 
   useEffect(() => {
-    const spread = spreadRef?.current;
     if (!spread) return;
 
     // 초기 시트명 설정
@@ -35,46 +34,44 @@ export const useGetActiveSheetName = ({ spreadRef }: UseGetSheetNamesProps) => {
     const handleSheetRenamed = () => updateActiveSheetName();
 
     try {
-      spread.bind('ActiveSheetChanged', handleSheetActivated);
-      spread.bind('SheetTabClick', handleSheetActivated);
+      spread.bind?.('ActiveSheetChanged', handleSheetActivated);
+      spread.bind?.('SheetTabClick', handleSheetActivated);
       // 시트 이름이 변경될 때도 최신 이름을 반영
-      spread.bind('SheetNameChanged', handleSheetRenamed);
+      spread.bind?.('SheetNameChanged', handleSheetRenamed);
     } catch (error) {
       console.warn('Failed to bind sheet change events:', error);
     }
 
     return () => {
       try {
-        spread.unbind('ActiveSheetChanged', handleSheetActivated);
-        spread.unbind('SheetTabClick', handleSheetActivated);
-        spread.unbind('SheetNameChanged', handleSheetRenamed);
+        spread.unbind?.('ActiveSheetChanged', handleSheetActivated);
+        spread.unbind?.('SheetTabClick', handleSheetActivated);
+        spread.unbind?.('SheetNameChanged', handleSheetRenamed);
       } catch (error) {
         console.warn('Failed to unbind sheet change events:', error);
       }
     };
-  }, [spreadRef, updateActiveSheetName]);
+  }, [spread, updateActiveSheetName]);
 
-  // ref가 늦게 준비되는 경우를 대비한 폴백: 최초 마운트 후 짧게 폴링하여 값 세팅
+  // 폴백: 초기에 이름이 비어 있고 spread가 준비되어 있으면 짧게 폴링하여 값 세팅
   useEffect(() => {
-    if (activeSheetName) return; // 이미 세팅되었으면 스킵
-    if (!spreadRef) return;
+    if (activeSheetName || !spread) return;
     let tries = 0;
     const timer = setInterval(() => {
       tries += 1;
-      if (spreadRef.current) {
-        updateActiveSheetName();
+      const name = getActiveSheetName();
+      if (name) {
+        setActiveSheetName(name);
         clearInterval(timer);
       }
-      if (tries > 20) {
-        clearInterval(timer);
-      }
+      if (tries > 20) clearInterval(timer);
     }, 100);
     return () => clearInterval(timer);
-  }, [spreadRef, activeSheetName, updateActiveSheetName]);
+  }, [spread, activeSheetName, getActiveSheetName]);
 
-  return { 
-    getActiveSheetName, 
+  return {
+    getActiveSheetName,
     activeSheetName,
-    updateActiveSheetName 
+    updateActiveSheetName,
   };
 };

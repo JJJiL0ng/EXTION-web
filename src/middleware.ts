@@ -5,6 +5,36 @@ export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const userAgent = request.headers.get('user-agent') || '';
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  const hostname = request.nextUrl.hostname;
+
+  // dev 서브도메인 접근 제어
+  if (hostname.startsWith('dev.')) {
+    const basicAuth = request.headers.get('authorization');
+    
+    if (basicAuth) {
+      const auth = basicAuth.split(' ')[1];
+      const [user, pwd] = Buffer.from(auth, 'base64').toString().split(':');
+      
+      // 환경변수에서 QA 계정 정보 가져오기
+      if (user === process.env.QA_USERNAME && pwd === process.env.QA_PASSWORD) {
+        // 인증 성공, 다음 로직으로 진행
+      } else {
+        return new NextResponse('Invalid credentials', {
+          status: 401,
+          headers: {
+            'WWW-Authenticate': 'Basic realm="QA Environment"',
+          },
+        });
+      }
+    } else {
+      return new NextResponse('Authentication required', {
+        status: 401,
+        headers: {
+          'WWW-Authenticate': 'Basic realm="QA Environment"',
+        },
+      });
+    }
+  }
 
   // Firebase 세션 토큰 확인
   const sessionToken = request.cookies.get('firebase-session-token')?.value;
@@ -14,16 +44,7 @@ export function middleware(request: NextRequest) {
     const sorryUrl = new URL('/sorryformobile', request.url);
     return NextResponse.redirect(sorryUrl);
   }
-
-  // 로그인이 필요한 경로에 대한 인증 확인
-  // if (path.startsWith('/ai')) {
-  //   // 세션 토큰이 없으면 로그인 페이지로 리디렉션
-  //   if (!sessionToken) {
-  //     const loginUrl = new URL('/login', request.url);
-  //     return NextResponse.redirect(loginUrl);
-  //   }
-  // }
-
+  
   // /adminforpel!sers 경로에 대한 접근 제어
   if (path.startsWith('/adminforpelisers')) {
     // 간단한 예시로 쿠키 확인
@@ -53,12 +74,9 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * 임시로 특정 경로만 활성화하여 딜레이 원인 확인
-     * 미들웨어가 딜레이 원인이라면 이렇게 변경 후 성능이 개선될 것입니다
+     * dev 서브도메인의 모든 경로와 기존 경로들을 포함
      */
-    // 미들웨어가 필요한 특정 경로만 활성화
-    // '/ai/:path*',  // AI 관련 경로만
-    // '/dashboard/:path*',  // 대시보드 관련 경로만
+    '/((?!api|_next/static|_next/image|favicon.ico).*)', // dev 도메인 전체 적용을 위해 추가
     '/adminforpelisers/:path*',
     '/admindashboard/:path*'
   ],

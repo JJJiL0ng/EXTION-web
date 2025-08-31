@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext"
 import useSpreadsheetNamesStore from "@/_store/sheet/spreadSheetNamesStore"
 
 export const useSpreadSheetNames = () => {
-    const { spreadRef } = useSpreadsheetContext()
+    const { spread } = useSpreadsheetContext()
 
     // store selectors (components won't import the store directly)
     const spreadSheetNames = useSpreadsheetNamesStore((s) => s.spreadSheetNames)
@@ -20,9 +20,8 @@ export const useSpreadSheetNames = () => {
         }
     }
 
-    // 1) 컨텍스트(spreadRef)가 바뀔 때마다 스토어 업데이트
-        useEffect(() => {
-            const spread = spreadRef?.current
+    // 1) 컨텍스트(spread)가 바뀔 때마다 스토어 업데이트
+    useEffect(() => {
         if (!spread) return
 
         // 초기 동기화
@@ -95,7 +94,7 @@ export const useSpreadSheetNames = () => {
                     }
                 })
 
-        return () => {
+    return () => {
             try {
                 spread?.unbind?.(SheetNameChanged, onSheetNameChanged)
             } catch {
@@ -114,10 +113,9 @@ export const useSpreadSheetNames = () => {
                         }
                     })
         }
-            }, [spreadRef, setSpreadSheetNames, renameSelectedSheet])
+    }, [spread, setSpreadSheetNames, renameSelectedSheet])
 
     return {
-        spreadRef,
         spreadSheetNames
     }
 }

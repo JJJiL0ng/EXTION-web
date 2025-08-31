@@ -13,7 +13,6 @@ import { useUIState } from '../../_hooks/sheet/useUIState';
 import { useSpreadJSInit } from '../../_hooks/sheet/useSpreadJSInit';
 
 // Stores
-import { useAuthStore } from '@/stores/authStore';
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
 
 // Utils
@@ -23,7 +22,6 @@ import { configureLicense } from '../../_utils/sheet/spreadJSConfig';
 
 // Components
 import { SpreadSheetToolbar } from './SpreadSheetToolbar';
-import { StatusDisplay } from './StatusDisplay';
 import { ChatButton } from './ChatButton';
 import { FileUploadSheetRender } from './FileUploadSheetRender';
 
@@ -50,18 +48,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     const { isFileUploaded, setIsFileUploaded } = useSpreadsheetUploadStore();
 
     // 인증 상태 관리
-    const { user } = useAuthStore();
-
-    // 사용자 ID 가져오기 (로그인 사용자 또는 게스트) - 메모이제이션으로 무한 렌더링 방지
-    const userId = useMemo(() => {
-        if (user?.uid) {
-            // 로그인된 사용자의 경우 Firebase uid 사용
-            return user.uid;
-        } else {
-            // 비로그인 사용자의 경우 guest ID 생성/사용
-            return getOrCreateGuestId();
-        }
-    }, [user?.uid]);
+    const userId = getOrCreateGuestId();
 
     // resetUploadState 함수의 ref 저장 (무한 루프 방지)
     const resetUploadStateRef = useRef<(() => void) | null>(null);
@@ -165,7 +152,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             try {
                 // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
                 const currentUserId = userId;
-                console.log('🔍 사용자 ID:', currentUserId, user?.uid ? '(로그인)' : '(게스트)');
 
                 // 파일 데이터를 JSON으로 변환 (새로운 FileConverter 사용)
                 const jsonData = await FileConverter.convertToJson(fileData, fileName);
@@ -380,7 +366,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         try {
             // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
             const currentUserId = userId;
-            console.log('🔍 새 스프레드시트 생성 - 사용자 ID:', currentUserId, user?.uid ? '(로그인)' : '(게스트)');
 
             // 새 스프레드시트의 초기 JSON 데이터 구조
             const initialJsonData = {
