@@ -88,7 +88,7 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
                     fileName="모든 파일 추가"
                     showIcon={true}
                     spreadRef={spreadRef}
-                    mode='modal'
+                    mode='modal-whole-file'
                     isSelected={isAllSheetsSelected}
                   />
                 </button>

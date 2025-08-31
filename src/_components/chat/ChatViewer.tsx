@@ -161,6 +161,8 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [isScrollingToBottom, setIsScrollingToBottom] = useState(false);
+  const [lastScrollTop, setLastScrollTop] = useState(0);
+  const [userScrollIntent, setUserScrollIntent] = useState<'none' | 'up' | 'manual_bottom'>('none');
   
   // V2 스토어에서 직접 데이터 가져오기
   const { 
@@ -183,7 +185,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
     if (!chatContainerRef.current) return true;
     
     const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-    const threshold = 100; // 100px 여유분
+    const threshold = 50; // 50px 여유분으로 더 정확한 감지
     return scrollHeight - scrollTop - clientHeight <= threshold;
   }, []);
 
@@ -267,29 +269,37 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
     }
   }, []);
 
-  // 사용자 스크롤 감지 핸들러
+  // 사용자 스크롤 감지 핸들러 (개선된 로직)
   const handleScroll = useCallback(() => {
     if (!chatContainerRef.current) return;
 
+    const container = chatContainerRef.current;
+    const currentScrollTop = container.scrollTop;
     const atBottom = isAtBottom();
     
     // 사용자가 스크롤 중이라고 표시
     setIsUserScrolling(true);
     
-    // 사용자가 맨 아래에 있으면 자동 스크롤 다시 활성화
-    if (atBottom && !isAutoScrollEnabled) {
-      setIsAutoScrollEnabled(true);
-    }
-    // 사용자가 위쪽으로 스크롤했으면 자동 스크롤 비활성화
-    else if (!atBottom && isAutoScrollEnabled) {
+    // 스크롤 방향 감지 (위로 스크롤했는지)
+    const scrollingUp = currentScrollTop < lastScrollTop;
+    
+    // 사용자가 능동적으로 위로 스크롤했을 때만 자동 스크롤 해제
+    if (scrollingUp && !atBottom && isAutoScrollEnabled) {
       setIsAutoScrollEnabled(false);
+      setUserScrollIntent('up');
     }
+    
+    // 사용자가 맨 아래로 수동으로 돌아왔을 때는 즉시 재활성화하지 않음
+    // (맨 아래로 가기 버튼을 통해서만 재활성화되도록)
+    
+    // 현재 스크롤 위치 저장
+    setLastScrollTop(currentScrollTop);
 
     // 스크롤이 멈췄음을 감지하기 위한 타이머
     setTimeout(() => {
       setIsUserScrolling(false);
-    }, 150);
-  }, [isAtBottom, isAutoScrollEnabled]);
+    }, 100); // 150ms → 100ms로 더 빠른 반응
+  }, [isAtBottom, isAutoScrollEnabled, lastScrollTop]);
 
   // 스크롤 이벤트 리스너 등록
   useEffect(() => {
@@ -340,38 +350,30 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
     if (isAutoScrollEnabled && !isUserScrolling) {
       scrollToBottom();
     }
-  }, [messages, isAutoScrollEnabled, isUserScrolling, scrollToBottom]);
+  }, [messages, isAutoScrollEnabled, isUserScrolling, scrollToBottom, forceScrollToBottom]);
 
-  // 스트리밍 시작 시 자동 스크롤 강제 활성화 및 적용
+  // 스트리밍 시작 시 한번만 스크롤하고 이후 사용자 의도 존중
+  const [hasScrolledForStreaming, setHasScrolledForStreaming] = useState(false);
+  
   useEffect(() => {
-    if (isStreaming) {
-      // 스트리밍이 시작되면 자동 스크롤을 강제로 활성화
-      if (!isAutoScrollEnabled) {
-        // Debug log removed for production
-        setIsAutoScrollEnabled(true);
-      }
-      
-      if (isAutoScrollEnabled && !isUserScrolling) {
-        scrollToBottom('auto'); // 스트리밍 중에는 부드러운 스크롤 대신 즉시 스크롤
-      }
+    if (isStreaming && !hasScrolledForStreaming) {
+      // 스트리밍이 처음 시작될 때만 한번 스크롤
+      setHasScrolledForStreaming(true);
+      forceScrollToBottom(true); // 부드러운 애니메이션으로 한번만
+    } else if (!isStreaming) {
+      // 스트리밍이 끝나면 플래그 리셋
+      setHasScrolledForStreaming(false);
     }
-  }, [isStreaming, isAutoScrollEnabled, isUserScrolling, scrollToBottom]);
+    
+    // 스트리밍 중이고 자동 스크롤이 활성화된 경우에만 계속 스크롤
+    if (isStreaming && isAutoScrollEnabled && !isUserScrolling) {
+      scrollToBottom('auto'); // 스트리밍 중에는 즉시 스크롤
+    }
+  }, [isStreaming, isAutoScrollEnabled, isUserScrolling, hasScrolledForStreaming, scrollToBottom, forceScrollToBottom]);
 
   return (
     <div className="chat-viewer h-full flex flex-col relative">
       <div className="border-b-2 border-[#D9D9D9]"></div>
-      
-      {/* 스크롤 애니메이션 표시 */}
-      {isScrollingToBottom && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
-          <div className="bg-blue-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-pulse">
-            <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-            <span className="text-sm">최신 메시지로 이동 중...</span>
-          </div>
-        </div>
-      )}
       
       {/* 메시지 리스트 */}
       <div 
@@ -416,10 +418,15 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
               className="w-full"
             >
                 <div
-                  className={`w-full rounded-lg px-4 py-2 border ${
+                  // className={`w-full rounded-lg px-4 py-2 border ${
+                  //   message.type === MessageType.USER
+                  //     ? 'bg-white text-gray-900 border-gray-300'
+                  //     : 'bg-gray-100 text-gray-900 border-gray-300'
+                  // }`}
+                   className={`w-full rounded-lg px-4 py-2  ${
                     message.type === MessageType.USER
-                      ? 'bg-white text-gray-900 border-gray-300'
-                      : 'bg-gray-100 text-gray-900 border-gray-300'
+                      ? 'bg-white text-gray-900 border border-gray-300'
+                      : ''
                   }`}
                 >
                   {message.type === MessageType.USER ? (
@@ -446,7 +453,6 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
         
         {/* 타이핑 인디케이터 - AI 메시지가 pending 상태일 때만 표시 */}
         {(() => {
-          const lastMessage = messages[messages.length - 1];
           const hasPendingAIMessage = messages.some(msg => 
             msg.type === MessageType.ASSISTANT && msg.status === 'pending'
           );
@@ -476,7 +482,7 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
         {/* AI 추론 과정 표시 - TypingIndicator와 분리 */}
         {reasoningPreview && (
           <div className="flex justify-start">
-            <div className="px-4 py-1">
+            <div className="px-2">
               <ReasoningPreview
                 reasoning={reasoningPreview}
                 isComplete={reasoningComplete}
@@ -499,23 +505,29 @@ const ChatViewer: React.FC<ChatViewerProps> = ({ userId = getOrCreateGuestId() }
         <div ref={messagesEndRef} />
       </div>
       
-      {/* 자동 스크롤 비활성화 시 맨 아래로 가기 버튼 */}
-      {/* {!isAutoScrollEnabled && (
-        <div className="absolute bottom-4 right-4">
+      {/* 자동 스크롤 비활성화 시 맨 아래로 가기 버튼 (개선된 버전) */}
+      {!isAutoScrollEnabled && (
+        <div className="absolute bottom-4 right-4 z-10">
           <button
             onClick={() => {
               setIsAutoScrollEnabled(true);
-              scrollToBottom();
+              setUserScrollIntent('manual_bottom');
+              forceScrollToBottom(true);
             }}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center"
-            title="맨 아래로 이동하고 자동 스크롤 활성화"
+            className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 flex items-center justify-center group hover:scale-105"
+            title="최신 메시지로 이동하고 자동 스크롤 활성화"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 transition-transform group-hover:translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
             </svg>
+            {(isStreaming || (messages.length > 0 && messages[messages.length - 1]?.status === 'streaming')) && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse">
+                <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"></div>
+              </div>
+            )}
           </button>
         </div>
-      )} */}
+      )}
     </div>
   );
 }

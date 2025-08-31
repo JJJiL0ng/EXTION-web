@@ -13,6 +13,8 @@ const config: Config = {
     'text-gray-500',
     'text-gray-600',
     'text-gray-700',
+    'text-gray-50',
+    'text-gray-100',
     'border-gray-300',
     'border-gray-400',
     'border-gray-500',
@@ -27,7 +29,10 @@ const config: Config = {
     'px-1',
     'pl-2',
     'gap-3',
-    'w-56'
+    'w-56',
+    'bg-gray-200',
+    'px-10',
+    'opacity-40'
 
   ],
   theme: {
