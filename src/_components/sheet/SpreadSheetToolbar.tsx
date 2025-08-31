@@ -11,9 +11,9 @@ interface SpreadSheetToolbarProps {
     // 새 스프레드시트
     onNewSpreadsheet: () => void;
 
-    // 파일 업로드
-    onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    isUploading: boolean;
+    // (옵션) 업로드 관련 - 현재는 상위(Main)에서 관리
+    onFileUpload?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    isUploading?: boolean;
 }
 
 /**
@@ -24,9 +24,7 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
     onSaveAsCSV,
     onSaveAsJSON,
     isExporting,
-    onNewSpreadsheet,
-    onFileUpload,
-    isUploading
+    onNewSpreadsheet
 }) => {
     return (
         <div className="w-full h-6 bg-white flex items-center px-2 box-border">
@@ -46,16 +44,7 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                     홈
                 </button>
 
-                {/* 숨겨진 파일 업로드 input */}
-                <input
-                    id="file-upload"
-                    type="file"
-                    accept=".xlsx,.xls,.csv,.sjs,.json"
-                    multiple
-                    onChange={onFileUpload}
-                    disabled={isUploading}
-                    className="hidden"
-                />
+                {/* 파일 업로드 input은 상위(Main)에서 관리 */}
 
                 {/* 내보내기 드롭다운 */}
                 <div className="relative group">

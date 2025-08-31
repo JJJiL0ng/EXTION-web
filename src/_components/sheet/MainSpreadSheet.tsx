@@ -77,7 +77,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     const [hostStyle, setHostStyle] = useState({
         width: '100vw',
-        height: 'calc(100vh - 24px)', // 상단 바 높이(24px)를 제외한 전체 화면
+        height: '100vh',
         minWidth: '100%',
         boxSizing: 'border-box' as const,
     });
@@ -276,7 +276,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         const handleResize = () => {
             setHostStyle({
                 width: '100vw',
-                height: 'calc(100vh - 24px)',
+                height: isFileUploaded ? 'calc(100vh - 24px)' : '100vh',
                 minWidth: '100%',
                 boxSizing: 'border-box' as const,
             });
@@ -290,8 +290,10 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         };
 
         window.addEventListener('resize', handleResize);
+        // 최초 1회 적용 및 isFileUploaded 변경 시 높이 갱신
+        handleResize();
         return () => window.removeEventListener('resize', handleResize);
-    }, [spreadRef]);
+    }, [spreadRef, isFileUploaded]);
 
 
     // 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리
@@ -411,31 +413,42 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     return (
         <div className="w-full h-screen box-border flex flex-col bg-gray-50">
-            {/* 상단 툴바 및 상태 표시 통합 */}
-            <div className="flex-shrink-0 w-full h-6 bg-white flex items-center justify-between ">
-                <SpreadSheetToolbar
-                    onSaveAsExcel={() => saveAsExcel()}
-                    onSaveAsCSV={() => saveAsCSV()}
-                    onSaveAsJSON={() => saveAsJSON()}
-                    isExporting={exportState.isExporting}
-                    onNewSpreadsheet={handleNewSpreadsheet}
-                    onFileUpload={handleFileUpload}
-                    isUploading={uploadState.isUploading}
-                />
+            {/* 숨겨진 파일 업로드 input (항상 렌더링) */}
+            <input
+                id="file-upload"
+                type="file"
+                accept=".xlsx,.xls,.csv,.sjs,.json"
+                multiple
+                onChange={handleFileUpload}
+                disabled={uploadState.isUploading}
+                className="hidden"
+            />
 
-                {/* <StatusDisplay
-                    uploadState={uploadState}
-                    exportState={exportState}
-                    isCreating={isCreating}
-                    createError={createError}
-                    deltaManager={deltaManager}
-                /> */}
+            {/* 상단 툴바 및 상태 표시: 파일 업로드 후에만 표시 */}
+            {isFileUploaded && (
+                <div className="flex-shrink-0 w-full h-6 bg-white flex items-center justify-between ">
+                    <SpreadSheetToolbar
+                        onSaveAsExcel={() => saveAsExcel()}
+                        onSaveAsCSV={() => saveAsCSV()}
+                        onSaveAsJSON={() => saveAsJSON()}
+                        isExporting={exportState.isExporting}
+                        onNewSpreadsheet={handleNewSpreadsheet}
+                    />
 
-                <ChatButton
-                    onClick={handleShowChat}
-                    isVisible={uiState.showChatButton}
-                />
-            </div>
+                    {/* <StatusDisplay
+                        uploadState={uploadState}
+                        exportState={exportState}
+                        isCreating={isCreating}
+                        createError={createError}
+                        deltaManager={deltaManager}
+                    /> */}
+
+                    <ChatButton
+                        onClick={handleShowChat}
+                        isVisible={uiState.showChatButton}
+                    />
+                </div>
+            )}
 
             {/* 파일 업로드 영역 및 SpreadJS */}
             <FileUploadSheetRender

@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { SpreadSheets } from "@mescius/spread-sheets-react";
 
 interface FileUploadSheetRenderProps {
@@ -41,7 +42,7 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
     hostStyle
 }) => {
     return (
-        <div 
+        <div
             className="w-full relative"
             onDragEnter={onDragEnter}
             onDragLeave={onDragLeave}
@@ -50,37 +51,47 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
         >
             {/* 파일이 업로드되지 않았을 때 표시되는 업로드 안내 영역 */}
             {!isFileUploaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-                    <div className="text-center max-w-md mx-4">
-                        <div className="mb-8">
-                            <svg 
-                                className="w-16 h-16 text-[#005ed9] mx-auto mb-4" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                viewBox="0 0 24 24"
-                            >
-                                <path 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    strokeWidth={1.5} 
-                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" 
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10 overflow-hidden">
+                    {/* 배경 이미지 (Next Image, 약간 투명) */}
+                    <Image
+                        src="/cells_bg_image.png"
+                        alt=""
+                        fill
+                        sizes="100vw"
+                        priority
+                        aria-hidden="true"
+                        className="opacity-40 pointer-events-none select-none"
+                        style={{ objectFit: 'cover' }}
+                    />
+                    <div className="bg-white border-2 rounded-lg px-10 py-6 border-[#005de9] text-center max-w-md mx-4 relative z-10">
+                        <div className="mb-8 flex flex-col items-center">
+                            <div className="relative w-16 h-16 mb-4"> {/* 로고 크기: 72x72 */}
+                                <Image
+                                    src="/EXTION_new_logo.svg"
+                                    alt="EXTION logo"
+                                    fill
+                                    sizes="72px"
+                                    priority
+                                    aria-hidden="true"
+                                    className="object-contain"
                                 />
-                            </svg>
-                            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                            </div>
+
+                            <h3 className="text-xl font-semibold text-gray-700 mb-2 text-center">
                                 파일을 업로드하여 시작하세요
                             </h3>
-                            <p className="text-gray-500 text-sm">
+                            <p className="text-gray-500 text-sm text-center">
                                 Excel, CSV, JSON 파일을 지원합니다
                             </p>
                         </div>
 
-                        {/* 드래그&드롭 영역 */}
-                        <div 
-                            className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${
-                                isDragActive 
-                                    ? 'border-blue-500 bg-blue-50' 
+                        {/* 드래그&드롭 영역 */
+                        }
+                        <div
+                            className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${isDragActive
+                                    ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-300 hover:border-gray-400'
-                            }`}
+                                }`}
                         >
                             {isDragActive ? (
                                 <div className="text-blue-600">

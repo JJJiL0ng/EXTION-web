@@ -30,7 +30,9 @@ const config: Config = {
     'pl-2',
     'gap-3',
     'w-56',
-    'bg-gray-200'
+    'bg-gray-200',
+    'px-10',
+    'opacity-40'
 
   ],
   theme: {
