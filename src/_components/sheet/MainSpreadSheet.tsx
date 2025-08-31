@@ -14,7 +14,6 @@ import { useSpreadJSInit } from '../../_hooks/sheet/useSpreadJSInit';
 
 // Stores
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
-import { useUserIdStore } from '@/_store/auth/userIdStore';
 
 // Utils
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
