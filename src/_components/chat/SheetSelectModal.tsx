@@ -2,9 +2,9 @@ import React from 'react';
 // import { useGetSheetNames } from '../../_hooks/sheet/useGetSheetNames';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { X } from 'lucide-react';
-import { useSelectedSheetInfoStore } from '../../_hooks/sheet/useSelectedSheetInfoStore';
+import { useSelectedSheetInfoStore } from '../../_hooks/sheet/common/useSelectedSheetInfoStore';
 
-import { useSpreadSheetNames } from '@/_hooks/sheet/useSpreadSheetNames'
+import { useSpreadSheetNames } from '@/_hooks/sheet/common/useSpreadSheetNames'
 
 
 interface FileSelectModalProps {

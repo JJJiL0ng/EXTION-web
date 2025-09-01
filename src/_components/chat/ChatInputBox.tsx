@@ -6,9 +6,9 @@ import { useMainChat } from '../../_hooks/chat/useChatStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
 import { useChatMode, ChatMode } from '../../_hooks/chat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
-import { useGetActiveSheetName } from '@/_hooks/sheet/useGetActiveSheetName'
+import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName'
 import FileAddButton from './FileAddButton';
-import { useSelectedSheetInfoStore } from '../../_hooks/sheet/useSelectedSheetInfoStore';
+import { useSelectedSheetInfoStore } from '../../_hooks/sheet/common/useSelectedSheetInfoStore';
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 
 

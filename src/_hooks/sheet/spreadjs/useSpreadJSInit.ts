@@ -1,5 +1,5 @@
 import { useCallback, MutableRefObject } from 'react';
-import { configurePerformanceSettings, setupDefaultData, setupDefaultStyles } from '../../_utils/sheet/spreadJSConfig';
+import { configurePerformanceSettings, setupDefaultData, setupDefaultStyles } from '../../../_utils/sheet/spreadJSConfig';
 
 interface UseSpreadJSInitProps {
     spreadRef: MutableRefObject<any>;

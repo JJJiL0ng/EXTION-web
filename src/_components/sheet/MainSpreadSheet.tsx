@@ -4,13 +4,13 @@ import '@mescius/spread-sheets-io';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useParams } from 'next/navigation';
 // Hooks
-import { useFileUpload } from '../../_hooks/sheet/useFileUpload';
-import { useFileExport } from '../../_hooks/sheet/useFileExport';
-import { useSheetCreate } from '../../_hooks/sheet/useSheetCreate';
-import { useSpreadSheetDelta } from '../../_hooks/sheet/useSpreadSheetDelta';
+import { useFileUpload } from '../../_hooks/sheet/file_upload_export/useFileUpload';
+import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
+import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
+import { useSpreadSheetDelta } from '../../_hooks/sheet/data_save/useSpreadSheetDelta';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
-import { useUIState } from '../../_hooks/sheet/useUIState';
-import { useSpreadJSInit } from '../../_hooks/sheet/useSpreadJSInit';
+import { useUIState } from '../../_hooks/sheet/common/useUIState';
+import { useSpreadJSInit } from '../../_hooks/sheet/spreadjs/useSpreadJSInit';
 
 // Stores
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
