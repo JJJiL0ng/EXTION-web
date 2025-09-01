@@ -28,13 +28,12 @@ const useCommandApplyEngine = ({ dataEditCommand }: CommandApplyEngineProps) => 
         }
 
         case "use_formula": {
-            // TODO: implement use formula command
-            break;
-        }
-
-        case "control_sheet": {
-            // TODO: implement control sheet command
-            break;
+            if (range.length == 4) {
+                sheet.setArrayFormula(range[0], range[1], range[2], range[3], detailedCommand);
+            }
+            else if (range.length == 2) {
+                sheet.setFormula(range[0], range[1], detailedCommand);
+            } break;
         }
 
         case "sort_data": {
@@ -54,6 +53,11 @@ const useCommandApplyEngine = ({ dataEditCommand }: CommandApplyEngineProps) => 
 
         case "summary_edit_history": {
             // TODO: implement summary edit history command
+            break;
+        }
+
+        case "control_sheet": {
+            // TODO: implement control sheet command
             break;
         }
 
