@@ -1,26 +1,33 @@
-import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 import { useState } from 'react';
-import useCommandMaker from "./useCommandMaker";
+import commandApplyEngine from "./useCommandApplyEngine";
+
+import { dataEditChatRes } from "@/_Api/ai-chat/aiChatApi.types";
 
 interface useDataEditApplyProps {
-    sheetIndex: number;
-    dataEditCommand: string;
-    range: string;
+    dataEditChatRes: dataEditChatRes;
 }
 
 interface useDataEditApplyReturns {
     isDataEdited: boolean;
 }
 
-const useDataEditApply = ({ dataEditCommand, sheetIndex, range }: useDataEditApplyProps): useDataEditApplyReturns => {
-    const { spread } = useSpreadsheetContext();
-    const [isDataEdited] = useState(false);
+const useDataEditApply = ({ dataEditChatRes }: useDataEditApplyProps): useDataEditApplyReturns => {
+    const [isDataEdited, setIsDataEdited] = useState(false);
 
-    spread.setActiveSheet(sheetIndex);
 
-    // useCommandMaker의 현재 시그니처에 맞게 호출하여 문자열 명령 생성
-    const { makeCommand } = useCommandMaker({ dataEditCommand, range });
-    console.log('Generated command:', makeCommand);
+    const commandsLength = dataEditChatRes.dataEditCommands.length;
+
+
+    // 명령어가 한번에 여러개가 와도 대응 보통의 경우 1개
+    for (let i = 0; i < commandsLength; i++) {
+        //command apply engine에 세부 명령어 넣어서 동작 수행
+        commandApplyEngine({dataEditCommand: dataEditChatRes.dataEditCommands[i]});
+
+        setIsDataEdited(true);
+    }
+
+
+    // console.log('Generated command:', madeCommands);
 
     return { isDataEdited };
 };
