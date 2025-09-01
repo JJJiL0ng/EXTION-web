@@ -37,7 +37,7 @@ const useCommandApplyEngine = ({ dataEditCommand }: CommandApplyEngineProps) => 
         }
 
         case "sort_data": {
-            // TODO: implement sort data command
+            sheet.setFormula(range[0], range[1], detailedCommand);
             break;
         }
 
