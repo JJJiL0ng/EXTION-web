@@ -1,5 +1,6 @@
-import { dataEditCommand } from "@/_Api/ai-chat/aiChatApi.types";
+import { dataEditCommand,StyleCommand } from "@/_Api/ai-chat/aiChatApi.types";
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
+import useStyleCommandApplyEngine from "./useStyleCommandApplyEngine";
 import GC from '@mescius/spread-sheets';
 
 interface CommandApplyEngineProps {
@@ -16,6 +17,12 @@ const useCommandApplyEngine = ({ dataEditCommand }: CommandApplyEngineProps) => 
     const range = dataEditCommand.range;
 
     const commandType = dataEditCommand.commandType;
+
+    const { executeStyleCommand } = useStyleCommandApplyEngine({
+        sheetIndex,
+        range,
+        styleCommand: detailedCommand as StyleCommand
+    });
 
     switch (commandType) {
         case "value_change": {
@@ -55,9 +62,7 @@ const useCommandApplyEngine = ({ dataEditCommand }: CommandApplyEngineProps) => 
         // }
 
         case "apply_style": {
-            const style = new GC.Spread.Sheets.Style();
-            
-            
+            executeStyleCommand();
             break;
         }
 
