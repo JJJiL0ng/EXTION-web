@@ -1,5 +1,5 @@
 import GC from '@mescius/spread-sheets';
-import { StyleCommand, StyleProperties, BorderInfo } from "@/_Api/ai-chat/aiChatApi.types";
+import { StyleCommand, StyleProperties, BorderInfo } from "@/_Api/ai-chat/types/style.types";
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 
 

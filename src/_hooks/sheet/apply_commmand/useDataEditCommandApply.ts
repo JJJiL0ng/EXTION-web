@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import commandApplyEngine from "./useCommandApplyEngine";
 
-import { dataEditChatRes } from "@/_Api/ai-chat/aiChatApi.types";
+import { dataEditChatRes } from "@/_Api/ai-chat/types/dataEdit.types";
 
 interface useDataEditApplyProps {
     dataEditChatRes: dataEditChatRes;
