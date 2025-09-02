@@ -1,5 +1,5 @@
-import { dataEditCommand } from "@/_Api/ai-chat/types/dataEdit.types";
-import { StyleCommand } from "@/_Api/ai-chat/types/style.types";
+import { dataEditCommand } from "@/_types/ai-chat-api/dataEdit.types";
+import { StyleCommand } from "@/_types/ai-chat-api/style.types";
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 import useStyleCommandApplyEngine from "./useStyleCommandApplyEngine";
 import GC from '@mescius/spread-sheets';
