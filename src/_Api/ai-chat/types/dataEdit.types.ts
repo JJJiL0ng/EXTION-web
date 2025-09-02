@@ -18,6 +18,5 @@ export enum dataEditCommandType {
     CONTROL_SHEET = 'control_sheet',
     SORT_DATA = 'sort_data',
     APPLY_STYLE = 'apply_style',
-    FILTER_DATA = 'filter_data',
     SUMMARY_EDIT_HISTORY = 'summary_edit_history',
 }

@@ -55,13 +55,6 @@ const useCommandApplyEngine = ({ dataEditCommand }: CommandApplyEngineProps) => 
             break;
         }
 
-        // case "filter_data": {
-        //     const filterRange = new GC.Spread.Sheets.Range(range[0], range[1], range[2], range[3]);
-        //     const rowFilter = new GC.Spread.Sheets.Filter.HideRowFilter(filterRange);
-        //     sheet.rowFilter(rowFilter);
-        //     break;
-        // }
-
         case "apply_style": {
             executeStyleCommand();
             break;
