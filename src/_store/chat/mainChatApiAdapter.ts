@@ -1,7 +1,7 @@
 // src/_store/chat/mainChatApiAdapter.ts
 // mainChatApi.ts와 v2 스토어 간의 어댑터
 
-import { MainChatApi, ChatRequest, createChatRequest, NewChatResponseData } from '../../_Api/chat/mainChatApi'
+import { MainChatApi, ChatRequest, createChatRequest, NewChatResponseData } from '../../_ApiConnector/chat/mainChatApi'
 import {
   CreateChatRequest,
   CreateChatResponse,

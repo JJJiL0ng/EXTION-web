@@ -11,7 +11,8 @@ export interface aiChatApiReq {
     userQuestionMessage: string;
     parsedSheetNames: string[];
 }
- export interface aiChatApiRes {
+export interface aiChatApiRes {
+    jobId: string;
     taskManagerOutput: TaskManagerOutput;
     dataEditChatRes: dataEditChatRes;
 }
