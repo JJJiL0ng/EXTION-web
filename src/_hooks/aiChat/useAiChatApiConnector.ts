@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { AiChatApiConnector, AiJobError, AiJobCancelled, AiJobTimeout } from '@/_ApiConnector/ai-chat/aiChatApiConnector';
+import { AiChatApiConnector } from '@/_ApiConnector/ai-chat/aiChatApiConnector';
 import { aiChatApiReq } from "@/_types/ai-chat-api/aiChatApi.types";
 import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
 
@@ -126,7 +126,7 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
     }
 
     return new Promise((resolve, reject) => {
-      const jobId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      const jobId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
       
       pendingJobsRef.current.set(jobId, { resolve, reject });
       
