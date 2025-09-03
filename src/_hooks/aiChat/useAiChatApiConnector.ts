@@ -131,7 +131,7 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
       pendingJobsRef.current.set(jobId, { resolve, reject });
       
       try {
-        connectorRef.current!.startAiJob({ ...request });
+        connectorRef.current!.startAiJob({ ...request, jobId });
       } catch (error) {
         pendingJobsRef.current.delete(jobId);
         reject(error);
