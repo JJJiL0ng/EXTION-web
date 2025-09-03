@@ -23,25 +23,6 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
         chatId,
         isSendingMessage,
         aiThinkingIndicatorVisible,
-        currentAssistantMessageId,
-        
-        // State setters
-        setWsConnectionStatus,
-        setWebsocketId,
-        setUserId,
-        setSpreadsheetId,
-        setChatId,
-        setIsSendingMessage,
-        setAiThinkingIndicatorVisible,
-        
-        // Message actions
-        addUserMessage,
-        updateAssistantMessage,
-        completeAssistantMessage,
-        setAssistantMessageError,
-        updateUserMessageStatus,
-        addSystemMessage,
-        addErrorMessage
     } = aiChatStore();
 
     // 웹소켓 초기화
@@ -52,14 +33,19 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
             currentWs.close();
         }
 
-        setWsConnectionStatus('connecting', undefined);
-        setUserId(userId || '');
-        setChatId(chatId || '');
+        {
+            const { setWsConnectionStatus, setUserId, setChatId, addSystemMessage } = aiChatStore.getState();
+            setWsConnectionStatus('connecting', undefined);
+            setUserId(userId || '');
+            setChatId(chatId || '');
+            // 연결 시도 로그는 시스템 메시지로 남기지 않음. onopen에서 안내 메시지 표시
+        }
 
         const ws = new WebSocket(url);
         webSocketRef.current = ws;
 
         ws.onopen = () => {
+            const { setWsConnectionStatus, addSystemMessage } = aiChatStore.getState();
             setWsConnectionStatus('connected', undefined);
             addSystemMessage('서버에 연결되었습니다.');
         };
@@ -67,6 +53,17 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data as string);
+                const {
+                    currentAssistantMessageId,
+                    setWebsocketId,
+                    updateAssistantMessage,
+                    completeAssistantMessage,
+                    setIsSendingMessage,
+                    setAiThinkingIndicatorVisible,
+                    setAssistantMessageError,
+                    addErrorMessage,
+                    addSystemMessage,
+                } = aiChatStore.getState();
 
                 if (data.type === 'ws_id' && data.id) {
                     setWebsocketId(data.id);
@@ -95,6 +92,7 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
                 }
             } catch (e) {
                 console.error('Failed to parse WS message:', e);
+                const { addErrorMessage, setIsSendingMessage, setAiThinkingIndicatorVisible } = aiChatStore.getState();
                 addErrorMessage('서버 메시지 파싱 중 오류가 발생했습니다.');
                 setIsSendingMessage(false);
                 setAiThinkingIndicatorVisible(false);
@@ -102,6 +100,7 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
         };
 
         ws.onclose = () => {
+            const { setWsConnectionStatus, addSystemMessage, setIsSendingMessage, setAiThinkingIndicatorVisible } = aiChatStore.getState();
             setWsConnectionStatus('disconnected', undefined);
             addSystemMessage('서버와 연결이 끊어졌습니다.');
             setIsSendingMessage(false);
@@ -111,18 +110,14 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
 
         ws.onerror = (error) => {
             console.error('WebSocket Error:', error);
+            const { setWsConnectionStatus, addErrorMessage, setIsSendingMessage, setAiThinkingIndicatorVisible } = aiChatStore.getState();
             setWsConnectionStatus('error', '웹소켓 연결 오류 발생');
             addErrorMessage('웹소켓 연결 오류 발생.');
             setIsSendingMessage(false);
             setAiThinkingIndicatorVisible(false);
             webSocketRef.current = null;
         };
-    }, [
-        setWsConnectionStatus, setUserId, setChatId, setWebsocketId, 
-        addSystemMessage, updateAssistantMessage, completeAssistantMessage,
-        setAssistantMessageError, addErrorMessage, setIsSendingMessage,
-        setAiThinkingIndicatorVisible, currentAssistantMessageId
-    ]);
+    }, []);
 
     // 웹소켓 연결 끊기
     const disconnectWebSocket = useCallback(() => {
@@ -135,6 +130,18 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
     // 웹소켓 메시지 전송
     const sendWebSocketMessage = useCallback((messageContent: string, relatedMessageId: string) => {
         const ws = webSocketRef.current;
+        const {
+            wsConnectionStatus,
+            userId,
+            websocketId,
+            chatId,
+            spreadsheetId,
+            addErrorMessage,
+            updateUserMessageStatus,
+            setIsSendingMessage,
+            setAiThinkingIndicatorVisible,
+        } = aiChatStore.getState();
+
         if (ws && wsConnectionStatus === 'connected') {
             try {
                 const payload = {
@@ -161,10 +168,11 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
             setIsSendingMessage(false);
             setAiThinkingIndicatorVisible(false);
         }
-    }, [wsConnectionStatus, userId, websocketId, chatId, spreadsheetId, addErrorMessage, updateUserMessageStatus, setIsSendingMessage, setAiThinkingIndicatorVisible]);
+    }, []);
 
     // 메시지 전송 (사용자 메시지 추가 + 웹소켓 전송)
     const sendMessage = useCallback((content: string) => {
+        const { addUserMessage, setIsSendingMessage, setAiThinkingIndicatorVisible, updateUserMessageStatus } = aiChatStore.getState();
         // 사용자 메시지를 스토어에 추가하고 생성된 ID 받기
         const messageId = addUserMessage(content);
         setIsSendingMessage(true);
@@ -175,7 +183,7 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
             sendWebSocketMessage(content, messageId);
             updateUserMessageStatus(messageId, 'sent');
         }, 0);
-    }, [addUserMessage, sendWebSocketMessage, updateUserMessageStatus, setIsSendingMessage, setAiThinkingIndicatorVisible]);
+    }, [sendWebSocketMessage]);
 
     // props로 전달된 값들이 변경되면 웹소켓 초기화
     useEffect(() => {
@@ -208,8 +216,8 @@ export const useAiChatController = (props?: UseAiChatControllerProps) => {
         sendWebSocketMessage,
         
         // Setters
-        setUserId,
-        setSpreadsheetId,
-        setChatId,
+    setUserId: aiChatStore.getState().setUserId,
+    setSpreadsheetId: aiChatStore.getState().setSpreadsheetId,
+    setChatId: aiChatStore.getState().setChatId,
     };
 };
