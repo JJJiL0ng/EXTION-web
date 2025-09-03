@@ -11,9 +11,6 @@ interface ChatActions {
     // 상태 설정 관련
     setWsConnectionStatus: (status: WebSocketConnectionStatus, error?: string) => void;
     setWebsocketId: (id: string) => void;
-    setUserId: (id: string) => void;
-    setSpreadsheetId: (id: string) => void;
-    setChatId: (id: string) => void;
 
     // 메시지 관련
     addUserMessage: (content: string) => string;
@@ -41,9 +38,6 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
     wsError: null,
     currentAssistantMessageId: null,
     websocketId: null,
-    userId: null,
-    spreadsheetId: null,
-    chatId: null,
 
     isSendingMessage: false,
     aiThinkingIndicatorVisible: false,
@@ -58,9 +52,6 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
         set({ wsConnectionStatus: status, wsError: error ?? null });
     },
     setWebsocketId: (id: string) => set({ websocketId: id }),
-    setUserId: (id: string) => set({ userId: id }),
-    setSpreadsheetId: (id: string) => set({ spreadsheetId: id }),
-    setChatId: (id: string) => set({ chatId: id }),
 
     // 사용자 메시지 추가 (낙관적 UI)
     addUserMessage: (content: string) => {

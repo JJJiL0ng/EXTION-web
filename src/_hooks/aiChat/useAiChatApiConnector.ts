@@ -24,10 +24,8 @@ export const useAiChatApiConnector = ({ serverUrl, autoConnect = false, userId, 
     }
 
     {
-      const { setWsConnectionStatus, setUserId, setChatId, addSystemMessage } = aiChatStore.getState();
+      const { setWsConnectionStatus } = aiChatStore.getState();
       setWsConnectionStatus('connecting', undefined);
-      setUserId(userId || '');
-      setChatId(chatId || '');
     }
 
     const ws = new WebSocket(url);
@@ -117,14 +115,19 @@ export const useAiChatApiConnector = ({ serverUrl, autoConnect = false, userId, 
   }, []);
 
   // 웹소켓 메시지 전송
+  // 외부 저장소에서 값을 가져오는 함수들 (실제 구현은 프로젝트에 맞게 수정 필요)
+  const getUserId = () => userId; // 훅 props에서 가져온 값 사용
+  const getChatId = () => chatId; // 훅 props에서 가져온 값 사용  
+  const getSpreadsheetId = () => {
+    // TODO: 실제 외부 저장소에서 spreadsheetId 가져오는 로직 구현
+    return null; // 임시값
+  };
+
   const sendWebSocketMessage = useCallback((messageContent: string, relatedMessageId: string) => {
     const ws = webSocketRef.current;
     const {
       wsConnectionStatus,
-      userId,
       websocketId,
-      chatId,
-      spreadsheetId,
       addErrorMessage,
       updateUserMessageStatus,
       setIsSendingMessage,
@@ -136,10 +139,10 @@ export const useAiChatApiConnector = ({ serverUrl, autoConnect = false, userId, 
         const payload = {
           type: 'chat_request',
           messageId: relatedMessageId,
-          userId: userId,
+          userId: getUserId(),
           websocketId: websocketId,
-          chatId: chatId,
-          spreadsheetId: spreadsheetId,
+          chatId: getChatId(),
+          spreadsheetId: getSpreadsheetId(),
           content: messageContent,
           timestamp: Date.now(),
         };

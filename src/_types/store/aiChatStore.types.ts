@@ -43,9 +43,6 @@ export interface AiChatState {
   wsError: string | null; // 웹소켓 연결 오류 메시지
   currentAssistantMessageId: string | null; // 현재 스트리밍 중인 AI 메시지의 ID (하나의 AI만 스트리밍한다고 가정)
   websocketId: string | null; // 백엔드에서 부여하는 웹소켓 세션 ID 등 (필요 시)
-  userId: string | null; // 현재 로그인된 사용자 ID (필요 시)
-  spreadsheetId: string | null; // 현재 활성 스프레드시트 ID (도메인 특정)
-  chatId: string | null; // 현재 활성 대화방 ID
   isTyping: boolean;
   isSendingMessage: boolean;
   aiThinkingIndicatorVisible: boolean;
