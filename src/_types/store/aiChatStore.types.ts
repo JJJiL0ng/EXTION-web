@@ -16,7 +16,7 @@ export interface UserMessage extends BaseMessage {
 
 export interface AssistantMessage extends BaseMessage {
   type: 'assistant';
-  content: string | aiChatApiRes; // AssistantMessage는 둘 다 가능
+  content: aiChatApiRes; // AssistantMessage는 둘 다 가능
 }
 
 export interface SystemMessage extends BaseMessage {
