@@ -2,12 +2,13 @@
 // 파일 업로드일때 채팅 컨테이너
 import React, { useState, useEffect } from "react";
 import ChatInputBox from "./ChatInputBox";
-import ChatViewer from "./ChatViewer";
+// import ChatViewer from "./ChatViewer";
 import ChatTabBar from "./ChatTabBar";
 import { FileSelectModal } from "./SheetSelectModal";
 import { ChatInitMode, UploadedFileInfo } from "../../_types/chat.types";
-import { useChatFlow, useChatStore } from "../../_hooks/chat/useChatStore";
-import { getOrCreateGuestId } from "../../_utils/guestUtils";
+// import { useChatFlow, useChatStore } from "../../_hooks/chat/useChatStore";
+// import { getOrCreateGuestId } from "../../_utils/guestUtils";
+import { aiChatStore } from "@/_store/aiChat/aiChatStore";
 
 interface FileUploadChattingContainerProps {
   initMode?: ChatInitMode;
@@ -16,25 +17,22 @@ interface FileUploadChattingContainerProps {
   userId?: string;
 }
 
-export default function FileUploadChattingContainer({
-  initMode = ChatInitMode.FILE_UPLOAD,
-  fileInfo,
-  spreadSheetId,
-  userId = getOrCreateGuestId() // Guest ID 사용
-}: FileUploadChattingContainerProps) {
+export default function FileUploadChattingContainer(_props: FileUploadChattingContainerProps) {
 
   // 모달 상태 관리
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // v2 채팅 플로우 훅 사용
-  const chatFlow = useChatFlow({
-    mode: initMode,
-    fileInfo,
-    spreadSheetId
-  });
-
-  // v2 스토어에서 에러 상태 가져오기
-  const { error: storeError, clearError } = useChatStore();
+  // aiChatStore 사용
+  const { wsConnectionStatus, wsError } = aiChatStore();
+  
+  // 초기화 상태 관리 (간단한 구현)
+  const [isInitialized] = useState(true);
+  
+  // 에러 클리어 함수
+  const clearError = () => {
+    // aiChatStore에서 에러를 클리어하는 로직이 필요하다면 여기서 구현
+    console.log('Error cleared');
+  };
 
   // 모달 열기/닫기 함수
   const handleOpenModal = () => setIsModalOpen(true);
@@ -67,15 +65,15 @@ export default function FileUploadChattingContainer({
   return (
     <div className=" border-gray-200 h-full flex flex-col">
       {/* 초기화되지 않은 경우 로딩 표시 */}
-      {!chatFlow.isInitialized ? (
+      {!isInitialized ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-gray-500">채팅을 초기화하고 있습니다...</div>
         </div>
-      ) : storeError ? (
+      ) : wsError ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md p-6">
             <div className="text-red-600 mb-4">초기화 중 오류가 발생했습니다</div>
-            <div className="text-gray-600 mb-4 text-sm">{storeError.message}</div>
+            <div className="text-gray-600 mb-4 text-sm">{wsError}</div>
             <button 
               onClick={clearError}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -98,7 +96,10 @@ export default function FileUploadChattingContainer({
           
           {/* 채팅 뷰어 */}
           <div className="flex-1 overflow-y-auto">
-            <ChatViewer userId={userId} />
+            {/* <ChatViewer userId={userId} /> */}
+            <div className="p-4 text-center text-gray-500">
+              채팅 뷰어 컴포넌트 준비 중...
+            </div>
           </div>
           
           {/* 채팅 입력 박스와 모달을 포함하는 컨테이너 - 최하단 */}
@@ -113,8 +114,8 @@ export default function FileUploadChattingContainer({
             )}
             
             <ChatInputBox 
-              userId={userId}
-              disabled={!chatFlow.canSendMessage}
+              // userId={userId}
+              disabled={wsConnectionStatus !== 'connected'}
               onFileAddClick={handleOpenModal}
             />
           </div>

@@ -2,14 +2,15 @@
 
 import React, { useState, useRef } from 'react';
 import { ChevronDown, Check} from 'lucide-react';
-import { useMainChat } from '../../_hooks/chat/useChatStore';
-import { getOrCreateGuestId } from '../../_utils/guestUtils';
+// import { useMainChat } from '../../_hooks/chat/useChatStore';
+// import { getOrCreateGuestId } from '../../_utils/guestUtils';
 import { useChatMode, ChatMode } from '../../_hooks/chat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName'
 import FileAddButton from './FileAddButton';
 import { useSelectedSheetInfoStore } from '../../_hooks/sheet/common/useSelectedSheetInfoStore';
-import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
+// import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
+import { aiChatStore } from '@/_store/aiChat/aiChatStore';
 
 
 interface ChatInputBoxProps {
@@ -27,7 +28,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   // onSendMessage,
   placeholder = "수정사항을 입력하세요...",
   disabled = false,
-  userId = getOrCreateGuestId(), // Guest ID 사용
+  // userId = getOrCreateGuestId(), // Guest ID 사용
   onFileAddClick
 }) => {
   const [message, setMessage] = useState('');
@@ -42,7 +43,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const modeModalRef = useRef<HTMLDivElement>(null);
 
   // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
-  const spread = useSpreadsheetContext();
+  // const spread = useSpreadsheetContext();
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
@@ -50,27 +51,27 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   // useSelectedSheetInfoStore 훅 사용
   const { selectedSheets, removeSelectedSheet, addSelectedSheet, renameSelectedSheet } = useSelectedSheetInfoStore();
 
-  // v2 채팅 훅 사용
-  const { sendMessage: sendChatMessage, isLoading } = useMainChat(userId);
+  // aiChatStore 훅 사용
+  const { addUserMessage, isSendingMessage } = aiChatStore();
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
+  // const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = event.target.files?.[0];
+  //   if (file) {
+  //     setSelectedFile(file);
+  //   }
+  // };
 
-  const handleRemoveFile = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  // const handleRemoveFile = () => {
+  //   setSelectedFile(null);
+  //   if (fileInputRef.current) {
+  //     fileInputRef.current.value = '';
+  //   }
+  // };
 
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
       const messageToSend = message;
-      const fileToSend = selectedFile;
+      // const fileToSend = selectedFile;
       const selectedSheetsToSend = selectedSheets; // 선택된 시트 정보 포함
 
       // 메시지 전송 전에 입력창 초기화
@@ -90,7 +91,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
       // 선택된 시트 정보와 함께 메시지 전송
       console.log('Sending message with selected sheets:', selectedSheetsToSend);
-      await sendChatMessage(messageToSend);
+      addUserMessage(messageToSend);
     }
   };
 
@@ -98,7 +99,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
       event.preventDefault();
       // disabled 상태일 때는 전송하지 않음
-      if (!disabled && !isLoading && (message.trim() || selectedFile)) {
+      if (!disabled && !isSendingMessage && (message.trim() || selectedFile)) {
         handleSend();
       }
     }
@@ -338,13 +339,13 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
           {/* 전송 버튼 */}
           <button
             onClick={handleSend}
-            disabled={disabled || isLoading || (!message.trim() && !selectedFile)}
-            className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${disabled || isLoading || (!message.trim() && !selectedFile)
+            disabled={disabled || isSendingMessage || (!message.trim() && !selectedFile)}
+            className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${disabled || isSendingMessage || (!message.trim() && !selectedFile)
               ? 'bg-gray-300 text-white cursor-not-allowed'
               : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
               }`}
           >
-            {isLoading ? (
+            {isSendingMessage ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
