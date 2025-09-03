@@ -33,17 +33,23 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
   }>>(new Map());
 
   const connect = useCallback(async (serverUrl: string) => {
+    console.log('🔌 [useAiChatApiConnector] Connect called with:', serverUrl);
+    
     if (!connectorRef.current) {
+      console.log('🔌 [useAiChatApiConnector] Creating new connector');
       connectorRef.current = new AiChatApiConnector();
     }
 
     if (connectorRef.current.connected) {
+      console.log('🔌 [useAiChatApiConnector] Already connected, skipping');
       return;
     }
 
+    console.log('🔌 [useAiChatApiConnector] Starting connection process');
     setIsConnecting(true);
     try {
       await connectorRef.current.connect(serverUrl);
+      console.log('✅ [useAiChatApiConnector] Connector connected successfully');
       setIsConnected(true);
 
       // 이벤트 리스너 설정
@@ -97,9 +103,11 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
       });
 
     } catch (error) {
+      console.error('❌ [useAiChatApiConnector] Connection failed:', error);
       setIsConnected(false);
       throw error;
     } finally {
+      console.log('🏁 [useAiChatApiConnector] Connection process finished');
       setIsConnecting(false);
     }
   }, []);

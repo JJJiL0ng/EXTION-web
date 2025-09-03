@@ -77,9 +77,20 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
       try {
         // 선택된 시트 정보와 함께 메시지 전송
-        console.log('Sending message with selected sheets:', selectedSheetsToSend);
-        addUserMessage(messageToSend);
-        console.log('User message added to store:', messageToSend);
+        console.log('🚀 [ChatInputBox] Sending message with selected sheets:', selectedSheetsToSend);
+        console.log('🚀 [ChatInputBox] Message content:', messageToSend);
+        console.log('🚀 [ChatInputBox] About to call addUserMessage');
+        
+        const messageId = addUserMessage(messageToSend);
+        
+        console.log('✅ [ChatInputBox] User message added to store:', {
+          messageId,
+          content: messageToSend,
+          timestamp: Date.now()
+        });
+        
+        // Store 상태 확인
+        console.log('📊 [ChatInputBox] Current store state:', aiChatStore.getState());
         
         // TODO: 실제 API 호출이 완료되면 setIsSendingMessage(false) 호출해야 함
         // 현재는 임시로 1초 후 전송 상태 해제
