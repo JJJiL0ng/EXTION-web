@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { Send, Paperclip, Settings, ChevronDown, X, MessagesSquare } from 'lucide-react';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
-import { useMainAiChatController } from '@/_hooks/aiChat/useAiChatController';
+
 
 const ChatTabBar = () => {
     const [activeTab, setActiveTab] = useState('chat');

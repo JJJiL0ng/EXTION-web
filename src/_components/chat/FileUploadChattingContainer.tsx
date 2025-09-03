@@ -23,7 +23,7 @@ export default function FileUploadChattingContainer(_props: FileUploadChattingCo
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // aiChatStore 사용
-  const { wsConnectionStatus, wsError } = aiChatStore();
+  const { wsError } = aiChatStore();
   
   // 초기화 상태 관리 (간단한 구현)
   const [isInitialized] = useState(true);
@@ -115,7 +115,7 @@ export default function FileUploadChattingContainer(_props: FileUploadChattingCo
             
             <ChatInputBox 
               // userId={userId}
-              disabled={wsConnectionStatus !== 'connected'}
+              disabled={false} // 임시로 항상 활성화
               onFileAddClick={handleOpenModal}
             />
           </div>

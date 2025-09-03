@@ -1,7 +1,7 @@
 "use client";
 import '@mescius/spread-sheets-resources-ko';
 import '@mescius/spread-sheets-io';
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle } from "react";
 import { useParams } from 'next/navigation';
 // Hooks
 import { useFileUpload } from '../../_hooks/sheet/file_upload_export/useFileUpload';
@@ -24,6 +24,7 @@ import { configureLicense } from '../../_utils/sheet/spreadJSConfig';
 import { SpreadSheetToolbar } from './SpreadSheetToolbar';
 import { ChatButton } from './ChatButton';
 import { FileUploadSheetRender } from './FileUploadSheetRender';
+
 
 // SpreadJS 라이선싱 초기화
 configureLicense();

@@ -2,14 +2,11 @@
 
 import React, { useState, useRef } from 'react';
 import { ChevronDown, Check} from 'lucide-react';
-// import { useMainChat } from '../../_hooks/chat/useChatStore';
-// import { getOrCreateGuestId } from '../../_utils/guestUtils';
 import { useChatMode, ChatMode } from '../../_hooks/chat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName'
 import FileAddButton from './FileAddButton';
 import { useSelectedSheetInfoStore } from '../../_hooks/sheet/common/useSelectedSheetInfoStore';
-// import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 import { aiChatStore } from '@/_store/aiChat/aiChatStore';
 
 
@@ -52,24 +49,13 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const { selectedSheets, removeSelectedSheet, addSelectedSheet, renameSelectedSheet } = useSelectedSheetInfoStore();
 
   // aiChatStore 훅 사용
-  const { addUserMessage, isSendingMessage } = aiChatStore();
-
-  // const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-  //   const file = event.target.files?.[0];
-  //   if (file) {
-  //     setSelectedFile(file);
-  //   }
-  // };
-
-  // const handleRemoveFile = () => {
-  //   setSelectedFile(null);
-  //   if (fileInputRef.current) {
-  //     fileInputRef.current.value = '';
-  //   }
-  // };
+  const { addUserMessage, isSendingMessage, setIsSendingMessage } = aiChatStore();
 
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
+      // 전송 상태 시작
+      setIsSendingMessage(true);
+      
       const messageToSend = message;
       // const fileToSend = selectedFile;
       const selectedSheetsToSend = selectedSheets; // 선택된 시트 정보 포함
@@ -89,9 +75,21 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         }, 0);
       }
 
-      // 선택된 시트 정보와 함께 메시지 전송
-      console.log('Sending message with selected sheets:', selectedSheetsToSend);
-      addUserMessage(messageToSend);
+      try {
+        // 선택된 시트 정보와 함께 메시지 전송
+        console.log('Sending message with selected sheets:', selectedSheetsToSend);
+        addUserMessage(messageToSend);
+        console.log('User message added to store:', messageToSend);
+        
+        // TODO: 실제 API 호출이 완료되면 setIsSendingMessage(false) 호출해야 함
+        // 현재는 임시로 1초 후 전송 상태 해제
+        setTimeout(() => {
+          setIsSendingMessage(false);
+        }, 1000);
+      } catch (error) {
+        console.error('메시지 전송 실패:', error);
+        setIsSendingMessage(false);
+      }
     }
   };
 

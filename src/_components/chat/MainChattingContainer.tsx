@@ -17,7 +17,7 @@ interface MainChattingContainerProps {
 export default function MainChattingContainer(_props: MainChattingContainerProps) {
   
   // aiChatStore 사용
-  const { wsConnectionStatus, wsError } = aiChatStore();
+  const { wsError } = aiChatStore();
   
   // 초기화 상태 관리 (간단한 구현)
   const [isInitialized] = useState(true);
@@ -72,7 +72,7 @@ export default function MainChattingContainer(_props: MainChattingContainerProps
           <div>
             <ChatInputBox 
               // userId={userId}
-              disabled={wsConnectionStatus !== 'connected'}
+              disabled={false} // 임시로 항상 활성화
             />
           </div>
         </>
