@@ -1,16 +1,38 @@
-import { aiChatApiRes } from "../ai-chat-api/aiChatApi.types"; 
-
-export type MessageType = 'user' | 'assistant' | 'system' | 'error';
+import { aiChatApiRes } from "../ai-chat-api/aiChatApi.types";
 
 export type MessageStatus = 'pending' | 'sent' | 'streaming' | 'completed' | 'error';
-export interface ChatMessage {
-  id: string; // 메시지의 고유 식별자 (렌더링 key 및 업데이트 추적에 사용)
-  type: MessageType; // 메시지 주체 ('user', 'assistant', 'system', 'error')
-  content: string | aiChatApiRes ; // 메시지의 실제 텍스트 내용
-  timestamp: number; // 메시지가 생성된 시간 (new Date().getTime() 또는 Date.now())
-  isStreaming?: boolean; // type이 'assistant'일 때, 스트리밍 중인지 여부
+
+interface BaseMessage {
+  id: string;
+  timestamp: number;
   status: MessageStatus;
+  isStreaming?: boolean; // assistant 메시지일때만 사용되는 필드임
 }
+
+export interface UserMessage extends BaseMessage {
+  type: 'user';       // 'type'을 고정된 문자열 리터럴로 지정 (이것이 식별자)
+  content: string;    // UserMessage의 content는 항상 string
+}
+
+export interface AssistantMessage extends BaseMessage {
+  type: 'assistant';
+  content: string | aiChatApiRes; // AssistantMessage는 둘 다 가능
+}
+
+export interface SystemMessage extends BaseMessage {
+  type: 'system';
+  content: string;    // SystemMessage의 content는 항상 string
+}
+
+export interface ErrorMessage extends BaseMessage {
+  type: 'error';
+  content: string;
+}
+
+// 3. 모든 구체적인 메시지 타입을 |(Union)으로 묶어 최종 타입을 만듦
+export type ChatMessage = UserMessage | AssistantMessage | SystemMessage | ErrorMessage;
+
+// export type MessageType = 'user' | 'assistant' | 'system' | 'error';
 
 export type WebSocketConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 

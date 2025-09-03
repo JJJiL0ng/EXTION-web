@@ -210,7 +210,6 @@ export const aiChatStore = create<AiChatState & ChatActions>((set, get) => ({
             if (message) {
                 message.content += newContentChunk;
                 message.status = 'streaming';
-                message.isStreaming = true;
             }
         }));
     },
