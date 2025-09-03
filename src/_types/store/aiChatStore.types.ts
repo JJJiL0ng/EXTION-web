@@ -14,7 +14,7 @@ export interface ChatMessage {
 
 export type WebSocketConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
-export interface ChatState {
+export interface AiChatState {
   messages: ChatMessage[]; // 전체 채팅 메시지 배열
   webSocket: WebSocket | null; // 현재 연결된 WebSocket 인스턴스
   wsConnectionStatus: WebSocketConnectionStatus; // 웹소켓 연결 상태

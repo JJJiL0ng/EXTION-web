@@ -1,6 +1,6 @@
 // aiChat 스토어를 사용하여 채팅 상태 및 메시지 관리를 담당
 
-import { ChatState, WebSocketConnectionStatus, MessageStatus, ChatMessage } from "@/_types/store/aiChatStore.types";
+import { AiChatState, WebSocketConnectionStatus, MessageStatus, ChatMessage } from "@/_types/store/aiChatStore.types";
 
 import { create } from 'zustand';
 import { produce } from 'immer'; // 불변성 관리를 위해 immer 사용
@@ -39,7 +39,7 @@ interface ChatActions {
 // 2. Zustand 스토어 생성
 // -----------------------------------------------------------
 
-export const aiChatStore = create<ChatState & ChatActions>((set, get) => ({
+export const aiChatStore = create<AiChatState & ChatActions>((set, get) => ({
     // 초기 상태
     messages: [],
     webSocket: null,
@@ -175,7 +175,7 @@ export const aiChatStore = create<ChatState & ChatActions>((set, get) => ({
             status: 'pending', // 전송 대기 상태
         };
 
-        set(produce((state: ChatState) => {
+        set(produce((state: AiChatState) => {
             state.messages.push(newMessage);
         }));
 
@@ -197,7 +197,7 @@ export const aiChatStore = create<ChatState & ChatActions>((set, get) => ({
             status: 'streaming',
             isStreaming: true,
         };
-        set(produce((state: ChatState) => {
+        set(produce((state: AiChatState) => {
             state.messages.push(placeholderMessage);
         }));
         return newId;
@@ -205,7 +205,7 @@ export const aiChatStore = create<ChatState & ChatActions>((set, get) => ({
 
     // AI 응답 스트리밍 업데이트
     updateAssistantMessage: (id: string, newContentChunk: string) => {
-        set(produce((state: ChatState) => {
+        set(produce((state: AiChatState) => {
             const message = state.messages.find(msg => msg.id === id && msg.type === 'assistant');
             if (message) {
                 message.content += newContentChunk;
@@ -217,7 +217,7 @@ export const aiChatStore = create<ChatState & ChatActions>((set, get) => ({
 
     // AI 응답 스트리밍 완료
     completeAssistantMessage: (id: string) => {
-        set(produce((state: ChatState) => {
+        set(produce((state: AiChatState) => {
             const message = state.messages.find(msg => msg.id === id && msg.type === 'assistant');
             if (message) {
                 message.status = 'completed';
@@ -230,7 +230,7 @@ export const aiChatStore = create<ChatState & ChatActions>((set, get) => ({
 
     // AI 응답 에러 처리
     setAssistantMessageError: (id: string, errorContent: string) => {
-        set(produce((state: ChatState) => {
+        set(produce((state: AiChatState) => {
             const message = state.messages.find(msg => msg.id === id); // 타입에 상관없이 ID로 찾음
             if (message) {
                 message.content = errorContent;
@@ -243,7 +243,7 @@ export const aiChatStore = create<ChatState & ChatActions>((set, get) => ({
 
     // 사용자 메시지 상태 업데이트
     updateUserMessageStatus: (id: string, status: MessageStatus) => {
-        set(produce((state: ChatState) => {
+        set(produce((state: AiChatState) => {
             const message = state.messages.find(msg => msg.id === id && msg.type === 'user');
             if (message) {
                 message.status = status;
@@ -260,7 +260,7 @@ export const aiChatStore = create<ChatState & ChatActions>((set, get) => ({
             timestamp: Date.now(),
             status: 'completed',
         };
-        set(produce((state: ChatState) => {
+        set(produce((state: AiChatState) => {
             state.messages.push(newMessage);
         }));
     },
@@ -276,7 +276,7 @@ export const aiChatStore = create<ChatState & ChatActions>((set, get) => ({
             //   errorDetails: content,
             // relatedMessageId를 저장하여 UI에서 관련 메시지 옆에 표시할 수도 있습니다.
         };
-        set(produce((state: ChatState) => {
+        set(produce((state: AiChatState) => {
             state.messages.push(newMessage);
         }));
     },
