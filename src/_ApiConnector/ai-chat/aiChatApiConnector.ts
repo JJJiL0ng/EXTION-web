@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
-import { aiChatApiReq, aiChatApiRes } from "@/_types/ai-chat-api/aiChatApi.types";
+import { aiChatApiReq } from "@/_types/ai-chat-api/aiChatApi.types";
+import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
 
 export interface AiJobError {
   jobId?: string;
@@ -74,12 +75,12 @@ export class AiChatApiConnector {
     this.socket.emit('acknowledge_task', { jobId, feedback });
   }
 
-  onJobPlanned(callback: (data: aiChatApiRes) => void): void {
+  onJobPlanned(callback: (data: { jobId: string; plan: any }) => void): void {
     if (!this.socket) return;
     this.socket.on('ai_job_planned', callback);
   }
 
-  onTasksExecuted(callback: (data: aiChatApiRes) => void): void {
+  onTasksExecuted(callback: (data: { jobId: string; dataEditChatRes: dataEditChatRes; executionTime: number; timestamp: string }) => void): void {
     if (!this.socket) return;
     this.socket.on('ai_tasks_executed', callback);
   }
@@ -99,12 +100,12 @@ export class AiChatApiConnector {
     this.socket.on('ai_job_timeout', callback);
   }
 
-  offJobPlanned(callback?: (data: aiChatApiRes) => void): void {
+  offJobPlanned(callback?: (data: { jobId: string; plan: any }) => void): void {
     if (!this.socket) return;
     this.socket.off('ai_job_planned', callback);
   }
 
-  offTasksExecuted(callback?: (data: aiChatApiRes) => void): void {
+  offTasksExecuted(callback?: (data: { jobId: string; dataEditChatRes: dataEditChatRes; executionTime: number; timestamp: string }) => void): void {
     if (!this.socket) return;
     this.socket.off('ai_tasks_executed', callback);
   }
