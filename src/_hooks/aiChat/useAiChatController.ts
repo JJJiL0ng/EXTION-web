@@ -5,20 +5,19 @@ import useChatStore from '@/_store/chat/chatIdStore'
 import useSpreadsheetIdStore from '@/_store/sheet/spreadSheetIdStore'
 import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore'  
 import { getOrCreateGuestId } from '../../_utils/guestUtils'
-import { ChatMode } from '../../_store/chat/chatModeStore';
 import useChatModeStore from "@/_store/chat/chatModeStore";
 
 import { aiChatApiReq } from "@/_types/ai-chat-api/aiChatApi.types";
 import { AiChatState } from '@/_types/store/aiChatStore.types';
 
 export const useMainAiChatController = () => {
-  const { newUserMessage, isNewMessageDetected, clearNewMessage } = useAiChatStoreStatusMonitor();
+  const { newUserMessage, clearNewMessage } = useAiChatStoreStatusMonitor();
   const { executeAiChat, isConnected } = useAiChatExcuter();
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const handleNewUserMessage = async () => {
-      if (newUserMessage && isNewMessageDetected && !isProcessing && isConnected) {
+      if (newUserMessage && !isProcessing && isConnected) {
         setIsProcessing(true);
         
         try {
@@ -42,20 +41,18 @@ export const useMainAiChatController = () => {
     };
 
     handleNewUserMessage();
-  }, [newUserMessage, isNewMessageDetected, isProcessing, isConnected, executeAiChat, clearNewMessage]);
+  }, [newUserMessage, isProcessing, isConnected, executeAiChat, clearNewMessage]);
 
   return {
     isProcessing,
     isConnected,
     newUserMessage,
-    isNewMessageDetected,
   };
 }
 
 export const useAiChatStoreStatusMonitor = () => {
   const [newUserMessage, setNewUserMessage] = useState<string | null>(null);
   const [messageCount, setMessageCount] = useState(0);
-  const [isNewMessageDetected, setIsNewMessageDetected] = useState(false);
   const lastMessageCountRef = useRef(0);
 
   useEffect(() => {
@@ -69,12 +66,6 @@ export const useAiChatStoreStatusMonitor = () => {
         // 사용자 메시지인지 확인 (type이 'user'인 경우)
         if (latestMessage && latestMessage.type === 'user') {
           setNewUserMessage(latestMessage.content as string);
-          setIsNewMessageDetected(true);
-          
-          // 일정 시간 후 새 메시지 플래그 리셋
-          setTimeout(() => {
-            setIsNewMessageDetected(false);
-          }, 100);
         }
         
         lastMessageCountRef.current = currentMessageCount;
@@ -93,13 +84,11 @@ export const useAiChatStoreStatusMonitor = () => {
 
   const clearNewMessage = useCallback(() => {
     setNewUserMessage(null);
-    setIsNewMessageDetected(false);
   }, []);
 
   return {
     newUserMessage,
     messageCount,
-    isNewMessageDetected,
     clearNewMessage,
   };
 }
@@ -108,8 +97,8 @@ export const useAiChatExcuter = () => {
   const { connect, executeAiJob, isConnected, isConnecting, disconnect } = useAiChatApiConnector();
   const { chatId } = useChatStore();
   const { spreadsheetId } = useSpreadsheetIdStore();
-  const parsedSheetNames = useSpreadsheetNamesStore.getState().selectedSheets.map(s => s.name)
- 
+  // Stale Closure 문제 해결: useStore 훅 사용하여 실시간 상태 감지
+  const { selectedSheets } = useSpreadsheetNamesStore();
   
   // 서버 연결 초기화
   useEffect(() => {
@@ -129,18 +118,23 @@ export const useAiChatExcuter = () => {
         if (!chatId || !spreadsheetId) {
           throw new Error('Chat ID or Spreadsheet ID is required');
         }
+      
+      // 실행 시점의 최신 상태를 가져와서 Stale Closure 문제 해결
+      const currentParsedSheetNames = selectedSheets.map(s => s.name);
+      const currentChatMode = useChatModeStore.getState().mode;
+      
       // 필요한 추가 정보를 request에 포함
-    const lastContent = request.messages[request.messages.length - 1]?.content as string; // 제일 최신의 사용자 메시지 내용
-    const enrichedRequest: aiChatApiReq = {
-      ...request,
-      userId: getOrCreateGuestId(),
-      chatId,
-      spreadsheetId,
-      parsedSheetNames,
-      jobId: Date.now().toString() + Math.random().toString(36).substring(2, 9),
-      chatMode: useChatModeStore.getState().mode,
-      userQuestionMessage: lastContent,
-    };
+      const lastContent = request.messages[request.messages.length - 1]?.content as string;
+      const enrichedRequest: aiChatApiReq = {
+        ...request,
+        userId: getOrCreateGuestId(),
+        chatId,
+        spreadsheetId,
+        parsedSheetNames: currentParsedSheetNames,
+        jobId: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+        chatMode: currentChatMode,
+        userQuestionMessage: lastContent,
+      };
 
       // AI 작업 실행
       const result = await executeAiJob(enrichedRequest);
@@ -150,7 +144,7 @@ export const useAiChatExcuter = () => {
       console.error('AI Chat execution failed:', error);
       throw error;
     }
-  }, [executeAiJob, chatId, spreadsheetId, parsedSheetNames]);
+  }, [executeAiJob, chatId, spreadsheetId, selectedSheets]);
 
   return {
     executeAiChat,
