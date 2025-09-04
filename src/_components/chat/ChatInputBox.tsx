@@ -12,7 +12,21 @@ import useSpreadsheetIdStore from '@/_store/sheet/spreadSheetIdStore'
 import { getOrCreateGuestId } from '../../_utils/guestUtils'
 import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore'
 import useChatIdStore from '@/_store/chat/chatIdStore'
+
 import { useAiChatApiConnector } from '@/_hooks/aiChat/useAiChatApiConnector'; 
+
+// 브라우저 Web Crypto API 사용 + 폴백
+const safeRandomUUID = () => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch (_) {
+    // ignore
+  }
+  // 간단한 폴백 (충돌 가능성 낮음)
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+};
 
 interface ChatInputBoxProps {
   // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
@@ -153,13 +167,13 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
           console.log('🔗 [ChatInputBox] Connection status:', { isConnected, isConnecting });
           
           const aiRequest = {
-            spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!, // TODO: 실제 스프레드시트 ID 사용
-            chatId: useChatIdStore.getState().chatId!, // TODO: 실제 채팅 ID 사용
-            userId: userId, // TODO: 실제 사용자 ID 사용
+            spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!,
+            chatId: useChatIdStore.getState().chatId!,
+            userId: userId,
             chatMode: mode,
             userQuestionMessage: messageToSend,
             parsedSheetNames: useSpreadsheetNamesStore.getState().selectedSheets.map((s) => s.name),
-            jobId: '', // executeAiJob에서 자동 생성됨
+            jobId: `jobId_${safeRandomUUID()}`,
           };
 
           console.log('📤 [ChatInputBox] AI request payload:', aiRequest);
