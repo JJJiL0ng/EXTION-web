@@ -10,8 +10,6 @@ import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdStore";
 import { enableMapSet } from 'immer';
 
-import  { HookMainAiChat } from "@/_components/debug/HookMainAiChat";
-
 
 // Immer MapSet 플러그인 활성화
 enableMapSet();
@@ -170,9 +168,6 @@ function HomeContent({
           <FileUploadContainer />
         </div>
       )}
-      <div>
-        <HookMainAiChat />
-      </div>
     </div>
   );
 }

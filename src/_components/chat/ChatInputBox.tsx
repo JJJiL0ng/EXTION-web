@@ -8,7 +8,11 @@ import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetNa
 import FileAddButton from './FileAddButton';
 import { useSelectedSheetInfoStore } from '../../_hooks/sheet/common/useSelectedSheetInfoStore';
 import { aiChatStore } from '@/_store/aiChat/aiChatStore';
-
+import useSpreadsheetIdStore from '@/_store/sheet/spreadSheetIdStore'
+import { getOrCreateGuestId } from '../../_utils/guestUtils'
+import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore'
+import useChatIdStore from '@/_store/chat/chatIdStore'
+import { useAiChatApiConnector } from '@/_hooks/aiChat/useAiChatApiConnector'; 
 
 interface ChatInputBoxProps {
   // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
@@ -25,9 +29,10 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   // onSendMessage,
   placeholder = "수정사항을 입력하세요...",
   disabled = false,
-  // userId = getOrCreateGuestId(), // Guest ID 사용
+  userId = getOrCreateGuestId(), // Guest ID 사용
   onFileAddClick
 }) => {
+  console.log('🏗️ [ChatInputBox] Component mounting/rendering');
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // const [model, setModel] = useState<Model>('Claude-sonnet-4');
@@ -50,6 +55,55 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
   // aiChatStore 훅 사용
   const { addUserMessage, isSendingMessage, setIsSendingMessage } = aiChatStore();
+
+  // AI Chat API Connector 훅 사용
+  const { isConnected, isConnecting, connect, executeAiJob } = useAiChatApiConnector();
+
+  // AI Chat API 서버 연결
+  React.useEffect(() => {
+    const connectToAiChatServer = async () => {
+      console.log('🔄 [ChatInputBox] Connection effect triggered:', { 
+        isConnected, 
+        isConnecting,
+        shouldConnect: !isConnected && !isConnecting 
+      });
+      
+      if (!isConnected && !isConnecting) {
+        try {
+          console.log('🔌 [ChatInputBox] Attempting to connect to AI Chat server');
+          const serverUrl = process.env.NEXT_PUBLIC_AI_CHAT_SERVER_URL || 'ws://localhost:8080';
+          console.log('🔌 [ChatInputBox] Using server URL:', serverUrl);
+          
+          await connect(serverUrl);
+          console.log('✅ [ChatInputBox] Successfully connected to AI Chat server');
+        } catch (error) {
+          console.error('❌ [ChatInputBox] Failed to connect to AI Chat server:', error);
+        }
+      } else if (isConnected) {
+        console.log('✅ [ChatInputBox] Already connected to AI Chat server');
+      } else if (isConnecting) {
+        console.log('⏳ [ChatInputBox] Connection in progress...');
+      }
+    };
+
+    connectToAiChatServer();
+  }, [isConnected, isConnecting, connect]);
+
+  // 연결 상태 변화 로깅
+  React.useEffect(() => {
+    console.log('🔗 [ChatInputBox] Connection status changed:', {
+      isConnected,
+      isConnecting,
+      timestamp: new Date().toISOString()
+    });
+  }, [isConnected, isConnecting]);
+
+  // 컴포넌트 언마운트 로깅
+  React.useEffect(() => {
+    return () => {
+      console.log('🏗️ [ChatInputBox] Component unmounting');
+    };
+  }, []);
 
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
@@ -79,6 +133,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         // 선택된 시트 정보와 함께 메시지 전송
         console.log('🚀 [ChatInputBox] Sending message with selected sheets:', selectedSheetsToSend);
         console.log('🚀 [ChatInputBox] Message content:', messageToSend);
+        console.log('🚀 [ChatInputBox] Chat mode:', mode);
         console.log('🚀 [ChatInputBox] About to call addUserMessage');
         
         const messageId = addUserMessage(messageToSend);
@@ -91,14 +146,44 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         
         // Store 상태 확인
         console.log('📊 [ChatInputBox] Current store state:', aiChatStore.getState());
+
+        // AI Chat API 호출
+        if (isConnected) {
+          console.log('🤖 [ChatInputBox] Starting AI job execution');
+          console.log('🔗 [ChatInputBox] Connection status:', { isConnected, isConnecting });
+          
+          const aiRequest = {
+            spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!, // TODO: 실제 스프레드시트 ID 사용
+            chatId: useChatIdStore.getState().chatId!, // TODO: 실제 채팅 ID 사용
+            userId: userId, // TODO: 실제 사용자 ID 사용
+            chatMode: mode,
+            userQuestionMessage: messageToSend,
+            parsedSheetNames: useSpreadsheetNamesStore.getState().selectedSheets.map((s) => s.name),
+            jobId: '', // executeAiJob에서 자동 생성됨
+          };
+
+          console.log('📤 [ChatInputBox] AI request payload:', aiRequest);
+
+          try {
+            const result = await executeAiJob(aiRequest);
+            console.log('🎉 [ChatInputBox] AI job completed successfully:', result);
+            
+            // TODO: AI 응답을 채팅 스토어에 추가
+            // addAiMessage(result.result?.dataEditChatRes);
+            
+          } catch (aiError) {
+            console.error('❌ [ChatInputBox] AI job failed:', aiError);
+            // TODO: 에러 메시지를 사용자에게 표시
+          }
+        } else {
+          console.warn('⚠️ [ChatInputBox] Not connected to AI server, skipping AI job');
+        }
         
-        // TODO: 실제 API 호출이 완료되면 setIsSendingMessage(false) 호출해야 함
-        // 현재는 임시로 1초 후 전송 상태 해제
-        setTimeout(() => {
-          setIsSendingMessage(false);
-        }, 1000);
       } catch (error) {
-        console.error('메시지 전송 실패:', error);
+        console.error('❌ [ChatInputBox] Message sending failed:', error);
+      } finally {
+        // 전송 상태 해제
+        console.log('🏁 [ChatInputBox] Finishing message send process');
         setIsSendingMessage(false);
       }
     }
@@ -351,8 +436,11 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             disabled={disabled || isSendingMessage || (!message.trim() && !selectedFile)}
             className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${disabled || isSendingMessage || (!message.trim() && !selectedFile)
               ? 'bg-gray-300 text-white cursor-not-allowed'
-              : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
+              : isConnected 
+                ? 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
+                : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
               }`}
+            title={!isConnected ? 'AI 서버 연결 중...' : '메시지 전송'}
           >
             {isSendingMessage ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

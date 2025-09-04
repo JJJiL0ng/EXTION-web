@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import { produce } from 'immer'; // 불변성 관리를 위해 immer 사용
 import { v4 as uuidv4 } from 'uuid'; // 고유 ID 생성을 위해 uuid 라이브러리 사용
 import { aiChatApiRes } from "@/_types/ai-chat-api/aiChatApi.types";
+import useChatStore from '@/_store/chat/chatIdStore'
 
 interface ChatActions {
     // 상태 설정 관련
@@ -26,12 +27,16 @@ interface ChatActions {
     setAiThinkingIndicatorVisible: (visible: boolean) => void;
 }
 
+//chatid 스토어에서 chatid 가져오기
+const ChatId = useChatStore.getState().chatId;
+
 // -----------------------------------------------------------
 // 2. Zustand 스토어 생성
 // -----------------------------------------------------------
 
 export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
     // 초기 상태
+    chatId: ChatId,
     messages: [],
     webSocket: null,
     wsConnectionStatus: 'disconnected',
