@@ -14,6 +14,7 @@ import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore'
 import useChatIdStore from '@/_store/chat/chatIdStore'
 
 import { useAiChatApiConnector } from '@/_hooks/aiChat/useAiChatApiConnector'; 
+import { aiChatApiReq } from '@/_types/ai-chat-api/aiChatApi.types';
 
 // 브라우저 Web Crypto API 사용 + 폴백
 const safeRandomUUID = () => {
@@ -166,7 +167,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
           console.log('🤖 [ChatInputBox] Starting AI job execution');
           console.log('🔗 [ChatInputBox] Connection status:', { isConnected, isConnecting });
           
-          const aiRequest = {
+          const aiChatApiRequest: aiChatApiReq = {
             spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!,
             chatId: useChatIdStore.getState().chatId!,
             userId: userId,
@@ -176,10 +177,10 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             jobId: `jobId_${safeRandomUUID()}`,
           };
 
-          console.log('📤 [ChatInputBox] AI request payload:', aiRequest);
+          console.log('📤 [ChatInputBox] AI request payload:', aiChatApiRequest);
 
           try {
-            const result = await executeAiJob(aiRequest);
+            const result = await executeAiJob(aiChatApiRequest);
             console.log('🎉 [ChatInputBox] AI job completed successfully:', result);
             
             // TODO: AI 응답을 채팅 스토어에 추가
