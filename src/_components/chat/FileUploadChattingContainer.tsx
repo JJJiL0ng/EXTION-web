@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import ChatInputBox from "./ChatInputBox";
 import ChatTabBar from "./ChatTabBar";
+import AiChatViewer from "./AiChatViewer";
 import { FileSelectModal } from "./SheetSelectModal";
 import { ChatInitMode, UploadedFileInfo } from "../../_types/chat.types";
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
@@ -93,10 +94,7 @@ export default function FileUploadChattingContainer(_props: FileUploadChattingCo
           
           {/* 채팅 뷰어 */}
           <div className="flex-1 overflow-y-auto">
-            {/* <ChatViewer userId={userId} /> */}
-            <div className="p-4 text-center text-gray-500">
-              채팅 뷰어 컴포넌트 준비 중...
-            </div>
+            <AiChatViewer />
           </div>
           
           {/* 채팅 입력 박스와 모달을 포함하는 컨테이너 - 최하단 */}

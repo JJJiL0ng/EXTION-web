@@ -187,7 +187,9 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
               // addAiMessage(aiChatApiRes, tasksRes)
               aiChatStore.getState().addAiMessage(result);
             }
-            
+
+            // TODO: AI 응답 후속 작업
+
           } catch (aiError) {
             console.error('❌ [ChatInputBox] AI job failed:', aiError);
             // TODO: 에러 메시지를 사용자에게 표시
