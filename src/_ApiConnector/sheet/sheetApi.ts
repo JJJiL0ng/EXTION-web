@@ -79,7 +79,7 @@ export interface CreateSpreadSheetRequest {
   spreadsheetId: string; // 백엔드와 일치하도록 수정 (spreadSheetId → spreadsheetId)
   chatId: string;
   userId: string;
-  initialData?: Record<string, any>; // Optional로 변경하여 전체 JSON 데이터 또는 undefined 허용
+  jsonData: Record<string, any>; // Optional로 변경하여 전체 JSON 데이터 또는 undefined 허용
 }
 
 export interface LoadSpreadSheetRequest {

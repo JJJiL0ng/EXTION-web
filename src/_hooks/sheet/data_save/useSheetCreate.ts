@@ -76,19 +76,19 @@ export const useSheetCreate = (options?: UseSheetCreateOptions) => {
     spreadSheetId: string,
     chatId: string,
     userId: string,
-    initialData?: Record<string, any>
+    jsonData: Record<string, any>
   ) => {
     const request: CreateSpreadSheetRequest = {
       fileName,
       spreadsheetId: spreadSheetId, // 백엔드 형식에 맞게 변경
       chatId,
       userId,
-      ...(initialData && { initialData }), // initialData가 있을 때만 포함, 전체 JSON 데이터를 그대로 전달
+      ...(jsonData && { jsonData }), // jsonData가 있을 때만 포함, 전체 JSON 데이터를 그대로 전달
     };
     
     console.log('createSheetWithDefaults로 생성된 요청 데이터:', request);
-    console.log('전송되는 initialData:', initialData);
-    
+    console.log('전송되는 jsonData:', jsonData);
+
     return createSheet(request);
   }, [createSheet]);
 
