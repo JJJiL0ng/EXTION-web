@@ -47,7 +47,6 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   userId = getOrCreateGuestId(), // Guest ID 사용
   onFileAddClick
 }) => {
-  console.log('🏗️ [ChatInputBox] Component mounting/rendering');
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // const [model, setModel] = useState<Model>('Claude-sonnet-4');
