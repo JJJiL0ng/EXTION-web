@@ -6,7 +6,9 @@ import { create } from 'zustand';
 import { produce } from 'immer'; // 불변성 관리를 위해 immer 사용
 import { v4 as uuidv4 } from 'uuid'; // 고유 ID 생성을 위해 uuid 라이브러리 사용
 import { aiChatApiRes } from "@/_types/ai-chat-api/aiChatApi.types";
+import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
 import useChatStore from '@/_store/chat/chatIdStore'
+import { TaskManagerOutput } from "@/_types/ai-chat-api/task.types";
 
 interface ChatActions {
     // 상태 설정 관련
@@ -21,6 +23,7 @@ interface ChatActions {
     updateUserMessageStatus: (id: string, status: MessageStatus) => void;
     addSystemMessage: (content: string) => void;
     addErrorMessage: (content: string) => void;
+    addAiMessage: (aiChatApiRes: aiChatApiRes) => void;
 
     // UI 상태 관련
     setIsSendingMessage: (sending: boolean) => void;
@@ -147,6 +150,29 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
             status: 'error',
             //   errorDetails: content,
             // relatedMessageId를 저장하여 UI에서 관련 메시지 옆에 표시할 수도 있습니다.
+        };
+        set(produce((state: AiChatState) => {
+            state.messages.push(newMessage);
+        }));
+    },
+
+    // AI 메시지 추가
+    addAiMessage: (aiChatApiRes: aiChatApiRes) => {
+        // dataEditChatRes인 경우 aiChatApiRes 형태로 변환
+        const aiResponse: aiChatApiRes = 'dataEditCommands' in aiChatApiRes
+            ? {
+                jobId: uuidv4(),
+                taskManagerOutput: aiChatApiRes.taskManagerOutput,
+                dataEditChatRes: aiChatApiRes.dataEditChatRes
+              }
+            : aiChatApiRes;
+
+        const newMessage: ChatMessage = {
+            id: uuidv4(),
+            type: 'assistant',
+            content: aiResponse,
+            timestamp: Date.now(),
+            status: 'completed',
         };
         set(produce((state: AiChatState) => {
             state.messages.push(newMessage);

@@ -1,24 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { AiChatApiConnector } from '@/_ApiConnector/ai-chat/aiChatApiConnector';
-import { aiChatApiReq } from "@/_types/ai-chat-api/aiChatApi.types";
-import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
-
-interface AiJobResult {
-  jobId: string;
-  plan?: any;
-  result?: {
-    dataEditChatRes: dataEditChatRes;
-    executionTime: number;
-    timestamp: string;
-  };
-}
+import { aiChatApiReq, aiChatApiRes } from "@/_types/ai-chat-api/aiChatApi.types";
 
 interface UseAiChatApiConnectorReturn {
   isConnected: boolean;
   isConnecting: boolean;
   connect: (serverUrl: string) => Promise<void>;
   disconnect: () => void;
-  executeAiJob: (request: aiChatApiReq) => Promise<AiJobResult>;
+  executeAiJob: (request: aiChatApiReq) => Promise<aiChatApiRes>;
   cancelJob: (jobId: string) => void;
 }
 
@@ -27,7 +16,7 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
   const [isConnecting, setIsConnecting] = useState(false);
   const connectorRef = useRef<AiChatApiConnector | null>(null);
   const pendingJobsRef = useRef<Map<string, {
-    resolve: (value: AiJobResult) => void;
+    resolve: (value: aiChatApiRes) => void;
     reject: (reason: any) => void;
     plan?: any;
   }>>(new Map());
@@ -63,14 +52,11 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
       connectorRef.current.onTasksExecuted((data) => {
         const pending = pendingJobsRef.current.get(data.jobId);
         if (pending) {
+          // aiChatApiRes 형태로 반환
           pending.resolve({
             jobId: data.jobId,
-            plan: pending.plan,
-            result: {
-              dataEditChatRes: data.dataEditChatRes,
-              executionTime: data.executionTime,
-              timestamp: data.timestamp,
-            },
+            taskManagerOutput: pending.plan,
+            dataEditChatRes: data.dataEditChatRes,
           });
           pendingJobsRef.current.delete(data.jobId);
         }
@@ -124,7 +110,7 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
     pendingJobsRef.current.clear();
   }, []);
 
-  const executeAiJob = useCallback(async (request: aiChatApiReq): Promise<AiJobResult> => {
+  const executeAiJob = useCallback(async (request: aiChatApiReq): Promise<aiChatApiRes> => {
     if (!connectorRef.current) {
       throw new Error('Connector not initialized');
     }
@@ -133,7 +119,7 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
       throw new Error('Not connected to server');
     }
 
-    return new Promise((resolve, reject) => {
+  return new Promise<aiChatApiRes>((resolve, reject) => {
       const jobId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
       
       pendingJobsRef.current.set(jobId, { resolve, reject });

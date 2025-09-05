@@ -26,7 +26,6 @@ const ChatTabBar = () => {
                 onClick={hideChat}
             >
                 <img src="/EXTION_new_logo_white.svg" alt="Extion Logo" className="w-4 h-4" />
-                
                 AI
             </button>
             <div className="flex-1" />

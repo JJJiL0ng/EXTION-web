@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { ChevronDown, Check} from 'lucide-react';
+import { ChevronDown, Check, ReceiptPoundSterling} from 'lucide-react';
 import { useChatMode, ChatMode } from '../../_hooks/chat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName'
@@ -182,8 +182,11 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             const result = await executeAiJob(aiChatApiRequest);
             console.log('🎉 [ChatInputBox] AI job completed successfully:', result);
             
-            // TODO: AI 응답을 채팅 스토어에 추가
-            // addAiMessage(result.result?.dataEditChatRes);
+            // AI 응답을 채팅 스토어에 추가
+            if (result) {
+              // addAiMessage(aiChatApiRes, tasksRes)
+              aiChatStore.getState().addAiMessage(result);
+            }
             
           } catch (aiError) {
             console.error('❌ [ChatInputBox] AI job failed:', aiError);
