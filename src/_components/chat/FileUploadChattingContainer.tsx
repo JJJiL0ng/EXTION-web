@@ -2,12 +2,9 @@
 // 파일 업로드일때 채팅 컨테이너
 import React, { useState, useEffect } from "react";
 import ChatInputBox from "./ChatInputBox";
-// import ChatViewer from "./ChatViewer";
 import ChatTabBar from "./ChatTabBar";
 import { FileSelectModal } from "./SheetSelectModal";
 import { ChatInitMode, UploadedFileInfo } from "../../_types/chat.types";
-// import { useChatFlow, useChatStore } from "../../_hooks/chat/useChatStore";
-// import { getOrCreateGuestId } from "../../_utils/guestUtils";
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
 
 interface FileUploadChattingContainerProps {
