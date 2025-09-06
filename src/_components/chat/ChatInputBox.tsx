@@ -16,6 +16,12 @@ import useChatIdStore from '@/_store/chat/chatIdStore'
 import { useAiChatApiConnector } from '@/_hooks/aiChat/useAiChatApiConnector'; 
 import { aiChatApiReq } from '@/_types/ai-chat-api/aiChatApi.types';
 
+import applyDataEditCommands from '@/_utils/sheet/applyDataEditCommands';
+import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
+
+import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
+
+
 // 브라우저 Web Crypto API 사용 + 폴백
 const safeRandomUUID = () => {
   try {
@@ -59,7 +65,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const modeModalRef = useRef<HTMLDivElement>(null);
 
   // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
-  // const spread = useSpreadsheetContext();
+  const { spread } = useSpreadsheetContext();
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
@@ -72,6 +78,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
   // AI Chat API Connector 훅 사용
   const { isConnected, isConnecting, connect, executeAiJob } = useAiChatApiConnector();
+
 
   // AI Chat API 서버 연결
   React.useEffect(() => {
@@ -187,8 +194,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
               // addAiMessage(aiChatApiRes, tasksRes)
               aiChatStore.getState().addAiMessage(result);
             }
-
-            // TODO: AI 응답 후속 작업
+            applyDataEditCommands({ dataEditChatRes: result.dataEditChatRes as dataEditChatRes, spread: spread });
 
           } catch (aiError) {
             console.error('❌ [ChatInputBox] AI job failed:', aiError);
