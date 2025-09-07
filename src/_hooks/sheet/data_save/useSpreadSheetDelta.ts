@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import * as GC from "@mescius/spread-sheets";
-import { SheetAPI, ApplyDeltaRequest } from '@/_Api/sheet/sheetApi';
+import { SheetAPI, ApplyDeltaRequest } from '@/_ApiConnector/sheet/sheetApi';
 import { useSpreadjsCommandStore } from '@/_store/sheet/spreadjsCommandStore';
 import { useSpreadSheetDeltaApply } from './useSpreadSheetDeltaApply';
 import { 

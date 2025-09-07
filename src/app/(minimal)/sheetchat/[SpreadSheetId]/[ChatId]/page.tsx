@@ -10,6 +10,7 @@ import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdStore";
 import { enableMapSet } from 'immer';
 
+
 // Immer MapSet 플러그인 활성화
 enableMapSet();
 
@@ -126,6 +127,8 @@ function HomeContent({
   spreadRef
 }: HomeContentProps) {
   const { isChatVisible } = useChatVisibility();
+
+
 
   // 채팅이 숨겨질 때 스프레드시트 너비를 100%로 조정
   const actualLeftWidth = isChatVisible ? leftWidth : 100;

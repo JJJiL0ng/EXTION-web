@@ -160,7 +160,7 @@ export const useFileUpload = (
       }
 
       const sheet = spreadInstance.getActiveSheet();
-      
+
       // suspendPaint 안전 체크
       if (sheet && sheet.suspendPaint && typeof sheet.suspendPaint === 'function') {
         sheet.suspendPaint();
@@ -172,9 +172,20 @@ export const useFileUpload = (
           try {
             updateProgress(100);
             console.log('✅ 파일 로드 완료:', file.name);
-            
+
             // 데이터 추출
-            const jsonData = spreadInstance.toJSON();
+            const jsonData = spreadInstance.toJSON({
+              includeBindingSource: true,
+              ignoreFormula: false,
+              ignoreStyle: false,
+              saveAsView: true,
+              rowHeadersAsFrozenColumns: true,
+              columnHeadersAsFrozenRows: true,
+              includeAutoMergedCells: true,
+              saveR1C1Formula: true,
+              includeUnsupportedFormula: true,
+              includeUnsupportedStyle: true
+            });
             resolve(jsonData);
           } finally {
             // resumePaint 안전 체크
@@ -222,7 +233,7 @@ export const useFileUpload = (
     try {
       for (let i = 0; i < fileList.length; i++) {
         const file = fileList[i];
-        
+
         try {
           // 각 파일별 진행률 계산 (전체 진행률에서 현재 파일의 위치)
           const baseProgress = (i / totalFiles) * 100;
@@ -275,7 +286,7 @@ export const useFileUpload = (
 
         } catch (error) {
           console.error(`❌ 파일 ${file.name} 업로드 실패:`, error);
-          
+
           // 실패한 파일도 결과에 추가 (에러 정보와 함께)
           results.push({
             fileName: file.name,
@@ -293,11 +304,11 @@ export const useFileUpload = (
               progress: 0,
               error: error instanceof Error ? error.message : '파일 업로드 중 오류가 발생했습니다.'
             }));
-            
+
             onUploadError?.(error instanceof Error ? error : new Error('파일 업로드 실패'), file.name);
             throw error;
           }
-          
+
           // 다중 파일인 경우 계속 진행
         }
       }
@@ -311,7 +322,7 @@ export const useFileUpload = (
         isUploading: false,
         isProcessing: false,
         progress: 100,
-        fileName: totalFiles === 1 
+        fileName: totalFiles === 1
           ? (successFiles.length > 0 ? successFiles[0].fileName : '')
           : `${successFiles.length}/${totalFiles}개 파일 완료`,
         error: failedFiles.length > 0 ? `${failedFiles.length}개 파일 실패` : null
@@ -324,7 +335,7 @@ export const useFileUpload = (
         } else {
           // 다중 파일의 경우 성공한 파일들의 이름과 데이터 전달
           onUploadSuccess?.(
-            `${successFiles.length}개 파일 업로드 완료`, 
+            `${successFiles.length}개 파일 업로드 완료`,
             successFiles.map(f => f.data)
           );
         }
@@ -342,7 +353,7 @@ export const useFileUpload = (
     } catch (error) {
       // 예상치 못한 전체 오류
       console.error('❌ 전체 업로드 프로세스 실패:', error);
-      
+
       setUploadState(prev => ({
         ...prev,
         isUploading: false,
@@ -425,7 +436,7 @@ export const useFileUpload = (
       return result.data;
     } catch (error) {
       console.error('❌ 파일 업로드 실패:', error);
-      
+
       setUploadState(prev => ({
         ...prev,
         isUploading: false,
@@ -467,15 +478,15 @@ export const useFileUpload = (
   return {
     // 상태
     uploadState,
-    
+
     // 통합 업로드 함수 (권장)
     uploadFiles,
-    
+
     // 업로드 함수 (하위 호환성)
     uploadFile,
     uploadMultipleFiles,
     validateFile,
-    
+
     // 상태 관리
     resetUploadState
   };

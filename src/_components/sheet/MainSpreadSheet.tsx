@@ -1,16 +1,16 @@
 "use client";
 import '@mescius/spread-sheets-resources-ko';
 import '@mescius/spread-sheets-io';
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle } from "react";
 import { useParams } from 'next/navigation';
 // Hooks
-import { useFileUpload } from '../../_hooks/sheet/useFileUpload';
-import { useFileExport } from '../../_hooks/sheet/useFileExport';
-import { useSheetCreate } from '../../_hooks/sheet/useSheetCreate';
-import { useSpreadSheetDelta } from '../../_hooks/sheet/useSpreadSheetDelta';
+import { useFileUpload } from '../../_hooks/sheet/file_upload_export/useFileUpload';
+import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
+import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
+import { useSpreadSheetDelta } from '../../_hooks/sheet/data_save/useSpreadSheetDelta';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
-import { useUIState } from '../../_hooks/sheet/useUIState';
-import { useSpreadJSInit } from '../../_hooks/sheet/useSpreadJSInit';
+import { useUIState } from '../../_hooks/sheet/common/useUIState';
+import { useSpreadJSInit } from '../../_hooks/sheet/spreadjs/useSpreadJSInit';
 
 // Stores
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
@@ -24,6 +24,7 @@ import { configureLicense } from '../../_utils/sheet/spreadJSConfig';
 import { SpreadSheetToolbar } from './SpreadSheetToolbar';
 import { ChatButton } from './ChatButton';
 import { FileUploadSheetRender } from './FileUploadSheetRender';
+
 
 // SpreadJS 라이선싱 초기화
 configureLicense();
@@ -154,7 +155,19 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 const currentUserId = userId;
 
                 // 파일 데이터를 JSON으로 변환 (새로운 FileConverter 사용)
-                const jsonData = await FileConverter.convertToJson(fileData, fileName);
+                const jsonData = spreadRef.current.toJSON({
+                    includeBindingSource: true,
+                    ignoreFormula: false,
+                    ignoreStyle: false,
+                    saveAsView: true,
+                    rowHeadersAsFrozenColumns: false,
+                    columnHeadersAsFrozenRows: false,
+                    includeAutoMergedCells: true,
+                    saveR1C1Formula: true,
+                    includeUnsupportedFormula: true,
+                    includeUnsupportedStyle: true
+                });
+
                 console.log('🔄 JSON 변환된 데이터:', jsonData);
 
                 await createSheetWithDefaults(

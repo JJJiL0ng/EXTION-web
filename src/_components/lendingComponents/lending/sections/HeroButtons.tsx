@@ -3,7 +3,7 @@
 import { Button } from '@/_components/lendingComponents/lending-common-ui/Button'
 import { scrollToElement } from '@/_utils/lending-utils/lending-utils'
 import { useRouter } from 'next/navigation'
-import { useGenerateSpreadSheetId } from '../../../../_hooks/sheet/useGenerateSpreadSheetId'
+import { useGenerateSpreadSheetId } from '../../../../_hooks/sheet/common/useGenerateSpreadSheetId'
 import { useGenerateChatId } from '../../../../_hooks/chat/useGenerateChatId';
 // 클라이언트에서만 실행되는 인터랙티브 버튼들
 export function HeroButtons() {
