@@ -155,14 +155,13 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 const currentUserId = userId;
 
                 // 파일 데이터를 JSON으로 변환 (새로운 FileConverter 사용)
-                // const jsonData = await FileConverter.convertToJson(fileData, fileName);
                 const jsonData = spreadRef.current.toJSON({
                     includeBindingSource: true,
                     ignoreFormula: false,
                     ignoreStyle: false,
                     saveAsView: true,
-                    rowHeadersAsFrozenColumns: true,
-                    columnHeadersAsFrozenRows: true,
+                    rowHeadersAsFrozenColumns: false,
+                    columnHeadersAsFrozenRows: false,
                     includeAutoMergedCells: true,
                     saveR1C1Formula: true,
                     includeUnsupportedFormula: true,
