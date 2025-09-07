@@ -2,7 +2,7 @@ import GC from '@mescius/spread-sheets';
 import { StyleCommand, StyleProperties, BorderInfo } from "@/_types/ai-chat-api/style.types";
 
 interface StyleCommandApplyEngineProps {
-    sheetIndex: number;
+    sheetName: string;
     range: number[];
     styleCommand: StyleCommand;
     spread: any;
@@ -10,7 +10,7 @@ interface StyleCommandApplyEngineProps {
 
 
 const StyleCommandApplyEngine = ({
-    sheetIndex,
+    sheetName,
     range,
     styleCommand,
     spread
@@ -204,8 +204,7 @@ const StyleCommandApplyEngine = ({
     // 메인 실행 함수 - 명령어를 반환하는 함수
     const executeStyleCommand = () => {
         try {
-            const targetSheet = spread.getSheet(sheetIndex);
-
+            const targetSheet = spread.getSheetFromName(sheetName);
             switch (styleCommand.method) {
                 case "style_object":
                     applyStyleObject(targetSheet, range, styleCommand.properties);
