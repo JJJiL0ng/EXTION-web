@@ -66,6 +66,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
   // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
   const { spread } = useSpreadsheetContext();
+  spread.options.allowDynamicArray = true; // 동적 배열 허용
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();

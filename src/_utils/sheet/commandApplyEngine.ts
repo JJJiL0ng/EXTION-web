@@ -18,13 +18,15 @@ const commandApplyEngine = ({ dataEditCommand, spread }: CommandApplyEngineProps
     const sheetName = dataEditCommand.sheetName;
     const detailedCommand = dataEditCommand.detailedCommand as any;
     const range = dataEditCommand.range as unknown as number[]; // 항상 숫자 배열로 전달됨 (caller 보장)
+    spread.options.allowDynamicArray = true; // 동적 배열 허용
+
 
     // 런타임 안전 체크: 배열이 아니거나 길이가 2 또는 4가 아니면 중단
     if (!Array.isArray(range) || (range.length !== 2 && range.length !== 4)) {
         console.error("[commandApplyEngine] Invalid range. Expected number[] of length 2 or 4, got:", range);
         return;
     }
-    
+
     const commandType = dataEditCommand.commandType;
 
     console.log('🚀 [commandApplyEngine] Processed range:', range, 'type:', typeof range, 'length:', range.length);
@@ -81,7 +83,7 @@ const commandApplyEngine = ({ dataEditCommand, spread }: CommandApplyEngineProps
             const targetSheet = spread.getSheetFromName(sheetName);
             console.log('🚀 [commandApplyEngine] Formula:', detailedCommand);
             console.log('🚀 [commandApplyEngine] Position: row:', range[0], 'col:', range[1]);
-            
+
             if (range.length == 4) {
                 console.log('🚀 [commandApplyEngine] Using setArrayFormula with range:', range);
                 targetSheet.setArrayFormula(range[0], range[1], range[2], range[3], detailedCommand);
