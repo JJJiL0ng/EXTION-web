@@ -1,6 +1,7 @@
 // api/sheetApi.ts
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.BE_API_URL || 'http://localhost:8080';
 const API_PATH = '/v2/table-data-json-save';
 
 // API 응답 타입 정의
