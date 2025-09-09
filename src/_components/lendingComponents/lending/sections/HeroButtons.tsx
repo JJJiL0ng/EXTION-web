@@ -93,10 +93,11 @@ export function HeroButtons() {
   };
 
   return (
-  <div className="flex flex-row gap-4 sm:gap-6 justify-center items-center mb-8 lg:mb-12">
+    <div className="flex flex-row gap-4 sm:gap-6 justify-center items-center mb-8 lg:mb-12">
       <Button
+        variant="secondary"
         size="lg"
-    className="bg-[#005de9] hover:bg-blue-700 px-2 py-2 border-2 text-lg lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl w-[150px] sm:w-[160px] rounded-full"
+        className="text-white bg-[#005de9] hover:bg-blue-700 px-2 py-2 border-2 border-[#005de9] text-lg lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl w-[150px] sm:w-[160px] rounded-full"
         onClick={handleNewSheetClick}
       >
         <span className="flex items-center gap-2">
@@ -110,13 +111,13 @@ export function HeroButtons() {
       <Button
         variant="outline"
         size="lg"
-  className="px-2 py-2 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 w-[150px] sm:w-[160px] rounded-full"
+        className="px-2 py-2 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 w-[150px] sm:w-[160px] rounded-full"
         onClick={handleNewSheetClick}
       >
         <span className="flex items-center gap-2">
           demo
         </span>
       </Button>
-    </div>
+    </div >
   )
 }

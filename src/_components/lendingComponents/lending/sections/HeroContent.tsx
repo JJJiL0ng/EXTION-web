@@ -13,7 +13,6 @@ export function HeroContent() {
         {heroData.headline.highlight}
       </h2>
 
-
       {/* 서브 헤드라인 - 검색 엔진을 위한 키워드 포함 */}
       <p className="text-sm sm:text-lg lg:text-xl xl:text-2xl text-gray-600 mb-12 leading-relaxed max-w-4xl mx-auto font-medium">
         {heroData.headline.subtitle}<br />

@@ -23,7 +23,7 @@ export default function Header() {
   }
 
   return (
-  <header className="bg-[#EEF2F6]/60 border-b border-blue-100/50 sticky top-0 z-50 backdrop-blur-sm">
+  <header className="bg-[#EEF2F6]/10 border-b border-blue-100/50 sticky top-0 z-50 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
   <div className="flex justify-between items-center h-14 sm:h-12">
           <Link 
