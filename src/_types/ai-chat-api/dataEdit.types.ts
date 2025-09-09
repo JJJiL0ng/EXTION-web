@@ -9,7 +9,6 @@ export interface dataEditCommand {
     commandType: dataEditCommandType; // 예시: 'setformula'
     range: number[]; // 범위, 숫자배열. 예시 [0,6], [0,24,22,42]
     detailedCommand: string | StyleCommand; // 세부 명령어. 예시: '=SUM(B1:B10)'
-    dataEditCommands?: dataEditCommand[]; // 중복 래핑된 구조 처리용
 }
 
 export enum dataEditCommandType {
