@@ -49,8 +49,7 @@ export function HeroVideoStatic() {
       {/* 영상 하단 설명 텍스트 - SSG로 렌더링 */}
       <div className="text-center mt-6 lg:mt-8 max-w-3xl mx-auto">
         <p className="text-gray-600 text-lg lg:text-xl leading-relaxed">
-          {heroData.video.description.split('같은 ')[0]}같은 <strong className="text-blue-600">자연어 명령</strong>만으로<br />
-          복잡한 엑셀 작업이 <strong className="text-blue-600">자동으로 처리</strong>됩니다
+          Easily solve complex spreadsheet tasks using simple chat
         </p>
         
         {/* 사용 예시들 - SEO 최적화 */}

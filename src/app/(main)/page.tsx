@@ -79,7 +79,7 @@ export default async function HomePage() {
           __html: JSON.stringify(heroStructuredData)
         }}
       />
-      
+
       {/* Feature 섹션 구조화된 데이터 */}
       <script
         type="application/ld+json"
@@ -87,7 +87,7 @@ export default async function HomePage() {
           __html: JSON.stringify(featuresStructuredData)
         }}
       />
-      
+
       {/* Device 섹션 구조화된 데이터 */}
       <script
         type="application/ld+json"
@@ -95,7 +95,7 @@ export default async function HomePage() {
           __html: JSON.stringify(devicesStructuredData)
         }}
       />
-      
+
       {/* Review 섹션 구조화된 데이터 */}
       <script
         type="application/ld+json"
@@ -103,7 +103,7 @@ export default async function HomePage() {
           __html: JSON.stringify(reviewsStructuredData)
         }}
       />
-      
+
       {/* CTA 섹션 구조화된 데이터 */}
       <script
         type="application/ld+json"
@@ -111,16 +111,16 @@ export default async function HomePage() {
           __html: JSON.stringify(ctaStructuredData)
         }}
       />
-      
+
       <main>
         <HeroSection />
         {/* Feature 데이터는 이제 컴포넌트 내부에서 SSG로 처리 */}
         <FeatureSection />
         {/* Device 섹션 추가 - SSG로 처리 */}
-        <DeviceSection />
-        {/* Review 섹션 - 전환 직전 배치 */}
         <ReviewSection />
         {/* <CTASection /> */}
+        <DeviceSection />
+        {/* Review 섹션 - 전환 직전 배치 */}
       </main>
     </>
   )

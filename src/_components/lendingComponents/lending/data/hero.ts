@@ -2,30 +2,30 @@
 export const heroData = {
   // SEO 최적화된 메인 헤드라인
   headline: {
-    main: "엑셀 몰라도 괜찮아요.",
-    highlight: "초보도 프로처럼.",
-    subtitle: "Extion은 당신의 말을 알아듣는 엑셀 비서입니다.",
-    description: "\"하고 싶은 걸 말하면 되는\" 엑셀 도구"
+    main: "Just tell Extion",
+    highlight: "what you want for cells",
+    subtitle: "Extion ai is the future of spreadsheet agent.",
+    description: "\"next generation spreadsheet ai agent\" extion.ai"
   },
   
   // 구조화된 데이터용 키워드
   seoKeywords: [
-    "엑셀 자동화",
-    "자연어 처리", 
-    "AI 엑셀 도구",
-    "표 정리",
-    "데이터 분석",
-    "차트 생성",
-    "엑셀 함수",
-    "스프레드시트 AI"
-  ],
+    "Excel automation",
+    "Natural language processing",
+    "AI Excel tools", 
+    "Table organization",
+    "Data analysis",
+    "Chart generation",
+    "Excel functions",
+    "Spreadsheet AI"
+],
   
   // 비디오 메타데이터
   video: {
     src: "https://video.extion.co/main-demo.MP4",
     poster: "https://video.extion.co/main-demo-thum.png",
-    title: "Extion 데모 - 자연어로 엑셀 작업하기",
-    description: "\"정렬해줘\", \"차트 만들어줘\", \"중복 제거해줘\" 같은 자연어 명령만으로 복잡한 엑셀 작업이 자동으로 처리됩니다",
+    title: "Extion Demo - Perform Excel Tasks with Natural Language",
+    description: "\"Sort this\", \"Create a chart\", \"Remove duplicates\" ",
     duration: 30,
     width: 1920,
     height: 1080
@@ -33,26 +33,26 @@ export const heroData = {
   
   // 핵심 가치 제안 (구조화된 데이터용)
   valuePropositions: [
-    {
-      title: "자연어 명령 처리",
-      description: "복잡한 함수 없이 말로만 엑셀 작업 완료"
-    },
-    {
-      title: "자동 표 정리",
-      description: "지저분한 데이터를 깔끔하게 자동 정리"
-    },
-    {
-      title: "즉시 시각화",
-      description: "데이터를 차트로 바로 변환"
-    }
-  ],
+   {
+     title: "Natural Language Commands",
+     description: "Complete Excel tasks with simple voice commands - no complex formulas needed"
+   },
+   {
+     title: "Smart Data Cleanup",
+     description: "Automatically organize messy spreadsheets into clean, structured data"
+   },
+   {
+     title: "Instant Visualization",
+     description: "Transform your data into professional charts and graphs in seconds"
+   }
+],
   
   // 사용 예시 (SEO용)
-  examples: [
-    "매출표 정리해줘 → 병합 + 정렬 + 필터까지 자동 처리",
-    "지출내역 정리해줘 → 중복 제거, 표 스타일 정리까지 한 번에",
-    "이번 달 지출 차트로 보여줘 → 막대그래프 자동 생성"
-  ]
+ examples: [
+   "Clean up sales data → Auto merge + sort + filter applied instantly",
+   "Organize expense records → Duplicate removal + table formatting in one click", 
+   "Show this month's spending as chart → Bar graph generated automatically"
+]
 } as const
 
 // JSON-LD 구조화된 데이터 생성
