@@ -1,9 +1,7 @@
 import type { Metadata } from 'next'
-import { generateMetadata } from '@/lending-libs/seo'
+import { generateMetadata } from '@/_utils/lending-utils/seo'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import AuthProvider from '@/components/AuthProvider'
-import ImmerSetup from '@/components/ImmerSetup'
 import './globals.css'
 
 export const metadata: Metadata = generateMetadata({
@@ -64,11 +62,8 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased min-h-screen">
-        <ImmerSetup />
-        <AuthProvider>
           {children}
-        </AuthProvider>
-        <Analytics />
+        <Analytics /> 
         <SpeedInsights />
       </body>
     </html>

@@ -2,26 +2,24 @@ import React from 'react';
 // import { useGetSheetNames } from '../../_hooks/sheet/useGetSheetNames';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { X } from 'lucide-react';
-import { useSelectedSheetInfoStore } from '../../_hooks/sheet/useSelectedSheetInfoStore';
+import { useSelectedSheetInfoStore } from '../../_hooks/sheet/common/useSelectedSheetInfoStore';
 
-import { useSpreadSheetNames } from '@/_hooks/sheet/useSpreadSheetNames'
+import { useSpreadSheetNames } from '@/_hooks/sheet/common/useSpreadSheetNames'
 
 
 interface FileSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectSheet: (sheetName: string) => void;
-  spreadRef: React.RefObject<any>;
 }
 
 export const FileSelectModal: React.FC<FileSelectModalProps> = ({
   isOpen,
   onClose,
   onSelectSheet,
-  spreadRef,
 }) => {
   const { spreadSheetNames } = useSpreadSheetNames();
-  
+
   // useSelectedSheetInfoStore 훅 사용
   const { selectedSheets, addSelectedSheet, removeSelectedSheet, isSheetSelected, addAllSheets, clearSelectedSheets } = useSelectedSheetInfoStore();
 
@@ -87,7 +85,6 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
                   <SelectedSheetNameCard
                     fileName="모든 파일 추가"
                     showIcon={true}
-                    spreadRef={spreadRef}
                     mode='modal-whole-file'
                     isSelected={isAllSheetsSelected}
                   />
@@ -105,7 +102,6 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
                   <SelectedSheetNameCard
                     fileName={sheetName}
                     showIcon={true}
-                    spreadRef={spreadRef}
                     mode='modal'
                     isSelected={isSheetSelected(sheetName)}
                   />

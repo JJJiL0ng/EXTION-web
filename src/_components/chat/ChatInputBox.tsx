@@ -1,14 +1,39 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { ChevronDown, Check} from 'lucide-react';
-import { useMainChat } from '../../_hooks/chat/useChatStore';
-import { getOrCreateGuestId } from '../../_utils/guestUtils';
+import { ChevronDown, Check, ReceiptPoundSterling} from 'lucide-react';
 import { useChatMode, ChatMode } from '../../_hooks/chat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
-import { useGetActiveSheetName } from '@/_hooks/sheet/useGetActiveSheetName'
+import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName'
 import FileAddButton from './FileAddButton';
-import { useSelectedSheetInfoStore } from '../../_hooks/sheet/useSelectedSheetInfoStore';
+import { useSelectedSheetInfoStore } from '../../_hooks/sheet/common/useSelectedSheetInfoStore';
+import { aiChatStore } from '@/_store/aiChat/aiChatStore';
+import useSpreadsheetIdStore from '@/_store/sheet/spreadSheetIdStore'
+import { getOrCreateGuestId } from '../../_utils/guestUtils'
+import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore'
+import useChatIdStore from '@/_store/chat/chatIdStore'
+
+import { useAiChatApiConnector } from '@/_hooks/aiChat/useAiChatApiConnector'; 
+import { aiChatApiReq } from '@/_types/ai-chat-api/aiChatApi.types';
+
+import applyDataEditCommands from '@/_utils/sheet/applyDataEditCommands';
+import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
+
+import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
+
+
+// 브라우저 Web Crypto API 사용 + 폴백
+const safeRandomUUID = () => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch (_) {
+    // ignore
+  }
+  // 간단한 폴백 (충돌 가능성 낮음)
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+};
 
 interface ChatInputBoxProps {
   // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
@@ -16,7 +41,6 @@ interface ChatInputBoxProps {
   placeholder?: string;
   disabled?: boolean;
   userId?: string;
-  spreadRef?: React.MutableRefObject<any> | React.RefObject<any> | null;
   onFileAddClick?: () => void;
 }
 
@@ -27,7 +51,6 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   placeholder = "수정사항을 입력하세요...",
   disabled = false,
   userId = getOrCreateGuestId(), // Guest ID 사용
-  spreadRef,
   onFileAddClick
 }) => {
   const [message, setMessage] = useState('');
@@ -41,33 +64,76 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
 
+  // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
+  const { spread } = useSpreadsheetContext();
+  spread.options.allowDynamicArray = true; // 동적 배열 허용
+
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
 
   // useSelectedSheetInfoStore 훅 사용
   const { selectedSheets, removeSelectedSheet, addSelectedSheet, renameSelectedSheet } = useSelectedSheetInfoStore();
 
-  // v2 채팅 훅 사용
-  const { sendMessage: sendChatMessage, isLoading } = useMainChat(userId);
+  // aiChatStore 훅 사용
+  const { addUserMessage, isSendingMessage, setIsSendingMessage } = aiChatStore();
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
+  // AI Chat API Connector 훅 사용
+  const { isConnected, isConnecting, connect, executeAiJob } = useAiChatApiConnector();
 
-  const handleRemoveFile = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+
+  // AI Chat API 서버 연결
+  React.useEffect(() => {
+    const connectToAiChatServer = async () => {
+      console.log('🔄 [ChatInputBox] Connection effect triggered:', { 
+        isConnected, 
+        isConnecting,
+        shouldConnect: !isConnected && !isConnecting 
+      });
+      
+      if (!isConnected && !isConnecting) {
+        try {
+          console.log('🔌 [ChatInputBox] Attempting to connect to AI Chat server');
+          const serverUrl = process.env.NEXT_PUBLIC_AI_CHAT_SERVER_URL || 'ws://localhost:8080';
+          console.log('🔌 [ChatInputBox] Using server URL:', serverUrl);
+          
+          await connect(serverUrl);
+          console.log('✅ [ChatInputBox] Successfully connected to AI Chat server');
+        } catch (error) {
+          console.error('❌ [ChatInputBox] Failed to connect to AI Chat server:', error);
+        }
+      } else if (isConnected) {
+        console.log('✅ [ChatInputBox] Already connected to AI Chat server');
+      } else if (isConnecting) {
+        console.log('⏳ [ChatInputBox] Connection in progress...');
+      }
+    };
+
+    connectToAiChatServer();
+  }, [isConnected, isConnecting, connect]);
+
+  // 연결 상태 변화 로깅
+  React.useEffect(() => {
+    console.log('🔗 [ChatInputBox] Connection status changed:', {
+      isConnected,
+      isConnecting,
+      timestamp: new Date().toISOString()
+    });
+  }, [isConnected, isConnecting]);
+
+  // 컴포넌트 언마운트 로깅
+  React.useEffect(() => {
+    return () => {
+      console.log('🏗️ [ChatInputBox] Component unmounting');
+    };
+  }, []);
 
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
+      // 전송 상태 시작
+      setIsSendingMessage(true);
+      
       const messageToSend = message;
-      const fileToSend = selectedFile;
+      // const fileToSend = selectedFile;
       const selectedSheetsToSend = selectedSheets; // 선택된 시트 정보 포함
 
       // 메시지 전송 전에 입력창 초기화
@@ -85,9 +151,67 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         }, 0);
       }
 
-      // 선택된 시트 정보와 함께 메시지 전송
-      console.log('Sending message with selected sheets:', selectedSheetsToSend);
-      await sendChatMessage(messageToSend);
+      try {
+        // 선택된 시트 정보와 함께 메시지 전송
+        console.log('🚀 [ChatInputBox] Sending message with selected sheets:', selectedSheetsToSend);
+        console.log('🚀 [ChatInputBox] Message content:', messageToSend);
+        console.log('🚀 [ChatInputBox] Chat mode:', mode);
+        console.log('🚀 [ChatInputBox] About to call addUserMessage');
+        
+        const messageId = addUserMessage(messageToSend);
+        
+        console.log('✅ [ChatInputBox] User message added to store:', {
+          messageId,
+          content: messageToSend,
+          timestamp: Date.now()
+        });
+        
+        // Store 상태 확인
+        console.log('📊 [ChatInputBox] Current store state:', aiChatStore.getState());
+
+        // AI Chat API 호출
+        if (isConnected) {
+          console.log('🤖 [ChatInputBox] Starting AI job execution');
+          console.log('🔗 [ChatInputBox] Connection status:', { isConnected, isConnecting });
+          
+          const aiChatApiRequest: aiChatApiReq = {
+            spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!,
+            chatId: useChatIdStore.getState().chatId!,
+            userId: userId,
+            chatMode: mode,
+            userQuestionMessage: messageToSend,
+            parsedSheetNames: useSpreadsheetNamesStore.getState().selectedSheets.map((s) => s.name),
+            jobId: `jobId_${safeRandomUUID()}`,
+          };
+
+          console.log('📤 [ChatInputBox] AI request payload:', aiChatApiRequest);
+
+          try {
+            const result = await executeAiJob(aiChatApiRequest);
+            console.log('🎉 [ChatInputBox] AI job completed successfully:', result);
+            
+            // AI 응답을 채팅 스토어에 추가
+            if (result) {
+              // addAiMessage(aiChatApiRes, tasksRes)
+              aiChatStore.getState().addAiMessage(result);
+            }
+            applyDataEditCommands({ dataEditChatRes: result.dataEditChatRes as dataEditChatRes, spread: spread });
+
+          } catch (aiError) {
+            console.error('❌ [ChatInputBox] AI job failed:', aiError);
+            // TODO: 에러 메시지를 사용자에게 표시
+          }
+        } else {
+          console.warn('⚠️ [ChatInputBox] Not connected to AI server, skipping AI job');
+        }
+        
+      } catch (error) {
+        console.error('❌ [ChatInputBox] Message sending failed:', error);
+      } finally {
+        // 전송 상태 해제
+        console.log('🏁 [ChatInputBox] Finishing message send process');
+        setIsSendingMessage(false);
+      }
     }
   };
 
@@ -95,7 +219,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
       event.preventDefault();
       // disabled 상태일 때는 전송하지 않음
-      if (!disabled && !isLoading && (message.trim() || selectedFile)) {
+      if (!disabled && !isSendingMessage && (message.trim() || selectedFile)) {
         handleSend();
       }
     }
@@ -155,7 +279,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     }
   }, [showModeModal]); // , showModelModal
 
-  const { activeSheetName } = useGetActiveSheetName({ spreadRef: spreadRef ?? null });
+  const { activeSheetName } = useGetActiveSheetName();
   // 최초 1회만 activeSheetName을 기본 선택으로 추가
   const didInitDefaultSelection = React.useRef(false);
   React.useEffect(() => {
@@ -195,7 +319,6 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             {selectedSheets.map((sheet) => (
               <SelectedSheetNameCard 
                 key={sheet.name}
-                spreadRef={spreadRef} 
                 fileName={sheet.name}
                 onRemove={() => removeSelectedSheet(sheet.name)}
                 mode='chatInputBox'
@@ -336,13 +459,16 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
           {/* 전송 버튼 */}
           <button
             onClick={handleSend}
-            disabled={disabled || isLoading || (!message.trim() && !selectedFile)}
-            className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${disabled || isLoading || (!message.trim() && !selectedFile)
+            disabled={disabled || isSendingMessage || (!message.trim() && !selectedFile)}
+            className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${disabled || isSendingMessage || (!message.trim() && !selectedFile)
               ? 'bg-gray-300 text-white cursor-not-allowed'
-              : 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
+              : isConnected 
+                ? 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
+                : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
               }`}
+            title={!isConnected ? 'AI 서버 연결 중...' : '메시지 전송'}
           >
-            {isLoading ? (
+            {isSendingMessage ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">

@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { Send, Paperclip, Settings, ChevronDown, X, MessagesSquare } from 'lucide-react';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 
+
 const ChatTabBar = () => {
     const [activeTab, setActiveTab] = useState('chat');
     const tabBarRef = useRef<HTMLDivElement>(null);
@@ -25,7 +26,6 @@ const ChatTabBar = () => {
                 onClick={hideChat}
             >
                 <img src="/EXTION_new_logo_white.svg" alt="Extion Logo" className="w-4 h-4" />
-                
                 AI
             </button>
             <div className="flex-1" />

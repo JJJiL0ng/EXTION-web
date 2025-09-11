@@ -1,4 +1,4 @@
-import HeroSection from "@/_components/lending/hero/HeroSection";
+import HeroSection from "@/_components/lendingComponents/TestHeroSection";
 
 const TestLendingPage = () => {
   return (

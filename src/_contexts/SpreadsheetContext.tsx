@@ -1,12 +1,10 @@
 import React, { createContext, useContext, MutableRefObject, useEffect, useState } from 'react';
-import { UseSpreadjsCommandStoreReturn } from '@/_hooks/sheet/useSpreadjsCommandStore';
-import { FormulaResponse } from '@/_hooks/sheet/useSpreadjsCommandEngine';
 
 // Context 타입 정의
 interface SpreadsheetContextType {
-  spreadRef: MutableRefObject<any> | null;
-  commandManager: UseSpreadjsCommandStoreReturn | null;
-  executeFormula: (formulaResponse: FormulaResponse) => Promise<void>;
+  // SpreadJS 인스턴스 자체를 보관 (ref가 아닌 instance)
+  spread: any | null;
+  // 인스턴스 준비 여부
   isReady: boolean;
 }
 
@@ -16,68 +14,40 @@ const SpreadsheetContext = createContext<SpreadsheetContextType | null>(null);
 // Provider Props 타입
 interface SpreadsheetProviderProps {
   children: React.ReactNode;
+  // 외부에서 관리하는 ref를 입력 받아 내부에서 instance로 노출
   spreadRef: MutableRefObject<any>;
-  commandManager: UseSpreadjsCommandStoreReturn;
 }
 
 // Provider 컴포넌트
 export const SpreadsheetProvider: React.FC<SpreadsheetProviderProps> = ({
   children,
-  spreadRef,
-  commandManager //spreadjs formula excute engine
+  spreadRef
 }) => {
-  // SpreadJS 인스턴스 준비 상태를 실시간으로 추적
+  // SpreadJS 인스턴스를 보관 (ref가 아닌 instance)
+  const [spread, setSpread] = useState<any | null>(null);
   const [isSpreadReady, setIsSpreadReady] = useState(false);
 
-  // SpreadJS 인스턴스 변화 감지
+  // ref.current 변화를 폴링하여 instance 저장
   useEffect(() => {
-    const checkSpreadReady = () => {
-      const ready = !!(spreadRef?.current && commandManager);
+    const check = () => {
+      const instance = spreadRef?.current ?? null;
+      setSpread((prev: any | null) => (prev !== instance ? instance : prev));
+      const ready = !!instance;
       setIsSpreadReady(ready);
       if (ready) {
-        console.log('✅ SpreadsheetContext Ready:', { 
-          hasSpreadRef: !!spreadRef?.current, 
-          hasCommandManager: !!commandManager 
-        });
+        console.log('✅ SpreadsheetContext Ready (instance detected)');
       }
     };
 
-    // 초기 체크
-    checkSpreadReady();
-
-    // SpreadJS 인스턴스가 설정될 때까지 주기적으로 체크
-    const interval = setInterval(checkSpreadReady, 100);
-
-    // 준비되면 interval 제거
-    if (isSpreadReady) {
-      clearInterval(interval);
-    }
-
+    // 초기 체크 및 폴링 시작
+    check();
+    const interval = setInterval(check, 100);
+    if (isSpreadReady) clearInterval(interval);
     return () => clearInterval(interval);
-  }, [spreadRef, commandManager, isSpreadReady]);
-
-  // 수식 실행 통합 함수
-  const executeFormula = async (formulaResponse: FormulaResponse): Promise<void> => {
-    if (!spreadRef.current) {
-      throw new Error('SpreadJS 인스턴스가 준비되지 않았습니다.');
-    }
-
-    if (!commandManager) {
-      throw new Error('Command Manager가 초기화되지 않았습니다.');
-    }
-
-    try {
-      await commandManager.executeCommand(formulaResponse);
-    } catch (error) {
-      console.error('수식 실행 실패:', error);
-      throw error;
-    }
-  };
+  }, [spreadRef, isSpreadReady]);
 
   const contextValue: SpreadsheetContextType = {
-    spreadRef,
-    commandManager,
-    executeFormula,
+    spread,
     isReady: isSpreadReady
   };
 

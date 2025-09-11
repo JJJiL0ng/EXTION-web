@@ -5,6 +5,7 @@ const config: Config = {
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/_components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
@@ -32,7 +33,8 @@ const config: Config = {
     'w-56',
     'bg-gray-200',
     'px-10',
-    'opacity-40'
+    'opacity-40', 
+    'bg-[#F0F2F5]'
 
   ],
   theme: {
