@@ -29,7 +29,7 @@ export default function MainChattingContainer(_props: MainChattingContainerProps
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="bg-whiteh h-full flex flex-col">
       {/* 초기화되지 않은 경우 로딩 표시 */}
       {!isInitialized ? (
         <div className="flex-1 flex items-center justify-center">
