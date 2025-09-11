@@ -22,15 +22,26 @@ const applyDataEditCommands = ({ dataEditChatRes, spread }: applyDataEditCommand
         const command = dataEditChatRes.dataEditCommands[i];
         console.log('🚀 [applyDataEditCommands] Processing command[' + i + ']:', command);
         
-        // 중복 래핑된 구조 처리: command.dataEditCommands[0]에 실제 데이터가 있음
-        const actualCommand: dataEditCommand = (command as any).dataEditCommands && (command as any).dataEditCommands[0] 
-            ? (command as any).dataEditCommands[0] 
-            : command;
-        console.log('🚀 [applyDataEditCommands] Actual command:', actualCommand);
-        
-        // command apply engine에 세부 명령어 넣어서 동작 수행
-        CommandApplyEngine({ dataEditCommand: actualCommand, spread });
-        isDataEdited = true;
+        // 중복 래핑된 구조 처리
+        if (command.dataEditCommands && Array.isArray(command.dataEditCommands)) {
+            // 중첩된 배열의 모든 명령어 처리
+            const nestedCommands = command.dataEditCommands;
+            console.log('🚀 [applyDataEditCommands] Found nested commands, count:', nestedCommands.length);
+            
+            for (let j = 0; j < nestedCommands.length; j++) {
+                const actualCommand: dataEditCommand = nestedCommands[j];
+                console.log('🚀 [applyDataEditCommands] Processing nested command[' + j + ']:', actualCommand);
+                
+                // command apply engine에 세부 명령어 넣어서 동작 수행
+                CommandApplyEngine({ dataEditCommand: actualCommand, spread });
+                isDataEdited = true;
+            }
+        } else {
+            // 일반적인 단일 명령어 처리
+            console.log('🚀 [applyDataEditCommands] Processing direct command:', command);
+            CommandApplyEngine({ dataEditCommand: command as dataEditCommand, spread });
+            isDataEdited = true;
+        }
     }
 
     return isDataEdited;

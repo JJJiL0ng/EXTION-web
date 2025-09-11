@@ -27,9 +27,6 @@ export function FeatureItem({ feature, index }: FeatureItemProps) {
       <div className="flex-1 space-y-2">
         {/* 아이콘과 제목 */}
         <div className="flex items-center gap-4">
-          <span className="text-4xl" role="img" aria-label={feature.title}>
-            {feature.icon}
-          </span>
           <h3 className="text-3xl font-bold text-gray-900" itemProp="name">
             {feature.title}
           </h3>
@@ -58,9 +55,9 @@ export function FeatureItem({ feature, index }: FeatureItemProps) {
         </div>
         
         {/* 사용 예시 */}
-        <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg">
+        <div className="bg-gray-100 border-l-4 border-[#005de9] p-4 rounded-r-lg">
           <p className="text-gray-700">
-            <span className="text-blue-600 font-medium">예시:</span> 
+            <span className="text-blue-600 font-medium">Try it:</span> 
             <span itemProp="example">{feature.example}</span>
           </p>
         </div>

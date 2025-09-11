@@ -15,60 +15,60 @@ export interface Feature {
 export const featuresData = {
   // 섹션 헤더 정보
   header: {
-    title: "핵심 기능",
-    subtitle: "자연어로 엑셀 작업이 이렇게 쉬워집니다",
-    description: "복잡한 함수나 매크로 없이, 말 한마디로 모든 엑셀 작업을 자동화하세요"
+    title: "Core Features",
+    subtitle: "Excel tasks made effortless with natural language",
+    description: "Automate any Excel workflow with simple voice commands - no complex formulas or macros required"
   },
-  
+
   // 기능 목록
   features: [
     {
       id: 1,
-      title: "자연어 명령 처리",
-      subtitle: "말 한마디로 엑셀 자동 실행!",
-      description: "정렬해줘, 차트로 보여줘처럼 대화하듯 입력만 하면, 복잡한 엑셀 작업이 자동으로 처리됩니다.",
-      example: "매출표 정리해줘 → 병합 + 정렬 + 필터까지 자동 처리 완료!",
+      title: "Natural Language Commands",
+      subtitle: "Excel automation with just your voice!",
+      description: "Simply speak commands like 'sort this data' or 'create a chart' and watch complex Excel tasks complete automatically.",
+      example: "Clean up sales data → Auto merge + sort + filter applied instantly!",
       videoUrl: "https://video.extion.co/command.mp4",
       poster: "https://video.extion.co/command-thum.png",
       icon: "💬",
       benefits: [
-        "복잡한 함수 학습 불필요",
-        "직관적인 자연어 명령",
-        "즉시 실행되는 자동화"
+        "No complex formulas to learn",
+        "Intuitive voice commands",
+        "Instant task automation"
       ],
-      keywords: ["자연어 처리", "음성 명령", "AI 엑셀", "자동화"]
+      keywords: ["natural language processing", "voice commands", "AI Excel", "automation"]
     },
     {
       id: 2,
-      title: "표 자동 정리",
-      subtitle: "지저분한 데이터? 한 번에 깔끔하게!",
-      description: "병합 셀, 중복값, 비어있는 셀 등을 자동으로 정리해서 읽기 쉬운 표로 재구성합니다.",
-      example: "지출내역 정리해줘 → 비어 있는 셀, 중복 제거, 표 스타일 정리까지!",
+      title: "Smart Data Cleanup",
+      subtitle: "Messy spreadsheets? Clean in seconds!",
+      description: "Automatically fixes merged cells, removes duplicates, and fills empty cells to create perfectly organized tables.",
+      example: "Organize expense records → Empty cells filled, duplicates removed, table formatted!",
       videoUrl: "https://video.extion.co/datafix.mp4",
       poster: "https://video.extion.co/datafix-thum.png",
       icon: "📊",
       benefits: [
-        "자동 데이터 정제",
-        "일관된 표 형식",
-        "중복 데이터 제거"
+        "Automated data cleaning",
+        "Consistent table formatting",
+        "Duplicate removal"
       ],
-      keywords: ["데이터 정리", "표 정제", "중복 제거", "데이터 클리닝"]
+      keywords: ["data cleanup", "table formatting", "duplicate removal", "data cleaning"]
     },
     {
       id: 3,
-      title: "시각화 기능",
-      subtitle: "그래프? 그냥 말하면 그려줍니다.",
-      description: "데이터를 분석해 가장 어울리는 차트를 자동 추천 + 생성합니다.",
-      example: "이번 달 지출 차트로 보여줘 → 데이터 분석후 적절한 그래프 자동 생성!",
+      title: "Instant Visualization",
+      subtitle: "Need charts? Just ask and it's done.",
+      description: "Analyzes your data and automatically recommends and creates the most suitable charts and graphs.",
+      example: "Show monthly expenses as chart → Data analyzed, perfect graph generated automatically!",
       videoUrl: "https://video.extion.co/artifact.MP4",
       poster: "https://video.extion.co/artifact-thum.png",
       icon: "📈",
       benefits: [
-        "자동 차트 추천",
-        "맞춤형 시각화",
-        "전문적인 디자인"
+        "Smart chart recommendations",
+        "Custom visualizations",
+        "Professional designs"
       ],
-      keywords: ["차트 생성", "데이터 시각화", "그래프", "분석"]
+      keywords: ["chart generation", "data visualization", "graphs", "analysis"]
     }
   ] as Feature[]
 } as const

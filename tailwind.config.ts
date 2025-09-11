@@ -33,7 +33,8 @@ const config: Config = {
     'w-56',
     'bg-gray-200',
     'px-10',
-    'opacity-40'
+    'opacity-40', 
+    'bg-[#F0F2F5]'
 
   ],
   theme: {

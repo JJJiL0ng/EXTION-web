@@ -5,7 +5,7 @@ export function FeatureHeader() {
   return (
     <div className="text-center mb-16">
       {/* 메인 제목 - SEO 최적화 */}
-      <h2 className="text-3xl md:text-3xl font-bold text-gray-900 mb-4">
+      <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
         {featuresData.header.title}
       </h2>
       

@@ -31,17 +31,17 @@ export function HeroVideo() {
   return (
     <div className="w-full">
       {/* 인터랙티브 비디오 플레이어 */}
-      <div 
-        id="demo-video" 
+      <div
+        id="demo-video"
         className="relative"
         style={{ maxHeight: '80vh' }}
       >
         {/* 썸네일 이미지 (비디오가 준비되기 전까지 표시) */}
         {!videoReady && <HeroVideoStatic />}
-        
+
         {/* 실제 비디오 플레이어 - 클라이언트에서만 로드 */}
         <div className={`transition-opacity duration-500 ${videoReady ? 'opacity-100' : 'opacity-0'}`}>
-          <VideoPlayer 
+          <VideoPlayer
             src={heroData.video.src}
             autoPlay={true}
             muted={true}
@@ -54,12 +54,11 @@ export function HeroVideo() {
           />
         </div>
       </div>
-      
+
       {/* 영상 하단 설명 텍스트 - 정적 렌더링 */}
       <div className="text-center mt-6 lg:mt-8 max-w-3xl mx-auto">
         <p className="text-gray-600 text-lg lg:text-xl leading-relaxed">
-          {heroData.video.description.split('같은 ')[0]}같은 <strong className="text-blue-600">자연어 명령</strong>만으로<br />
-          복잡한 엑셀 작업이 <strong className="text-blue-600">자동으로 처리</strong>됩니다
+          Easily solve complex spreadsheet tasks using simple chat commands
         </p>
       </div>
     </div>

@@ -25,7 +25,7 @@ const AiChatViewer = () => {
       if (typeof content === 'object' && content.dataEditChatRes) {
         return (
           <div>
-            <p>AI가 {content.taskManagerOutput.tasks[0].description}개의 데이터 편집 명령을 실행했습니다.</p>
+            <p>{content.taskManagerOutput.reason}</p>
           </div>
         );
       }
