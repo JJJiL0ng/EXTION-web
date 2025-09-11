@@ -117,9 +117,9 @@ export default async function HomePage() {
         {/* Feature 데이터는 이제 컴포넌트 내부에서 SSG로 처리 */}
         <FeatureSection />
         {/* Device 섹션 추가 - SSG로 처리 */}
-        <ReviewSection />
+        {/* <ReviewSection /> */}
         {/* <CTASection /> */}
-        <DeviceSection />
+        {/* <DeviceSection /> */}
         {/* Review 섹션 - 전환 직전 배치 */}
       </main>
     </>
