@@ -93,7 +93,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
       if (!isConnected && !isConnecting) {
         try {
           console.log('🔌 [ChatInputBox] Attempting to connect to AI Chat server');
-          const serverUrl = process.env.NEXT_PUBLIC_AI_CHAT_SERVER_URL || 'ws://localhost:8080';
+          const serverUrl = process.env.NEXT_PUBLIC_API_URL || 'ws://localhost:8080';
           console.log('🔌 [ChatInputBox] Using server URL:', serverUrl);
           
           await connect(serverUrl);
