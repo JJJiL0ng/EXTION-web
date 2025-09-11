@@ -24,19 +24,6 @@ export interface DeltaResponse {
   applied: boolean;
 }
 
-export interface GPTData {
-  totalCells: number;
-  sheetCount: number;
-  dataHash: string;
-  parsedAt: string;
-  sheets: Array<{
-    name: string;
-    cellCount: number;
-    csvData: string;
-    metadata: any;
-  }>;
-}
-
 export interface SpreadSheetListItem {
   id: string;
   fileName: string;
@@ -240,15 +227,6 @@ export class SheetAPI {
   }
 
   /**
-   * GPT용 데이터 조회
-   */
-  static async getGPTData(): Promise<ApiResponse<GPTData>> {
-    return apiFetch<GPTData>('/gpt-data', {
-      method: 'GET',
-    });
-  }
-
-  /**
    * 강제 저장
    */
   static async forceSave(): Promise<ApiResponse<SaveResult>> {
@@ -306,7 +284,6 @@ export const {
   applyDelta,
   applyBatchDeltas,
   getCurrentState,
-  getGPTData,
   forceSave,
   getUserSpreadSheets,
   deleteSpreadSheet,

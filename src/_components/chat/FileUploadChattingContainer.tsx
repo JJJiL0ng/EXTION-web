@@ -61,7 +61,7 @@ export default function FileUploadChattingContainer(_props: FileUploadChattingCo
   }, [isModalOpen]);
 
   return (
-    <div className=" border-gray-200 h-full flex flex-col">
+    <div className="bg-white border-gray-200 h-full flex flex-col">
       {/* 초기화되지 않은 경우 로딩 표시 */}
       {!isInitialized ? (
         <div className="flex-1 flex items-center justify-center">
