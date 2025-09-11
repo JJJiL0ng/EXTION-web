@@ -55,7 +55,7 @@ export function FeatureItem({ feature, index }: FeatureItemProps) {
         </div>
         
         {/* 사용 예시 */}
-        <div className="bg-gray-100 border-l-4 border-[#005de9] p-4 rounded-r-lg">
+        <div className="bg-[#EEF2F6] border-l-4 border-[#005de9] p-4 rounded-r-lg">
           <p className="text-gray-700">
             <span className="text-blue-600 font-medium">Try it:</span> 
             <span itemProp="example">{feature.example}</span>
