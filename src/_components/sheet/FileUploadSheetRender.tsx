@@ -52,16 +52,12 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
             {/* 파일이 업로드되지 않았을 때 표시되는 업로드 안내 영역 */}
             {!isFileUploaded && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10 overflow-hidden">
-                    {/* 배경 이미지 (Next Image, 약간 투명) */}
-                    <Image
-                        src="/cells_bg_image.png"
+                    {/* 배경 이미지 (외부 호스팅) */}
+                    <img
+                        src="https://bucket.extion.ai/cells_bg_image.png"
                         alt=""
-                        fill
-                        sizes="100vw"
-                        priority
                         aria-hidden="true"
-                        className="opacity-40 pointer-events-none select-none"
-                        style={{ objectFit: 'cover' }}
+                        className="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none select-none"
                     />
                     <div className="bg-white border-2 rounded-lg px-10 py-6 border-[#005de9] text-center max-w-md mx-4 relative z-10">
                         <div className="mb-8 flex flex-col items-center">
