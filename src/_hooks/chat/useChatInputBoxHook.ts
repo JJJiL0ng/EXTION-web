@@ -14,7 +14,7 @@ import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
 import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName';
 import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionNumStore';
 import { isSpreadSheetDataDirty } from '@/_utils/sheet/authSave/isSpreadSheetDataDirty';
-import { SpreadSheetToolbar } from '@/_components/sheet/SpreadSheetToolbar';
+import { clearAllDirtyData } from '@/_utils/sheet/authSave/clearAllDirtyData';
 
 // 브라우저 Web Crypto API 사용 + 폴백
 const safeRandomUUID = () => {
@@ -232,6 +232,8 @@ export const useChatInputBoxHook = ({
               }),
             }),
           };
+          // 전송 직후 시트의 dirty 데이터 모두 초기화
+          clearAllDirtyData(spread);
 
           console.log('📤 [ChatInputBoxHook] AI request payload:', aiChatApiRequest);
           console.log('📊 [ChatInputBoxHook] Current version before request:', useSpreadSheetVersionStore.getState().spreadSheetVersionNum);
