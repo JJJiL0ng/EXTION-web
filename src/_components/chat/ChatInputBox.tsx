@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { ChevronDown, Check, ReceiptPoundSterling} from 'lucide-react';
-import { useChatMode, ChatMode } from '../../_hooks/chat/useChatMode';
+import { useChatMode, ChatMode } from '../../_hooks/aiChat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName'
 import FileAddButton from './FileAddButton';
