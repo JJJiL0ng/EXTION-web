@@ -16,7 +16,7 @@ import useChatIdStore from '@/_store/chat/chatIdStore'
 import { useAiChatApiConnector } from '@/_hooks/aiChat/useAiChatApiConnector'; 
 import { aiChatApiReq } from '@/_types/ai-chat-api/aiChatApi.types';
 
-import applyDataEditCommands from '@/_utils/sheet/applyDataEditCommands';
+import applyDataEditCommands from '@/_utils/sheet/applyCommand/applyDataEditCommands';
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 
 import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";

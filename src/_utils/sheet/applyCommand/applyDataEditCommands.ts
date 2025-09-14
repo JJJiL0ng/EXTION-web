@@ -1,6 +1,6 @@
 // import commandApplyEngine from "./useCommandApplyEngine";
 
-import CommandApplyEngine from '@/_utils/sheet/commandApplyEngine';
+import CommandApplyEngine from '@/_utils/sheet/applyCommand/commandApplyEngine';
 import { dataEditCommand } from '@/_types/ai-chat-api/dataEdit.types';
 import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
 
