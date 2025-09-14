@@ -1,0 +1,330 @@
+import { useState, useRef, useEffect } from 'react';
+import { useChatMode } from '../aiChat/useChatMode';
+import { useSelectedSheetInfoStore } from '../sheet/common/useSelectedSheetInfoStore';
+import { aiChatStore } from '@/_store/aiChat/aiChatStore';
+import useSpreadsheetIdStore from '@/_store/sheet/spreadSheetIdStore';
+import { getOrCreateGuestId } from '../../_utils/guestUtils';
+import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore';
+import useChatIdStore from '@/_store/chat/chatIdStore';
+import { useAiChatApiConnector } from '../aiChat/useAiChatApiConnector';
+import { aiChatApiReq } from '@/_types/ai-chat-api/aiChatApi.types';
+import applyDataEditCommands from '@/_utils/sheet/applyCommand/applyDataEditCommands';
+import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
+import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
+import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName';
+import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionNumStore';
+import { isSpreadSheetDataDirty } from '@/_utils/sheet/authSave/isSpreadSheetDataDirty';
+import { SpreadSheetToolbar } from '@/_components/sheet/SpreadSheetToolbar';
+
+// 브라우저 Web Crypto API 사용 + 폴백
+const safeRandomUUID = () => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch (_) {
+    // ignore
+  }
+  // 간단한 폴백 (충돌 가능성 낮음)
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+};
+
+interface UseChatInputBoxHookProps {
+  userId?: string;
+}
+
+export const useChatInputBoxHook = ({
+  userId = getOrCreateGuestId()
+}: UseChatInputBoxHookProps = {}) => {
+  const [message, setMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showModeModal, setShowModeModal] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modeModalRef = useRef<HTMLDivElement>(null);
+
+  // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
+  const { spread } = useSpreadsheetContext();
+  spread.options.allowDynamicArray = true; // 동적 배열 허용
+
+  // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
+  const { mode, setMode } = useChatMode();
+
+  // useSelectedSheetInfoStore 훅 사용
+  const { selectedSheets, removeSelectedSheet, addSelectedSheet, renameSelectedSheet } = useSelectedSheetInfoStore();
+
+  // aiChatStore 훅 사용
+  const { addUserMessage, isSendingMessage, setIsSendingMessage } = aiChatStore();
+
+  // AI Chat API Connector 훅 사용
+  const { isConnected, isConnecting, connect, executeAiJob } = useAiChatApiConnector();
+
+  const { activeSheetName } = useGetActiveSheetName();
+
+  // AI Chat API 서버 연결
+  useEffect(() => {
+    const connectToAiChatServer = async () => {
+      console.log('🔄 [ChatInputBoxHook] Connection effect triggered:', {
+        isConnected,
+        isConnecting,
+        shouldConnect: !isConnected && !isConnecting
+      });
+
+      if (!isConnected && !isConnecting) {
+        try {
+          console.log('🔌 [ChatInputBoxHook] Attempting to connect to AI Chat server');
+          const serverUrl = process.env.NEXT_PUBLIC_API_URL || 'ws://localhost:8080';
+          console.log('🔌 [ChatInputBoxHook] Using server URL:', serverUrl);
+
+          await connect(serverUrl);
+          console.log('✅ [ChatInputBoxHook] Successfully connected to AI Chat server');
+        } catch (error) {
+          console.error('❌ [ChatInputBoxHook] Failed to connect to AI Chat server:', error);
+        }
+      } else if (isConnected) {
+        console.log('✅ [ChatInputBoxHook] Already connected to AI Chat server');
+      } else if (isConnecting) {
+        console.log('⏳ [ChatInputBoxHook] Connection in progress...');
+      }
+    };
+
+    connectToAiChatServer();
+  }, [isConnected, isConnecting, connect]);
+
+  // 연결 상태 변화 로깅
+  useEffect(() => {
+    console.log('🔗 [ChatInputBoxHook] Connection status changed:', {
+      isConnected,
+      isConnecting,
+      timestamp: new Date().toISOString()
+    });
+  }, [isConnected, isConnecting]);
+
+  // 컴포넌트 언마운트 로깅
+  useEffect(() => {
+    return () => {
+      console.log('🏗️ [ChatInputBoxHook] Hook unmounting');
+    };
+  }, []);
+
+  // 최초 1회만 activeSheetName을 기본 선택으로 추가
+  const didInitDefaultSelection = useRef(false);
+  useEffect(() => {
+    if (didInitDefaultSelection.current) return;
+    if (!activeSheetName) return;
+    if (selectedSheets.length > 0) {
+      didInitDefaultSelection.current = true;
+      return;
+    }
+    addSelectedSheet(activeSheetName);
+    didInitDefaultSelection.current = true;
+  }, [activeSheetName, selectedSheets.length, addSelectedSheet]);
+
+  // 활성 시트명이 변경될 때, 선택된 칩이 하나인 경우 실시간으로 이름 동기화
+  useEffect(() => {
+    if (!activeSheetName) return;
+    if (selectedSheets.length !== 1) return;
+    const currentName = selectedSheets[0]?.name;
+    if (currentName && currentName !== activeSheetName) {
+      renameSelectedSheet(currentName, activeSheetName);
+    }
+  }, [activeSheetName, selectedSheets, renameSelectedSheet]);
+
+  // textarea 높이 조정
+  const adjustTextareaHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const maxHeight = 120;
+      textareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [message]);
+
+  // 모달 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (showModeModal && modeModalRef.current && !modeModalRef.current.contains(target)) {
+        setShowModeModal(false);
+      }
+    };
+
+    if (showModeModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showModeModal]);
+
+  const handleSend = async () => {
+    if (message.trim() || selectedFile) {
+      // 전송 상태 시작
+      setIsSendingMessage(true);
+
+      const messageToSend = message;
+      const selectedSheetsToSend = selectedSheets;
+
+      // 메시지 전송 전에 입력창 초기화
+      setMessage('');
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      // textarea 포커스 해제 후 다시 포커스를 주어 IME 상태를 초기화
+      if (textareaRef.current) {
+        textareaRef.current.blur();
+        setTimeout(() => {
+          textareaRef.current?.focus();
+        }, 0);
+      }
+
+      try {
+        console.log('🚀 [ChatInputBoxHook] Sending message with selected sheets:', selectedSheetsToSend);
+        console.log('🚀 [ChatInputBoxHook] Message content:', messageToSend);
+        console.log('🚀 [ChatInputBoxHook] Chat mode:', mode);
+        console.log('🚀 [ChatInputBoxHook] About to call addUserMessage');
+
+        const messageId = addUserMessage(messageToSend);
+
+        console.log('✅ [ChatInputBoxHook] User message added to store:', {
+          messageId,
+          content: messageToSend,
+          timestamp: Date.now()
+        });
+
+        console.log('📊 [ChatInputBoxHook] Current store state:', aiChatStore.getState());
+
+        // AI Chat API 호출
+        if (isConnected) {
+          console.log('🤖 [ChatInputBoxHook] Starting AI job execution');
+          console.log('🔗 [ChatInputBoxHook] Connection status:', { isConnected, isConnecting });
+
+
+          const aiChatApiRequest: aiChatApiReq = {
+            spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!,
+            chatId: useChatIdStore.getState().chatId!,
+            userId,
+            chatMode: mode,
+            userQuestionMessage: messageToSend,
+            parsedSheetNames: useSpreadsheetNamesStore.getState().selectedSheets.map(s => s.name),
+            jobId: `jobId_${safeRandomUUID()}`,
+            spreadsheetVersionNumber: useSpreadSheetVersionStore.getState().spreadSheetVersionNum,
+            ...(isSpreadSheetDataDirty(spread) && {
+              newVersionSpreadSheetData: spread.toJSON({
+                includeBindingSource: true,
+                ignoreFormula: false,
+                ignoreStyle: false,
+                saveAsView: true,
+                rowHeadersAsFrozenColumns: false,
+                columnHeadersAsFrozenRows: false,
+                includeAutoMergedCells: true,
+                saveR1C1Formula: true,
+                includeUnsupportedFormula: true,
+                includeUnsupportedStyle: true
+              }),
+            }),
+          };
+
+          console.log('📤 [ChatInputBoxHook] AI request payload:', aiChatApiRequest);
+          console.log('📊 [ChatInputBoxHook] Current version before request:', useSpreadSheetVersionStore.getState().spreadSheetVersionNum);
+
+          try {
+            const result = await executeAiJob(aiChatApiRequest);
+            console.log('🎉 [ChatInputBoxHook] AI job completed successfully:', result);
+
+            // AI 응답을 채팅 스토어에 추가, spreadSheetVersionNum 업데이트
+            if (result) {
+              aiChatStore.getState().addAiMessage(result);
+              // 백엔드에서 유효한 버전 번호를 받은 경우에만 업데이트
+              if (typeof result.spreadsheetVersionNumber === 'number' && result.spreadsheetVersionNumber > 0) {
+                useSpreadSheetVersionStore.getState().setVersion(result.spreadsheetVersionNumber);
+                console.log('✅ [ChatInputBoxHook] Version updated to:', result.spreadsheetVersionNumber);
+              } else {
+                console.warn('⚠️ [ChatInputBoxHook] Invalid version number received:', result.spreadsheetVersionNumber);
+              }
+            }
+            // 시트에 데이터 편집 명령 적용
+            applyDataEditCommands({ dataEditChatRes: result.dataEditChatRes as dataEditChatRes, spread: spread });
+
+          } catch (aiError) {
+            console.error('❌ [ChatInputBoxHook] AI job failed:', aiError);
+          }
+        } else {
+          console.warn('⚠️ [ChatInputBoxHook] Not connected to AI server, skipping AI job');
+        }
+
+      } catch (error) {
+        console.error('❌ [ChatInputBoxHook] Message sending failed:', error);
+      } finally {
+        console.log('🏁 [ChatInputBoxHook] Finishing message send process');
+        setIsSendingMessage(false);
+      }
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+      event.preventDefault();
+      if (!isSendingMessage && (message.trim() || selectedFile)) {
+        handleSend();
+      }
+    }
+  };
+
+  const handleCompositionStart = () => {
+    setIsComposing(true);
+  };
+
+  const handleCompositionEnd = () => {
+    setIsComposing(false);
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
+  return {
+    // State
+    message,
+    setMessage,
+    selectedFile,
+    setSelectedFile,
+    showModeModal,
+    setShowModeModal,
+    isComposing,
+    isFocused,
+    mode,
+    setMode,
+    selectedSheets,
+    removeSelectedSheet,
+    addSelectedSheet,
+    isSendingMessage,
+    isConnected,
+    isConnecting,
+
+    // Refs
+    fileInputRef,
+    textareaRef,
+    modeModalRef,
+
+    // Handlers
+    handleSend,
+    handleKeyDown,
+    handleCompositionStart,
+    handleCompositionEnd,
+    handleFocus,
+    handleBlur,
+  };
+};

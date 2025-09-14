@@ -80,7 +80,7 @@ export class AiChatApiConnector {
     this.socket.on('ai_job_planned', callback);
   }
 
-  onTasksExecuted(callback: (data: { jobId: string; dataEditChatRes: dataEditChatRes; executionTime: number; timestamp: string }) => void): void {
+  onTasksExecuted(callback: (data: { jobId: string; dataEditChatRes: dataEditChatRes; executionTime: number; timestamp: string; spreadsheetVersionNumber: number; }) => void): void {
     if (!this.socket) return;
     this.socket.on('ai_tasks_executed', callback);
   }
@@ -105,7 +105,7 @@ export class AiChatApiConnector {
     this.socket.off('ai_job_planned', callback);
   }
 
-  offTasksExecuted(callback?: (data: { jobId: string; dataEditChatRes: dataEditChatRes; executionTime: number; timestamp: string }) => void): void {
+  offTasksExecuted(callback?: (data: { jobId: string; dataEditChatRes: dataEditChatRes; executionTime: number; timestamp: string; spreadsheetVersionNumber: number; }) => void): void {
     if (!this.socket) return;
     this.socket.off('ai_tasks_executed', callback);
   }

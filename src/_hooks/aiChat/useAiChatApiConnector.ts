@@ -57,6 +57,7 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
             jobId: data.jobId,
             taskManagerOutput: pending.plan,
             dataEditChatRes: data.dataEditChatRes,
+            spreadsheetVersionNumber: data.spreadsheetVersionNumber
           });
           pendingJobsRef.current.delete(data.jobId);
         }
