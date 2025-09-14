@@ -148,7 +148,7 @@ function HomeContent({
           className={`
             w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize 
             relative group transition-colors duration-200
-            ${isDragging ? 'bg-blue-500' : ''}
+            ${isDragging ? 'bg-[#005de9]' : ''}
           `}
           onMouseDown={handleMouseDown}
         >

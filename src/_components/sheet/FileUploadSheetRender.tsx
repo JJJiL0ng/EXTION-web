@@ -53,10 +53,12 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
             {!isFileUploaded && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10 overflow-hidden">
                     {/* 배경 이미지 (외부 호스팅) */}
-                    <img
+                    <Image
                         src="https://bucket.extion.ai/cells_bg_image.png"
                         alt=""
                         aria-hidden="true"
+                        fill
+                        unoptimized
                         className="absolute inset-0 w-full h-full object-cover opacity-40 pointer-events-none select-none"
                     />
                     <div className="bg-white border-2 rounded-lg px-10 py-6 border-[#005de9] text-center max-w-md mx-4 relative z-10">
@@ -85,7 +87,7 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
                         }
                         <div
                             className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${isDragActive
-                                    ? 'border-blue-500 bg-blue-50'
+                                    ? 'border-[#005de9] bg-blue-50'
                                     : 'border-gray-300 hover:border-gray-400'
                                 }`}
                         >
@@ -133,7 +135,7 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
 
             {/* 드래그 오버레이 */}
             {isDragActive && (
-                <div className="absolute inset-0 bg-blue-500 bg-opacity-10 border-2 border-blue-500 border-dashed z-20 flex items-center justify-center">
+                <div className="absolute inset-0 bg-[#005de9] bg-opacity-10 border-2 border-[#005de9] border-dashed z-20 flex items-center justify-center">
                     <div className="bg-white rounded-lg p-4 shadow-lg">
                         <div className="text-blue-600 text-center">
                             <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
