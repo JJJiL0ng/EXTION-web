@@ -54,7 +54,7 @@ export const useChatInputBoxHook = ({
   const { mode, setMode } = useChatMode();
 
   // useSelectedSheetInfoStore 훅 사용
-  const { selectedSheets, removeSelectedSheet, addSelectedSheet, renameSelectedSheet } = useSelectedSheetInfoStore();
+  const { selectedSheets, removeSelectedSheet, addSelectedSheet } = useSelectedSheetInfoStore();
 
   // aiChatStore 훅 사용
   const { addUserMessage, isSendingMessage, setIsSendingMessage } = aiChatStore();
@@ -110,28 +110,44 @@ export const useChatInputBoxHook = ({
     };
   }, []);
 
-  // 최초 1회만 activeSheetName을 기본 선택으로 추가
+  // 최초 1회만 activeSheetName을 기본 선택으로 추가 (컴포넌트 마운트 시에만)
   const didInitDefaultSelection = useRef(false);
+  
   useEffect(() => {
-    if (didInitDefaultSelection.current) return;
-    if (!activeSheetName) return;
-    if (selectedSheets.length > 0) {
+    console.log('🔍 [ChatInputBoxHook] Default selection effect triggered:', {
+      didInitDefaultSelection: didInitDefaultSelection.current,
+      activeSheetName,
+      selectedSheetsLength: selectedSheets.length,
+      selectedSheets: selectedSheets.map(s => s.name)
+    });
+
+    // 이미 초기화했으면 실행하지 않음
+    if (didInitDefaultSelection.current) {
+      console.log('🚫 [ChatInputBoxHook] Already initialized, skipping');
+      return;
+    }
+    
+    // activeSheetName이 없으면 대기
+    if (!activeSheetName) {
+      console.log('⏳ [ChatInputBoxHook] No activeSheetName yet, waiting...');
+      return;
+    }
+
+    // 이미 선택된 시트가 있는지 현재 상태를 직접 확인
+    const currentSelectedSheets = selectedSheets;
+    if (currentSelectedSheets.length > 0) {
+      console.log('✅ [ChatInputBoxHook] Sheets already selected, marking as initialized');
       didInitDefaultSelection.current = true;
       return;
     }
+    
+    console.log('🎯 [ChatInputBoxHook] Adding default sheet:', activeSheetName);
     addSelectedSheet(activeSheetName);
     didInitDefaultSelection.current = true;
-  }, [activeSheetName, selectedSheets.length, addSelectedSheet]);
+  }, [activeSheetName, addSelectedSheet, selectedSheets]);
 
-  // 활성 시트명이 변경될 때, 선택된 칩이 하나인 경우 실시간으로 이름 동기화
-  useEffect(() => {
-    if (!activeSheetName) return;
-    if (selectedSheets.length !== 1) return;
-    const currentName = selectedSheets[0]?.name;
-    if (currentName && currentName !== activeSheetName) {
-      renameSelectedSheet(currentName, activeSheetName);
-    }
-  }, [activeSheetName, selectedSheets, renameSelectedSheet]);
+  // 이 로직은 제거됨 - 모달에서 시트 선택 시 activeSheetName이 간섭하지 않도록 함
+  // 활성 시트명이 변경될 때 자동 동기화는 하지 않음
 
   // textarea 높이 조정
   const adjustTextareaHeight = () => {
