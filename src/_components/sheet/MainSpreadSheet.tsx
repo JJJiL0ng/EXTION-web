@@ -7,7 +7,6 @@ import { useParams } from 'next/navigation';
 import { useFileUpload } from '../../_hooks/sheet/file_upload_export/useFileUpload';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
 import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
-import { useSpreadSheetDelta } from '../../_hooks/sheet/data_save/useSpreadSheetDelta';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useUIState } from '../../_hooks/sheet/common/useUIState';
 import { useSpreadJSInit } from '../../_hooks/sheet/spreadjs/useSpreadJSInit';
@@ -17,7 +16,6 @@ import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadS
 
 // Utils
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
-import { FileConverter } from '../../_utils/sheet/fileConverters';
 import { configureLicense } from '../../_utils/sheet/spreadJSConfig';
 
 // Components
@@ -53,9 +51,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     // resetUploadState 함수의 ref 저장 (무한 루프 방지)
     const resetUploadStateRef = useRef<(() => void) | null>(null);
-
-    // deltaManager ref 저장 (무한 루프 방지)
-    const deltaManagerRef = useRef<typeof deltaManager | null>(null);
 
     // AI 버튼 클릭 핸들러 - 통합된 상태 사용
     const handleShowChat = useCallback(() => {
@@ -93,33 +88,10 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         }
     });
 
-    // 델타 자동저장 훅
-    const deltaManager = useSpreadSheetDelta({
-        userId: userId,
-        spreadsheetId: spreadSheetId,
-        batchTimeout: 500,
-        maxRetries: 3,
-        maxBatchSize: 50,
-        onDeltaApplied: (delta) => {
-            console.log('✅ 델타 적용 성공:', delta);
-        },
-        onError: (error, context) => {
-            console.error('❌ 델타 처리 실패:', error, context);
-
-            // 서버 오류인 경우 사용자에게 알림
-            if (context?.serverError) {
-                console.warn('🚫 백엔드 서버 오류로 인해 자동저장이 비활성화되었습니다.');
-            }
-        },
-        onSync: (syncedDeltas) => {
-            console.log(`🔄 ${syncedDeltas}개 델타 동기화 완료`);
-        }
-    });
 
     // SpreadJS 초기화 훅
     const { initSpread, createNewSpreadsheet } = useSpreadJSInit({
         spreadRef,
-        deltaManager
     });
 
     // 파일 업로드 훅
@@ -208,7 +180,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     // 함수들을 ref에 저장 (무한 루프 방지)
     resetUploadStateRef.current = resetUploadState;
-    deltaManagerRef.current = deltaManager;
 
     // 메모리 관리를 위한 cleanup 함수
     const handleCleanup = useCallback(() => {
@@ -239,14 +210,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
         if (spreadRef.current) {
             try {
-                // 델타 이벤트 리스너 정리
-                if ((spreadRef.current as any)._deltaCleanup) {
-                    (spreadRef.current as any)._deltaCleanup();
-                }
-
-                // 남은 델타들 강제 동기화
-                deltaManagerRef.current?.forcSync().catch(console.error);
-
                 spreadRef.current.destroy && spreadRef.current.destroy();
             } catch (error) {
                 console.warn('Cleanup warning:', error);
@@ -432,14 +395,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                         isExporting={exportState.isExporting}
                         onNewSpreadsheet={handleNewSpreadsheet}
                     />
-
-                    {/* <StatusDisplay
-                        uploadState={uploadState}
-                        exportState={exportState}
-                        isCreating={isCreating}
-                        createError={createError}
-                        deltaManager={deltaManager}
-                    /> */}
 
                     <ChatButton
                         onClick={handleShowChat}

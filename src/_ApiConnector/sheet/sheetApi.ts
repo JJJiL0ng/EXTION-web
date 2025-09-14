@@ -19,11 +19,6 @@ export interface SpreadSheetData {
   lastModified: string;
 }
 
-export interface DeltaResponse {
-  version: number;
-  applied: boolean;
-}
-
 export interface SpreadSheetListItem {
   id: string;
   fileName: string;
@@ -49,10 +44,6 @@ export interface PaginatedSpreadSheets {
   };
 }
 
-export interface SaveResult {
-  savedDeltas: number;
-}
-
 export interface StatusData {
   hasActiveSpreadSheet: boolean;
   totalCells: number;
@@ -74,34 +65,6 @@ export interface LoadSpreadSheetRequest {
   spreadsheetId: string; // 백엔드와 일치하도록 수정
 }
 
-export interface ApplyDeltaRequest {
-  action: string;
-  parsedSheetName: string;
-  
-  cellAddress?: string;
-  range?: string;
-  value?: any;
-  formula?: string;
-  style?: {
-    backgroundColor?: string;
-    color?: string;
-    fontWeight?: string;
-    fontSize?: number;
-    fontFamily?: string;
-    textAlign?: 'left' | 'center' | 'right' | 'justify';
-    verticalAlign?: 'top' | 'middle' | 'bottom';
-    border?: any;
-  };
-  rowIndex?: number;
-  columnIndex?: number;
-  count?: number;
-}
-
-export interface BatchDeltasRequest {
-  userId: string; // 백엔드에서 필요한 userId 추가
-  spreadsheetId: string; // 백엔드에서 필요한 spreadsheetId 추가
-  deltas: ApplyDeltaRequest[];
-}
 
 // 인증 토큰을 가져오는 함수 (실제 구현은 프로젝트에 따라 다름)
 const getAuthToken = (): string | null => {
@@ -198,40 +161,11 @@ export class SheetAPI {
   }
 
   /**
-   * 단일 델타 적용
-   */
-  static async applyDelta(request: ApplyDeltaRequest): Promise<ApiResponse<DeltaResponse>> {
-    return apiFetch<DeltaResponse>('/delta', {
-      method: 'PUT',
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * 여러 델타 일괄 적용
-   */
-  static async applyBatchDeltas(request: BatchDeltasRequest): Promise<ApiResponse<{ appliedCount: number; version: number }>> {
-    return apiFetch<{ appliedCount: number; version: number }>('/deltas/batch', {
-      method: 'PUT',
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
    * 현재 상태 조회
    */
   static async getCurrentState(): Promise<ApiResponse<any>> {
     return apiFetch<any>('/current-state', {
       method: 'GET',
-    });
-  }
-
-  /**
-   * 강제 저장
-   */
-  static async forceSave(): Promise<ApiResponse<SaveResult>> {
-    return apiFetch<SaveResult>('/save', {
-      method: 'POST',
     });
   }
 
@@ -281,10 +215,7 @@ export class SheetAPI {
 export const {
   createSpreadSheet,
   loadSpreadSheet,
-  applyDelta,
-  applyBatchDeltas,
   getCurrentState,
-  forceSave,
   getUserSpreadSheets,
   deleteSpreadSheet,
   cleanup,
