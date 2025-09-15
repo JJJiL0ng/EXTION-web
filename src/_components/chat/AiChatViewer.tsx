@@ -205,22 +205,21 @@ const AiChatViewer = () => {
         <div ref={messagesEndRef} />
       </div>
       
-      {/* 맨 아래로 가기 버튼 */}
-      {!isAutoScrollEnabled && (
-        <div className="absolute bottom-4 right-4 z-10">
-            <button
-                onClick={() => {
-                    setIsAutoScrollEnabled(true);
-                    forceScrollToBottom(true);
-                }}
-                className="bg-[#005de9] hover:bg-blue-600 text-white p-2 w-6 h-6 rounded-full shadow-sm transition-transform duration-200 flex items-center justify-center group hover:scale-105"
-                title="최신 메시지로 이동하고 자동 스크롤 활성화"
-            >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
-            </button>
-        </div>
+        {!isAutoScrollEnabled && (
+          <div className="absolute bottom-4 right-4 z-10">
+          <button
+              onClick={() => {
+              setIsAutoScrollEnabled(true);
+              forceScrollToBottom(true);
+              }}
+              className="bg-[#005de9] hover:bg-blue-600 text-white  w-8 h-8 rounded-full shadow-sm transition-transform duration-200 flex items-center justify-center group hover:scale-105"
+              title="최신 메시지로 이동하고 자동 스크롤 활성화"
+          >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+          </button>
+          </div>
       )}
     </div>
   );
