@@ -3,6 +3,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
 import { ChatMessage } from "@/_types/store/aiChatStore.types";
+import { Undo2, ThumbsUp, ThumbsDown } from 'lucide-react';
+
 
 import TypingIndicator from './TypingIndicator';
 
@@ -95,6 +97,10 @@ const AiChatViewer = () => {
     }, 100);
   }, [isAtBottom, isAutoScrollEnabled, lastScrollTop]);
 
+
+  const handleRollBackButtonClick = () => {
+  }
+
   // 스크롤 이벤트 리스너
   useEffect(() => {
     const container = chatContainerRef.current;
@@ -163,22 +169,53 @@ const AiChatViewer = () => {
             {messages.map((message) => (
               <div key={message.id} className="w-full">
                 <div
-                  className={`w-full rounded-lg px-4 py-2 ${
+                  className={`w-full rounded-lg px-2 py-2 ${
                     message.type === 'user'
                       ? 'bg-white text-gray-900 border border-gray-300'
                       : ''
                   }`}
                 >
-                  {renderMessageContent(message)}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      {renderMessageContent(message)}
+                    </div>
+                  </div>
+
+                  {/* assistant 메시지에만 버튼들 표시 */}
+                  {message.type === 'assistant' && (
+                    <div className="flex items-center gap mt-2">
+                      <button
+                        onClick={() => handleRollBackButtonClick()}
+                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
+                        title="메시지 보내기 전으로 롤백"
+                      >
+                        <Undo2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => {/* thumbs up logic */}}
+                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
+                        title="좋아요"
+                      >
+                        <ThumbsUp size={16} />
+                      </button>
+                      <button
+                        onClick={() => {/* thumbs down logic */}}
+                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
+                        title="싫어요"
+                      >
+                        <ThumbsDown size={16} />
+                      </button>
+                    </div>
+                  )}
 
                   {/* 메시지 타임스탬프 */}
-                  <div
+                  {/* <div
                     className={`text-xs mt-1 ${
                       message.type === 'user' ? 'text-blue-900' : 'text-gray-900'
                     }`}
                   >
                     {formatTimestamp(message.timestamp)}
-                  </div>
+                  </div> */}
                 </div>
               </div>
             ))}
