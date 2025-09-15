@@ -3,13 +3,14 @@ import { CheckAndLoadReq, CheckAndLoadRes } from "@/_types/apiConnector/check-an
 import { checkAndLoadApiConnector } from "@/_ApiConnector/sheet/checkAndLoadApi";
 // getOrCreateGuestId, useSpreadsheetContext 등은 그대로 사용한다고 가정합니다.
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
-
+import { aiChatStore } from '@/_store/aiChat/aiChatStore';
 
 /**
  * 컴포넌트 마운트 시, 스프레드시트/채팅 존재 여부를 서버에 확인하고(필요 시 로드)하는 커스텀 훅.
  */
 export const useCheckAndLoadOnMount = (spreadSheetId: string, chatId: string, userId: string) => {
     const { spread } = useSpreadsheetContext();
+    const { addLoadedPreviousMessages } = aiChatStore();
 
     const [loading, setLoading] = useState(true); // 처음에는 로딩 상태로 시작
     const [exists, setExists] = useState<boolean | null>(null);
@@ -39,7 +40,34 @@ export const useCheckAndLoadOnMount = (spreadSheetId: string, chatId: string, us
                 setExists(res.exists);
 
                 if (res.exists) {
-                    // TODO: 스프레드시트/채팅 로드 로직 (spread 객체 활용) json으로 시트 업로드, 채팅 업로드
+                    // 스프레드시트 데이터 로드 로직
+                    try {
+                        const jsonData = typeof (res as any).spreadSheetData === 'string'
+                            ? JSON.parse((res as any).spreadSheetData)
+                            : (res as any).spreadSheetData;
+
+                        if (jsonData && spread) {
+                            const sheet = spread.getActiveSheet();
+                            sheet.suspendPaint();
+                            try {
+                                const deserializationOptions = {
+                                    ignoreFormula: false,
+                                    ignoreStyle: false,
+                                    includeBindingSource: true,
+                                    includeUnsupportedFormula: true,
+                                    includeUnsupportedStyle: true,
+                                } as const;
+                                await spread.fromJSON(jsonData, deserializationOptions);
+                                if (res.chatHistory) {
+                                    addLoadedPreviousMessages(res.chatHistory);
+                                }
+                            } finally {
+                                sheet.resumePaint();
+                            }
+                        }
+                    } catch (loadErr) {
+                        console.error('스프레드시트 로드 실패:', loadErr);
+                    }
                 }
             } catch (e) {
                 const err = e instanceof Error ? e : new Error('Unknown error in checkAndLoad');
@@ -52,7 +80,7 @@ export const useCheckAndLoadOnMount = (spreadSheetId: string, chatId: string, us
         fetchCheckAndLoad(); // 함수 실행
 
     // spreadSheetId, chatId, userId가 변경될 때마다 이 useEffect는 다시 실행됩니다.
-    }, [spreadSheetId, chatId, userId]);
+    }, [spreadSheetId, chatId, userId, spread, addLoadedPreviousMessages]);
 
     // 이제 run 함수를 반환할 필요가 없습니다.
     return { exists };
