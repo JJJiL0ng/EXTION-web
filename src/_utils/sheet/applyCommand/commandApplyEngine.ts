@@ -1,5 +1,5 @@
-import { dataEditCommand } from "@/_types/ai-chat-api/dataEdit.types";
-import { StyleCommand } from "@/_types/ai-chat-api/style.types";
+import { dataEditCommand } from "@/_types/apiConnector/ai-chat-api/dataEdit.types";
+import { StyleCommand } from "@/_types/apiConnector/ai-chat-api/style.types";
 import styleCommandApplyEngine from "./styleCommandApplyEngine";
 
 

@@ -6,7 +6,7 @@ import { ChatMode } from '../../_hooks/aiChat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import FileAddButton from './FileAddButton';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
-import { useChatInputBoxHook } from '../../_hooks/chat/useChatInputBoxHook';
+import { useChatInputBoxHook } from '../../_hooks/aiChat/useChatInputBoxHook';
 
 interface ChatInputBoxProps {
   onSendMessage?: (message: string, mode: ChatMode, selectedFile?: File) => void;

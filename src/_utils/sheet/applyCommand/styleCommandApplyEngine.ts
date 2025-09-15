@@ -1,5 +1,5 @@
 import GC from '@mescius/spread-sheets';
-import { StyleCommand, StyleProperties, BorderInfo } from "@/_types/ai-chat-api/style.types";
+import { StyleCommand, StyleProperties, BorderInfo } from "@/_types/apiConnector/ai-chat-api/style.types";
 
 interface StyleCommandApplyEngineProps {
     sheetName: string;

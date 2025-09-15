@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
-import { aiChatApiReq } from "@/_types/ai-chat-api/aiChatApi.types";
-import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
+import { aiChatApiReq } from "@/_types/apiConnector/ai-chat-api/aiChatApi.types";
+import { dataEditChatRes } from "@/_types/apiConnector/ai-chat-api/dataEdit.types";
 
 export interface AiJobError {
   jobId?: string;

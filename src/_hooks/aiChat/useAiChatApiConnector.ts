@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { AiChatApiConnector } from '@/_ApiConnector/ai-chat/aiChatApiConnector';
-import { aiChatApiReq, aiChatApiRes } from "@/_types/ai-chat-api/aiChatApi.types";
+import { aiChatApiReq, aiChatApiRes } from "@/_types/apiConnector/ai-chat-api/aiChatApi.types";
 
 interface UseAiChatApiConnectorReturn {
   isConnected: boolean;

@@ -1,8 +1,8 @@
 // import commandApplyEngine from "./useCommandApplyEngine";
 
 import CommandApplyEngine from '@/_utils/sheet/applyCommand/commandApplyEngine';
-import { dataEditCommand } from '@/_types/ai-chat-api/dataEdit.types';
-import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
+import { dataEditCommand } from '@/_types/apiConnector/ai-chat-api/dataEdit.types';
+import { dataEditChatRes } from "@/_types/apiConnector/ai-chat-api/dataEdit.types";
 
 interface applyDataEditCommandsProps {
     dataEditChatRes: dataEditChatRes;

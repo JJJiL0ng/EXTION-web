@@ -1,5 +1,5 @@
-import { aiChatApiRes } from "../ai-chat-api/aiChatApi.types";
-import { TaskManagerOutput } from "../ai-chat-api/task.types";
+import { aiChatApiRes } from "../apiConnector/ai-chat-api/aiChatApi.types";
+import { TaskManagerOutput } from "../apiConnector/ai-chat-api/task.types";
 
 export type MessageStatus = 'pending' | 'sent' | 'streaming' | 'completed' | 'error';
 
