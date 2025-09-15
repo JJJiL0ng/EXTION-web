@@ -1,4 +1,5 @@
 import { aiChatApiRes } from "../ai-chat-api/aiChatApi.types";
+import { TaskManagerOutput } from "../ai-chat-api/task.types";
 
 export type MessageStatus = 'pending' | 'sent' | 'streaming' | 'completed' | 'error';
 
@@ -16,7 +17,8 @@ export interface UserMessage extends BaseMessage {
 
 export interface AssistantMessage extends BaseMessage {
   type: 'assistant';
-  content: aiChatApiRes; // AssistantMessage는 둘 다 가능
+  content: string; // taskManagerOutput.reason 타입이 들어갈 예정
+  aiChatRes?: aiChatApiRes; // AssistantMessage는 둘 다 가능
 }
 
 export interface SystemMessage extends BaseMessage {

@@ -22,6 +22,7 @@ interface ChatActions {
     addSystemMessage: (content: string) => void;
     addErrorMessage: (content: string) => void;
     addAiMessage: (aiChatApiRes: aiChatApiRes) => void;
+    addLoadedPreviousMessages: (previousMessagesContent: previousMessagesContent[]) => void;
 
     // UI 상태 관련
     setIsSendingMessage: (sending: boolean) => void;
@@ -169,21 +170,45 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
         const newMessage: ChatMessage = {
             id: uuidv4(),
             type: 'assistant',
-            content: aiResponse,
+            aiChatRes: aiResponse,
             timestamp: Date.now(),
             status: 'completed',
+            content: aiResponse.taskManagerOutput.reason,
         };
         set(produce((state: AiChatState) => {
             state.messages.push(newMessage);
         }));
     },
     addLoadedPreviousMessages: (previousMessagesContent: previousMessagesContent[]) => {
-      // 이전 배열을 클리어하는 로직
+      // 백엔드에서 내려온 기존 히스토리(user/assistant 역할 + content) 배열을 ChatMessage 형태로 변환하여 스토어에 적재
       set(produce((state: AiChatState) => {
+          // 1) 기존 메시지 초기화
           state.messages = [];
-      }));
 
-      // 백앤드에서 previousMessagesContent의 배열을 줄텐데 이걸 상태 저장
+          // 2) 변환 및 push
+          const baseTime = Date.now();
+          previousMessagesContent.forEach((m, idx) => {
+              if (m.role === 'user') {
+                  state.messages.push({
+                      id: uuidv4(),
+                      type: 'user',
+                      content: m.content,
+                      timestamp: baseTime + idx, // 단조 증가 보장
+                      // 이미 서버에 존재하는 과거 메시지이므로 'sent' 로 표기 (UI에서 재전송 동작 X)
+                      status: 'sent'
+                  });
+              } else if (m.role === 'assistant') {
+                  state.messages.push({
+                      id: uuidv4(),
+                      type: 'assistant',
+                      content: m.content,
+                      timestamp: baseTime + idx,
+                      status: 'completed',
+                      isStreaming: false
+                  });
+              }
+          });
+      }));
     },
 
     // UI 상태 관련

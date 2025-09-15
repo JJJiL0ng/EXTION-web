@@ -22,10 +22,11 @@ const AiChatViewer = () => {
   const renderMessageContent = (message: ChatMessage) => {
     if (message.type === 'assistant') {
       const content = message.content;
-      if (typeof content === 'object' && content.dataEditChatRes) {
+      const aiChatRes = message.aiChatRes;
+      if (typeof content === 'object' && aiChatRes?.dataEditChatRes) {
         return (
           <div>
-            <p>{content.taskManagerOutput.reason}</p>
+            <p>{content}</p>
           </div>
         );
       }
