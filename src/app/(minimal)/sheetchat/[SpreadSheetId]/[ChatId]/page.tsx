@@ -2,7 +2,7 @@
 
 import FileUploadContainer from "@/_components/chat/FileUploadChattingContainer";
 import dynamic from "next/dynamic";
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisibilityContext";
 import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
 import { useParams } from "next/navigation";
@@ -30,8 +30,8 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // spreadjs 컨텍스트 인스턴스를 담은 인스턴스
-  const spreadRef = useRef<any>(null);
+  // spreadjs 컨텍스트 인스턴스를 담은 인스턴스 - 페이지 이동해도 유지되도록 useMemo 사용
+  const spreadRef = useMemo(() => ({ current: null }), []);
 
 
   // URL 파라미터에서 spreadsheetId와 chatId를 추출하여 store에 저장

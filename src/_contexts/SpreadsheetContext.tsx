@@ -42,9 +42,9 @@ export const SpreadsheetProvider: React.FC<SpreadsheetProviderProps> = ({
     // 초기 체크 및 폴링 시작
     check();
     const interval = setInterval(check, 100);
-    if (isSpreadReady) clearInterval(interval);
+    
     return () => clearInterval(interval);
-  }, [spreadRef, isSpreadReady]);
+  }, [spreadRef]); // isSpreadReady 의존성 제거 - 폴링 중단 방지
 
   const contextValue: SpreadsheetContextType = {
     spread,
