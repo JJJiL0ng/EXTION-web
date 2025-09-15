@@ -9,6 +9,8 @@ import { useParams } from "next/navigation";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdStore";
 import { enableMapSet } from 'immer';
+import { useCheckAndLoadOnMount } from "@/_hooks/sheet/data_save/useCheckAndLoad";
+import { getOrCreateGuestId } from "@/_utils/guestUtils";
 
 
 // Immer MapSet 플러그인 활성화
@@ -127,6 +129,30 @@ function HomeContent({
   spreadRef
 }: HomeContentProps) {
   const { isChatVisible } = useChatVisibility();
+  const { spreadsheetId } = useSpreadsheetIdStore();
+  const { chatId } = useChatStore();
+  
+  // 스프레드시트와 채팅 데이터 로드 (렌더링 상태 포함)
+  const { exists, loading, error, renderState } = useCheckAndLoadOnMount(
+    spreadsheetId || '',
+    chatId || '',
+    getOrCreateGuestId()
+  );
+
+  // 백엔드 데이터 로딩 상태 로그
+  React.useEffect(() => {
+    console.log('📊 [Page] 백엔드 데이터 로딩 상태:', {
+      exists,
+      loading,
+      error: error?.message,
+      renderState: {
+        isRendering: renderState.isRendering,
+        isProcessing: renderState.isProcessing,
+        progress: renderState.progress,
+        fileName: renderState.fileName
+      }
+    });
+  }, [exists, loading, error, renderState]);
 
 
 
