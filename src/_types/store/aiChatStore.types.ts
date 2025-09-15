@@ -50,3 +50,10 @@ export interface AiChatState {
   isSendingMessage: boolean;
   aiThinkingIndicatorVisible: boolean;
 }
+
+
+// 기존 채팅 히스토리를 볼러올때 사용
+export interface previousMessagesContent {
+    role: 'user' | 'assistant';
+    content: string;
+}

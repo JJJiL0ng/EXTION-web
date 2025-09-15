@@ -1,6 +1,6 @@
 // aiChat 스토어를 사용하여 채팅 상태 및 메시지 관리를 담당
 
-import { AiChatState, WebSocketConnectionStatus, MessageStatus, ChatMessage } from "@/_types/store/aiChatStore.types";
+import { AiChatState, WebSocketConnectionStatus, MessageStatus, ChatMessage, previousMessagesContent } from "@/_types/store/aiChatStore.types";
 
 import { create } from 'zustand';
 import { produce } from 'immer'; // 불변성 관리를 위해 immer 사용
@@ -176,6 +176,14 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
         set(produce((state: AiChatState) => {
             state.messages.push(newMessage);
         }));
+    },
+    addLoadedPreviousMessages: (previousMessagesContent: previousMessagesContent[]) => {
+      // 이전 배열을 클리어하는 로직
+      set(produce((state: AiChatState) => {
+          state.messages = [];
+      }));
+
+      // 백앤드에서 previousMessagesContent의 배열을 줄텐데 이걸 상태 저장
     },
 
     // UI 상태 관련
