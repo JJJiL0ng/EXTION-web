@@ -6,9 +6,7 @@ import { create } from 'zustand';
 import { produce } from 'immer'; // 불변성 관리를 위해 immer 사용
 import { v4 as uuidv4 } from 'uuid'; // 고유 ID 생성을 위해 uuid 라이브러리 사용
 import { aiChatApiRes } from "@/_types/ai-chat-api/aiChatApi.types";
-import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
 import useChatStore from '@/_store/chat/chatIdStore'
-import { TaskManagerOutput } from "@/_types/ai-chat-api/task.types";
 
 interface ChatActions {
     // 상태 설정 관련
