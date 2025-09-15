@@ -4,6 +4,8 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
 import { ChatMessage } from "@/_types/store/aiChatStore.types";
 
+import TypingIndicator from './TypingIndicator';
+
 const AiChatViewer = () => {
   const messages = aiChatStore((state) => state.messages);
   const messagesEndRef = useRef<HTMLDivElement>(null);

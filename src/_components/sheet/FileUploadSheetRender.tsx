@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { SpreadSheets } from "@mescius/spread-sheets-react";
+import { useCheckAndLoadOnMount } from "@/_hooks/sheet/data_save/useCheckAndLoad";
+import { useParams } from 'next/navigation';
+import { getOrCreateGuestId } from "@/_utils/guestUtils";
+import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
+import useChatStore from "@/_store/chat/chatIdStore";
 
 interface FileUploadSheetRenderProps {
     // 파일 업로드 상태
@@ -29,7 +34,7 @@ interface FileUploadSheetRenderProps {
 /**
  * 파일 업로드 영역 컴포넌트
  */
-export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
+const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
     isFileUploaded,
     isDragActive,
     uploadState,
@@ -41,13 +46,48 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
     initSpread,
     hostStyle
 }) => {
+    // URL 파라미터와 스토어에서 ID 가져오기
+    const { spreadsheetId } = useSpreadsheetIdStore();
+    const { chatId } = useChatStore();
+    
+    // ID들을 안정화하여 불필요한 훅 재실행 방지
+    const stableSpreadsheetId = useMemo(() => spreadsheetId || '', [spreadsheetId]);
+    const stableChatId = useMemo(() => chatId || '', [chatId]);
+    const stableUserId = useMemo(() => getOrCreateGuestId(), []);
+    
+    // 백엔드 데이터 존재 여부 확인
+    const { exists, loading, error } = useCheckAndLoadOnMount(
+        stableSpreadsheetId,
+        stableChatId,
+        stableUserId
+    );
+
+    // exists가 false일 때만 업로드 버튼 활성화
+    const isUploadEnabled = exists === false && !loading;
+    
+    // 상태 변화가 있을 때만 로깅 (무한 로그 방지)
+    const statusKey = `${exists}-${loading}-${isUploadEnabled}-${isFileUploaded}`;
+    const lastStatusRef = React.useRef<string>('');
+    
+    React.useEffect(() => {
+        if (lastStatusRef.current !== statusKey) {
+            console.log('📊 [FileUploadSheetRender] 상태 변화:', {
+                exists,
+                loading,
+                isUploadEnabled,
+                isFileUploaded,
+                error: error?.message
+            });
+            lastStatusRef.current = statusKey;
+        }
+    }, [statusKey, exists, loading, isUploadEnabled, isFileUploaded, error]);
     return (
         <div
             className="w-full relative"
-            onDragEnter={onDragEnter}
-            onDragLeave={onDragLeave}
-            onDragOver={onDragOver}
-            onDrop={onDrop}
+            onDragEnter={isUploadEnabled ? onDragEnter : undefined}
+            onDragLeave={isUploadEnabled ? onDragLeave : undefined}
+            onDragOver={isUploadEnabled ? onDragOver : undefined}
+            onDrop={isUploadEnabled ? onDrop : undefined}
         >
             {/* 파일이 업로드되지 않았을 때 표시되는 업로드 안내 영역 */}
             {!isFileUploaded && (
@@ -86,9 +126,12 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
                         {/* 드래그&드롭 영역 */
                         }
                         <div
-                            className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${isDragActive
-                                    ? 'border-[#005de9] bg-blue-50'
-                                    : 'border-gray-300 hover:border-gray-400'
+                            className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${
+                                !isUploadEnabled 
+                                    ? 'border-gray-200 bg-gray-100 opacity-50'
+                                    : isDragActive
+                                        ? 'border-[#005de9] bg-blue-50'
+                                        : 'border-gray-300 hover:border-gray-400'
                                 }`}
                         >
                             {isDragActive ? (
@@ -106,10 +149,16 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
                                     <p className="font-medium mb-1">파일을 드래그하여 놓거나</p>
                                     <button
                                         onClick={onUploadButtonClick}
-                                        disabled={uploadState.isUploading}
-                                        className="text-[#005ed9] hover:text-blue-700 font-medium underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled={uploadState.isUploading || !isUploadEnabled}
+                                        className={`font-medium underline transition-colors ${
+                                            isUploadEnabled && !uploadState.isUploading
+                                                ? "text-[#005ed9] hover:text-blue-700"
+                                                : "text-gray-400 cursor-not-allowed"
+                                        }`}
                                     >
-                                        여기를 클릭하여 선택
+                                        {loading ? "데이터 확인 중..." : 
+                                         exists === true ? "데이터가 이미 존재합니다" :
+                                         "여기를 클릭하여 선택"}
                                     </button>
                                 </div>
                             )}
@@ -157,3 +206,6 @@ export const FileUploadSheetRender: React.FC<FileUploadSheetRenderProps> = ({
         </div>
     );
 };
+
+// React.memo로 감싸서 불필요한 리렌더링 방지
+export const FileUploadSheetRender = React.memo(FileUploadSheetRenderComponent);
