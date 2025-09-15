@@ -8,6 +8,7 @@ import TypingIndicator from './TypingIndicator';
 
 const AiChatViewer = () => {
   const messages = aiChatStore((state) => state.messages);
+  const isSendingMessage = aiChatStore((state) => state.isSendingMessage);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
@@ -122,6 +123,16 @@ const AiChatViewer = () => {
     }
   }, [messages, isAutoScrollEnabled, isUserScrolling, scrollToBottom, forceScrollToBottom]);
 
+  // TypingIndicator가 나타날 때 자동 스크롤
+  useEffect(() => {
+    if (isSendingMessage && isAutoScrollEnabled && !isUserScrolling) {
+      // 약간의 지연을 두어 TypingIndicator가 렌더링된 후 스크롤
+      setTimeout(() => {
+        scrollToBottom('smooth');
+      }, 100);
+    }
+  }, [isSendingMessage, isAutoScrollEnabled, isUserScrolling, scrollToBottom]);
+
   return (
     <div className="chat-viewer h-full flex flex-col relative">
       <div className="border-b-2 border-[#D9D9D9]"></div>
@@ -148,28 +159,46 @@ const AiChatViewer = () => {
             </div>
           </div>
         ) : (
-          messages.map((message) => (
-            <div key={message.id} className="w-full">
-              <div
-                className={`w-full rounded-lg px-4 py-2 ${
-                  message.type === 'user'
-                    ? 'bg-white text-gray-900 border border-gray-300'
-                    : ''
-                }`}
-              >
-                {renderMessageContent(message)}
-
-                {/* 메시지 타임스탬프 */}
+          <>
+            {messages.map((message) => (
+              <div key={message.id} className="w-full">
                 <div
-                  className={`text-xs mt-1 ${
-                    message.type === 'user' ? 'text-blue-900' : 'text-gray-900'
+                  className={`w-full rounded-lg px-4 py-2 ${
+                    message.type === 'user'
+                      ? 'bg-white text-gray-900 border border-gray-300'
+                      : ''
                   }`}
                 >
-                  {formatTimestamp(message.timestamp)}
+                  {renderMessageContent(message)}
+
+                  {/* 메시지 타임스탬프 */}
+                  <div
+                    className={`text-xs mt-1 ${
+                      message.type === 'user' ? 'text-blue-900' : 'text-gray-900'
+                    }`}
+                  >
+                    {formatTimestamp(message.timestamp)}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            ))}
+
+            {/* AI 응답 대기 중 TypingIndicator 표시 */}
+            {isSendingMessage && (
+              <div className="w-full">
+                <div className="w-full rounded-lg px-2">
+                  <TypingIndicator 
+                    variant="wave"
+                    color="#005ed9"
+                    dotCount={3}
+                    sizePx={10}
+                    showHelper={false}
+                    className="py-3"
+                  />
+                </div>
+              </div>
+            )}
+          </>
         )}
         
         {/* 스크롤 앵커 */}
