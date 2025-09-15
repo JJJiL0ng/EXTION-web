@@ -163,7 +163,8 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
             ? {
                 jobId: uuidv4(),
                 taskManagerOutput: aiChatApiRes.taskManagerOutput,
-                dataEditChatRes: aiChatApiRes.dataEditChatRes
+                dataEditChatRes: aiChatApiRes.dataEditChatRes,
+                spreadsheetVersionNumber: aiChatApiRes.spreadsheetVersionNumber
               }
             : aiChatApiRes;
 
