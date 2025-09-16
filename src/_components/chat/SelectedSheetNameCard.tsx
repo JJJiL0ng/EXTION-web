@@ -77,7 +77,7 @@ export const SelectedSheetNameCard: React.FC<{
                   type="button"
                   aria-label="remove selected sheet"
                   title="Remove"
-                  className="mr-1 text-gray-700 p-0.5 rounded hover:bg-gray-200 active:bg-gray-300 transition-colors focus:outline-none focus:ring-1 focus:ring-gray-300"
+                  className="mr-1 text-gray-700 rounded hover:bg-gray-200 active:bg-gray-300 transition-colors focus:outline-none focus:ring-1 focus:ring-gray-300"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemove?.();
