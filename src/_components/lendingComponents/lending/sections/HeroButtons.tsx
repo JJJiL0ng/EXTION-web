@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Button } from '@/_components/lendingComponents/lending-common-ui/Button'
 import { scrollToElement } from '@/_utils/lending-utils/lending-utils'
 import { useRouter } from 'next/navigation'
@@ -101,10 +102,10 @@ export function HeroButtons() {
         onClick={handleNewSheetClick}
       >
         <span className="flex items-center gap-2">
-          start for free
+          Start for free
           {/* <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg> */}
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg> */}
         </span>
       </Button>
 
@@ -115,7 +116,8 @@ export function HeroButtons() {
         onClick={handleNewSheetClick}
       >
         <span className="flex items-center gap-2">
-          demo
+          Discord
+          <Image src="/discord.png" alt="Discord logo" width={24} height={24} className="inline-block" />
         </span>
       </Button>
     </div >
