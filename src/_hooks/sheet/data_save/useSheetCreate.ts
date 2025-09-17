@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import {  createSpreadSheetApiConnector, CreateSpreadSheetReq, CreateSpreadSheetRes } from '@/_ApiConnector/sheet/createSpreadSheetApi';
+import {  createSpreadSheetApiConnector } from '@/_ApiConnector/sheet/createSpreadSheetApi';
+import { CreateSpreadSheetReq, CreateSpreadSheetRes } from '@/_types/apiConnector/spreadsheet-create/spreadSheetCreateApi';
 
 interface UseSheetCreateState {
   loading: boolean;

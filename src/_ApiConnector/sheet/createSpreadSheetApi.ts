@@ -1,15 +1,4 @@
-export interface CreateSpreadSheetReq{
-  fileName: string;
-  spreadsheetId: string;
-  chatId: string;
-  userId: string;
-  jsonData: Record<string, any>;
-}
-
-export interface CreateSpreadSheetRes {
-  success: boolean;
-  message: string;
-}
+import { CreateSpreadSheetReq, CreateSpreadSheetRes } from '@/_types/apiConnector/spreadsheet-create/spreadSheetCreateApi';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 
