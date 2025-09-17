@@ -16,6 +16,7 @@ const AiChatViewer = () => {
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [lastScrollTop, setLastScrollTop] = useState(0);
+  const [messageRatings, setMessageRatings] = useState<Record<string, 'like' | 'dislike' | null>>({});
   
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('ko-KR', {
@@ -100,6 +101,20 @@ const AiChatViewer = () => {
 
   const handleRollBackButtonClick = () => {
   }
+
+  // 좋아요/싫어요 버튼 핸들러
+  const handleRating = (messageId: string, rating: 'like' | 'dislike') => {
+    setMessageRatings(prev => {
+      const currentRating = prev[messageId];
+      if (currentRating === rating) {
+        // 같은 버튼을 다시 누르면 선택 취소
+        return { ...prev, [messageId]: null };
+      } else {
+        // 다른 버튼을 누르거나 처음 누르면 해당 평가로 설정
+        return { ...prev, [messageId]: rating };
+      }
+    });
+  };
 
   // 스크롤 이벤트 리스너
   useEffect(() => {
@@ -192,15 +207,23 @@ const AiChatViewer = () => {
                         <Undo2 size={16} />
                       </button>
                       <button
-                        onClick={() => {/* thumbs up logic */}}
-                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
+                        onClick={() => handleRating(message.id, 'like')}
+                        className={`p-1 rounded-md transition-colors duration-200 ${
+                          messageRatings[message.id] === 'like'
+                            ? 'text-[#005de9] bg-gray-200'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
                         title="좋아요"
                       >
                         <ThumbsUp size={16} />
                       </button>
                       <button
-                        onClick={() => {/* thumbs down logic */}}
-                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
+                        onClick={() => handleRating(message.id, 'dislike')}
+                        className={`p-1 rounded-md transition-colors duration-200 ${
+                          messageRatings[message.id] === 'dislike'
+                            ? 'text-[#005de9] bg-gray-200'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
                         title="싫어요"
                       >
                         <ThumbsDown size={16} />
