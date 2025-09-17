@@ -6,10 +6,10 @@ import { useParams } from 'next/navigation';
 // Hooks
 import { useFileUpload } from '../../_hooks/sheet/file_upload_export/useFileUpload';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
-import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useUIState } from '../../_hooks/sheet/common/useUIState';
 import { useSpreadJSInit } from '../../_hooks/sheet/spreadjs/useSpreadJSInit';
+import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
 
 // Stores
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
@@ -71,28 +71,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // 명령어 관리 Hook (page.tsx로 이동됨)
     // const commandManager = useSpreadjsCommandManager(...) 제거됨
 
-    // 스프레드시트 생성 훅
-    const {
-        isCreating,
-        error: createError,
-        createSheetWithDefaults,
-        resetState: resetCreateState,
-        clearError: clearCreateError
-    } = useSheetCreate({
-        onSuccess: (sheet) => {
-            console.log(`✅ 스프레드시트 생성 성공:`, sheet);
-        },
-        onError: (error) => {
-            console.error(`❌ 스프레드시트 생성 실패:`, error);
-            alert(`스프레드시트 생성 중 오류가 발생했습니다: ${error.message}`);
-        }
-    });
-
 
     // SpreadJS 초기화 훅
     const { initSpread, createNewSpreadsheet } = useSpreadJSInit({
         spreadRef,
     });
+
+    // 스프레드시트 생성 훅
+    const { loading: createLoading, error: createError, createSheet, reset: resetCreateState } = useSheetCreate();
 
     // 파일 업로드 훅
     const {
@@ -142,13 +128,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
                 console.log('🔄 JSON 변환된 데이터:', jsonData);
 
-                await createSheetWithDefaults(
+                // 업로드(Create)로직 수정 필요
+                await createSheet({
                     fileName, // 업로드된 파일명을 스프레드시트명으로 사용
-                    spreadSheetId, // URL에서 추출한 spreadSheetId
+                    spreadsheetId: spreadSheetId, // URL에서 추출한 spreadSheetId
                     chatId, // URL에서 추출한 chatId
-                    currentUserId, // 사용자 ID (로그인 또는 게스트)
+                    userId: currentUserId, // 사용자 ID (로그인 또는 게스트)
                     jsonData // JSON으로 변환된 파일 데이터를 초기 데이터로 사용
-                );
+                });
             } catch (error) {
                 console.error('스프레드시트 생성 실패:', error);
                 // createSheetWithDefaults의 onError에서 이미 처리됨
@@ -202,12 +189,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             console.warn('resetCreateState cleanup warning:', error);
         }
 
-        try {
-            clearCreateError();
-        } catch (error) {
-            console.warn('clearCreateError cleanup warning:', error);
-        }
-
         if (spreadRef.current) {
             try {
                 spreadRef.current.destroy && spreadRef.current.destroy();
@@ -215,7 +196,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 console.warn('Cleanup warning:', error);
             }
         }
-    }, [resetExportState, resetCreateState, clearCreateError, spreadRef]);
+    }, [resetExportState, resetCreateState, spreadRef]);
 
     // 컴포넌트 언마운트 시 정리
     useEffect(() => {
@@ -355,14 +336,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 createdAt: new Date().toISOString(),
                 type: 'new_spreadsheet'
             };
-
-            await createSheetWithDefaults(
-                '새 스프레드시트',
-                spreadSheetId,
+            // 업로드(Create)로직 수정 필요
+            await createSheet({
+                fileName: '새 스프레드시트',
+                spreadsheetId: spreadSheetId,
                 chatId,
                 userId,
-                initialJsonData
-            );
+                jsonData: initialJsonData
+            });
 
             // 업로드 상태 초기화
             resetUploadStateRef.current?.();
