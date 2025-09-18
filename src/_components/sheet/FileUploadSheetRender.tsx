@@ -5,7 +5,7 @@ import { useCheckAndLoadOnMount } from "@/_hooks/sheet/data_save/useCheckAndLoad
 import { useParams } from 'next/navigation';
 import { getOrCreateGuestId } from "@/_utils/guestUtils";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
-import useChatStore from "@/_store/chat/chatIdStore";
+import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
 
 interface FileUploadSheetRenderProps {
     // 파일 업로드 상태

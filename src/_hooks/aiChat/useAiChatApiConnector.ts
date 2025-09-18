@@ -55,9 +55,11 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
           // aiChatApiRes 형태로 반환
           pending.resolve({
             jobId: data.jobId,
+            chatSessionId: data.chatSessionId,
             taskManagerOutput: pending.plan,
             dataEditChatRes: data.dataEditChatRes,
-            spreadsheetVersionNumber: data.spreadsheetVersionNumber
+            spreadSheetVersionId: data.spreadSheetVersionId,
+            editLockVersion: data.editLockVersion
           });
           pendingJobsRef.current.delete(data.jobId);
         }

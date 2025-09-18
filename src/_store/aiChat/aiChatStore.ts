@@ -6,7 +6,7 @@ import { create } from 'zustand';
 import { produce } from 'immer'; // 불변성 관리를 위해 immer 사용
 import { v4 as uuidv4 } from 'uuid'; // 고유 ID 생성을 위해 uuid 라이브러리 사용
 import { aiChatApiRes } from "@/_types/apiConnector/ai-chat-api/aiChatApi.types";
-import useChatStore from '@/_store/chat/chatIdStore'
+import useChatStore from '@/_store/chat/chatIdAndChatSessionIdStore'
 
 interface ChatActions {
     // 상태 설정 관련
@@ -31,7 +31,7 @@ interface ChatActions {
 
 //chatid 스토어에서 chatid 가져오기
 const ChatId = useChatStore.getState().chatId;
-
+const ChatSessionId = useChatStore.getState().chatSessionId;
 // -----------------------------------------------------------
 // 2. Zustand 스토어 생성
 // -----------------------------------------------------------
@@ -39,6 +39,7 @@ const ChatId = useChatStore.getState().chatId;
 export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
     // 초기 상태
     chatId: ChatId,
+    chatSessionId: ChatSessionId,
     messages: [],
     webSocket: null,
     wsConnectionStatus: 'disconnected',
@@ -161,9 +162,11 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
         const aiResponse: aiChatApiRes = 'dataEditCommands' in aiChatApiRes
             ? {
                 jobId: uuidv4(),
+                chatSessionId: aiChatApiRes.chatSessionId,
                 taskManagerOutput: aiChatApiRes.taskManagerOutput,
                 dataEditChatRes: aiChatApiRes.dataEditChatRes,
-                spreadsheetVersionNumber: aiChatApiRes.spreadsheetVersionNumber
+                spreadSheetVersionId: aiChatApiRes.spreadSheetVersionId,
+                editLockVersion: aiChatApiRes.editLockVersion || 1,
               }
             : aiChatApiRes;
 

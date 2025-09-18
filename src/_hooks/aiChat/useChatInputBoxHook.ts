@@ -5,14 +5,14 @@ import { aiChatStore } from '@/_store/aiChat/aiChatStore';
 import useSpreadsheetIdStore from '@/_store/sheet/spreadSheetIdStore';
 import { getOrCreateGuestId } from '../../_utils/guestUtils';
 import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore';
-import useChatIdStore from '@/_store/chat/chatIdStore';
+import useChatIdStore from '@/_store/chat/chatIdAndChatSessionIdStore';
 import { useAiChatApiConnector } from './useAiChatApiConnector';
 import { aiChatApiReq } from '@/_types/apiConnector/ai-chat-api/aiChatApi.types';
 import applyDataEditCommands from '@/_utils/sheet/applyCommand/applyDataEditCommands';
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 import { dataEditChatRes } from "@/_types/apiConnector/ai-chat-api/dataEdit.types";
 import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName';
-import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionNumStore';
+import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
 import { isSpreadSheetDataDirty } from '@/_utils/sheet/authSave/isSpreadSheetDataDirty';
 import { clearAllDirtyData } from '@/_utils/sheet/authSave/clearAllDirtyData';
 
@@ -227,12 +227,13 @@ export const useChatInputBoxHook = ({
           const aiChatApiRequest: aiChatApiReq = {
             spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!,
             chatId: useChatIdStore.getState().chatId!,
+            chatSessionId: useChatIdStore.getState().chatSessionId!,
             userId,
             chatMode: mode,
             userQuestionMessage: messageToSend,
             parsedSheetNames: useSpreadsheetNamesStore.getState().selectedSheets.map(s => s.name),
             jobId: `jobId_${safeRandomUUID()}`,
-            spreadsheetVersionNumber: useSpreadSheetVersionStore.getState().spreadSheetVersionNum,
+            spreadSheetVersionId: useSpreadSheetVersionStore.getState().spreadSheetVersionId,
             ...(isSpreadSheetDataDirty(spread) && {
               newVersionSpreadSheetData: spread.toJSON({
                 includeBindingSource: true,
@@ -247,12 +248,13 @@ export const useChatInputBoxHook = ({
                 includeUnsupportedStyle: true
               }),
             }),
+            editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || 1 // 낙관적 잠금을 위한 버전 번호
           };
           // 전송 직후 시트의 dirty 데이터 모두 초기화
           clearAllDirtyData(spread);
 
           console.log('📤 [ChatInputBoxHook] AI request payload:', aiChatApiRequest);
-          console.log('📊 [ChatInputBoxHook] Current version before request:', useSpreadSheetVersionStore.getState().spreadSheetVersionNum);
+          console.log('📊 [ChatInputBoxHook] Current version before request:', useSpreadSheetVersionStore.getState().spreadSheetVersionId);
 
           try {
             const result = await executeAiJob(aiChatApiRequest);
@@ -261,12 +263,12 @@ export const useChatInputBoxHook = ({
             // AI 응답을 채팅 스토어에 추가, spreadSheetVersionNum 업데이트
             if (result) {
               aiChatStore.getState().addAiMessage(result);
-              // 백엔드에서 유효한 버전 번호를 받은 경우에만 업데이트
-              if (typeof result.spreadsheetVersionNumber === 'number' && result.spreadsheetVersionNumber > 0) {
-                useSpreadSheetVersionStore.getState().setVersion(result.spreadsheetVersionNumber);
-                console.log('✅ [ChatInputBoxHook] Version updated to:', result.spreadsheetVersionNumber);
+              // 백엔드에서 유효한 버전 id를 받은 경우에만 업데이트
+              if (typeof result.spreadSheetVersionId === 'string' && result.spreadSheetVersionId) {
+                useSpreadSheetVersionStore.getState().setVersion(result.spreadSheetVersionId);
+                console.log('✅ [ChatInputBoxHook] Version updated to:', result.spreadSheetVersionId);
               } else {
-                console.warn('⚠️ [ChatInputBoxHook] Invalid version number received:', result.spreadsheetVersionNumber);
+                console.warn('⚠️ [ChatInputBoxHook] Invalid version id received:', result.spreadSheetVersionId);
               }
             }
             // 시트에 데이터 편집 명령 적용

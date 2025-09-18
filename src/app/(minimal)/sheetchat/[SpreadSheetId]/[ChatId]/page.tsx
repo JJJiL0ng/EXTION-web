@@ -7,7 +7,7 @@ import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisib
 import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
 import { useParams } from "next/navigation";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
-import useChatStore from "@/_store/chat/chatIdStore";
+import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
 import { enableMapSet } from 'immer';
 
 
