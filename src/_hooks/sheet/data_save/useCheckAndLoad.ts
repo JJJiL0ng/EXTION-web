@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useCheckAndLoadQuery } from '@/_hooks/tanstack/useCheckAndLoadQuery';
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 import { aiChatStore } from '@/_store/aiChat/aiChatStore';
@@ -10,18 +10,18 @@ import { useSpreadsheetUploadStore } from '@/_store/sheet/spreadsheetUploadStore
  * TanStack Query 기반으로 개선된 버전
  */
 export const useCheckAndLoadOnMount = (
-    spreadSheetId: string, 
-    chatId: string, 
+    spreadSheetId: string,
+    chatId: string,
     userId: string,
-    userActivity: 'active' | 'normal' | 'inactive' = 'normal'
+    userActivity: 'active' | 'normal' | 'inactive' = 'normal',
+    spreadSheetVersionId: string | null
 ) => {
     const { spread } = useSpreadsheetContext();
     const { addLoadedPreviousMessages } = aiChatStore();
     const { setIsFileUploaded } = useSpreadsheetUploadStore();
     
     // 중복 실행 방지를 위한 ref
-    const isDataLoadedRef = useRef(false);
-    const loadedResponseIdRef = useRef<string | null>(null);
+    const processedResponsesRef = useRef<Set<string>>(new Set());
     
     // useSheetRender 훅 사용 - 백엔드 데이터를 파일 업로드처럼 처리
     const { renderBackendData, renderState } = useSheetRender({
@@ -42,7 +42,7 @@ export const useCheckAndLoadOnMount = (
         isSuccess,
         isFetching
     } = useCheckAndLoadQuery(
-        { spreadSheetId, chatId, userId },
+        { spreadSheetId, chatId, userId, spreadSheetVersionId },
         {
             enabled: !!(spreadSheetId && chatId && userId), // spread 조건 제거 - 먼저 데이터를 가져온 후 spread가 준비되면 렌더링
             userActivity,
@@ -54,6 +54,7 @@ export const useCheckAndLoadOnMount = (
         spreadSheetId,
         chatId,
         userId,
+        spreadSheetVersionId,
         hasSpread: !!spread,
         loading,
         isFetching,
@@ -68,44 +69,38 @@ export const useCheckAndLoadOnMount = (
         addLoadedPreviousMessages(messages);
     }, [addLoadedPreviousMessages]);
 
-    // renderBackendData를 useCallback으로 안정화
-    const stableRenderBackendData = useCallback(renderBackendData, [renderBackendData]);
+    // renderBackendData 함수를 memo화하여 안정화
+    const memoizedRenderBackendData = useMemo(() => renderBackendData, [renderBackendData]);
+
+    // 안정적인 값들 추출
+    const responseExists = response?.exists;
+    const responseSpreadSheetVersionId = response?.spreadSheetVersionId;
+    const responseChatHistory = response?.chatHistory;
+    const responseSpreadSheetData = response?.spreadSheetData;
 
     // 데이터 로드 효과 처리
     useEffect(() => {
-        console.log('🔍 [useCheckAndLoad] useEffect 실행 조건 체크:', {
-            isSuccess,
-            responseExists: response?.exists,
-            hasSpread: !!spread,
-            hasSpreadSheetData: !!response?.spreadSheetData,
-            hasChatHistory: !!response?.chatHistory,
-            isDataLoaded: isDataLoadedRef.current,
-            currentResponseId: loadedResponseIdRef.current
-        });
-
         // 성공하지 않았거나 데이터가 존재하지 않으면 early return
-        if (!isSuccess || !response?.exists) {
-            console.log('⏸️ [useCheckAndLoad] 조건 미충족으로 데이터 로드 건너뜀');
+        if (!isSuccess || !responseExists) {
             return;
         }
 
         // 응답 ID 생성 (중복 실행 방지용)
-        const responseId = `${spreadSheetId}-${chatId}-${response.latestVersion || 'unknown'}`;
+        const responseId = `${spreadSheetId}-${chatId}-${responseSpreadSheetVersionId || 'unknown'}`;
 
         // 이미 같은 응답을 처리했다면 건너뜀
-        if (loadedResponseIdRef.current === responseId) {
-            console.log('⏸️ [useCheckAndLoad] 이미 처리된 응답, 건너뜀:', responseId);
+        if (processedResponsesRef.current.has(responseId)) {
             return;
         }
 
-        // 현재 응답 ID 저장
-        loadedResponseIdRef.current = responseId;
+        // 현재 응답 ID를 처리된 목록에 추가
+        processedResponsesRef.current.add(responseId);
 
         // 채팅 히스토리 로드 (한 번만)
-        if (response.chatHistory && response.chatHistory.length > 0) {
+        if (responseChatHistory && responseChatHistory.length > 0) {
             console.log('🔄 [useCheckAndLoad] 채팅 히스토리 로드 시작');
-            stableAddLoadedPreviousMessages(response.chatHistory);
-            console.log('✅ [useCheckAndLoad] 채팅 히스토리 로드 완료:', response.chatHistory.length);
+            stableAddLoadedPreviousMessages(responseChatHistory);
+            console.log('✅ [useCheckAndLoad] 채팅 히스토리 로드 완료:', responseChatHistory.length);
         }
 
         // spread가 준비되지 않았으면 스프레드시트 렌더링은 나중에
@@ -119,22 +114,21 @@ export const useCheckAndLoadOnMount = (
                 console.log('🔄 [useCheckAndLoad] 스프레드시트 데이터 로드 시작');
 
                 // 스프레드시트 데이터 처리
-                const jsonData = typeof response.spreadSheetData === 'string'
-                    ? JSON.parse(response.spreadSheetData)
-                    : response.spreadSheetData;
+                const jsonData = typeof responseSpreadSheetData === 'string'
+                    ? JSON.parse(responseSpreadSheetData)
+                    : responseSpreadSheetData;
 
                 if (jsonData) {
                     console.log('🔄 [useCheckAndLoad] 스프레드시트 데이터 렌더링 시작');
 
                     // useSheetRender의 renderBackendData 함수 사용
-                    await stableRenderBackendData(
+                    await memoizedRenderBackendData(
                         jsonData,
                         spread,
                         `스프레드시트-${spreadSheetId.substring(0, 8)}.json`
                     );
 
                     console.log('✅ [useCheckAndLoad] 스프레드시트 데이터 렌더링 완료');
-                    isDataLoadedRef.current = true;
                 } else {
                     console.log('ℹ️ [useCheckAndLoad] 스프레드시트 데이터가 없음');
                 }
@@ -149,7 +143,18 @@ export const useCheckAndLoadOnMount = (
         };
 
         loadSpreadsheetData();
-    }, [isSuccess, response, spread, spreadSheetId, stableAddLoadedPreviousMessages, stableRenderBackendData]);
+    }, [
+        isSuccess,
+        responseExists,
+        responseSpreadSheetVersionId,
+        responseChatHistory,
+        responseSpreadSheetData,
+        spread,
+        spreadSheetId,
+        chatId,
+        stableAddLoadedPreviousMessages,
+        memoizedRenderBackendData
+    ]);
 
     // 기존 인터페이스 유지 - exists 필드 추가
     const exists = response?.exists ?? null;

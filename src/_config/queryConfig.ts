@@ -28,7 +28,7 @@ export const getCacheStrategy = (userActivity: 'active' | 'normal' | 'inactive')
 
 // Query Keys 관리
 export const QUERY_KEYS = {
-  checkAndLoad: (params: { spreadSheetId: string; chatId: string; userId: string }) => 
+  checkAndLoad: (params: { spreadSheetId: string; chatId: string; userId: string; spreadSheetVersionId?: string | null }) =>
     ['checkAndLoad', params] as const,
   spreadSheet: (spreadSheetId: string) => ['spreadSheet', spreadSheetId] as const,
   chatHistory: (chatId: string) => ['chatHistory', chatId] as const,

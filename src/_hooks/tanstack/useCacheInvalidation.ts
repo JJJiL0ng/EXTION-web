@@ -47,11 +47,11 @@ export const useCacheInvalidation = () => {
 
   // 버전 기반 스마트 캐시 업데이트
   const updateCacheWithVersion = useCallback((
-    params: CheckAndLoadReq, 
-    newVersion: number
+    params: CheckAndLoadReq,
+    newSpreadSheetVersionId: string
   ) => {
-    console.log('🔄 [Cache Update] 버전 기반 캐시 업데이트:', { params, newVersion })
-    
+    console.log('🔄 [Cache Update] 버전 기반 캐시 업데이트:', { params, newSpreadSheetVersionId })
+
     queryClient.setQueryData(
       QUERY_KEYS.checkAndLoad(params),
       (oldData: CheckAndLoadRes | undefined) => {
@@ -59,11 +59,14 @@ export const useCacheInvalidation = () => {
           return oldData
         }
 
-        // 새 버전이 더 높으면 캐시 무효화
-        if (oldData.latestVersion && oldData.latestVersion < newVersion) {
-          console.log('🔄 [Cache Update] 새 버전 감지, 캐시 무효화 실행')
-          queryClient.invalidateQueries({ 
-            queryKey: QUERY_KEYS.checkAndLoad(params) 
+        // 새 버전이 다르면 캐시 무효화
+        if (oldData.spreadSheetVersionId !== newSpreadSheetVersionId) {
+          console.log('🔄 [Cache Update] 새 버전 감지, 캐시 무효화 실행:', {
+            old: oldData.spreadSheetVersionId,
+            new: newSpreadSheetVersionId
+          })
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.checkAndLoad(params)
           })
           return oldData
         }

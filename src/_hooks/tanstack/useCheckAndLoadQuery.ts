@@ -31,24 +31,6 @@ export const useCheckAndLoadQuery = (
     
     enabled,
     
-    // 대용량 데이터 최적화 - select 함수 제거하여 무한 re-render 방지
-    // select: (data: CheckAndLoadRes) => {
-    //   console.log('🔄 [TanStack Query] 캐시된 데이터 반환:', {
-    //     exists: data.exists,
-    //     version: data.latestVersion,
-    //     hasSpreadSheetData: !!data.spreadSheetData,
-    //     hasChatHistory: !!data.chatHistory,
-    //     cacheStrategy: userActivity
-    //   })
-
-    //   return {
-    //     ...data,
-    //     // 필요시 데이터 변환/압축 로직 추가 가능
-    //     spreadSheetData: data.spreadSheetData ?
-    //       JSON.parse(JSON.stringify(data.spreadSheetData)) : undefined
-    //   }
-    // },
-    
     // 에러 처리
     throwOnError: false,
     

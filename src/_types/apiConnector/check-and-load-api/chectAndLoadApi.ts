@@ -4,11 +4,12 @@ export interface CheckAndLoadReq {
   spreadSheetId: string;
   chatId: string;
   userId: string;
+  spreadSheetVersionId: string | null;
 }
 
 export class CheckAndLoadRes {
   exists: boolean = false;
-  latestVersion?: number | null;
+  spreadSheetVersionId: string | null = null;
   spreadSheetData?: Record<string, any>;
   chatHistory?: previousMessagesContent[] | null;
 }

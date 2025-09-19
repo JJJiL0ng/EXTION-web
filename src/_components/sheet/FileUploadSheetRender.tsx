@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { getOrCreateGuestId } from "@/_utils/guestUtils";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
-
+import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
 interface FileUploadSheetRenderProps {
     // 파일 업로드 상태
     isFileUploaded: boolean;
@@ -54,12 +54,15 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
     const stableSpreadsheetId = useMemo(() => spreadsheetId || '', [spreadsheetId]);
     const stableChatId = useMemo(() => chatId || '', [chatId]);
     const stableUserId = useMemo(() => getOrCreateGuestId(), []);
-    
+    const stableSpreadsheetVersionId = useSpreadSheetVersionStore((state) => state.spreadSheetVersionId);
+    const stableActivity = 'normal';
     // 백엔드 데이터 존재 여부 확인
     const { exists, loading, error } = useCheckAndLoadOnMount(
         stableSpreadsheetId,
         stableChatId,
-        stableUserId
+        stableUserId,
+        stableActivity,
+        stableSpreadsheetVersionId
     );
 
     // exists가 false일 때만 업로드 버튼 활성화
