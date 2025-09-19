@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
 import {  createSpreadSheetApiConnector } from '@/_ApiConnector/sheet/createSpreadSheetApi';
 import { CreateSpreadSheetReq, CreateSpreadSheetRes } from '@/_types/apiConnector/spreadsheet-create/spreadSheetCreateApi';
+import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
 
+//todo
 interface UseSheetCreateState {
   loading: boolean;
   error: string | null;
@@ -30,7 +32,8 @@ export const useSheetCreate = (): UseSheetCreateReturn => {
       
       console.log('✅ [useSheetCreate] 스프레드시트 생성 성공:', result);
       setState(prev => ({ ...prev, loading: false }));
-      
+      useSpreadSheetVersionStore.setState({ spreadSheetVersionId: result.spreadSheetVersionId });
+
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '스프레드시트 생성 중 오류가 발생했습니다.';

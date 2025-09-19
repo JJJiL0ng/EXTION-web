@@ -7,6 +7,7 @@ import { useSpreadsheetUploadStore } from '@/_store/sheet/spreadsheetUploadStore
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/_config/queryConfig';
 import type { CheckAndLoadRes } from '@/_types/apiConnector/check-and-load-api/chectAndLoadApi';
+import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
 
 /**
  * 컴포넌트 마운트 시, 스프레드시트/채팅 존재 여부를 서버에 확인하고(필요 시 로드)하는 커스텀 훅.
@@ -22,6 +23,7 @@ export const useCheckAndLoadOnMount = (
     const { spread } = useSpreadsheetContext();
     const { addLoadedPreviousMessages } = aiChatStore();
     const { setIsFileUploaded } = useSpreadsheetUploadStore();
+    const { setSpreadSheetVersion } = useSpreadSheetVersionStore();
     const queryClient = useQueryClient();
 
     // 중복 실행 방지를 위한 ref
@@ -128,6 +130,12 @@ export const useCheckAndLoadOnMount = (
         // 성공하지 않았거나 데이터가 존재하지 않으면 early return
         if (!isSuccess || !responseExists) {
             return;
+        }
+
+        // spreadSheetVersionId를 상태관리에 저장
+        if (response?.spreadSheetVersionId) {
+            console.log('🔄 ㅁㄴㄹㅁㄴㅇㄹㅁㄴㄹㅇㅁㄴㅇㄹㄹ:', response.spreadSheetVersionId);
+            setSpreadSheetVersion(response.spreadSheetVersionId);
         }
 
         // 응답 ID 생성 (중복 실행 방지용) - 데이터 해시나 고유값 사용

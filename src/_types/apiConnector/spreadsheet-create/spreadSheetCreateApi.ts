@@ -9,4 +9,5 @@ export interface CreateSpreadSheetReq{
 export interface CreateSpreadSheetRes {
   success: boolean;
   message: string;
+  spreadSheetVersionId: string;
 }
