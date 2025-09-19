@@ -41,8 +41,8 @@ export type WebSocketConnectionStatus = 'disconnected' | 'connecting' | 'connect
 
 // aiChatState + userid + spreadsheetid + parsedSheetNames 
 export interface AiChatState {
-  chatId: string | null; // 현재 채팅 컨테이너 id
-  chatSessionId: string | null; // 현재 채팅 세션 id (새로운 대화 시작시마다 변경)
+  // chatId: string | null; // 현재 채팅 컨테이너 id
+  // chatSessionId: string | null; // 현재 채팅 세션 id (새로운 대화 시작시마다 변경)
   messages: ChatMessage[]; // 전체 채팅 메시지 배열
   webSocket: WebSocket | null; // 현재 연결된 WebSocket 인스턴스
   wsConnectionStatus: WebSocketConnectionStatus; // 웹소켓 연결 상태
