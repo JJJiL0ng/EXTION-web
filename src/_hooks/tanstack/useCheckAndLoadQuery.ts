@@ -8,13 +8,14 @@ interface UseCheckAndLoadQueryOptions {
   staleTime?: number
   gcTime?: number
   userActivity?: 'active' | 'normal' | 'inactive'
+  initialData?: CheckAndLoadRes
 }
 
 export const useCheckAndLoadQuery = (
-  params: CheckAndLoadReq, 
+  params: CheckAndLoadReq,
   options: UseCheckAndLoadQueryOptions = {}
 ) => {
-  const { userActivity = 'normal', enabled = true, ...customOptions } = options
+  const { userActivity = 'normal', enabled = true, initialData, ...customOptions } = options
   const cacheStrategy = getCacheStrategy(userActivity)
 
   // 기본값 설정 (cacheStrategy가 undefined인 경우 대비)
@@ -24,12 +25,15 @@ export const useCheckAndLoadQuery = (
   return useQuery({
     queryKey: QUERY_KEYS.checkAndLoad(params),
     queryFn: () => checkAndLoadApiConnector(params),
-    
+
     // 캐시 전략 적용 (fallback 포함)
     staleTime: customOptions.staleTime ?? cacheStrategy?.staleTime ?? defaultStaleTime,
     gcTime: customOptions.gcTime ?? cacheStrategy?.gcTime ?? defaultGcTime,
-    
+
     enabled,
+
+    // initialData가 제공되면 사용 (네트워크 요청 방지)
+    initialData,
     
     // 에러 처리
     throwOnError: false,

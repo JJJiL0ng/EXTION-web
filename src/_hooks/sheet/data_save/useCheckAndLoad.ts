@@ -4,6 +4,9 @@ import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 import { aiChatStore } from '@/_store/aiChat/aiChatStore';
 import { useSheetRender } from '@/_hooks/sheet/spreadjs/useSheetRender';
 import { useSpreadsheetUploadStore } from '@/_store/sheet/spreadsheetUploadStore';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/_config/queryConfig';
+import type { CheckAndLoadRes } from '@/_types/apiConnector/check-and-load-api/chectAndLoadApi';
 
 /**
  * 컴포넌트 마운트 시, 스프레드시트/채팅 존재 여부를 서버에 확인하고(필요 시 로드)하는 커스텀 훅.
@@ -19,9 +22,49 @@ export const useCheckAndLoadOnMount = (
     const { spread } = useSpreadsheetContext();
     const { addLoadedPreviousMessages } = aiChatStore();
     const { setIsFileUploaded } = useSpreadsheetUploadStore();
-    
+    const queryClient = useQueryClient();
+
     // 중복 실행 방지를 위한 ref
     const processedResponsesRef = useRef<Set<string>>(new Set());
+
+    // 이전 버전의 캐시된 데이터를 찾아서 initialData로 사용
+    const getPreviousData = useCallback((): CheckAndLoadRes | undefined => {
+        if (!spreadSheetVersionId) return undefined;
+
+        // 현재 캐시에서 다른 버전 ID를 가진 동일한 spreadSheetId, chatId, userId 조합의 데이터를 찾기
+        const queryCache = queryClient.getQueryCache();
+
+        for (const query of queryCache.getAll()) {
+            const queryKey = query.queryKey;
+            if (
+                Array.isArray(queryKey) &&
+                queryKey[0] === 'checkAndLoad' &&
+                queryKey[1] &&
+                typeof queryKey[1] === 'object' &&
+                'spreadSheetId' in queryKey[1] &&
+                'chatId' in queryKey[1] &&
+                'userId' in queryKey[1]
+            ) {
+                const params = queryKey[1] as any;
+                // 같은 spreadSheetId, chatId, userId이지만 다른 spreadSheetVersionId인 경우
+                if (
+                    params.spreadSheetId === spreadSheetId &&
+                    params.chatId === chatId &&
+                    params.userId === userId &&
+                    params.spreadSheetVersionId !== spreadSheetVersionId &&
+                    query.state.data
+                ) {
+                    console.log('🔄 [useCheckAndLoad] 이전 버전 데이터 발견, initialData로 사용:', {
+                        previousVersionId: params.spreadSheetVersionId,
+                        currentVersionId: spreadSheetVersionId
+                    });
+                    return query.state.data as CheckAndLoadRes;
+                }
+            }
+        }
+
+        return undefined;
+    }, [queryClient, spreadSheetId, chatId, userId, spreadSheetVersionId]);
     
     // useSheetRender 훅 사용 - 백엔드 데이터를 파일 업로드처럼 처리
     const { renderBackendData, renderState } = useSheetRender({
@@ -34,19 +77,22 @@ export const useCheckAndLoadOnMount = (
         }
     });
 
+    // 이전 데이터 조회
+    const previousData = useMemo(() => getPreviousData(), [getPreviousData]);
+
     // TanStack Query로 데이터 페칭
-    const { 
-        data: response, 
-        isLoading: loading, 
+    const {
+        data: response,
+        isLoading: loading,
         error,
-        isSuccess,
-        isFetching
+        isSuccess
     } = useCheckAndLoadQuery(
         { spreadSheetId, chatId, userId, spreadSheetVersionId },
         {
             enabled: !!(spreadSheetId && chatId && userId), // spread 조건 제거 - 먼저 데이터를 가져온 후 spread가 준비되면 렌더링
             userActivity,
             staleTime: userActivity === 'active' ? 2 * 60 * 1000 : 10 * 60 * 1000, // 활성 사용자는 2분, 일반은 10분
+            initialData: previousData, // 이전 버전의 데이터를 initialData로 제공
         }
     );
 
