@@ -50,19 +50,19 @@ export const useCheckAndLoadOnMount = (
         }
     );
 
-    console.log('🔍 [useCheckAndLoad] 현재 상태:', {
-        spreadSheetId,
-        chatId,
-        userId,
-        spreadSheetVersionId,
-        hasSpread: !!spread,
-        loading,
-        isFetching,
-        isSuccess,
-        hasResponse: !!response,
-        responseExists: response?.exists,
-        enabled: !!(spreadSheetId && chatId && userId)
-    });
+    // console.log('🔍 [useCheckAndLoad] 현재 상태:', {
+    //     spreadSheetId,
+    //     chatId,
+    //     userId,
+    //     spreadSheetVersionId,
+    //     hasSpread: !!spread,
+    //     loading,
+    //     isFetching,
+    //     isSuccess,
+    //     hasResponse: !!response,
+    //     responseExists: response?.exists,
+    //     enabled: !!(spreadSheetId && chatId && userId)
+    // });
 
     // 안정적인 함수 참조를 위한 useCallback
     const stableAddLoadedPreviousMessages = useCallback((messages: any[]) => {
@@ -72,9 +72,8 @@ export const useCheckAndLoadOnMount = (
     // renderBackendData 함수를 memo화하여 안정화
     const memoizedRenderBackendData = useMemo(() => renderBackendData, [renderBackendData]);
 
-    // 안정적인 값들 추출
+    // 안정적인 값들 추출 (spreadSheetVersionId는 쿼리 키에서만 사용)
     const responseExists = response?.exists;
-    const responseSpreadSheetVersionId = response?.spreadSheetVersionId;
     const responseChatHistory = response?.chatHistory;
     const responseSpreadSheetData = response?.spreadSheetData;
 
@@ -85,8 +84,8 @@ export const useCheckAndLoadOnMount = (
             return;
         }
 
-        // 응답 ID 생성 (중복 실행 방지용)
-        const responseId = `${spreadSheetId}-${chatId}-${responseSpreadSheetVersionId || 'unknown'}`;
+        // 응답 ID 생성 (중복 실행 방지용) - 데이터 해시나 고유값 사용
+        const responseId = `${spreadSheetId}-${chatId}-${!!responseSpreadSheetData}-${!!responseChatHistory}`;
 
         // 이미 같은 응답을 처리했다면 건너뜀
         if (processedResponsesRef.current.has(responseId)) {
@@ -146,7 +145,6 @@ export const useCheckAndLoadOnMount = (
     }, [
         isSuccess,
         responseExists,
-        responseSpreadSheetVersionId,
         responseChatHistory,
         responseSpreadSheetData,
         spread,

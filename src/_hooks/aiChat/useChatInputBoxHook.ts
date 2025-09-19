@@ -264,7 +264,7 @@ export const useChatInputBoxHook = ({
               aiChatStore.getState().addAiMessage(result);
               // 다른 저장소 쓰는 프로퍼티들은 값이 유효한지 간단히 체크 후 저장
               if (typeof result.spreadSheetVersionId === 'string' && result.spreadSheetVersionId && result.editLockVersion && result.chatSessionId) {
-                useSpreadSheetVersionStore.getState().setVersion(result.spreadSheetVersionId);
+                useSpreadSheetVersionStore.getState().setSpreadSheetVersion(result.spreadSheetVersionId);
                 useSpreadSheetVersionStore.getState().setEditLockVersion(result.editLockVersion);
                 useChatIdStore.getState().setChatSessionId(result.chatSessionId);
               } else {
