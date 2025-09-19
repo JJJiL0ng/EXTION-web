@@ -179,8 +179,10 @@ export const useChatInputBoxHook = ({
     }
   }, [showModeModal]);
 
+
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
+      
       // 전송 상태 시작
       setIsSendingMessage(true);
 
@@ -201,14 +203,10 @@ export const useChatInputBoxHook = ({
           textareaRef.current?.focus();
         }, 0);
       }
+      const userChatSessionBranchId = 'user_c_s_b_id_' + safeRandomUUID(); // 새로운 브랜치 ID 생성
 
       try {
-        console.log('🚀 [ChatInputBoxHook] Sending message with selected sheets:', selectedSheetsToSend);
-        console.log('🚀 [ChatInputBoxHook] Message content:', messageToSend);
-        console.log('🚀 [ChatInputBoxHook] Chat mode:', mode);
-        console.log('🚀 [ChatInputBoxHook] About to call addUserMessage');
-
-        const messageId = addUserMessage(messageToSend);
+        const messageId = addUserMessage(messageToSend, userChatSessionBranchId);
 
         console.log('✅ [ChatInputBoxHook] User message added to store:', {
           messageId,
@@ -228,6 +226,7 @@ export const useChatInputBoxHook = ({
             spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!,
             chatId: useChatIdStore.getState().chatId!,
             chatSessionId: useChatIdStore.getState().chatSessionId,
+            userChatSessionBranchId: userChatSessionBranchId,
             userId,
             chatMode: mode,
             userQuestionMessage: messageToSend,

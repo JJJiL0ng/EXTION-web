@@ -68,6 +68,9 @@ export const useCheckAndLoadOnMount = (
         addLoadedPreviousMessages(messages);
     }, [addLoadedPreviousMessages]);
 
+    // renderBackendData를 useCallback으로 안정화
+    const stableRenderBackendData = useCallback(renderBackendData, [renderBackendData]);
+
     // 데이터 로드 효과 처리
     useEffect(() => {
         console.log('🔍 [useCheckAndLoad] useEffect 실행 조건 체크:', {
@@ -88,7 +91,7 @@ export const useCheckAndLoadOnMount = (
 
         // 응답 ID 생성 (중복 실행 방지용)
         const responseId = `${spreadSheetId}-${chatId}-${response.latestVersion || 'unknown'}`;
-        
+
         // 이미 같은 응답을 처리했다면 건너뜀
         if (loadedResponseIdRef.current === responseId) {
             console.log('⏸️ [useCheckAndLoad] 이미 처리된 응답, 건너뜀:', responseId);
@@ -114,7 +117,7 @@ export const useCheckAndLoadOnMount = (
         const loadSpreadsheetData = async () => {
             try {
                 console.log('🔄 [useCheckAndLoad] 스프레드시트 데이터 로드 시작');
-                
+
                 // 스프레드시트 데이터 처리
                 const jsonData = typeof response.spreadSheetData === 'string'
                     ? JSON.parse(response.spreadSheetData)
@@ -122,14 +125,14 @@ export const useCheckAndLoadOnMount = (
 
                 if (jsonData) {
                     console.log('🔄 [useCheckAndLoad] 스프레드시트 데이터 렌더링 시작');
-                    
+
                     // useSheetRender의 renderBackendData 함수 사용
-                    await renderBackendData(
-                        jsonData, 
-                        spread, 
+                    await stableRenderBackendData(
+                        jsonData,
+                        spread,
                         `스프레드시트-${spreadSheetId.substring(0, 8)}.json`
                     );
-                    
+
                     console.log('✅ [useCheckAndLoad] 스프레드시트 데이터 렌더링 완료');
                     isDataLoadedRef.current = true;
                 } else {
@@ -146,7 +149,7 @@ export const useCheckAndLoadOnMount = (
         };
 
         loadSpreadsheetData();
-    }, [isSuccess, response, spread, spreadSheetId, stableAddLoadedPreviousMessages, renderBackendData]);
+    }, [isSuccess, response, spread, spreadSheetId, stableAddLoadedPreviousMessages, stableRenderBackendData]);
 
     // 기존 인터페이스 유지 - exists 필드 추가
     const exists = response?.exists ?? null;

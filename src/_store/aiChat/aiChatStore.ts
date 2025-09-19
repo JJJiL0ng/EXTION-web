@@ -14,7 +14,7 @@ interface ChatActions {
     setWebsocketId: (id: string) => void;
 
     // 메시지 관련
-    addUserMessage: (content: string) => string;
+    addUserMessage: (content: string, chatSessionBranchId: string) => string;
     updateAssistantMessage: (id: string, newContentChunk: string) => void;
     completeAssistantMessage: (id: string) => void;
     setAssistantMessageError: (id: string, errorContent: string) => void;
@@ -62,9 +62,9 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
     setWebsocketId: (id: string) => set({ websocketId: id }),
 
     // 사용자 메시지 추가 (낙관적 UI)
-    addUserMessage: (content: string) => {
+    addUserMessage: (content: string, chatSessionBranchId: string) => {
         const newMessage: ChatMessage = {
-            id: uuidv4(),
+            id: chatSessionBranchId,
             type: 'user',
             content,
             timestamp: Date.now(),
