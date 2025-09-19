@@ -227,7 +227,7 @@ export const useChatInputBoxHook = ({
           const aiChatApiRequest: aiChatApiReq = {
             spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!,
             chatId: useChatIdStore.getState().chatId!,
-            chatSessionId: useChatIdStore.getState().chatSessionId!,
+            chatSessionId: useChatIdStore.getState().chatSessionId,
             userId,
             chatMode: mode,
             userQuestionMessage: messageToSend,
@@ -248,25 +248,26 @@ export const useChatInputBoxHook = ({
                 includeUnsupportedStyle: true
               }),
             }),
-            editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || 1 // 낙관적 잠금을 위한 버전 번호
+            editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || null // 낙관적 잠금을 위한 버전 번호
           };
           // 전송 직후 시트의 dirty 데이터 모두 초기화
           clearAllDirtyData(spread);
 
-          console.log('📤 [ChatInputBoxHook] AI request payload:', aiChatApiRequest);
+          console.log('📤📤📤📤📤📤📤📤📤📤📤 AI request payload:', aiChatApiRequest);
           console.log('📊 [ChatInputBoxHook] Current version before request:', useSpreadSheetVersionStore.getState().spreadSheetVersionId);
 
           try {
             const result = await executeAiJob(aiChatApiRequest);
-            console.log('🎉 [ChatInputBoxHook] AI job completed successfully:', result);
+            console.log('🎉🎉🎉🎉🎉🎉🎉🎉🎉 AI job completed successfully:', result);
 
             // AI 응답을 채팅 스토어에 추가, spreadSheetVersionNum 업데이트
             if (result) {
               aiChatStore.getState().addAiMessage(result);
-              // 백엔드에서 유효한 버전 id를 받은 경우에만 업데이트
-              if (typeof result.spreadSheetVersionId === 'string' && result.spreadSheetVersionId) {
+              // 다른 저장소 쓰는 프로퍼티들은 값이 유효한지 간단히 체크 후 저장
+              if (typeof result.spreadSheetVersionId === 'string' && result.spreadSheetVersionId && result.editLockVersion && result.chatSessionId) {
                 useSpreadSheetVersionStore.getState().setVersion(result.spreadSheetVersionId);
-                console.log('✅ [ChatInputBoxHook] Version updated to:', result.spreadSheetVersionId);
+                useSpreadSheetVersionStore.getState().setEditLockVersion(result.editLockVersion);
+                useChatIdStore.getState().setChatSessionId(result.chatSessionId);
               } else {
                 console.warn('⚠️ [ChatInputBoxHook] Invalid version id received:', result.spreadSheetVersionId);
               }
