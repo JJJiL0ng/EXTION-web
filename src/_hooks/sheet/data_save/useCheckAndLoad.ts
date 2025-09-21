@@ -124,6 +124,10 @@ export const useCheckAndLoadOnMount = (
     const responseExists = response?.exists;
     const responseChatHistory = response?.chatHistory;
     const responseSpreadSheetData = response?.spreadSheetData;
+    const responseSpreadSheetVersionId = response?.spreadSheetVersionId;
+
+    // 현재 스토어의 버전 ID 가져오기 (중복 업데이트 방지용)
+    const currentVersionId = useSpreadSheetVersionStore(state => state.spreadSheetVersionId);
 
     // 데이터 로드 효과 처리
     useEffect(() => {
@@ -132,10 +136,10 @@ export const useCheckAndLoadOnMount = (
             return;
         }
 
-        // spreadSheetVersionId를 상태관리에 저장
-        if (response?.spreadSheetVersionId) {
-            console.log('🔄 ㅁㄴㄹㅁㄴㅇㄹㅁㄴㄹㅇㅁㄴㅇㄹㄹ:', response.spreadSheetVersionId);
-            setSpreadSheetVersion(response.spreadSheetVersionId);
+        // spreadSheetVersionId를 상태관리에 저장 (중복 업데이트 방지)
+        if (responseSpreadSheetVersionId && responseSpreadSheetVersionId !== currentVersionId) {
+            console.log('🔄 SpreadSheet Version 업데이트:', responseSpreadSheetVersionId);
+            setSpreadSheetVersion(responseSpreadSheetVersionId);
         }
 
         // 응답 ID 생성 (중복 실행 방지용) - 데이터 해시나 고유값 사용
@@ -201,11 +205,14 @@ export const useCheckAndLoadOnMount = (
         responseExists,
         responseChatHistory,
         responseSpreadSheetData,
+        responseSpreadSheetVersionId,
+        currentVersionId,
         spread,
         spreadSheetId,
         chatId,
         stableAddLoadedPreviousMessages,
-        memoizedRenderBackendData
+        memoizedRenderBackendData,
+        setSpreadSheetVersion
     ]);
 
     // 기존 인터페이스 유지 - exists 필드 추가

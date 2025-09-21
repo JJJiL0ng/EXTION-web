@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 
 interface RollbackAlertProps {
   isOpen: boolean;
@@ -26,7 +26,7 @@ const RollbackAlert: React.FC<RollbackAlertProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+      <div className="bg-white rounded-lg p-5 max-w-md mx-4">
         <h3 className="text-lg font-semibold mb-4">롤백 확인</h3>
         <p className="text-gray-700 mb-4">
           롤백을 진행하면 이전 메시지까지의 모든 작업이 되돌려집니다. 
@@ -51,13 +51,13 @@ const RollbackAlert: React.FC<RollbackAlertProps> = ({
         <div className="flex gap-3 justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+            className="px-2 py-1 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
           >
             취소
           </button>
           <button
             onClick={handleConfirm}
-            className="px-4 py-2 bg-[#005de09] text-white rounded hover:bg-blue-700"
+            className="px-2 py-1 bg-[#005de9] text-white rounded hover:bg-blue-700"
           >
             롤백하기
           </button>
