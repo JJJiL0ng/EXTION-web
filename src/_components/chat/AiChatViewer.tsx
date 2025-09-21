@@ -9,6 +9,8 @@ import { Undo2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import TypingIndicator from './TypingIndicator';
 import RollbackAlert from './RollbackAlert';
 
+import { useRollbackMessageLoadSheet } from '@/_hooks/rollback/useRollbackMessageLoadSheet';
+
 const AiChatViewer = () => {
   const messages = aiChatStore((state) => state.messages);
   const isSendingMessage = aiChatStore((state) => state.isSendingMessage);
@@ -22,6 +24,7 @@ const AiChatViewer = () => {
   const [showRollbackAlert, setShowRollbackAlert] = useState(false);
   const [dontShowRollbackAlert, setDontShowRollbackAlert] = useState(false);
   const [pendingRollbackMessageId, setPendingRollbackMessageId] = useState<string | null>(null);
+
   
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('ko-KR', {
@@ -111,6 +114,7 @@ const AiChatViewer = () => {
         setShowRollbackAlert(true);
       } else {
         executeRollback(messageId);
+        // useRollbackMessageLoadSheet(apiConnector);
       }
     }
   }

@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { aiChatApiReq } from "@/_types/apiConnector/ai-chat-api/aiChatApi.types";
 import { dataEditChatRes } from "@/_types/apiConnector/ai-chat-api/dataEdit.types";
+import { rollbackMessageReq, rollbackMessageRes } from '@/_types/apiConnector/ai-chat-api/rollbackMessageApi.types';
 
 export interface AiJobError {
   jobId?: string;
@@ -18,6 +19,7 @@ export interface AiJobTimeout {
   jobId: string;
   message: string;
 }
+
 
 export class AiChatApiConnector {
   private socket: Socket | null = null;
@@ -135,6 +137,34 @@ export class AiChatApiConnector {
   offJobTimeout(callback?: (data: AiJobTimeout) => void): void {
     if (!this.socket) return;
     this.socket.off('ai_job_timeout', callback);
+  }
+
+  rollbackMessage(rollbackRequest: rollbackMessageReq): void {
+    if (!this.socket || !this.isConnected) {
+      throw new Error('Socket not connected');
+    }
+
+    this.socket.emit('rollback_message', rollbackRequest);
+  }
+
+  onRollbackMessageResponse(callback: (data: rollbackMessageRes) => void): void {
+    if (!this.socket) return;
+    this.socket.on('rollback_message_response', callback);
+  }
+
+  onRollbackMessageError(callback: (error: any) => void): void {
+    if (!this.socket) return;
+    this.socket.on('rollback_message_error', callback);
+  }
+
+  offRollbackMessageResponse(callback?: (data: rollbackMessageRes) => void): void {
+    if (!this.socket) return;
+    this.socket.off('rollback_message_response', callback);
+  }
+
+  offRollbackMessageError(callback?: (error: any) => void): void {
+    if (!this.socket) return;
+    this.socket.off('rollback_message_error', callback);
   }
 
   get connected(): boolean {
