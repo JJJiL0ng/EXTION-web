@@ -5,8 +5,8 @@ import { aiChatStore } from "@/_store/aiChat/aiChatStore";
 import { ChatMessage } from "@/_types/store/aiChatStore.types";
 import { Undo2, ThumbsUp, ThumbsDown } from 'lucide-react';
 
-
 import TypingIndicator from './TypingIndicator';
+import RollbackAlert from './RollbackAlert';
 
 const AiChatViewer = () => {
   const messages = aiChatStore((state) => state.messages);
@@ -17,6 +17,8 @@ const AiChatViewer = () => {
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [lastScrollTop, setLastScrollTop] = useState(0);
   const [messageRatings, setMessageRatings] = useState<Record<string, 'like' | 'dislike' | null>>({});
+  const [showRollbackAlert, setShowRollbackAlert] = useState(false);
+  const [dontShowRollbackAlert, setDontShowRollbackAlert] = useState(false);
   
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('ko-KR', {
@@ -99,7 +101,17 @@ const AiChatViewer = () => {
   }, [isAtBottom, isAutoScrollEnabled, lastScrollTop]);
 
 
-  const handleRollBackButtonClick = () => {
+  const handleRollBackButtonClick = (messageId?: string) => {
+    if (!dontShowRollbackAlert) {
+      setShowRollbackAlert(true);
+    } else {
+      executeRollback(messageId);
+    }
+  }
+
+  const executeRollback = (messageId?: string) => {
+    console.log('RollBack button clicked for message ID:', messageId);
+    // 실제 롤백 로직 구현
   }
 
   // 좋아요/싫어요 버튼 핸들러
@@ -158,6 +170,15 @@ const AiChatViewer = () => {
     <div className="chat-viewer h-full flex flex-col relative">
       <div className="border-b-2 border-[#D9D9D9]"></div>
       
+      {/* 롤백 확인 알림창 */}
+      <RollbackAlert
+        isOpen={showRollbackAlert}
+        onClose={() => setShowRollbackAlert(false)}
+        onConfirm={() => executeRollback()}
+        dontShowAgain={dontShowRollbackAlert}
+        onDontShowAgainChange={setDontShowRollbackAlert}
+      />
+      
       {/* 메시지 리스트 */}
       <div 
         ref={chatContainerRef}
@@ -181,7 +202,7 @@ const AiChatViewer = () => {
           </div>
         ) : (
           <>
-            {messages.map((message) => (
+            {messages.map((message, index) => (
               <div key={message.id} className="w-full">
                 <div
                   className={`w-full rounded-lg px-2 py-2 ${
@@ -200,7 +221,10 @@ const AiChatViewer = () => {
                   {message.type === 'assistant' && (
                     <div className="flex items-center gap mt-2">
                       <button
-                        onClick={() => handleRollBackButtonClick()}
+                        onClick={() => {
+                          const previousMessage = index > 0 ? messages[index - 1] : null; // 이전 메시지(ux상으로 랜더링 중인 assistant 메시지의 바로 이전 메시지, 즉 user 메시지)
+                          handleRollBackButtonClick(previousMessage?.id);
+                        }}
                         className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
                         title="메시지 보내기 전으로 롤백"
                       >
