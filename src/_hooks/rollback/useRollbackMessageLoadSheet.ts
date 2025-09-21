@@ -1,16 +1,17 @@
 import { rollbackMessageReq, rollbackMessageRes } from "@/_types/apiConnector/ai-chat-api/rollbackMessageApi.types";
-import { AiChatApiConnector } from "@/_ApiConnector/ai-chat/aiChatApiConnector";
+import { useAiChatApiConnector } from "@/_hooks/aiChat/useAiChatApiConnector";
 import { useState } from "react";
 import { useSpreadSheetVersionStore } from "@/_store/sheet/spreadSheetVersionIdStore";
 import { useSheetRender } from "@/_hooks/sheet/spreadjs/useSheetRender";
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 
-export const useRollbackMessageLoadSheet = (apiConnector: AiChatApiConnector) => {
+export const useRollbackMessageLoadSheet = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { spread } = useSpreadsheetContext();
+    const { rollbackMessage: apiRollbackMessage, isConnected } = useAiChatApiConnector();
 
-    const { renderBackendData, renderState } = useSheetRender({
+    const { renderBackendData } = useSheetRender({
         onSuccess: (fileName) => {
             console.log('✅ [useRollbackMessageLoadSheet] 스프레드시트 렌더링 성공:', fileName);
         },
@@ -20,8 +21,12 @@ export const useRollbackMessageLoadSheet = (apiConnector: AiChatApiConnector) =>
     });
 
     const rollbackMessage = async (request: rollbackMessageReq): Promise<rollbackMessageRes | null> => {
-        if (!apiConnector.connected) {
-            setError('API connector is not connected');
+        console.log('📤 [useRollbackMessageLoadSheet] 롤백 요청 시작:', request);
+
+        if (!isConnected) {
+            const errorMsg = 'API connector is not connected';
+            console.error('❌ [useRollbackMessageLoadSheet]', errorMsg);
+            setError(errorMsg);
             return null;
         }
 
@@ -29,37 +34,25 @@ export const useRollbackMessageLoadSheet = (apiConnector: AiChatApiConnector) =>
             setIsLoading(true);
             setError(null);
 
-            return new Promise<rollbackMessageRes>((resolve, reject) => {
-                // 응답 리스너 등록
-                const handleResponse = (response: rollbackMessageRes) => {
-                    // 응답을 받았을 때 store 업데이트
-                    if (response.spreadSheetVersionId) {
-                        useSpreadSheetVersionStore.getState().setSpreadSheetVersion(response.spreadSheetVersionId);
-                    }
-                    if (response.editLockVersion !== undefined) {
-                        useSpreadSheetVersionStore.getState().setEditLockVersion(response.editLockVersion);
-                    }
+            console.log('⏳ [useRollbackMessageLoadSheet] API 호출 중...');
+            const response = await apiRollbackMessage(request);
+            console.log('📥 [useRollbackMessageLoadSheet] API 응답 받음:', response);
 
-                    apiConnector.offRollbackMessageResponse(handleResponse);
-                    resolve(response);
+            // 응답을 받았을 때 store 업데이트
+            if (response.spreadSheetVersionId) {
+                useSpreadSheetVersionStore.getState().setSpreadSheetVersion(response.spreadSheetVersionId);
+            }
+            if (response.editLockVersion !== undefined) {
+                useSpreadSheetVersionStore.getState().setEditLockVersion(response.editLockVersion);
+            }
 
-                    renderBackendData(response.spreadSheetData,spread);
-                };
+            renderBackendData(response.spreadSheetData, spread);
 
-                // 에러 리스너 등록
-                const handleError = (error: any) => {
-                    apiConnector.offRollbackMessageError(handleError);
-                    reject(new Error(error.message || 'Rollback failed'));
-                };
-
-                apiConnector.onRollbackMessageResponse(handleResponse);
-                apiConnector.onRollbackMessageError(handleError);
-
-                // 요청 전송
-                apiConnector.rollbackMessage(request);
-            });
+            return response;
         } catch (err) {
+            console.error('❌ [useRollbackMessageLoadSheet] 에러 발생:', err);
             const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+            console.error('❌ [useRollbackMessageLoadSheet] 에러 메시지:', errorMessage);
             setError(errorMessage);
             return null;
         } finally {

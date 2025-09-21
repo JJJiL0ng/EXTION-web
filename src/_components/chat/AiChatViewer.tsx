@@ -5,6 +5,10 @@ import Image from 'next/image';
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
 import { ChatMessage } from "@/_types/store/aiChatStore.types";
 import { Undo2, ThumbsUp, ThumbsDown } from 'lucide-react';
+import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
+import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
+
+import { getOrCreateGuestId } from '../../_utils/guestUtils';
 
 import TypingIndicator from './TypingIndicator';
 import RollbackAlert from './RollbackAlert';
@@ -25,7 +29,10 @@ const AiChatViewer = () => {
   const [dontShowRollbackAlert, setDontShowRollbackAlert] = useState(false);
   const [pendingRollbackMessageId, setPendingRollbackMessageId] = useState<string | null>(null);
 
-  
+  // 롤백 훅 사용
+  const { rollbackMessage: executeBackendRollback, isLoading: isRollbackLoading, error: rollbackError } = useRollbackMessageLoadSheet();
+
+
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('ko-KR', {
       hour: '2-digit',
@@ -45,7 +52,7 @@ const AiChatViewer = () => {
         );
       }
     }
-    
+
     return <div className="whitespace-pre-wrap">{String(message.content)}</div>;
   };
 
@@ -60,7 +67,7 @@ const AiChatViewer = () => {
   // 자동 스크롤 함수
   const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' = 'smooth') => {
     if (messagesEndRef.current && isAutoScrollEnabled) {
-      messagesEndRef.current.scrollIntoView({ 
+      messagesEndRef.current.scrollIntoView({
         behavior,
         block: 'end',
         inline: 'nearest'
@@ -72,7 +79,7 @@ const AiChatViewer = () => {
   const forceScrollToBottom = useCallback((animated: boolean = true) => {
     if (chatContainerRef.current && messagesEndRef.current) {
       if (animated) {
-        messagesEndRef.current.scrollIntoView({ 
+        messagesEndRef.current.scrollIntoView({
           behavior: 'smooth',
           block: 'end',
           inline: 'nearest'
@@ -90,15 +97,15 @@ const AiChatViewer = () => {
     const container = chatContainerRef.current;
     const currentScrollTop = container.scrollTop;
     const atBottom = isAtBottom();
-    
+
     setIsUserScrolling(true);
-    
+
     // 위로 스크롤했을 때 자동 스크롤 해제
     const scrollingUp = currentScrollTop < lastScrollTop;
     if (scrollingUp && !atBottom && isAutoScrollEnabled) {
       setIsAutoScrollEnabled(false);
     }
-    
+
     setLastScrollTop(currentScrollTop);
 
     setTimeout(() => {
@@ -119,11 +126,55 @@ const AiChatViewer = () => {
     }
   }
 
-  const executeRollback = (messageId?: string) => {
+  const executeRollback = async (messageId?: string) => {
     const targetMessageId = messageId || pendingRollbackMessageId;
     if (targetMessageId) {
       console.log('RollBack button clicked for message ID:', targetMessageId);
-      rollbackMessage(targetMessageId);
+
+      try {
+        // 필요한 정보 수집
+        const spreadsheetId = useSpreadsheetIdStore.getState().spreadsheetId;
+        const { chatId, chatSessionId } = useChatStore.getState();
+
+        if (!spreadsheetId) {
+          console.error('❌ spreadsheetId가 없습니다');
+          return;
+        }
+
+        if (!chatId || !chatSessionId) {
+          console.error('❌ chatId 또는 chatSessionId가 없습니다');
+          return;
+        }
+
+        // userId는 현재 Firebase Auth에서 가져와야 할 것 같습니다
+        // 임시로 'current-user'를 사용하거나, Firebase Auth 구현이 필요합니다
+        const userId = getOrCreateGuestId();
+
+        // 요청 데이터 로깅
+        const rollbackRequest = {
+          spreadSheetId: spreadsheetId,
+          chatId: chatId,
+          userId: userId,
+          chatSessionId: chatSessionId,
+          chatSessionBranchId: targetMessageId, // 롤백 대상 메시지의 chatSessionBranchId
+        };
+
+        console.log('🔍 롤백 요청 데이터:', rollbackRequest);
+
+        // 백엔드 롤백 API 호출
+        const result = await executeBackendRollback(rollbackRequest);
+
+        if (result) {
+          console.log('✅ 백엔드 롤백 성공:', result);
+          // 프론트엔드 상태도 롤백
+          rollbackMessage(targetMessageId);
+        } else {
+          console.error('❌ 백엔드 롤백 실패 - result가 null');
+        }
+      } catch (error) {
+        console.error('❌ 롤백 중 오류 발생:', error);
+      }
+
       // 롤백 후 상태 초기화
       setPendingRollbackMessageId(null);
     }
@@ -159,7 +210,7 @@ const AiChatViewer = () => {
     if (messages.length === 0) return;
 
     const lastMessage = messages[messages.length - 1];
-    
+
     if (lastMessage && lastMessage.type === 'user') {
       setIsAutoScrollEnabled(true);
       forceScrollToBottom(true);
@@ -184,7 +235,24 @@ const AiChatViewer = () => {
   return (
     <div className="chat-viewer h-full flex flex-col relative">
       <div className="border-b-2 border-[#D9D9D9]"></div>
-      
+
+      {/* 롤백 에러 알림 */}
+      {rollbackError && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mx-2 mt-2">
+          <div className="flex justify-between items-center">
+            <span>롤백 중 오류가 발생했습니다: {rollbackError}</span>
+            <button
+              onClick={() => {
+                // 에러 상태 초기화는 다음 롤백 시도 시 자동으로 처리됨
+              }}
+              className="text-red-500 hover:text-red-700"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 롤백 확인 알림창 */}
       <RollbackAlert
         isOpen={showRollbackAlert}
@@ -196,9 +264,9 @@ const AiChatViewer = () => {
         dontShowAgain={dontShowRollbackAlert}
         onDontShowAgainChange={setDontShowRollbackAlert}
       />
-      
+
       {/* 메시지 리스트 */}
-      <div 
+      <div
         ref={chatContainerRef}
         className="flex-1 overflow-y-auto p-2 space-y-3"
         style={{
@@ -225,11 +293,10 @@ const AiChatViewer = () => {
             {messages.map((message, index) => (
               <div key={message.id} className="w-full">
                 <div
-                  className={`w-full rounded-lg px-2 py-2 ${
-                    message.type === 'user'
+                  className={`w-full rounded-lg px-2 py-2 ${message.type === 'user'
                       ? 'bg-white text-gray-900 border border-gray-300'
                       : ''
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -245,29 +312,31 @@ const AiChatViewer = () => {
                           const previousMessage = index > 0 ? messages[index - 1] : null; // 이전 메시지(ux상으로 랜더링 중인 assistant 메시지의 바로 이전 메시지, 즉 user 메시지)
                           handleRollBackButtonClick(previousMessage?.id);
                         }}
-                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-                        title="메시지 보내기 전으로 롤백"
+                        disabled={isRollbackLoading}
+                        className={`p-1 rounded-md transition-colors duration-200 ${isRollbackLoading
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
+                        title={isRollbackLoading ? "롤백 중..." : "메시지 보내기 전으로 롤백"}
                       >
                         <Undo2 size={16} />
                       </button>
                       <button
                         onClick={() => handleRating(message.id, 'like')}
-                        className={`p-1 rounded-md transition-colors duration-200 ${
-                          messageRatings[message.id] === 'like'
+                        className={`p-1 rounded-md transition-colors duration-200 ${messageRatings[message.id] === 'like'
                             ? 'text-[#005de9] bg-gray-200'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
+                          }`}
                         title="좋아요"
                       >
                         <ThumbsUp size={16} />
                       </button>
                       <button
                         onClick={() => handleRating(message.id, 'dislike')}
-                        className={`p-1 rounded-md transition-colors duration-200 ${
-                          messageRatings[message.id] === 'dislike'
+                        className={`p-1 rounded-md transition-colors duration-200 ${messageRatings[message.id] === 'dislike'
                             ? 'text-[#005de9] bg-gray-200'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                        }`}
+                          }`}
                         title="싫어요"
                       >
                         <ThumbsDown size={16} />
@@ -291,7 +360,7 @@ const AiChatViewer = () => {
             {isSendingMessage && (
               <div className="w-full">
                 <div className="w-full rounded-lg px-2">
-                  <TypingIndicator 
+                  <TypingIndicator
                     variant="wave"
                     color="#005ed9"
                     dotCount={3}
@@ -304,26 +373,26 @@ const AiChatViewer = () => {
             )}
           </>
         )}
-        
+
         {/* 스크롤 앵커 */}
         <div ref={messagesEndRef} />
       </div>
-      
-        {!isAutoScrollEnabled && (
-          <div className="absolute bottom-4 right-4 z-10">
+
+      {!isAutoScrollEnabled && (
+        <div className="absolute bottom-4 right-4 z-10">
           <button
-              onClick={() => {
+            onClick={() => {
               setIsAutoScrollEnabled(true);
               forceScrollToBottom(true);
-              }}
-              className="bg-[#005de9] hover:bg-blue-600 text-white  w-8 h-8 rounded-full shadow-sm transition-transform duration-200 flex items-center justify-center group hover:scale-105"
-              title="최신 메시지로 이동하고 자동 스크롤 활성화"
+            }}
+            className="bg-[#005de9] hover:bg-blue-600 text-white  w-8 h-8 rounded-full shadow-sm transition-transform duration-200 flex items-center justify-center group hover:scale-105"
+            title="최신 메시지로 이동하고 자동 스크롤 활성화"
           >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
+            </svg>
           </button>
-          </div>
+        </div>
       )}
     </div>
   );
