@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
 import { ChatMessage } from "@/_types/store/aiChatStore.types";
 import { Undo2, ThumbsUp, ThumbsDown } from 'lucide-react';
@@ -11,6 +12,7 @@ import RollbackAlert from './RollbackAlert';
 const AiChatViewer = () => {
   const messages = aiChatStore((state) => state.messages);
   const isSendingMessage = aiChatStore((state) => state.isSendingMessage);
+  const rollbackMessage = aiChatStore((state) => state.rollbackMessage);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
@@ -19,6 +21,7 @@ const AiChatViewer = () => {
   const [messageRatings, setMessageRatings] = useState<Record<string, 'like' | 'dislike' | null>>({});
   const [showRollbackAlert, setShowRollbackAlert] = useState(false);
   const [dontShowRollbackAlert, setDontShowRollbackAlert] = useState(false);
+  const [pendingRollbackMessageId, setPendingRollbackMessageId] = useState<string | null>(null);
   
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('ko-KR', {
@@ -102,16 +105,24 @@ const AiChatViewer = () => {
 
 
   const handleRollBackButtonClick = (messageId?: string) => {
-    if (!dontShowRollbackAlert) {
-      setShowRollbackAlert(true);
-    } else {
-      executeRollback(messageId);
+    if (messageId) {
+      setPendingRollbackMessageId(messageId);
+      if (!dontShowRollbackAlert) {
+        setShowRollbackAlert(true);
+      } else {
+        executeRollback(messageId);
+      }
     }
   }
 
   const executeRollback = (messageId?: string) => {
-    console.log('RollBack button clicked for message ID:', messageId);
-    // 실제 롤백 로직 구현
+    const targetMessageId = messageId || pendingRollbackMessageId;
+    if (targetMessageId) {
+      console.log('RollBack button clicked for message ID:', targetMessageId);
+      rollbackMessage(targetMessageId);
+      // 롤백 후 상태 초기화
+      setPendingRollbackMessageId(null);
+    }
   }
 
   // 좋아요/싫어요 버튼 핸들러
@@ -173,7 +184,10 @@ const AiChatViewer = () => {
       {/* 롤백 확인 알림창 */}
       <RollbackAlert
         isOpen={showRollbackAlert}
-        onClose={() => setShowRollbackAlert(false)}
+        onClose={() => {
+          setShowRollbackAlert(false);
+          setPendingRollbackMessageId(null);
+        }}
         onConfirm={() => executeRollback()}
         dontShowAgain={dontShowRollbackAlert}
         onDontShowAgainChange={setDontShowRollbackAlert}
@@ -191,10 +205,12 @@ const AiChatViewer = () => {
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-700">
             <div className="text-center">
-              <img
+              <Image
                 src="/EXTION_new_logo.svg"
                 alt="Extion Logo"
-                className="mx-auto mb-4 w-16 h-16"
+                width={64}
+                height={64}
+                className="mx-auto mb-4"
               />
               <div className="text-xl mb-2">채팅으로 데이터 수정</div>
               <div className="text-sm">아래 입력창에 메시지를 입력하세요</div>

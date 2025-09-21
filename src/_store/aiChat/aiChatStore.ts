@@ -23,6 +23,7 @@ interface ChatActions {
     addErrorMessage: (content: string) => void;
     addAiMessage: (aiChatApiRes: aiChatApiRes) => void;
     addLoadedPreviousMessages: (previousMessagesContent: previousMessagesContent[]) => void;
+    rollbackMessage: (userMessageId: string) => void;
 
     // UI 상태 관련
     setIsSendingMessage: (sending: boolean) => void;
@@ -212,6 +213,24 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
               }
           });
       }));
+    },
+
+    // 롤백 기능: 특정 사용자 메시지와 그 이후의 모든 메시지 삭제
+    rollbackMessage: (userMessageId: string) => {
+        set(produce((state: AiChatState) => {
+            // 해당 사용자 메시지의 인덱스 찾기
+            const userMessageIndex = state.messages.findIndex(msg => msg.id === userMessageId && msg.type === 'user');
+            
+            if (userMessageIndex !== -1) {
+                // 해당 사용자 메시지와 그 이후의 모든 메시지들을 제거
+                state.messages = state.messages.slice(0, userMessageIndex);
+                
+                // 관련 상태도 초기화
+                state.currentAssistantMessageId = null;
+                state.isSendingMessage = false;
+                state.aiThinkingIndicatorVisible = false;
+            }
+        }));
     },
 
     // UI 상태 관련
