@@ -240,7 +240,7 @@ const AiChatViewer = () => {
       {rollbackError && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mx-2 mt-2">
           <div className="flex justify-between items-center">
-            <span>롤백 중 오류가 발생했습니다: {rollbackError}</span>
+            <span>An error occurred during rollback: {rollbackError}</span>
             <button
               onClick={() => {
                 // 에러 상태 초기화는 다음 롤백 시도 시 자동으로 처리됨
@@ -284,8 +284,8 @@ const AiChatViewer = () => {
                 height={64}
                 className="mx-auto mb-4"
               />
-              <div className="text-xl mb-2">채팅으로 데이터 수정</div>
-              <div className="text-sm">아래 입력창에 메시지를 입력하세요</div>
+              <div className="text-xl mb-2">Edit Data with Chat</div>
+              <div className="text-sm">Enter your message in the input field below</div>
             </div>
           </div>
         ) : (
@@ -317,7 +317,7 @@ const AiChatViewer = () => {
                             ? 'text-gray-400 cursor-not-allowed'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                           }`}
-                        title={isRollbackLoading ? "롤백 중..." : "메시지 보내기 전으로 롤백"}
+                        title={isRollbackLoading ? "Rolling back..." : "Rollback to before sending message"}
                       >
                         <Undo2 size={16} />
                       </button>
@@ -327,7 +327,7 @@ const AiChatViewer = () => {
                             ? 'text-[#005de9] bg-gray-200'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                           }`}
-                        title="좋아요"
+                        title="Like"
                       >
                         <ThumbsUp size={16} />
                       </button>
@@ -337,7 +337,7 @@ const AiChatViewer = () => {
                             ? 'text-[#005de9] bg-gray-200'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                           }`}
-                        title="싫어요"
+                        title="Dislike"
                       >
                         <ThumbsDown size={16} />
                       </button>
@@ -386,7 +386,7 @@ const AiChatViewer = () => {
               forceScrollToBottom(true);
             }}
             className="bg-[#005de9] hover:bg-blue-600 text-white  w-8 h-8 rounded-full shadow-sm transition-transform duration-200 flex items-center justify-center group hover:scale-105"
-            title="최신 메시지로 이동하고 자동 스크롤 활성화"
+            title="Go to latest message and enable auto-scroll"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />

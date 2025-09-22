@@ -10,14 +10,14 @@ interface RenderProgress {
 }
 
 interface UseSheetRenderOptions {
-  maxDirectLoadSize?: number; // 직접 로드 가능한 최대 파일 크기 (기본: 10MB)
+  maxDirectLoadSize?: number; // 직접 로드 가능한 최대 파일 크기 (기본: 50MB)
   onSuccess?: (fileName: string) => void;
   onError?: (error: Error, fileName: string) => void;
 }
 
 export const useSheetRender = (options: UseSheetRenderOptions = {}) => {
   const {
-    maxDirectLoadSize = 10 * 1024 * 1024, // 10MB
+    maxDirectLoadSize = 50 * 1024 * 1024, // 50MB
     onSuccess,
     onError
   } = options;

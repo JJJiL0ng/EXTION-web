@@ -17,7 +17,7 @@ interface ChatInputBoxProps {
 }
 
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
-  placeholder = "수정사항을 입력하세요...",
+  placeholder = "Enter your changes...",
   disabled = false,
   userId = getOrCreateGuestId(),
   onFileAddClick
@@ -122,7 +122,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                     >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left ">
-                      agent <span className="text-xs text-gray-500">변경사항 자동 적용</span>
+                      agent <span className="text-xs text-gray-500">Auto apply changes</span>
                       </span>
                       {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
                       <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
@@ -140,7 +140,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                     >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left">
-                      edit <span className="text-xs text-gray-500">변경사항 수동 적용</span>
+                      edit <span className="text-xs text-gray-500">Manual apply changes</span>
                       </span>
                       <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
                       {mode === 'edit' ? <Check size={16} /> : null}
@@ -213,7 +213,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                 ? 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
                 : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
               }`}
-            title={!isConnected ? 'AI 서버 연결 중...' : '메시지 전송'}
+            title={!isConnected ? 'Connecting to AI server...' : 'Send message'}
           >
             {isSendingMessage ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -5,42 +5,42 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
 
-    <!-- 메인 홈페이지 -->
+    <!-- Main homepage -->
     <url>
-        <loc>https://extion.co</loc>
+        <loc>https://extion.ai</loc>
         <lastmod>2025-01-01</lastmod>
         <changefreq>weekly</changefreq>
         <priority>1.0</priority>
         
-        <!-- 메인 데모 영상 정보 -->
+        <!-- Main demo video information -->
         <video:video>
-            <video:thumbnail_loc>https://video.extion.co/main-demo-thum.png</video:thumbnail_loc>
-            <video:title>Extion Demo - 자연어로 엑셀 작업하기</video:title>
-            <video:description>자연어 명령어로 엑셀 표 정리, 차트 생성, 데이터 분석을 자동화하는 Extion의 실제 사용 화면</video:description>
-            <video:content_loc>https://video.extion.co/main-demo.MP4</video:content_loc>
+            <video:thumbnail_loc>https://video.extion.ai/main-demo-thum.png</video:thumbnail_loc>
+            <video:title>Extion Demo - Excel Automation with Natural Language</video:title>
+            <video:description>Automate Excel table organization, chart creation, and data analysis with natural language commands using Extion</video:description>
+            <video:content_loc>https://video.extion.ai/main-demo.MP4</video:content_loc>
             <video:duration>30</video:duration>
             <video:family_friendly>yes</video:family_friendly>
         </video:video>
         
-        <!-- 메인 이미지 정보 -->
+        <!-- Main image information -->
         <image:image>
-            <image:loc>https://extion.co/og-image.jpg</image:loc>
-            <image:title>Extion - 함수 몰라도 되는 엑셀 AI 도구</image:title>
-            <image:caption>자연어로 엑셀 작업을 자동화하는 AI 도구</image:caption>
+            <image:loc>https://extion.ai/og-image.jpg</image:loc>
+            <image:title>Extion - Excel AI Tool, No Formulas Required</image:title>
+            <image:caption>AI tool that automates Excel tasks with natural language</image:caption>
         </image:image>
     </url>
 
-    <!-- 개인정보 처리방침 (베타 신청 시 필요) -->
+    <!-- Privacy Policy (required for beta signup) -->
     <url>
-        <loc>https://extion.co/privacy</loc>
+        <loc>https://extion.ai/privacy</loc>
         <lastmod>2025-01-01</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.5</priority>
     </url>
 
-    <!-- 이용약관 -->
+    <!-- Terms of Service -->
     <url>
-        <loc>https://extion.co/terms</loc>
+        <loc>https://extion.ai/terms</loc>
         <lastmod>2025-01-01</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.4</priority>

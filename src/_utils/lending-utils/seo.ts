@@ -13,7 +13,7 @@ export function generateMetadata({
   description,
   keywords = [],
   image = '/og-image.jpg',
-  url = 'https://extion.app'
+  url = 'https://extion.ai'
 }: SEOProps): Metadata {
   return {
     title,

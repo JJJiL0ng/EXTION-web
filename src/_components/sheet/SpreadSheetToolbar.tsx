@@ -2,22 +2,22 @@ import React from 'react';
 import Image from 'next/image';
 
 interface SpreadSheetToolbarProps {
-    // 내보내기 관련
+    // Export related
     onSaveAsExcel: () => void;
     onSaveAsCSV: () => void;
     onSaveAsJSON: () => void;
     isExporting: boolean;
 
-    // 새 스프레드시트
+    // New spreadsheet
     onNewSpreadsheet: () => void;
 
-    // (옵션) 업로드 관련 - 현재는 상위(Main)에서 관리
+    // (Optional) Upload related - currently managed by parent (Main)
     onFileUpload?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     isUploading?: boolean;
 }
 
 /**
- * 스프레드시트 상단 툴바 컴포넌트
+ * Spreadsheet top toolbar component
  */
 export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
     onSaveAsExcel,
@@ -29,7 +29,7 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
     return (
         <div className="w-full h-6 bg-white flex items-center px-2 box-border">
             <div className="flex items-center space-x-6">
-                {/* 홈으로 가기 */}
+                {/* Home */}
                 <button
                     onClick={() => window.location.href = '/dashboard'}
                     className="px-2 pl-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
@@ -41,21 +41,21 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                     onClick={() => window.location.href = '/dashboard'}
                     className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
                 >
-                    홈
+                    Home
                 </button>
 
-                {/* 파일 업로드 input은 상위(Main)에서 관리 */}
+                {/* File upload input is managed by parent (Main) */}
 
-                {/* 내보내기 드롭다운 */}
+                {/* Export dropdown */}
                 <div className="relative group">
                     <button className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center">
-                        내보내기
+                        Export
                         <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
 
-                    {/* 드롭다운 메뉴 */}
+                    {/* Dropdown menu */}
                     <div className="absolute left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
                         <div className="py-1">
                             <button
@@ -72,24 +72,24 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                             >
                                 CSV (.csv)
                             </button>
-                            <button
+                            {/* <button
                                 onClick={onSaveAsJSON}
                                 disabled={isExporting}
                                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 JSON (.json)
-                            </button>
+                            </button> */}
                         </div>
                     </div>
                 </div>
 
-                {/* 새 스프레드시트 */}
-                <button
+                {/* New spreadsheet */}
+                {/* <button
                     onClick={onNewSpreadsheet}
                     className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
                 >
-                    시트 초기화
-                </button>
+                    Reset Sheet
+                </button> */}
             </div>
         </div>
     );

@@ -8,6 +8,7 @@ import { useGenerateSpreadSheetId } from '../../../../_hooks/sheet/common/useGen
 import { useGenerateChatId } from '../../../../_hooks/aiChat/useGenerateChatId';
 import useChatStore from '@/_store/chat/chatIdAndChatSessionIdStore'
 import {useSpreadSheetVersionStore} from '@/_store/sheet/spreadSheetVersionIdStore';
+import Link from 'next/link'
 // 클라이언트에서만 실행되는 인터랙티브 버튼들
 export function HeroButtons() {
   const router = useRouter()
@@ -147,7 +148,11 @@ export function HeroButtons() {
         variant="outline"
         size="lg"
         className="px-2 py-2 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 w-[150px] sm:w-[160px] rounded-full"
-        onClick={handleNewSheetClick}
+        onClick={() => {
+          if (typeof window !== 'undefined') {
+        window.open('https://discord.gg/4BS9TxG8MA', '_blank', 'noopener,noreferrer');
+          }
+        }}
       >
         <span className="flex items-center gap-2">
           Discord

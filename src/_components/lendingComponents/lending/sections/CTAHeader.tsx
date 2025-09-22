@@ -49,7 +49,7 @@ export function CTAHeader() {
         {/* 판매자 정보 */}
         <div itemProp="seller" itemScope itemType="https://schema.org/Organization">
           <meta itemProp="name" content="Extion" />
-          <meta itemProp="url" content="https://extion.app" />
+          <meta itemProp="url" content="https://extion.ai" />
         </div>
       </div>
     </div>

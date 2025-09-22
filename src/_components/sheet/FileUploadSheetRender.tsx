@@ -119,10 +119,10 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                             </div>
 
                             <h3 className="text-xl font-semibold text-gray-700 mb-2 text-center">
-                                파일을 업로드하여 시작하세요
+                                Upload a file to get started
                             </h3>
                             <p className="text-gray-500 text-sm text-center">
-                                Excel, CSV, JSON 파일을 지원합니다
+                                Supports Excel, CSV, and JSON files
                             </p>
                         </div>
 
@@ -142,14 +142,14 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                                     <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                     </svg>
-                                    <p className="font-medium">파일을 여기에 놓아주세요</p>
+                                    <p className="font-medium">Drop your file here</p>
                                 </div>
                             ) : (
                                 <div className="text-gray-500">
                                     <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                     </svg>
-                                    <p className="font-medium mb-1">파일을 드래그하여 놓거나</p>
+                                    <p className="font-medium mb-1">Drag and drop your file or</p>
                                     <button
                                         onClick={onUploadButtonClick}
                                         disabled={uploadState.isUploading || !isUploadEnabled}
@@ -159,9 +159,9 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                                                 : "text-gray-400 cursor-not-allowed"
                                         }`}
                                     >
-                                        {loading ? "데이터 확인 중..." : 
-                                         exists === true ? "데이터가 이미 존재합니다" :
-                                         "여기를 클릭하여 선택"}
+                                        {loading ? "Checking data..." : 
+                                         exists === true ? "Data already exists" :
+                                         "click here to select"}
                                     </button>
                                 </div>
                             )}
@@ -172,14 +172,14 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                             <div className="flex items-center justify-center gap-2 text-blue-600">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                                 <span className="text-sm">
-                                    {uploadState.isProcessing ? `처리 중... ${uploadState.progress}%` : '업로드 중...'}
+                                    {uploadState.isProcessing ? `Processing... ${uploadState.progress}%` : 'Uploading...'}
                                 </span>
                             </div>
                         )}
 
                         {/* 지원 파일 형식 안내 */}
                         <div className="text-xs text-gray-400 mt-4">
-                            지원 형식: .xlsx, .xls, .csv, .json (최대 50MB)
+                            Supported formats: .xlsx, .xls, .csv (max 50MB)
                         </div>
                     </div>
                 </div>
@@ -193,7 +193,7 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                             <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            <p className="font-semibold">파일을 여기에 놓아주세요</p>
+                            <p className="font-semibold">Drop your file here</p>
                         </div>
                     </div>
                 </div>

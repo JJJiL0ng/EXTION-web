@@ -11,7 +11,7 @@ Disallow: /admin/
 Disallow: /private/
 
 # 사이트맵 위치 알려주기
-Sitemap: https://extion.app/sitemap.xml
+Sitemap: https://extion.ai/sitemap.xml
 
 # 주요 검색엔진별 특별 설정
 User-agent: Googlebot
