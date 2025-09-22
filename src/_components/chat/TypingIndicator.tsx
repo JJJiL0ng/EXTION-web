@@ -21,7 +21,6 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({
   dotCount = 3,
   sizePx = 12,
   variant = "wave",
-  message = "시트 데이터 분석 중…",
   showHelperAfterMs = 1800,
   showHelper = true,
 }) => {

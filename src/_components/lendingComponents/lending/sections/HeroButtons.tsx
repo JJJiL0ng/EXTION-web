@@ -1,10 +1,14 @@
 'use client'
 
+import Image from 'next/image'
 import { Button } from '@/_components/lendingComponents/lending-common-ui/Button'
 import { scrollToElement } from '@/_utils/lending-utils/lending-utils'
 import { useRouter } from 'next/navigation'
 import { useGenerateSpreadSheetId } from '../../../../_hooks/sheet/common/useGenerateSpreadSheetId'
-import { useGenerateChatId } from '../../../../_hooks/chat/useGenerateChatId';
+import { useGenerateChatId } from '../../../../_hooks/aiChat/useGenerateChatId';
+import useChatStore from '@/_store/chat/chatIdAndChatSessionIdStore'
+import {useSpreadSheetVersionStore} from '@/_store/sheet/spreadSheetVersionIdStore';
+import Link from 'next/link'
 // 클라이언트에서만 실행되는 인터랙티브 버튼들
 export function HeroButtons() {
   const router = useRouter()
@@ -22,6 +26,7 @@ export function HeroButtons() {
     }
   }
 
+
   const handleDemoClick = () => {
     scrollToElement('demo-video', 80)
 
@@ -34,8 +39,16 @@ export function HeroButtons() {
       })
     }
   }
+  // spreadSheetId, chatId 생상
   const { generateSpreadSheetId } = useGenerateSpreadSheetId();
   const { generateChatId } = useGenerateChatId();
+
+  // chatSessionId 초기화 
+  const resetChatSessionId = useChatStore((state) => state.resetChatSessionId);
+  const { resetSpreadSheetVersion, resetEditLockVersion } = useSpreadSheetVersionStore();
+
+
+
 
   // handleFileChange를 컴포넌트 내부로 이동
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,6 +84,17 @@ export function HeroButtons() {
       const spreadsheetId = generateSpreadSheetId();
       const chatId = generateChatId();
 
+      resetChatSessionId(); // chatSessionId 초기화
+      resetSpreadSheetVersion(); // spreadSheetVersionId 초기화
+      resetEditLockVersion(); // editLockVersion 초기화
+
+      // 디버깅: 초기화 후 로컬 스토리지 상태 확인 (약간의 지연 후)
+      setTimeout(() => {
+        console.log('Reset 후 로컬 스토리지 상태:', localStorage.getItem('spreadsheet-version-storage'));
+        console.log('Reset 후 스토어 상태:', useSpreadSheetVersionStore.getState());
+      }, 100);
+
+
       // 새 창에서 sheetchat 페이지 열기
       const url = `/sheetchat/${spreadsheetId}/${chatId}`;
       window.open(url, '_blank');
@@ -89,8 +113,20 @@ export function HeroButtons() {
 
   // 새 시트 생성 버튼 클릭 핸들러
   const handleNewSheetClick = () => {
+    // ID 생성 및 초기화
+    resetChatSessionId(); // chatSessionId 초기화
+    resetSpreadSheetVersion(); // spreadSheetVersionId 초기화
+    resetEditLockVersion(); // editLockVersion 초기화
+
+    // 디버깅 로그
+    setTimeout(() => {
+      console.log('handleNewSheetClick - Reset 후 로컬 스토리지:', localStorage.getItem('spreadsheet-version-storage'));
+      console.log('handleNewSheetClick - Reset 후 스토어 상태:', useSpreadSheetVersionStore.getState());
+    }, 100);
+
     window.open(createNewSheetChatUrl(), '_blank');
   };
+
 
   return (
     <div className="flex flex-row gap-4 sm:gap-6 justify-center items-center mb-8 lg:mb-12">
@@ -101,10 +137,10 @@ export function HeroButtons() {
         onClick={handleNewSheetClick}
       >
         <span className="flex items-center gap-2">
-          start for free
+          Start for free
           {/* <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg> */}
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg> */}
         </span>
       </Button>
 
@@ -112,10 +148,15 @@ export function HeroButtons() {
         variant="outline"
         size="lg"
         className="px-2 py-2 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 w-[150px] sm:w-[160px] rounded-full"
-        onClick={handleNewSheetClick}
+        onClick={() => {
+          if (typeof window !== 'undefined') {
+        window.open('https://discord.gg/4BS9TxG8MA', '_blank', 'noopener,noreferrer');
+          }
+        }}
       >
         <span className="flex items-center gap-2">
-          demo
+          Discord
+          <Image src="/discord.png" alt="Discord logo" width={24} height={24} className="inline-block" />
         </span>
       </Button>
     </div >

@@ -43,7 +43,7 @@ export function CTASection() {
         <div className="hidden">
           <div itemScope itemType="https://schema.org/Organization">
             <meta itemProp="name" content="Extion" />
-            <meta itemProp="url" content="https://extion.app" />
+            <meta itemProp="url" content="https://extion.ai" />
             <meta itemProp="description" content="AI 기반 엑셀 자동화 도구" />
           </div>
           
@@ -56,7 +56,7 @@ export function CTASection() {
             <meta itemProp="eventStatus" content="https://schema.org/EventScheduled" />
             <meta itemProp="eventAttendanceMode" content="https://schema.org/OnlineEventAttendanceMode" />
             <div itemProp="location" itemScope itemType="https://schema.org/VirtualLocation">
-              <meta itemProp="url" content="https://extion.app" />
+              <meta itemProp="url" content="https://extion.ai" />
             </div>
           </div>
         </div>

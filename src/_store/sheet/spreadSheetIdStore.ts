@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 
 interface SSpreadsheetState {
-  spreadsheetId: string | null;
-  setSpreadsheetId: (newSpreadsheetId: string) => void;
-  resetSpreadsheetId: () => void;
+  spreadSheetId: string | null;
+  setSpreadSheetId: (newSpreadSheetId: string) => void;
+  resetSpreadSheetId: () => void;
 }
 
-const useSpreadsheetIdStore = create<SSpreadsheetState>((set) => ({
-  spreadsheetId: null,
-  setSpreadsheetId: (newSpreadsheetId) => set({ spreadsheetId: newSpreadsheetId }),
-  resetSpreadsheetId: () => set({ spreadsheetId: null }),
+const useSpreadSheetIdStore = create<SSpreadsheetState>((set) => ({
+  spreadSheetId: null,
+  setSpreadSheetId: (newSpreadSheetId) => set({ spreadSheetId: newSpreadSheetId }),
+  resetSpreadSheetId: () => set({ spreadSheetId: null }),
 }));
 
-export default useSpreadsheetIdStore;
+export default useSpreadSheetIdStore;

@@ -141,7 +141,7 @@ export function generateCTAStructuredData() {
     "seller": {
       "@type": "Organization",
       "name": "Extion",
-      "url": "https://extion.app"
+      "url": "https://extion.ai",
     }
   }
 }

@@ -10,14 +10,14 @@ interface RenderProgress {
 }
 
 interface UseSheetRenderOptions {
-  maxDirectLoadSize?: number; // 직접 로드 가능한 최대 파일 크기 (기본: 10MB)
+  maxDirectLoadSize?: number; // 직접 로드 가능한 최대 파일 크기 (기본: 50MB)
   onSuccess?: (fileName: string) => void;
   onError?: (error: Error, fileName: string) => void;
 }
 
 export const useSheetRender = (options: UseSheetRenderOptions = {}) => {
   const {
-    maxDirectLoadSize = 10 * 1024 * 1024, // 10MB
+    maxDirectLoadSize = 50 * 1024 * 1024, // 50MB
     onSuccess,
     onError
   } = options;
@@ -282,9 +282,106 @@ export const useSheetRender = (options: UseSheetRenderOptions = {}) => {
     onError
   ]);
 
+  // 백엔드 데이터를 파일 업로드처럼 처리하는 함수
+  const renderBackendData = useCallback(async (
+    jsonData: any, 
+    spreadInstance: any, 
+    fileName: string = 'backend-data.json'
+  ): Promise<void> => {
+    console.log('📊 [renderBackendData] 백엔드 데이터 렌더링 시작:', { fileName, hasData: !!jsonData });
+    
+    // SpreadJS 인스턴스 검증
+    if (!spreadInstance) {
+      const error = new Error('SpreadJS 인스턴스가 초기화되지 않았습니다.');
+      setRenderState(prev => ({ ...prev, error: error.message }));
+      onError?.(error, fileName);
+      return;
+    }
+
+    // 데이터 유효성 검증
+    if (!jsonData) {
+      const error = new Error('렌더링할 데이터가 없습니다.');
+      setRenderState(prev => ({ ...prev, error: error.message }));
+      onError?.(error, fileName);
+      return;
+    }
+
+    // 렌더링 시작 상태 설정
+    setRenderState({
+      isRendering: true,
+      isProcessing: false,
+      progress: 0,
+      fileName,
+      error: null
+    });
+
+    try {
+      updateProgress(25);
+      console.log('📄 [renderBackendData] JSON 데이터 처리 시작...');
+
+      if (spreadInstance) {
+        const sheet = spreadInstance.getActiveSheet();
+        if (sheet) {
+          sheet.suspendPaint();
+        }
+
+        try {
+          updateProgress(50);
+
+          // useSheetRender와 동일한 옵션 사용
+          const deserializationOptions = {
+            ignoreFormula: false,
+            ignoreStyle: false,
+            includeBindingSource: true,
+            includeUnsupportedFormula: true,
+            includeUnsupportedStyle: true
+          };
+
+          updateProgress(75);
+          console.log('🔄 [renderBackendData] SpreadJS fromJSON 실행 중...');
+          await spreadInstance.fromJSON(jsonData, deserializationOptions);
+          updateProgress(100);
+
+          console.log('✅ [renderBackendData] 백엔드 데이터 렌더링 완료');
+
+        } finally {
+          if (sheet) {
+            sheet.resumePaint();
+          }
+        }
+      }
+
+      // 성공 처리
+      setRenderState(prev => ({
+        ...prev,
+        isRendering: false,
+        isProcessing: false,
+        progress: 100
+      }));
+
+      onSuccess?.(fileName);
+
+    } catch (error) {
+      console.error('❌ [renderBackendData] 백엔드 데이터 렌더링 실패:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : '백엔드 데이터 렌더링 중 오류가 발생했습니다.';
+      
+      setRenderState(prev => ({
+        ...prev,
+        isRendering: false,
+        isProcessing: false,
+        progress: 0,
+        error: errorMessage
+      }));
+
+      onError?.(error instanceof Error ? error : new Error(errorMessage), fileName);
+    }
+  }, [updateProgress, onSuccess, onError]);
+
   return {
     renderState,
     renderFile,
+    renderBackendData,
     resetState,
     validateFile
   };

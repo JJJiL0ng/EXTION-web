@@ -1,14 +1,12 @@
 // aiChat 스토어를 사용하여 채팅 상태 및 메시지 관리를 담당
 
-import { AiChatState, WebSocketConnectionStatus, MessageStatus, ChatMessage } from "@/_types/store/aiChatStore.types";
+import { AiChatState, WebSocketConnectionStatus, MessageStatus, ChatMessage, previousMessagesContent } from "@/_types/store/aiChatStore.types";
 
 import { create } from 'zustand';
 import { produce } from 'immer'; // 불변성 관리를 위해 immer 사용
 import { v4 as uuidv4 } from 'uuid'; // 고유 ID 생성을 위해 uuid 라이브러리 사용
-import { aiChatApiRes } from "@/_types/ai-chat-api/aiChatApi.types";
-import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
-import useChatStore from '@/_store/chat/chatIdStore'
-import { TaskManagerOutput } from "@/_types/ai-chat-api/task.types";
+import { aiChatApiRes } from "@/_types/apiConnector/ai-chat-api/aiChatApi.types";
+import useChatStore from '@/_store/chat/chatIdAndChatSessionIdStore'
 
 interface ChatActions {
     // 상태 설정 관련
@@ -16,7 +14,7 @@ interface ChatActions {
     setWebsocketId: (id: string) => void;
 
     // 메시지 관련
-    addUserMessage: (content: string) => string;
+    addUserMessage: (content: string, userChatSessionBranchId: string) => string;
     updateAssistantMessage: (id: string, newContentChunk: string) => void;
     completeAssistantMessage: (id: string) => void;
     setAssistantMessageError: (id: string, errorContent: string) => void;
@@ -24,6 +22,8 @@ interface ChatActions {
     addSystemMessage: (content: string) => void;
     addErrorMessage: (content: string) => void;
     addAiMessage: (aiChatApiRes: aiChatApiRes) => void;
+    addLoadedPreviousMessages: (previousMessagesContent: previousMessagesContent[]) => void;
+    rollbackMessage: (userMessageId: string) => void;
 
     // UI 상태 관련
     setIsSendingMessage: (sending: boolean) => void;
@@ -32,7 +32,7 @@ interface ChatActions {
 
 //chatid 스토어에서 chatid 가져오기
 const ChatId = useChatStore.getState().chatId;
-
+const ChatSessionId = useChatStore.getState().chatSessionId;
 // -----------------------------------------------------------
 // 2. Zustand 스토어 생성
 // -----------------------------------------------------------
@@ -40,6 +40,7 @@ const ChatId = useChatStore.getState().chatId;
 export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
     // 초기 상태
     chatId: ChatId,
+    chatSessionId: ChatSessionId,
     messages: [],
     webSocket: null,
     wsConnectionStatus: 'disconnected',
@@ -62,9 +63,9 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
     setWebsocketId: (id: string) => set({ websocketId: id }),
 
     // 사용자 메시지 추가 (낙관적 UI)
-    addUserMessage: (content: string) => {
+    addUserMessage: (content: string, userChatSessionBranchId: string) => {
         const newMessage: ChatMessage = {
-            id: uuidv4(),
+            id: userChatSessionBranchId,
             type: 'user',
             content,
             timestamp: Date.now(),
@@ -162,20 +163,73 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
         const aiResponse: aiChatApiRes = 'dataEditCommands' in aiChatApiRes
             ? {
                 jobId: uuidv4(),
+                chatSessionId: aiChatApiRes.chatSessionId,
                 taskManagerOutput: aiChatApiRes.taskManagerOutput,
-                dataEditChatRes: aiChatApiRes.dataEditChatRes
+                dataEditChatRes: aiChatApiRes.dataEditChatRes,
+                spreadSheetVersionId: aiChatApiRes.spreadSheetVersionId,
+                editLockVersion: aiChatApiRes.editLockVersion || 1,
               }
             : aiChatApiRes;
 
         const newMessage: ChatMessage = {
             id: uuidv4(),
             type: 'assistant',
-            content: aiResponse,
+            aiChatRes: aiResponse,
             timestamp: Date.now(),
             status: 'completed',
+            content: aiResponse.taskManagerOutput.reason,
         };
         set(produce((state: AiChatState) => {
             state.messages.push(newMessage);
+        }));
+    },
+    addLoadedPreviousMessages: (previousMessagesContent: previousMessagesContent[]) => {
+      // 백엔드에서 내려온 기존 히스토리(user/assistant 역할 + content) 배열을 ChatMessage 형태로 변환하여 스토어에 적재
+      set(produce((state: AiChatState) => {
+          // 1) 기존 메시지 초기화
+          state.messages = [];
+
+          // 2) 변환 및 push
+          const baseTime = Date.now();
+          previousMessagesContent.forEach((m, idx) => {
+              if (m.role === 'user') {
+                  state.messages.push({
+                      id: uuidv4(),
+                      type: 'user',
+                      content: m.content,
+                      timestamp: baseTime + idx, // 단조 증가 보장
+                      // 이미 서버에 존재하는 과거 메시지이므로 'sent' 로 표기 (UI에서 재전송 동작 X)
+                      status: 'sent'
+                  });
+              } else if (m.role === 'assistant') {
+                  state.messages.push({
+                      id: uuidv4(),
+                      type: 'assistant',
+                      content: m.content,
+                      timestamp: baseTime + idx,
+                      status: 'completed',
+                      isStreaming: false
+                  });
+              }
+          });
+      }));
+    },
+
+    // 롤백 기능: 특정 사용자 메시지와 그 이후의 모든 메시지 삭제
+    rollbackMessage: (userMessageId: string) => {
+        set(produce((state: AiChatState) => {
+            // 해당 사용자 메시지의 인덱스 찾기
+            const userMessageIndex = state.messages.findIndex(msg => msg.id === userMessageId && msg.type === 'user');
+            
+            if (userMessageIndex !== -1) {
+                // 해당 사용자 메시지와 그 이후의 모든 메시지들을 제거
+                state.messages = state.messages.slice(0, userMessageIndex);
+                
+                // 관련 상태도 초기화
+                state.currentAssistantMessageId = null;
+                state.isSendingMessage = false;
+                state.aiThinkingIndicatorVisible = false;
+            }
         }));
     },
 

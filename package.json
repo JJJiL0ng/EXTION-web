@@ -19,6 +19,8 @@
     "@mescius/spread-sheets-react": "^18.1.4",
     "@mescius/spread-sheets-resources-ko": "^18.1.4",
     "@mescius/spread-sheets-shapes": "^18.1.4",
+    "@tanstack/react-query": "^5.87.4",
+    "@tanstack/react-query-devtools": "^5.87.4",
     "@types/papaparse": "^5.3.16",
     "@types/recharts": "^2.0.1",
     "@types/styled-components": "^5.1.34",

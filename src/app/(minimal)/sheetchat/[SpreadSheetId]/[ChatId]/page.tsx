@@ -2,12 +2,12 @@
 
 import FileUploadContainer from "@/_components/chat/FileUploadChattingContainer";
 import dynamic from "next/dynamic";
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisibilityContext";
 import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
 import { useParams } from "next/navigation";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
-import useChatStore from "@/_store/chat/chatIdStore";
+import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
 import { enableMapSet } from 'immer';
 
 
@@ -23,15 +23,15 @@ const MainSpreadSheet = dynamic(
 
 export default function Home() {
   const params = useParams();
-  const { setSpreadsheetId } = useSpreadsheetIdStore();
+  const { setSpreadSheetId } = useSpreadsheetIdStore();
   const { setChatId } = useChatStore();
   
   const [leftWidth, setLeftWidth] = useState(75); // 초기값 70%
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // spreadjs 컨텍스트 인스턴스를 담은 인스턴스
-  const spreadRef = useRef<any>(null);
+  // spreadjs 컨텍스트 인스턴스를 담은 인스턴스 - 페이지 이동해도 유지되도록 useMemo 사용
+  const spreadRef = useMemo(() => ({ current: null }), []);
 
 
   // URL 파라미터에서 spreadsheetId와 chatId를 추출하여 store에 저장
@@ -40,7 +40,7 @@ export default function Home() {
     
     if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
       console.log('📊 [Page] Setting spreadsheetId:', params.SpreadSheetId);
-      setSpreadsheetId(params.SpreadSheetId);
+      setSpreadSheetId(params.SpreadSheetId);
     }
     
     if (params?.ChatId && typeof params.ChatId === 'string') {
@@ -50,11 +50,11 @@ export default function Home() {
 
     // 저장된 값 확인
     setTimeout(() => {
-      const { spreadsheetId } = useSpreadsheetIdStore.getState();
+      const { spreadSheetId } = useSpreadsheetIdStore.getState();
       const { chatId } = useChatStore.getState();
-      console.log('✅ [Page] Stored values:', { spreadsheetId, chatId });
+      console.log('✅ [Page] Stored values:', { spreadSheetId, chatId });
     }, 100);
-  }, [params, setSpreadsheetId, setChatId]);
+  }, [params, setSpreadSheetId, setChatId]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -127,6 +127,7 @@ function HomeContent({
   spreadRef
 }: HomeContentProps) {
   const { isChatVisible } = useChatVisibility();
+  
 
 
 
@@ -148,7 +149,7 @@ function HomeContent({
           className={`
             w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize 
             relative group transition-colors duration-200
-            ${isDragging ? 'bg-blue-500' : ''}
+            ${isDragging ? 'bg-[#005de9]' : ''}
           `}
           onMouseDown={handleMouseDown}
         >

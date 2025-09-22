@@ -3,13 +3,12 @@ import { configurePerformanceSettings, setupDefaultData, setupDefaultStyles } fr
 
 interface UseSpreadJSInitProps {
     spreadRef: MutableRefObject<any>;
-    deltaManager?: any;
 }
 
 /**
  * SpreadJS 초기화 및 설정을 담당하는 훅
  */
-export const useSpreadJSInit = ({ spreadRef, deltaManager }: UseSpreadJSInitProps) => {
+export const useSpreadJSInit = ({ spreadRef }: UseSpreadJSInitProps) => {
     
     /**
      * SpreadJS 인스턴스 초기화
@@ -53,14 +52,7 @@ export const useSpreadJSInit = ({ spreadRef, deltaManager }: UseSpreadJSInitProp
                     sheet.resumePaint();
                 }
             }
-
-            // 델타 자동저장을 위한 이벤트 리스너 설정 (선택적)
-            if (deltaManager?.setupEventListeners) {
-                const cleanupDeltaListeners = deltaManager.setupEventListeners(spread);
-                // 정리 함수를 나중에 사용하기 위해 저장
-                (spread as any)._deltaCleanup = cleanupDeltaListeners;
-            }
-
+           
             console.log('✅ SpreadJS 초기화 완료 - 최적화된 설정 적용');
 
         } catch (error) {
@@ -70,7 +62,7 @@ export const useSpreadJSInit = ({ spreadRef, deltaManager }: UseSpreadJSInitProp
                 spreadRef.current = spread;
             }
         }
-    }, [spreadRef, deltaManager]);
+    }, [spreadRef]);
 
     /**
      * 새로운 스프레드시트 생성

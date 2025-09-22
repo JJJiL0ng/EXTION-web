@@ -2,12 +2,13 @@ import type { Metadata } from 'next'
 import { generateMetadata } from '@/_utils/lending-utils/seo'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import QueryProvider from '@/_providers/QueryProvider'
 import './globals.css'
 
 export const metadata: Metadata = generateMetadata({
-  title: '엑션 - 함수 몰라도 되는 엑셀 AI 도구',
-  description: '자연어로 엑셀 작업하기. 말 한마디로 표 정리, 차트 생성, 데이터 추출까지 자동화',
-  keywords: ['엑셀', '엑셀 AI', '엑셀 함수', '액샐 그래프', '엑셀 자동화' , '엑션' , 'extion' , '엑셀 Gpt']
+  title: 'Extion - sheet AI Agent, No Formulas Required',
+  description: 'Work with Excel using natural language. Automate table organization, chart creation, and data extraction with just a single command',
+  keywords: ['Excel', 'Excel AI', 'Excel formulas', 'Excel charts', 'Excel automation', 'Extion', 'Excel GPT', 'AI spreadsheet', 'data analysis']
 })
 
 export default function RootLayout({
@@ -16,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ko">
+    <html lang="en">
       <head>
         {/* 기본 구조화된 데이터 (JSON-LD) - 조직 정보 */}
         <script
@@ -26,17 +27,17 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "Extion",
-              "url": "https://extion.app",
-              "logo": "https://extion.app/logo.png",
-              "description": "자연어로 엑셀 작업을 자동화하는 AI 도구 개발사",
+              "url": "https://extion.ai",
+              "logo": "https://extion.ai/logo.png",
+              "description": "AI tool company that automates Excel tasks with natural language",
               "foundingDate": "2024",
               "contactPoint": {
                 "@type": "ContactPoint",
                 "contactType": "customer service",
-                "email": "support@extion.app"
+                "email": "jihong9412@gmail.com"
               },
               "sameAs": [
-                "https://twitter.com/extion_app"
+                "https://twitter.com/extion.official"
               ]
             })
           }}
@@ -50,11 +51,11 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebSite",
               "name": "Extion",
-              "url": "https://extion.app",
-              "description": "자연어로 엑셀 작업을 자동화하는 AI 도구",
+              "url": "https://extion.ai",
+              "description": "AI tool that automates Excel tasks with natural language",
               "potentialAction": {
                 "@type": "SearchAction",
-                "target": "https://extion.app/search?q={search_term_string}",
+                "target": "https://extion.ai/search?q={search_term_string}",
                 "query-input": "required name=search_term_string"
               }
             })
@@ -62,7 +63,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased min-h-screen">
+        <QueryProvider>
           {children}
+        </QueryProvider>
         <Analytics /> 
         <SpeedInsights />
       </body>

@@ -1,23 +1,24 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-
+import useFileNameStore from '@/_store/sheet/fileNameStore';
+import { renameSheet } from '@/_hooks/sheet/fileName/useRename';
 interface SpreadSheetToolbarProps {
-    // 내보내기 관련
+    // Export related
     onSaveAsExcel: () => void;
     onSaveAsCSV: () => void;
     onSaveAsJSON: () => void;
     isExporting: boolean;
 
-    // 새 스프레드시트
+    // New spreadsheet
     onNewSpreadsheet: () => void;
 
-    // (옵션) 업로드 관련 - 현재는 상위(Main)에서 관리
+    // (Optional) Upload related - currently managed by parent (Main)
     onFileUpload?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     isUploading?: boolean;
 }
 
 /**
- * 스프레드시트 상단 툴바 컴포넌트
+ * Spreadsheet top toolbar component
  */
 export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
     onSaveAsExcel,
@@ -26,10 +27,84 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
     isExporting,
     onNewSpreadsheet
 }) => {
+    const fileName = useFileNameStore((state) => state.fileName);
+    const setFileName = useFileNameStore((state) => state.setFileName);
+    
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState('');
+    const [previousFileName, setPreviousFileName] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // 편집 모드 시작
+    const handleEditStart = () => {
+        if (fileName) {
+            setEditValue(fileName);
+            setIsEditing(true);
+        }
+    };
+
+    // 편집 완료
+    const handleEditComplete = async () => {
+        if (editValue.trim() && editValue !== fileName) {
+            // 기존 파일명을 임시 저장
+            setPreviousFileName(fileName);
+
+            try {
+                const response = await renameSheet(editValue.trim());
+                if (response.success) {
+                    console.log('✅ 파일 이름 변경 완료:', editValue.trim());
+                    // renameSheet에서 이미 스토어를 업데이트했으므로 여기서는 추가 작업 불필요
+                    setPreviousFileName(null);
+                } else {
+                    console.error('❌ 파일 이름 변경 실패:', response);
+                    // 실패 시 이전 파일명으로 복원
+                    if (previousFileName) {
+                        setFileName(previousFileName);
+                        setEditValue(previousFileName);
+                    }
+                    setPreviousFileName(null);
+                }
+            } catch (error) {
+                console.error('❌ 파일 이름 변경 실패:', error);
+                // 실패 시 이전 파일명으로 복원
+                if (previousFileName) {
+                    setFileName(previousFileName);
+                    setEditValue(previousFileName);
+                }
+                setPreviousFileName(null);
+            }
+        }
+        setIsEditing(false);
+    };
+
+    // 편집 취소
+    const handleEditCancel = () => {
+        setEditValue(fileName || '');
+        setIsEditing(false);
+    };
+
+    // 키보드 이벤트 처리
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleEditComplete();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            handleEditCancel();
+        }
+    };
+
+    // 편집 모드가 시작되면 input에 포커스
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [isEditing]);
     return (
         <div className="w-full h-6 bg-white flex items-center px-2 box-border">
             <div className="flex items-center space-x-6">
-                {/* 홈으로 가기 */}
+                {/* Home */}
                 <button
                     onClick={() => window.location.href = '/dashboard'}
                     className="px-2 pl-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
@@ -37,25 +112,43 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                     <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
                 </button>
 
-                <button
-                    onClick={() => window.location.href = '/dashboard'}
-                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-                >
-                    홈
-                </button>
+                {/* File name display/edit */}
+                {fileName && (
+                    <div className="relative">
+                        {isEditing ? (
+                            <input
+                                ref={inputRef}
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={handleEditComplete}
+                                onKeyDown={handleKeyDown}
+                                className="px-2 py-1 text-sm text-gray-700 font-medium bg-white border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
+                                placeholder="Enter file name"
+                            />
+                        ) : (
+                            <button
+                                onClick={handleEditStart}
+                                className="px-2 py-1 text-sm text-gray-700 font-medium hover:bg-gray-100 rounded-md cursor-text transition-colors duration-150"
+                                title="Click to rename file"
+                            >
+                                {fileName}
+                            </button>
+                        )}
+                    </div>
+                )}
+               
+                {/* File upload input is managed by parent (Main) */}
 
-                {/* 파일 업로드 input은 상위(Main)에서 관리 */}
-
-                {/* 내보내기 드롭다운 */}
+                {/* Export dropdown */}
                 <div className="relative group">
                     <button className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center">
-                        내보내기
+                        Export
                         <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
 
-                    {/* 드롭다운 메뉴 */}
+                    {/* Dropdown menu */}
                     <div className="absolute left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
                         <div className="py-1">
                             <button
@@ -72,24 +165,24 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                             >
                                 CSV (.csv)
                             </button>
-                            <button
+                            {/* <button
                                 onClick={onSaveAsJSON}
                                 disabled={isExporting}
                                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 JSON (.json)
-                            </button>
+                            </button> */}
                         </div>
                     </div>
                 </div>
 
-                {/* 새 스프레드시트 */}
-                <button
+                {/* New spreadsheet */}
+                {/* <button
                     onClick={onNewSpreadsheet}
                     className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
                 >
-                    시트 초기화
-                </button>
+                    Reset Sheet
+                </button> */}
             </div>
         </div>
     );

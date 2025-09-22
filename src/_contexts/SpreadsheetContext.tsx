@@ -1,4 +1,4 @@
-import React, { createContext, useContext, MutableRefObject, useEffect, useState } from 'react';
+import React, { createContext, useContext, MutableRefObject, useEffect, useState, useRef } from 'react';
 
 // Context 타입 정의
 interface SpreadsheetContextType {
@@ -26,6 +26,7 @@ export const SpreadsheetProvider: React.FC<SpreadsheetProviderProps> = ({
   // SpreadJS 인스턴스를 보관 (ref가 아닌 instance)
   const [spread, setSpread] = useState<any | null>(null);
   const [isSpreadReady, setIsSpreadReady] = useState(false);
+  const hasLoggedReady = useRef(false);
 
   // ref.current 변화를 폴링하여 instance 저장
   useEffect(() => {
@@ -34,17 +35,18 @@ export const SpreadsheetProvider: React.FC<SpreadsheetProviderProps> = ({
       setSpread((prev: any | null) => (prev !== instance ? instance : prev));
       const ready = !!instance;
       setIsSpreadReady(ready);
-      if (ready) {
+      if (ready && !hasLoggedReady.current) {
         console.log('✅ SpreadsheetContext Ready (instance detected)');
+        hasLoggedReady.current = true;
       }
     };
 
     // 초기 체크 및 폴링 시작
     check();
     const interval = setInterval(check, 100);
-    if (isSpreadReady) clearInterval(interval);
+    
     return () => clearInterval(interval);
-  }, [spreadRef, isSpreadReady]);
+  }, [spreadRef]); // isSpreadReady 의존성 제거 - 폴링 중단 방지
 
   const contextValue: SpreadsheetContextType = {
     spread,

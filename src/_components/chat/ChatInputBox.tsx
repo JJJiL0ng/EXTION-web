@@ -1,42 +1,14 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { ChevronDown, Check, ReceiptPoundSterling} from 'lucide-react';
-import { useChatMode, ChatMode } from '../../_hooks/chat/useChatMode';
+import React from 'react';
+import { ChevronDown, Check } from 'lucide-react';
+import { ChatMode } from '../../_hooks/aiChat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
-import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName'
 import FileAddButton from './FileAddButton';
-import { useSelectedSheetInfoStore } from '../../_hooks/sheet/common/useSelectedSheetInfoStore';
-import { aiChatStore } from '@/_store/aiChat/aiChatStore';
-import useSpreadsheetIdStore from '@/_store/sheet/spreadSheetIdStore'
-import { getOrCreateGuestId } from '../../_utils/guestUtils'
-import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore'
-import useChatIdStore from '@/_store/chat/chatIdStore'
-
-import { useAiChatApiConnector } from '@/_hooks/aiChat/useAiChatApiConnector'; 
-import { aiChatApiReq } from '@/_types/ai-chat-api/aiChatApi.types';
-
-import applyDataEditCommands from '@/_utils/sheet/applyDataEditCommands';
-import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
-
-import { dataEditChatRes } from "@/_types/ai-chat-api/dataEdit.types";
-
-
-// 브라우저 Web Crypto API 사용 + 폴백
-const safeRandomUUID = () => {
-  try {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-  } catch (_) {
-    // ignore
-  }
-  // 간단한 폴백 (충돌 가능성 낮음)
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-};
+import { getOrCreateGuestId } from '../../_utils/guestUtils';
+import { useChatInputBoxHook } from '../../_hooks/aiChat/useChatInputBoxHook';
 
 interface ChatInputBoxProps {
-  // onSendMessage?: (message: string, mode: ChatMode, model: Model, selectedFile?: File) => void;
   onSendMessage?: (message: string, mode: ChatMode, selectedFile?: File) => void;
   placeholder?: string;
   disabled?: boolean;
@@ -44,264 +16,39 @@ interface ChatInputBoxProps {
   onFileAddClick?: () => void;
 }
 
-// type Model = 'Claude-sonnet-4' | 'OpenAi-GPT-4o' | 'Gemini-2.5-pro';
-
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
-  // onSendMessage,
-  placeholder = "수정사항을 입력하세요...",
+  placeholder = "Enter your changes...",
   disabled = false,
-  userId = getOrCreateGuestId(), // Guest ID 사용
+  userId = getOrCreateGuestId(),
   onFileAddClick
 }) => {
-  const [message, setMessage] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  // const [model, setModel] = useState<Model>('Claude-sonnet-4');
-  const [showModeModal, setShowModeModal] = useState(false);
-  // const [showModelModal, setShowModelModal] = useState(false);
-  const [isComposing, setIsComposing] = useState(false); // IME 입력 상태 추가
-  const [isFocused, setIsFocused] = useState(false); // 포커스 상태 관리
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const modeModalRef = useRef<HTMLDivElement>(null);
-
-  // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
-  const { spread } = useSpreadsheetContext();
-  spread.options.allowDynamicArray = true; // 동적 배열 허용
-
-  // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
-  const { mode, setMode } = useChatMode();
-
-  // useSelectedSheetInfoStore 훅 사용
-  const { selectedSheets, removeSelectedSheet, addSelectedSheet, renameSelectedSheet } = useSelectedSheetInfoStore();
-
-  // aiChatStore 훅 사용
-  const { addUserMessage, isSendingMessage, setIsSendingMessage } = aiChatStore();
-
-  // AI Chat API Connector 훅 사용
-  const { isConnected, isConnecting, connect, executeAiJob } = useAiChatApiConnector();
-
-
-  // AI Chat API 서버 연결
-  React.useEffect(() => {
-    const connectToAiChatServer = async () => {
-      console.log('🔄 [ChatInputBox] Connection effect triggered:', { 
-        isConnected, 
-        isConnecting,
-        shouldConnect: !isConnected && !isConnecting 
-      });
-      
-      if (!isConnected && !isConnecting) {
-        try {
-          console.log('🔌 [ChatInputBox] Attempting to connect to AI Chat server');
-          const serverUrl = process.env.NEXT_PUBLIC_API_URL || 'ws://localhost:8080';
-          console.log('🔌 [ChatInputBox] Using server URL:', serverUrl);
-          
-          await connect(serverUrl);
-          console.log('✅ [ChatInputBox] Successfully connected to AI Chat server');
-        } catch (error) {
-          console.error('❌ [ChatInputBox] Failed to connect to AI Chat server:', error);
-        }
-      } else if (isConnected) {
-        console.log('✅ [ChatInputBox] Already connected to AI Chat server');
-      } else if (isConnecting) {
-        console.log('⏳ [ChatInputBox] Connection in progress...');
-      }
-    };
-
-    connectToAiChatServer();
-  }, [isConnected, isConnecting, connect]);
-
-  // 연결 상태 변화 로깅
-  React.useEffect(() => {
-    console.log('🔗 [ChatInputBox] Connection status changed:', {
-      isConnected,
-      isConnecting,
-      timestamp: new Date().toISOString()
-    });
-  }, [isConnected, isConnecting]);
-
-  // 컴포넌트 언마운트 로깅
-  React.useEffect(() => {
-    return () => {
-      console.log('🏗️ [ChatInputBox] Component unmounting');
-    };
-  }, []);
-
-  const handleSend = async () => {
-    if (message.trim() || selectedFile) {
-      // 전송 상태 시작
-      setIsSendingMessage(true);
-      
-      const messageToSend = message;
-      // const fileToSend = selectedFile;
-      const selectedSheetsToSend = selectedSheets; // 선택된 시트 정보 포함
-
-      // 메시지 전송 전에 입력창 초기화
-      setMessage('');
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-
-      // textarea 포커스 해제 후 다시 포커스를 주어 IME 상태를 초기화
-      if (textareaRef.current) {
-        textareaRef.current.blur();
-        setTimeout(() => {
-          textareaRef.current?.focus();
-        }, 0);
-      }
-
-      try {
-        // 선택된 시트 정보와 함께 메시지 전송
-        console.log('🚀 [ChatInputBox] Sending message with selected sheets:', selectedSheetsToSend);
-        console.log('🚀 [ChatInputBox] Message content:', messageToSend);
-        console.log('🚀 [ChatInputBox] Chat mode:', mode);
-        console.log('🚀 [ChatInputBox] About to call addUserMessage');
-        
-        const messageId = addUserMessage(messageToSend);
-        
-        console.log('✅ [ChatInputBox] User message added to store:', {
-          messageId,
-          content: messageToSend,
-          timestamp: Date.now()
-        });
-        
-        // Store 상태 확인
-        console.log('📊 [ChatInputBox] Current store state:', aiChatStore.getState());
-
-        // AI Chat API 호출
-        if (isConnected) {
-          console.log('🤖 [ChatInputBox] Starting AI job execution');
-          console.log('🔗 [ChatInputBox] Connection status:', { isConnected, isConnecting });
-          
-          const aiChatApiRequest: aiChatApiReq = {
-            spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!,
-            chatId: useChatIdStore.getState().chatId!,
-            userId: userId,
-            chatMode: mode,
-            userQuestionMessage: messageToSend,
-            parsedSheetNames: useSpreadsheetNamesStore.getState().selectedSheets.map((s) => s.name),
-            jobId: `jobId_${safeRandomUUID()}`,
-          };
-
-          console.log('📤 [ChatInputBox] AI request payload:', aiChatApiRequest);
-
-          try {
-            const result = await executeAiJob(aiChatApiRequest);
-            console.log('🎉 [ChatInputBox] AI job completed successfully:', result);
-            
-            // AI 응답을 채팅 스토어에 추가
-            if (result) {
-              // addAiMessage(aiChatApiRes, tasksRes)
-              aiChatStore.getState().addAiMessage(result);
-            }
-            applyDataEditCommands({ dataEditChatRes: result.dataEditChatRes as dataEditChatRes, spread: spread });
-
-          } catch (aiError) {
-            console.error('❌ [ChatInputBox] AI job failed:', aiError);
-            // TODO: 에러 메시지를 사용자에게 표시
-          }
-        } else {
-          console.warn('⚠️ [ChatInputBox] Not connected to AI server, skipping AI job');
-        }
-        
-      } catch (error) {
-        console.error('❌ [ChatInputBox] Message sending failed:', error);
-      } finally {
-        // 전송 상태 해제
-        console.log('🏁 [ChatInputBox] Finishing message send process');
-        setIsSendingMessage(false);
-      }
-    }
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
-      event.preventDefault();
-      // disabled 상태일 때는 전송하지 않음
-      if (!disabled && !isSendingMessage && (message.trim() || selectedFile)) {
-        handleSend();
-      }
-    }
-  };
-
-  // IME 입력 시작 시 호출
-  const handleCompositionStart = () => {
-    setIsComposing(true);
-  };
-
-  // IME 입력 종료 시 호출
-  const handleCompositionEnd = () => {
-    setIsComposing(false);
-  };
-
-  // 포커스 이벤트 핸들러
-  const handleFocus = () => {
-    setIsFocused(true);
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-  };
-
-  const adjustTextareaHeight = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      const scrollHeight = textareaRef.current.scrollHeight;
-      const maxHeight = 120; // 최대 높이 제한
-      textareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
-    }
-  };
-
-  React.useEffect(() => {
-    adjustTextareaHeight();
-  }, [message]);
-
-  // 모달 외부 클릭 시 닫기 (수정된 버전)
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-
-      // 모드 모달 외부 클릭 확인
-      if (showModeModal && modeModalRef.current && !modeModalRef.current.contains(target)) {
-        setShowModeModal(false);
-      }
-
-      // 모델 모달 외부 클릭 확인
-      // if (showModelModal && modelModalRef.current && !modelModalRef.current.contains(target)) {
-      //   setShowModelModal(false);
-      // }
-    };
-
-    if (showModeModal) { // || showModelModal
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showModeModal]); // , showModelModal
-
-  const { activeSheetName } = useGetActiveSheetName();
-  // 최초 1회만 activeSheetName을 기본 선택으로 추가
-  const didInitDefaultSelection = React.useRef(false);
-  React.useEffect(() => {
-    if (didInitDefaultSelection.current) return;
-    if (!activeSheetName) return;
-    if (selectedSheets.length > 0) {
-      didInitDefaultSelection.current = true;
-      return;
-    }
-    addSelectedSheet(activeSheetName);
-    didInitDefaultSelection.current = true;
-  }, [activeSheetName, selectedSheets.length, addSelectedSheet]);
-
-  // 활성 시트명이 변경될 때, 선택된 칩이 하나인 경우 실시간으로 이름 동기화
-  React.useEffect(() => {
-    if (!activeSheetName) return;
-    if (selectedSheets.length !== 1) return; // 여러 개 선택된 경우엔 사용자 선택을 존중
-    const currentName = selectedSheets[0]?.name;
-    if (currentName && currentName !== activeSheetName) {
-      renameSelectedSheet(currentName, activeSheetName);
-    }
-  }, [activeSheetName, selectedSheets, renameSelectedSheet]);
+  const {
+    // State
+    message,
+    setMessage,
+    selectedFile,
+    showModeModal,
+    setShowModeModal,
+    isFocused,
+    mode,
+    setMode,
+    selectedSheets,
+    removeSelectedSheet,
+    isSendingMessage,
+    isConnected,
+    
+    // Refs
+    textareaRef,
+    modeModalRef,
+    
+    // Handlers
+    handleSend,
+    handleKeyDown,
+    handleCompositionStart,
+    handleCompositionEnd,
+    handleFocus,
+    handleBlur,
+  } = useChatInputBoxHook({ userId });
 
   return (
     <div className="p-2 mx-auto justify-center w-full max-full">
@@ -375,7 +122,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                     >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left ">
-                      agent <span className="text-xs text-gray-500">변경사항 자동 적용</span>
+                      agent <span className="text-xs text-gray-500">Auto apply changes</span>
                       </span>
                       {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
                       <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
@@ -393,7 +140,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                     >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left">
-                      edit <span className="text-xs text-gray-500">변경사항 수동 적용</span>
+                      edit <span className="text-xs text-gray-500">Manual apply changes</span>
                       </span>
                       <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
                       {mode === 'edit' ? <Check size={16} /> : null}
@@ -466,7 +213,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                 ? 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
                 : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
               }`}
-            title={!isConnected ? 'AI 서버 연결 중...' : '메시지 전송'}
+            title={!isConnected ? 'Connecting to AI server...' : 'Send message'}
           >
             {isSendingMessage ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

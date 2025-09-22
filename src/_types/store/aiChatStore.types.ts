@@ -1,4 +1,5 @@
-import { aiChatApiRes } from "../ai-chat-api/aiChatApi.types";
+import { aiChatApiRes } from "../apiConnector/ai-chat-api/aiChatApi.types";
+import { TaskManagerOutput } from "../apiConnector/ai-chat-api/task.types";
 
 export type MessageStatus = 'pending' | 'sent' | 'streaming' | 'completed' | 'error';
 
@@ -16,7 +17,8 @@ export interface UserMessage extends BaseMessage {
 
 export interface AssistantMessage extends BaseMessage {
   type: 'assistant';
-  content: aiChatApiRes; // AssistantMessage는 둘 다 가능
+  content: string; // taskManagerOutput.reason 타입이 들어갈 예정
+  aiChatRes?: aiChatApiRes; // AssistantMessage는 둘 다 가능
 }
 
 export interface SystemMessage extends BaseMessage {
@@ -39,7 +41,8 @@ export type WebSocketConnectionStatus = 'disconnected' | 'connecting' | 'connect
 
 // aiChatState + userid + spreadsheetid + parsedSheetNames 
 export interface AiChatState {
-  chatId: string | null; // 현재 채팅 세션 ID
+  // chatId: string | null; // 현재 채팅 컨테이너 id
+  // chatSessionId: string | null; // 현재 채팅 세션 id (새로운 대화 시작시마다 변경)
   messages: ChatMessage[]; // 전체 채팅 메시지 배열
   webSocket: WebSocket | null; // 현재 연결된 WebSocket 인스턴스
   wsConnectionStatus: WebSocketConnectionStatus; // 웹소켓 연결 상태
@@ -49,4 +52,11 @@ export interface AiChatState {
   isTyping: boolean;
   isSendingMessage: boolean;
   aiThinkingIndicatorVisible: boolean;
+}
+
+
+// 기존 채팅 히스토리를 볼러올때 사용
+export interface previousMessagesContent {
+    role: 'user' | 'assistant';
+    content: string;
 }

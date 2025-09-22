@@ -74,7 +74,7 @@ export default function FileUploadChattingContainer(_props: FileUploadChattingCo
             <div className="text-gray-600 mb-4 text-sm">{wsError}</div>
             <button 
               onClick={clearError}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              className="px-4 py-2 bg-[#005de9] text-white rounded hover:bg-blue-600"
             >
               다시 시도
             </button>

@@ -6,18 +6,17 @@ import { useParams } from 'next/navigation';
 // Hooks
 import { useFileUpload } from '../../_hooks/sheet/file_upload_export/useFileUpload';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
-import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
-import { useSpreadSheetDelta } from '../../_hooks/sheet/data_save/useSpreadSheetDelta';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useUIState } from '../../_hooks/sheet/common/useUIState';
 import { useSpreadJSInit } from '../../_hooks/sheet/spreadjs/useSpreadJSInit';
+import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
 
 // Stores
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
+import useFileNameStore from '@/_store/sheet/fileNameStore';
 
 // Utils
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
-import { FileConverter } from '../../_utils/sheet/fileConverters';
 import { configureLicense } from '../../_utils/sheet/spreadJSConfig';
 
 // Components
@@ -54,9 +53,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // resetUploadState 함수의 ref 저장 (무한 루프 방지)
     const resetUploadStateRef = useRef<(() => void) | null>(null);
 
-    // deltaManager ref 저장 (무한 루프 방지)
-    const deltaManagerRef = useRef<typeof deltaManager | null>(null);
-
     // AI 버튼 클릭 핸들러 - 통합된 상태 사용
     const handleShowChat = useCallback(() => {
         uiActions.setShowChatButton(false); // 즉시 버튼 제거
@@ -76,51 +72,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // 명령어 관리 Hook (page.tsx로 이동됨)
     // const commandManager = useSpreadjsCommandManager(...) 제거됨
 
-    // 스프레드시트 생성 훅
-    const {
-        isCreating,
-        error: createError,
-        createSheetWithDefaults,
-        resetState: resetCreateState,
-        clearError: clearCreateError
-    } = useSheetCreate({
-        onSuccess: (sheet) => {
-            console.log(`✅ 스프레드시트 생성 성공:`, sheet);
-        },
-        onError: (error) => {
-            console.error(`❌ 스프레드시트 생성 실패:`, error);
-            alert(`스프레드시트 생성 중 오류가 발생했습니다: ${error.message}`);
-        }
-    });
-
-    // 델타 자동저장 훅
-    const deltaManager = useSpreadSheetDelta({
-        userId: userId,
-        spreadsheetId: spreadSheetId,
-        batchTimeout: 500,
-        maxRetries: 3,
-        maxBatchSize: 50,
-        onDeltaApplied: (delta) => {
-            console.log('✅ 델타 적용 성공:', delta);
-        },
-        onError: (error, context) => {
-            console.error('❌ 델타 처리 실패:', error, context);
-
-            // 서버 오류인 경우 사용자에게 알림
-            if (context?.serverError) {
-                console.warn('🚫 백엔드 서버 오류로 인해 자동저장이 비활성화되었습니다.');
-            }
-        },
-        onSync: (syncedDeltas) => {
-            console.log(`🔄 ${syncedDeltas}개 델타 동기화 완료`);
-        }
-    });
 
     // SpreadJS 초기화 훅
     const { initSpread, createNewSpreadsheet } = useSpreadJSInit({
         spreadRef,
-        deltaManager
     });
+
+    // 스프레드시트 생성 훅
+    const { loading: createLoading, error: createError, createSheet, reset: resetCreateState } = useSheetCreate();
 
     // 파일 업로드 훅
     const {
@@ -132,7 +91,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         allowedExtensions: ['xlsx', 'xls', 'csv', 'json'],
         onUploadSuccess: async (fileName: string, fileData: any) => {
             console.log(`✅ 파일 업로드 성공: ${fileName}`);
-
+            useFileNameStore.setState({ fileName }); // 업로드된 파일명 저장
+            
 
             // 첫번째 시트를 활성 시트로 설정
             spreadRef.current.setActiveSheet(0);
@@ -170,13 +130,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
                 console.log('🔄 JSON 변환된 데이터:', jsonData);
 
-                await createSheetWithDefaults(
+                // 업로드(Create)로직 수정 필요
+                await createSheet({
                     fileName, // 업로드된 파일명을 스프레드시트명으로 사용
-                    spreadSheetId, // URL에서 추출한 spreadSheetId
+                    spreadsheetId: spreadSheetId, // URL에서 추출한 spreadSheetId
                     chatId, // URL에서 추출한 chatId
-                    currentUserId, // 사용자 ID (로그인 또는 게스트)
+                    userId: currentUserId, // 사용자 ID (로그인 또는 게스트)
                     jsonData // JSON으로 변환된 파일 데이터를 초기 데이터로 사용
-                );
+                });
             } catch (error) {
                 console.error('스프레드시트 생성 실패:', error);
                 // createSheetWithDefaults의 onError에서 이미 처리됨
@@ -208,7 +169,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     // 함수들을 ref에 저장 (무한 루프 방지)
     resetUploadStateRef.current = resetUploadState;
-    deltaManagerRef.current = deltaManager;
 
     // 메모리 관리를 위한 cleanup 함수
     const handleCleanup = useCallback(() => {
@@ -231,28 +191,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             console.warn('resetCreateState cleanup warning:', error);
         }
 
-        try {
-            clearCreateError();
-        } catch (error) {
-            console.warn('clearCreateError cleanup warning:', error);
-        }
-
         if (spreadRef.current) {
             try {
-                // 델타 이벤트 리스너 정리
-                if ((spreadRef.current as any)._deltaCleanup) {
-                    (spreadRef.current as any)._deltaCleanup();
-                }
-
-                // 남은 델타들 강제 동기화
-                deltaManagerRef.current?.forcSync().catch(console.error);
-
                 spreadRef.current.destroy && spreadRef.current.destroy();
             } catch (error) {
                 console.warn('Cleanup warning:', error);
             }
         }
-    }, [resetExportState, resetCreateState, clearCreateError, spreadRef]);
+    }, [resetExportState, resetCreateState, spreadRef]);
 
     // 컴포넌트 언마운트 시 정리
     useEffect(() => {
@@ -340,6 +286,12 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         const files = e.dataTransfer.files;
         if (!files || files.length === 0) return;
 
+        // 파일 이름들을 콘솔에 출력
+        console.log('📁 드래그&드롭으로 업로드할 파일들:');
+        Array.from(files).forEach((file, index) => {
+            console.log(`  ${index + 1}. ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        });
+
         try {
             await uploadFiles(files);
         } catch (error) {
@@ -347,18 +299,17 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         }
     }, [uploadFiles, uiActions]);
 
-    // 파일 선택 버튼 클릭 (단순화됨)
-    const handleUploadButtonClick = () => {
-        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-        if (fileInput && !uploadState.isUploading) {
-            fileInput.click();
-        }
-    };
 
     // 통합 파일 업로드 핸들러 (단일/다중 자동 처리)
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
+
+        // 파일 이름들을 콘솔에 출력
+        console.log('📁 클릭으로 선택한 파일들:');
+        Array.from(files).forEach((file, index) => {
+            console.log(`  ${index + 1}. ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        });
 
         try {
             // 새로운 통합 업로드 함수 사용
@@ -392,14 +343,14 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 createdAt: new Date().toISOString(),
                 type: 'new_spreadsheet'
             };
-
-            await createSheetWithDefaults(
-                '새 스프레드시트',
-                spreadSheetId,
+            // 업로드(Create)로직 수정 필요
+            await createSheet({
+                fileName: '새 스프레드시트',
+                spreadsheetId: spreadSheetId,
                 chatId,
                 userId,
-                initialJsonData
-            );
+                jsonData: initialJsonData
+            });
 
             // 업로드 상태 초기화
             resetUploadStateRef.current?.();
@@ -433,14 +384,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                         onNewSpreadsheet={handleNewSpreadsheet}
                     />
 
-                    {/* <StatusDisplay
-                        uploadState={uploadState}
-                        exportState={exportState}
-                        isCreating={isCreating}
-                        createError={createError}
-                        deltaManager={deltaManager}
-                    /> */}
-
                     <ChatButton
                         onClick={handleShowChat}
                         isVisible={uiState.showChatButton}
@@ -453,7 +396,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 isFileUploaded={isFileUploaded}
                 isDragActive={uiState.isDragActive}
                 uploadState={uploadState}
-                onUploadButtonClick={handleUploadButtonClick}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}

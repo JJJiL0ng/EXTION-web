@@ -12,7 +12,19 @@ const nextConfig = {
       remotePatterns: [
           {
               protocol: 'https',
-              hostname: 'cdn.extion.app',
+              hostname: 'cdn.extion.ai',
+              port: '',
+              pathname: '/**',
+          },
+          {
+              protocol: 'https',
+              hostname: 'video.extion.ai',
+              port: '',
+              pathname: '/**',
+          },
+            {
+              protocol: 'https',
+              hostname: 'cdn.extion.co',
               port: '',
               pathname: '/**',
           },
