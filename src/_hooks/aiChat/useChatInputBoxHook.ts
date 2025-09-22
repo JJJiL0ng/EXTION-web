@@ -8,7 +8,7 @@ import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore';
 import useChatIdStore from '@/_store/chat/chatIdAndChatSessionIdStore';
 import { useAiChatApiConnector } from './useAiChatApiConnector';
 import { aiChatApiReq } from '@/_types/apiConnector/ai-chat-api/aiChatApi.types';
-import applyDataEditCommands from '@/_utils/sheet/applyCommand/applyDataEditCommands';
+import applyDataEditCommands from '@/_utils/sheet/applyCommand/CommandApplyRouter';
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 import { dataEditChatRes } from "@/_types/apiConnector/ai-chat-api/dataEdit.types";
 import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName';

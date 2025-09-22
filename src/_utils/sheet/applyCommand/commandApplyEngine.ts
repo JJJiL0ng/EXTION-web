@@ -1,7 +1,7 @@
 import { dataEditCommand } from "@/_types/apiConnector/ai-chat-api/dataEdit.types";
 import { StyleCommand } from "@/_types/apiConnector/ai-chat-api/style.types";
 import styleCommandApplyEngine from "./styleCommandApplyEngine";
-
+import addNewSheet from "./detailedCommandApply/addNewSheet";
 
 interface CommandApplyEngineProps {
     dataEditCommand: dataEditCommand;
@@ -97,8 +97,16 @@ const commandApplyEngine = ({ dataEditCommand, spread }: CommandApplyEngineProps
         }
 
         case "sort_data": {
-            const targetSheet = spread.getSheetFromName(sheetName);
-            targetSheet.setFormula(range[0], range[1], detailedCommand);
+            const { uniqueSheetName } = addNewSheet({sheetName, spread}); // 시트 추가, 고유 이름 반환
+            const targetSheet = spread.getSheetFromName(uniqueSheetName); // 새로 추가된 시트 가져오기
+            targetSheet.setFormula(0, 0, detailedCommand); // 정렬 명령어 적용(새로운 시트를 만들고 그위에 수식을 적용시키므로 적용 타겟 셀은 (0,0)임)
+            break;
+        }
+
+        case "filter_data": {
+            const { uniqueSheetName } = addNewSheet({sheetName, spread}); // 시트 추가, 고유 이름 반환
+            const targetSheet = spread.getSheetFromName(uniqueSheetName); // 새로 추가된 시트 가져오기
+            targetSheet.setFormula(0, 0, detailedCommand); // 필터 명령어 적용(새로운 시트를 만들고 그위에 수식을 적용시키므로 적용 타겟 셀은 (0,0)임)
             break;
         }
 

@@ -19,4 +19,5 @@ export enum dataEditCommandType {
     SORT_DATA = 'sort_data',
     APPLY_STYLE = 'apply_style',
     SUMMARY_EDIT_HISTORY = 'summary_edit_history',
+    FIlTer_DATA = 'filter_data',
 }
