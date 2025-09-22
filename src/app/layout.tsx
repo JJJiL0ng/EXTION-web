@@ -6,7 +6,7 @@ import QueryProvider from '@/_providers/QueryProvider'
 import './globals.css'
 
 export const metadata: Metadata = generateMetadata({
-  title: 'Extion - Excel AI Tool, No Formulas Required',
+  title: 'Extion - sheet AI Agent, No Formulas Required',
   description: 'Work with Excel using natural language. Automate table organization, chart creation, and data extraction with just a single command',
   keywords: ['Excel', 'Excel AI', 'Excel formulas', 'Excel charts', 'Excel automation', 'Extion', 'Excel GPT', 'AI spreadsheet', 'data analysis']
 })
