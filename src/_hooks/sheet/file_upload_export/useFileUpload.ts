@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import * as GC from "@mescius/spread-sheets";
-
 interface FileUploadState {
   isUploading: boolean;
   isProcessing: boolean;

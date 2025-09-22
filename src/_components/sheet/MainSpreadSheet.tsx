@@ -13,6 +13,7 @@ import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
 
 // Stores
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
+import useFileNameStore from '@/_store/sheet/fileNameStore';
 
 // Utils
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
@@ -90,7 +91,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         allowedExtensions: ['xlsx', 'xls', 'csv', 'json'],
         onUploadSuccess: async (fileName: string, fileData: any) => {
             console.log(`✅ 파일 업로드 성공: ${fileName}`);
-
+            useFileNameStore.setState({ fileName }); // 업로드된 파일명 저장
+            
 
             // 첫번째 시트를 활성 시트로 설정
             spreadRef.current.setActiveSheet(0);
@@ -284,6 +286,12 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         const files = e.dataTransfer.files;
         if (!files || files.length === 0) return;
 
+        // 파일 이름들을 콘솔에 출력
+        console.log('📁 드래그&드롭으로 업로드할 파일들:');
+        Array.from(files).forEach((file, index) => {
+            console.log(`  ${index + 1}. ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        });
+
         try {
             await uploadFiles(files);
         } catch (error) {
@@ -291,18 +299,17 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         }
     }, [uploadFiles, uiActions]);
 
-    // 파일 선택 버튼 클릭 (단순화됨)
-    const handleUploadButtonClick = () => {
-        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-        if (fileInput && !uploadState.isUploading) {
-            fileInput.click();
-        }
-    };
 
     // 통합 파일 업로드 핸들러 (단일/다중 자동 처리)
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
+
+        // 파일 이름들을 콘솔에 출력
+        console.log('📁 클릭으로 선택한 파일들:');
+        Array.from(files).forEach((file, index) => {
+            console.log(`  ${index + 1}. ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        });
 
         try {
             // 새로운 통합 업로드 함수 사용
@@ -389,7 +396,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 isFileUploaded={isFileUploaded}
                 isDragActive={uiState.isDragActive}
                 uploadState={uploadState}
-                onUploadButtonClick={handleUploadButtonClick}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}

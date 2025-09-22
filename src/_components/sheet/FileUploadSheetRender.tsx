@@ -18,7 +18,7 @@ interface FileUploadSheetRenderProps {
     };
 
     // 이벤트 핸들러
-    onUploadButtonClick: () => void;
+    // onUploadButtonClick: () => void;
 
     // 드래그&드롭 핸들러들
     onDragEnter: (e: React.DragEvent) => void;
@@ -38,7 +38,7 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
     isFileUploaded,
     isDragActive,
     uploadState,
-    onUploadButtonClick,
+    // onUploadButtonClick,
     onDragEnter,
     onDragLeave,
     onDragOver,
@@ -49,7 +49,7 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
     // URL 파라미터와 스토어에서 ID 가져오기
     const { spreadsheetId } = useSpreadsheetIdStore();
     const { chatId } = useChatStore();
-    
+
     // ID들을 안정화하여 불필요한 훅 재실행 방지
     const stableSpreadsheetId = useMemo(() => spreadsheetId || '', [spreadsheetId]);
     const stableChatId = useMemo(() => chatId || '', [chatId]);
@@ -65,13 +65,21 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
         stableSpreadsheetVersionId
     );
 
+    const handleUploadButtonClick = () => {
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+    if (fileInput && !uploadState.isUploading) {
+        fileInput.click();
+    }
+};
+
+
     // exists가 false일 때만 업로드 버튼 활성화
     const isUploadEnabled = exists === false && !loading;
-    
+
     // 상태 변화가 있을 때만 로깅 (무한 로그 방지)
     const statusKey = `${exists}-${loading}-${isUploadEnabled}-${isFileUploaded}`;
     const lastStatusRef = React.useRef<string>('');
-    
+
     React.useEffect(() => {
         if (lastStatusRef.current !== statusKey) {
             console.log('📊 [FileUploadSheetRender] 상태 변화:', {
@@ -121,16 +129,12 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                             <h3 className="text-xl font-semibold text-gray-700 mb-2 text-center">
                                 Upload a file to get started
                             </h3>
-                            <p className="text-gray-500 text-sm text-center">
-                                Supports Excel, CSV, and JSON files
-                            </p>
                         </div>
 
                         {/* 드래그&드롭 영역 */
                         }
                         <div
-                            className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${
-                                !isUploadEnabled 
+                            className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${!isUploadEnabled
                                     ? 'border-gray-200 bg-gray-100 opacity-50'
                                     : isDragActive
                                         ? 'border-[#005de9] bg-blue-50'
@@ -151,17 +155,16 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                                     </svg>
                                     <p className="font-medium mb-1">Drag and drop your file or</p>
                                     <button
-                                        onClick={onUploadButtonClick}
+                                        onClick={handleUploadButtonClick}
                                         disabled={uploadState.isUploading || !isUploadEnabled}
-                                        className={`font-medium underline transition-colors ${
-                                            isUploadEnabled && !uploadState.isUploading
+                                        className={`font-medium underline transition-colors ${isUploadEnabled && !uploadState.isUploading
                                                 ? "text-[#005ed9] hover:text-blue-700"
                                                 : "text-gray-400 cursor-not-allowed"
-                                        }`}
+                                            }`}
                                     >
-                                        {loading ? "Checking data..." : 
-                                         exists === true ? "Data already exists" :
-                                         "click here to select"}
+                                        {loading ? "Checking data..." :
+                                            exists === true ? "Data already exists" :
+                                                "click here to select"}
                                     </button>
                                 </div>
                             )}
