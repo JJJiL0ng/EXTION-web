@@ -120,12 +120,12 @@ export const useCheckAndLoadOnMount = (
     // renderBackendData 함수를 memo화하여 안정화
     const memoizedRenderBackendData = useMemo(() => renderBackendData, [renderBackendData]);
 
-    // 안정적인 값들 추출 (spreadSheetVersionId는 쿼리 키에서만 사용)
-    const responseExists = response?.exists;
-    const responseFileName = response?.fileName;
-    const responseChatHistory = response?.chatHistory;
-    const responseSpreadSheetData = response?.spreadSheetData;
-    const responseSpreadSheetVersionId = response?.spreadSheetVersionId;
+    // 안정적인 값들 추출 - 값이 실제로 변경되었을 때만 리렌더링되도록 memo 사용
+    const responseExists = useMemo(() => response?.exists, [response?.exists]);
+    const responseFileName = useMemo(() => response?.fileName, [response?.fileName]);
+    const responseChatHistory = useMemo(() => response?.chatHistory, [response?.chatHistory]);
+    const responseSpreadSheetData = useMemo(() => response?.spreadSheetData, [response?.spreadSheetData]);
+    const responseSpreadSheetVersionId = useMemo(() => response?.spreadSheetVersionId, [response?.spreadSheetVersionId]);
 
     // 현재 스토어의 버전 ID 가져오기 (중복 업데이트 방지용)
     const currentVersionId = useSpreadSheetVersionStore(state => state.spreadSheetVersionId);
@@ -136,16 +136,9 @@ export const useCheckAndLoadOnMount = (
         if (!isSuccess || !responseExists) {
             return;
         }
-        useFileNameStore.setState({ fileName: responseFileName });
 
-        // spreadSheetVersionId를 상태관리에 저장 (중복 업데이트 방지)
-        if (responseSpreadSheetVersionId && responseSpreadSheetVersionId !== currentVersionId) {
-            console.log('🔄 SpreadSheet Version 업데이트:', responseSpreadSheetVersionId);
-            setSpreadSheetVersion(responseSpreadSheetVersionId);
-        }
-
-        // 응답 ID 생성 (중복 실행 방지용) - 데이터 해시나 고유값 사용
-        const responseId = `${spreadSheetId}-${chatId}-${!!responseSpreadSheetData}-${!!responseChatHistory}`;
+        // 응답 ID 생성 (중복 실행 방지용) - 파일명도 포함하여 중복 처리 방지
+        const responseId = `${spreadSheetId}-${chatId}-${responseFileName}-${!!responseSpreadSheetData}-${!!responseChatHistory}-${responseSpreadSheetVersionId}`;
 
         // 이미 같은 응답을 처리했다면 건너뜀
         if (processedResponsesRef.current.has(responseId)) {
@@ -154,6 +147,18 @@ export const useCheckAndLoadOnMount = (
 
         // 현재 응답 ID를 처리된 목록에 추가
         processedResponsesRef.current.add(responseId);
+
+        // 파일명 업데이트 - 서버에서 오는 응답이므로 setFileNameFromServer 사용
+        if (responseFileName) {
+            console.log('📝 [useCheckAndLoad] 서버로부터 파일명 업데이트 시도:', responseFileName);
+            useFileNameStore.getState().setFileNameFromServer(responseFileName);
+        }
+
+        // spreadSheetVersionId를 상태관리에 저장 (중복 업데이트 방지)
+        if (responseSpreadSheetVersionId && responseSpreadSheetVersionId !== currentVersionId) {
+            console.log('🔄 SpreadSheet Version 업데이트:', responseSpreadSheetVersionId);
+            setSpreadSheetVersion(responseSpreadSheetVersionId);
+        }
 
         // 채팅 히스토리 로드 (한 번만)
         if (responseChatHistory && responseChatHistory.length > 0) {
@@ -214,7 +219,8 @@ export const useCheckAndLoadOnMount = (
         chatId,
         stableAddLoadedPreviousMessages,
         memoizedRenderBackendData,
-        setSpreadSheetVersion
+        setSpreadSheetVersion,
+        responseFileName // responseId에 포함되므로 안전하게 포함
     ]);
 
     // 기존 인터페이스 유지 - exists 필드 추가

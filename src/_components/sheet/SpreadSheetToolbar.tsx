@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import useFileNameStore from '@/_store/sheet/fileNameStore';
-
+import { renameSheet } from '@/_hooks/sheet/fileName/useRename';
 interface SpreadSheetToolbarProps {
     // Export related
     onSaveAsExcel: () => void;
@@ -28,6 +28,79 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
     onNewSpreadsheet
 }) => {
     const fileName = useFileNameStore((state) => state.fileName);
+    const setFileName = useFileNameStore((state) => state.setFileName);
+    
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState('');
+    const [previousFileName, setPreviousFileName] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // 편집 모드 시작
+    const handleEditStart = () => {
+        if (fileName) {
+            setEditValue(fileName);
+            setIsEditing(true);
+        }
+    };
+
+    // 편집 완료
+    const handleEditComplete = async () => {
+        if (editValue.trim() && editValue !== fileName) {
+            // 기존 파일명을 임시 저장
+            setPreviousFileName(fileName);
+
+            try {
+                const response = await renameSheet(editValue.trim());
+                if (response.success) {
+                    console.log('✅ 파일 이름 변경 완료:', editValue.trim());
+                    // renameSheet에서 이미 스토어를 업데이트했으므로 여기서는 추가 작업 불필요
+                    setPreviousFileName(null);
+                } else {
+                    console.error('❌ 파일 이름 변경 실패:', response);
+                    // 실패 시 이전 파일명으로 복원
+                    if (previousFileName) {
+                        setFileName(previousFileName);
+                        setEditValue(previousFileName);
+                    }
+                    setPreviousFileName(null);
+                }
+            } catch (error) {
+                console.error('❌ 파일 이름 변경 실패:', error);
+                // 실패 시 이전 파일명으로 복원
+                if (previousFileName) {
+                    setFileName(previousFileName);
+                    setEditValue(previousFileName);
+                }
+                setPreviousFileName(null);
+            }
+        }
+        setIsEditing(false);
+    };
+
+    // 편집 취소
+    const handleEditCancel = () => {
+        setEditValue(fileName || '');
+        setIsEditing(false);
+    };
+
+    // 키보드 이벤트 처리
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleEditComplete();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            handleEditCancel();
+        }
+    };
+
+    // 편집 모드가 시작되면 input에 포커스
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [isEditing]);
     return (
         <div className="w-full h-6 bg-white flex items-center px-2 box-border">
             <div className="flex items-center space-x-6">
@@ -39,10 +112,28 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                     <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
                 </button>
 
-                {/* File name display */}
+                {/* File name display/edit */}
                 {fileName && (
-                    <div className="py-1 text-sm text-gray-700 font-medium">
-                        {fileName}
+                    <div className="relative">
+                        {isEditing ? (
+                            <input
+                                ref={inputRef}
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={handleEditComplete}
+                                onKeyDown={handleKeyDown}
+                                className="px-2 py-1 text-sm text-gray-700 font-medium bg-white border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
+                                placeholder="Enter file name"
+                            />
+                        ) : (
+                            <button
+                                onClick={handleEditStart}
+                                className="px-2 py-1 text-sm text-gray-700 font-medium hover:bg-gray-100 rounded-md cursor-text transition-colors duration-150"
+                                title="Click to rename file"
+                            >
+                                {fileName}
+                            </button>
+                        )}
                     </div>
                 )}
                
