@@ -9,6 +9,7 @@ export interface CheckAndLoadReq {
 
 export class CheckAndLoadRes {
   exists: boolean = false;
+  fileName: string = '';
   spreadSheetVersionId: string | null = null;
   spreadSheetData?: Record<string, any>;
   chatHistory?: previousMessagesContent[] | null;

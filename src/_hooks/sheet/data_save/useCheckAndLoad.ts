@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/_config/queryConfig';
 import type { CheckAndLoadRes } from '@/_types/apiConnector/check-and-load-api/chectAndLoadApi';
 import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
-
+import useFileNameStore from '@/_store/sheet/fileNameStore';
 /**
  * 컴포넌트 마운트 시, 스프레드시트/채팅 존재 여부를 서버에 확인하고(필요 시 로드)하는 커스텀 훅.
  * TanStack Query 기반으로 개선된 버전
@@ -67,7 +67,7 @@ export const useCheckAndLoadOnMount = (
 
         return undefined;
     }, [queryClient, spreadSheetId, chatId, userId, spreadSheetVersionId]);
-    
+
     // useSheetRender 훅 사용 - 백엔드 데이터를 파일 업로드처럼 처리
     const { renderBackendData, renderState } = useSheetRender({
         onSuccess: (fileName) => {
@@ -122,6 +122,7 @@ export const useCheckAndLoadOnMount = (
 
     // 안정적인 값들 추출 (spreadSheetVersionId는 쿼리 키에서만 사용)
     const responseExists = response?.exists;
+    const responseFileName = response?.fileName;
     const responseChatHistory = response?.chatHistory;
     const responseSpreadSheetData = response?.spreadSheetData;
     const responseSpreadSheetVersionId = response?.spreadSheetVersionId;
@@ -135,6 +136,7 @@ export const useCheckAndLoadOnMount = (
         if (!isSuccess || !responseExists) {
             return;
         }
+        useFileNameStore.setState({ fileName: responseFileName });
 
         // spreadSheetVersionId를 상태관리에 저장 (중복 업데이트 방지)
         if (responseSpreadSheetVersionId && responseSpreadSheetVersionId !== currentVersionId) {
@@ -219,11 +221,11 @@ export const useCheckAndLoadOnMount = (
     const exists = response?.exists ?? null;
 
     // exists와 렌더링 상태 정보 반환 (기존 인터페이스 유지)
-    return { 
-        exists, 
-        loading, 
+    return {
+        exists,
+        loading,
         error: error as Error | null,
         renderState,  // useSheetRender의 상태 정보
-        response 
+        response
     };
 };

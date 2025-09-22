@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import useFileNameStore from '@/_store/sheet/fileNameStore';
 
 interface SpreadSheetToolbarProps {
     // Export related
@@ -26,6 +27,7 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
     isExporting,
     onNewSpreadsheet
 }) => {
+    const fileName = useFileNameStore((state) => state.fileName);
     return (
         <div className="w-full h-6 bg-white flex items-center px-2 box-border">
             <div className="flex items-center space-x-6">
@@ -37,13 +39,13 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                     <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
                 </button>
 
-                <button
-                    onClick={() => window.location.href = '/dashboard'}
-                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-                >
-                    Home
-                </button>
-
+                {/* File name display */}
+                {fileName && (
+                    <div className="py-1 text-sm text-gray-700 font-medium">
+                        {fileName}
+                    </div>
+                )}
+               
                 {/* File upload input is managed by parent (Main) */}
 
                 {/* Export dropdown */}
