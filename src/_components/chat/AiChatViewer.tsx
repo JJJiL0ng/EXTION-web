@@ -133,7 +133,7 @@ const AiChatViewer = () => {
 
       try {
         // 필요한 정보 수집
-        const spreadsheetId = useSpreadsheetIdStore.getState().spreadsheetId;
+        const spreadsheetId = useSpreadsheetIdStore.getState().spreadSheetId;
         const { chatId, chatSessionId } = useChatStore.getState();
 
         if (!spreadsheetId) {

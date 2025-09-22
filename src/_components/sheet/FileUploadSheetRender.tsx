@@ -47,11 +47,11 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
     hostStyle
 }) => {
     // URL 파라미터와 스토어에서 ID 가져오기
-    const { spreadsheetId } = useSpreadsheetIdStore();
+    const { spreadSheetId } = useSpreadsheetIdStore();
     const { chatId } = useChatStore();
 
     // ID들을 안정화하여 불필요한 훅 재실행 방지
-    const stableSpreadsheetId = useMemo(() => spreadsheetId || '', [spreadsheetId]);
+    const stableSpreadsheetId = useMemo(() => spreadSheetId || '', [spreadSheetId]);
     const stableChatId = useMemo(() => chatId || '', [chatId]);
     const stableUserId = useMemo(() => getOrCreateGuestId(), []);
     const stableSpreadsheetVersionId = useSpreadSheetVersionStore((state) => state.spreadSheetVersionId);

@@ -223,7 +223,7 @@ export const useChatInputBoxHook = ({
 
 
           const aiChatApiRequest: aiChatApiReq = {
-            spreadsheetId: useSpreadsheetIdStore.getState().spreadsheetId!,
+            spreadsheetId: useSpreadsheetIdStore.getState().spreadSheetId!,
             chatId: useChatIdStore.getState().chatId!,
             chatSessionId: useChatIdStore.getState().chatSessionId,
             userChatSessionBranchId: userChatSessionBranchId,

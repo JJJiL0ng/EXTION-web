@@ -23,7 +23,7 @@ const MainSpreadSheet = dynamic(
 
 export default function Home() {
   const params = useParams();
-  const { setSpreadsheetId } = useSpreadsheetIdStore();
+  const { setSpreadSheetId } = useSpreadsheetIdStore();
   const { setChatId } = useChatStore();
   
   const [leftWidth, setLeftWidth] = useState(75); // 초기값 70%
@@ -40,7 +40,7 @@ export default function Home() {
     
     if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
       console.log('📊 [Page] Setting spreadsheetId:', params.SpreadSheetId);
-      setSpreadsheetId(params.SpreadSheetId);
+      setSpreadSheetId(params.SpreadSheetId);
     }
     
     if (params?.ChatId && typeof params.ChatId === 'string') {
@@ -50,11 +50,11 @@ export default function Home() {
 
     // 저장된 값 확인
     setTimeout(() => {
-      const { spreadsheetId } = useSpreadsheetIdStore.getState();
+      const { spreadSheetId } = useSpreadsheetIdStore.getState();
       const { chatId } = useChatStore.getState();
-      console.log('✅ [Page] Stored values:', { spreadsheetId, chatId });
+      console.log('✅ [Page] Stored values:', { spreadSheetId, chatId });
     }, 100);
-  }, [params, setSpreadsheetId, setChatId]);
+  }, [params, setSpreadSheetId, setChatId]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
