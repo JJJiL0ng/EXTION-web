@@ -2,10 +2,10 @@
 export const heroData = {
   // SEO 최적화된 메인 헤드라인
   headline: {
-    main: "Just tell Extion",
-    highlight: "what you want for cells",
-    subtitle: "Extion ai is the future of spreadsheet agent.",
-    description: "\"next generation spreadsheet ai agent\" extion.ai"
+    main: "Just Tell Extion",
+    highlight: "what you want in your sheet",
+    subtitle: "The AI assistant that makes spreadsheets effortless.",
+    description: "Next-generation spreadsheet AI Agent"
   },
   
   // 구조화된 데이터용 키워드
