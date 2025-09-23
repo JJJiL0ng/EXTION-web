@@ -177,7 +177,7 @@ export interface ChatApiConfig {
 // ==================== 기본 설정 ====================
 
 const DEFAULT_CONFIG: ChatApiConfig = {
-  baseUrl: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/v2/main-chat`,
+  baseUrl: `${process.env.NEXT_PUBLIC_API_URL }/v2/chat`,
   timeout: 120000, // 2분
   retryAttempts: 3,
   retryDelay: 1000,

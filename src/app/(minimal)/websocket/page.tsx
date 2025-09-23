@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import io, { Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function Home() {
   // socket 인스턴스를 상태로 관리합니다. (null일 수 있음)
