@@ -54,7 +54,7 @@ export default function Header() {
           {/* 베타 신청 버튼 */}
           <Button 
             size="sm"
-            className="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-sm transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg rounded-full"
+            className="bg-[#005de9] hover:bg-blue-700 px-3 py-1.5 text-sm transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg rounded-full"
             onClick={handleBetaClick}
           >
             <span className="flex items-center gap-2">

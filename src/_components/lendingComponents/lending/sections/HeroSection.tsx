@@ -5,8 +5,17 @@ import { HeroVideo } from './HeroVideo'
 export function HeroSection() {
   return (
     // <section className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
-    <section className="min-h-screen bg-[#EEF2F6]">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
+    <section 
+      className="min-h-screen bg-[#EEF2F6] relative"
+      style={{
+        backgroundImage: `
+          linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)
+        `,
+        backgroundSize: '72px 24px'
+      }}
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 relative z-10">
 
         {/* 위: 텍스트 콘텐츠 영역 */}
         <div className="max-w-5xl mx-auto text-center mb-12 lg:mb-16">

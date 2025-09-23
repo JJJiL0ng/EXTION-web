@@ -9,7 +9,7 @@ export function HeroContent() {
       <h1 className="font-bold text-black text-5xl sm:text-5xl md:text-6xl lg:text-[92px] leading-[1.1] lg:leading-[0.95em] tracking-tight lg:tracking-[-0.06em]">
         {heroData.headline.main}
       </h1>
-      <h2 className="block font-bold text-black mb-6 -mt-2 text-3xl sm:text-3xl md:text-4xl lg:text-5xl leading-tight lg:leading-none">
+      <h2 className="block font-bold text-black mb-6 -mt-2 text-2xl sm:text-3xl md:text-4xl lg:text-5xl leading-tight lg:leading-none">
         {heroData.headline.highlight}
       </h2>
 

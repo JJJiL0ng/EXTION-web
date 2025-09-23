@@ -34,7 +34,8 @@ const config: Config = {
     'bg-gray-200',
     'px-10',
     'opacity-40', 
-    'bg-[#F0F2F5]'
+    'bg-[#F0F2F5]',
+    
 
   ],
   theme: {

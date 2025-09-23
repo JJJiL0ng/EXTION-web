@@ -5,8 +5,17 @@ export default function Footer() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="bg-[#EEF2F6] border-t border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <footer 
+      className="bg-[#EEF2F6] border-t border-gray-200 relative"
+      style={{
+        backgroundImage: `
+          linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)
+        `,
+        backgroundSize: '72px 24px'
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
       {/* Brand section */}
           <div className="col-span-2 md:col-span-2">
@@ -20,8 +29,7 @@ export default function Footer() {
               />
             </Link>
             <p className="text-gray-600 mb-4 max-w-md">
-              An AI-powered tool that automates Excel tasks through natural language commands.
-              Analyze data and create charts with simple voice instructions - no complex formulas required.
+              An AI-powered tool that automates Excel tasks using natural language commands. Edit your spreadsheet automatically — no complex formulas required.
             </p>
             <div className="flex items-center text-sm text-gray-500">
               <span>Developed by</span>
