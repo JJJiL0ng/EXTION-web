@@ -1,6 +1,6 @@
 import { CheckAndLoadReq, CheckAndLoadRes } from "@/_types/apiConnector/check-and-load-api/chectAndLoadApi";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const checkAndLoadApiConnector = async (params: CheckAndLoadReq): Promise<CheckAndLoadRes> => {
     console.log('🔗 [CheckAndLoadAPI] API 호출 시작:', { BASE_URL, params });

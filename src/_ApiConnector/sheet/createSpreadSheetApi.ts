@@ -1,6 +1,6 @@
 import { CreateSpreadSheetReq, CreateSpreadSheetRes } from '@/_types/apiConnector/spreadsheet-create/spreadSheetCreateApi';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const createSpreadSheetApiConnector = async (params: CreateSpreadSheetReq): Promise<CreateSpreadSheetRes> => {
     console.log('🔗 [CreateSpreadSheetAPI] API 호출 시작:', { BASE_URL, params });
