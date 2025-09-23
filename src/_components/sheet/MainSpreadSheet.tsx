@@ -366,8 +366,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             <input
                 id="file-upload"
                 type="file"
-                accept=".xlsx,.xls,.csv,.sjs,.json"
-                multiple
+                accept=".xlsx,.xls,.csv"
                 onChange={handleFileUpload}
                 disabled={uploadState.isUploading}
                 className="hidden"
