@@ -7,6 +7,7 @@ import { getOrCreateGuestId } from "@/_utils/guestUtils";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
 import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
+
 interface FileUploadSheetRenderProps {
     // 파일 업로드 상태
     isFileUploaded: boolean;
@@ -18,7 +19,7 @@ interface FileUploadSheetRenderProps {
     };
 
     // 이벤트 핸들러
-    // onUploadButtonClick: () => void;
+    onUploadButtonClick: () => void;
 
     // 드래그&드롭 핸들러들
     onDragEnter: (e: React.DragEvent) => void;
@@ -32,13 +33,19 @@ interface FileUploadSheetRenderProps {
 }
 
 /**
- * 파일 업로드 영역 컴포넌트
+ * 파일 업로드 영역 및 SpreadJS 렌더링 컴포넌트
+ *
+ * 주요 기능:
+ * - 파일 업로드 UI 제공 (드래그&드롭, 클릭 선택)
+ * - 백엔드 데이터 존재 여부 확인
+ * - 업로드 상태에 따른 UI 전환
+ * - SpreadJS 컴포넌트 렌더링
  */
 const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
     isFileUploaded,
     isDragActive,
     uploadState,
-    // onUploadButtonClick,
+    onUploadButtonClick,
     onDragEnter,
     onDragLeave,
     onDragOver,
@@ -46,17 +53,39 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
     initSpread,
     hostStyle
 }) => {
+    // ============================================================================
+    // 상태 관리 및 데이터 로딩
+    // ============================================================================
+
     // URL 파라미터와 스토어에서 ID 가져오기
     const { spreadSheetId } = useSpreadsheetIdStore();
     const { chatId } = useChatStore();
 
     // ID들을 안정화하여 불필요한 훅 재실행 방지
-    const stableSpreadsheetId = useMemo(() => spreadSheetId || '', [spreadSheetId]);
-    const stableChatId = useMemo(() => chatId || '', [chatId]);
-    const stableUserId = useMemo(() => getOrCreateGuestId(), []);
+    const stableSpreadsheetId = useMemo(() => {
+        console.log(`🔧 [FileUploadSheetRender] SpreadSheet ID 안정화: ${spreadSheetId}`);
+        return spreadSheetId || '';
+    }, [spreadSheetId]);
+
+    const stableChatId = useMemo(() => {
+        console.log(`🔧 [FileUploadSheetRender] Chat ID 안정화: ${chatId}`);
+        return chatId || '';
+    }, [chatId]);
+
+    const stableUserId = useMemo(() => {
+        const userId = getOrCreateGuestId();
+        console.log(`🔧 [FileUploadSheetRender] User ID 안정화: ${userId}`);
+        return userId;
+    }, []);
+
     const stableSpreadsheetVersionId = useSpreadSheetVersionStore((state) => state.spreadSheetVersionId);
     const stableActivity = 'normal';
-    // 백엔드 데이터 존재 여부 확인
+
+    /**
+     * 백엔드 데이터 존재 여부 확인
+     * - 기존 데이터가 있으면 업로드 비활성화
+     * - 없으면 업로드 활성화
+     */
     const { exists, loading, error } = useCheckAndLoadOnMount(
         stableSpreadsheetId,
         stableChatId,
@@ -65,33 +94,47 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
         stableSpreadsheetVersionId
     );
 
-    const handleUploadButtonClick = () => {
-    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-    if (fileInput && !uploadState.isUploading) {
-        fileInput.click();
-    }
-};
+    // ============================================================================
+    // 업로드 활성화 조건
+    // ============================================================================
 
-
-    // exists가 false일 때만 업로드 버튼 활성화
+    /**
+     * exists가 false일 때만 업로드 버튼 활성화
+     * - 로딩 중이면 비활성화
+     * - 기존 데이터가 있으면 비활성화
+     */
     const isUploadEnabled = exists === false && !loading;
 
-    // 상태 변화가 있을 때만 로깅 (무한 로그 방지)
+    // ============================================================================
+    // 디버깅 및 상태 추적
+    // ============================================================================
+
+    /**
+     * 상태 변화가 있을 때만 로깅 (무한 로그 방지)
+     * - 상태 키 생성으로 변화 감지
+     * - 중복 로그 방지
+     */
     const statusKey = `${exists}-${loading}-${isUploadEnabled}-${isFileUploaded}`;
     const lastStatusRef = React.useRef<string>('');
 
     React.useEffect(() => {
         if (lastStatusRef.current !== statusKey) {
-            console.log('📊 [FileUploadSheetRender] 상태 변화:', {
+            console.log(`📊 [FileUploadSheetRender] 상태 변화:`, {
                 exists,
                 loading,
                 isUploadEnabled,
                 isFileUploaded,
-                error: error?.message
+                hasError: !!error,
+                errorMessage: error?.message
             });
             lastStatusRef.current = statusKey;
         }
     }, [statusKey, exists, loading, isUploadEnabled, isFileUploaded, error]);
+
+    // ============================================================================
+    // 렌더링
+    // ============================================================================
+
     return (
         <div
             className="w-full relative"
@@ -114,7 +157,7 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                     />
                     <div className="bg-white border-2 rounded-lg px-10 py-6 border-[#005de9] text-center max-w-md mx-4 relative z-10">
                         <div className="mb-8 flex flex-col items-center">
-                            <div className="relative w-16 h-16 mb-4"> {/* 로고 크기: 72x72 */}
+                            <div className="relative w-16 h-16 mb-4">
                                 <Image
                                     src="/EXTION_new_logo.svg"
                                     alt="EXTION logo"
@@ -131,8 +174,7 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                             </h3>
                         </div>
 
-                        {/* 드래그&드롭 영역 */
-                        }
+                        {/* 드래그&드롭 영역 - 상태에 따라 다른 스타일 적용 */}
                         <div
                             className={`border-2 border-dashed rounded-lg p-8 mb-4 transition-all duration-200 ${!isUploadEnabled
                                     ? 'border-gray-200 bg-gray-100 opacity-50'
@@ -155,7 +197,7 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
                                     </svg>
                                     <p className="font-medium mb-1">Drag and drop your file or</p>
                                     <button
-                                        onClick={handleUploadButtonClick}
+                                        onClick={onUploadButtonClick}
                                         disabled={uploadState.isUploading || !isUploadEnabled}
                                         className={`font-medium underline transition-colors ${isUploadEnabled && !uploadState.isUploading
                                                 ? "text-[#005ed9] hover:text-blue-700"

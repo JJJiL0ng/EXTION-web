@@ -4,7 +4,7 @@ import '@mescius/spread-sheets-io';
 import React, { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle } from "react";
 import { useParams } from 'next/navigation';
 // Hooks
-import { useFileUpload } from '../../_hooks/sheet/file_upload_export/useFileUpload';
+import { useFileUploadIntegration } from '../../_hooks/sheet/file_upload_export/useFileUploadIntegration';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
 import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useUIState } from '../../_hooks/sheet/common/useUIState';
@@ -33,6 +33,10 @@ interface MainSpreadSheetProps {
 }
 
 export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
+    // ============================================================================
+    // 상태 및 참조 초기화
+    // ============================================================================
+
     // URL 파라미터 추출
     const params = useParams();
     const spreadSheetId = params.SpreadSheetId as string;
@@ -50,28 +54,31 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // 인증 상태 관리
     const userId = getOrCreateGuestId();
 
-    // resetUploadState 함수의 ref 저장 (무한 루프 방지)
-    const resetUploadStateRef = useRef<(() => void) | null>(null);
+    console.log(`🔍 [MainSpreadSheet] 컴포넌트 렌더링:`, {
+        spreadSheetId,
+        chatId,
+        isFileUploaded,
+        isChatVisible
+    });
+
+    // ============================================================================
+    // 핵심 훅들 초기화
+    // ============================================================================
 
     // AI 버튼 클릭 핸들러 - 통합된 상태 사용
     const handleShowChat = useCallback(() => {
+        console.log(`🤖 [MainSpreadSheet] 채팅 버튼 클릭`);
         uiActions.setShowChatButton(false); // 즉시 버튼 제거
         showChat(); // 채팅 열기
     }, [showChat, uiActions]);
 
+    // SpreadJS 호스트 스타일 설정
     const [hostStyle, setHostStyle] = useState({
         width: '100vw',
         height: '100vh',
         minWidth: '100%',
         boxSizing: 'border-box' as const,
     });
-
-    // SpreadJS 인스턴스 참조 (props로 받음)
-    // const spreadRef = useRef<any>(null); // 제거됨 - props로 받음
-
-    // 명령어 관리 Hook (page.tsx로 이동됨)
-    // const commandManager = useSpreadjsCommandManager(...) 제거됨
-
 
     // SpreadJS 초기화 훅
     const { initSpread, createNewSpreadsheet } = useSpreadJSInit({
@@ -81,75 +88,47 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // 스프레드시트 생성 훅
     const { loading: createLoading, error: createError, createSheet, reset: resetCreateState } = useSheetCreate();
 
-    // 파일 업로드 훅
+    // ============================================================================
+    // 통합 파일 업로드 훅 사용
+    // ============================================================================
+
+    /**
+     * 파일 업로드 관련 모든 로직을 통합 관리하는 훅
+     * - 드래그&드롭 처리
+     * - 파일 선택 처리
+     * - 업로드 상태 관리
+     * - 자동 채팅 열기
+     * - 스프레드시트 생성 API 호출
+     */
     const {
         uploadState,
-        uploadFiles,
+        isDragActive,
+        handleDragEnter,
+        handleDragLeave,
+        handleDragOver,
+        handleDrop,
+        handleFileSelect,
+        handleUploadButtonClick,
         resetUploadState
-    } = useFileUpload(spreadRef.current, {
-        maxFileSize: 50 * 1024 * 1024, // 50MB
-        allowedExtensions: ['xlsx', 'xls', 'csv', 'json'],
-        onUploadSuccess: async (fileName: string, fileData: any) => {
-            console.log(`✅ 파일 업로드 성공: ${fileName}`);
-            useFileNameStore.setState({ fileName }); // 업로드된 파일명 저장
-            
-
-            // 첫번째 시트를 활성 시트로 설정
-            spreadRef.current.setActiveSheet(0);
-
-
-            // 파일 업로드 상태 업데이트
-            setIsFileUploaded(true, fileName);
-
-            // 파일 업로드 후 0.5초 뒤에 Chat 버튼 자동 클릭 (딱 한번만)
-            if (!uiState.hasAutoOpenedChat) {
-                setTimeout(() => {
-                    uiActions.setAutoOpenedChat(true); // 자동 열기 완료 표시
-                    handleShowChat(); // Chat 버튼 자동 클릭
-                }, 500);
-            }
-
-            // 파일 업로드 후 스프레드시트 생성 API 호출
-            try {
-                // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
-                const currentUserId = userId;
-
-                // 파일 데이터를 JSON으로 변환 (새로운 FileConverter 사용)
-                const jsonData = spreadRef.current.toJSON({
-                    includeBindingSource: true,
-                    ignoreFormula: false,
-                    ignoreStyle: false,
-                    saveAsView: true,
-                    rowHeadersAsFrozenColumns: false,
-                    columnHeadersAsFrozenRows: false,
-                    includeAutoMergedCells: true,
-                    saveR1C1Formula: true,
-                    includeUnsupportedFormula: true,
-                    includeUnsupportedStyle: true
-                });
-
-                console.log('🔄 JSON 변환된 데이터:', jsonData);
-
-                // 업로드(Create)로직 수정 필요
-                await createSheet({
-                    fileName, // 업로드된 파일명을 스프레드시트명으로 사용
-                    spreadsheetId: spreadSheetId, // URL에서 추출한 spreadSheetId
-                    chatId, // URL에서 추출한 chatId
-                    userId: currentUserId, // 사용자 ID (로그인 또는 게스트)
-                    jsonData // JSON으로 변환된 파일 데이터를 초기 데이터로 사용
-                });
-            } catch (error) {
-                console.error('스프레드시트 생성 실패:', error);
-                // createSheetWithDefaults의 onError에서 이미 처리됨
-            }
+    } = useFileUploadIntegration({
+        spreadRef,
+        onUploadSuccess: (fileName) => {
+            console.log(`✅ [MainSpreadSheet] 파일 업로드 성공 콜백: ${fileName}`);
         },
-        onUploadError: (error: Error, fileName: string) => {
-            console.error(`❌ 파일 업로드 실패: ${fileName}`, error);
-            alert(`파일 업로드 중 오류가 발생했습니다: ${error.message}`);
+        onUploadError: (error, fileName) => {
+            console.error(`❌ [MainSpreadSheet] 파일 업로드 실패 콜백: ${fileName}`, error);
         }
     });
 
+    // ============================================================================
     // 파일 내보내기 훅
+    // ============================================================================
+
+    /**
+     * 파일 내보내기 기능을 제공하는 훅
+     * - Excel, CSV, JSON 형식으로 내보내기 지원
+     * - 내보내기 상태 추적
+     */
     const {
         exportState,
         saveAsExcel,
@@ -159,178 +138,169 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     } = useFileExport(spreadRef.current, {
         defaultFileName: 'spreadsheet',
         onExportSuccess: (fileName: string) => {
-            console.log(`✅ 파일 저장 성공: ${fileName}`);
+            console.log(`✅ [MainSpreadSheet] 파일 저장 성공: ${fileName}`);
         },
         onExportError: (error: Error) => {
-            console.error('❌ 파일 저장 실패:', error);
+            console.error(`❌ [MainSpreadSheet] 파일 저장 실패:`, error);
             alert(`파일 저장 중 오류가 발생했습니다: ${error.message}`);
         }
     });
 
-    // 함수들을 ref에 저장 (무한 루프 방지)
-    resetUploadStateRef.current = resetUploadState;
+    // ============================================================================
+    // 메모리 관리 및 정리
+    // ============================================================================
 
-    // 메모리 관리를 위한 cleanup 함수
+    /**
+     * 메모리 관리를 위한 cleanup 함수
+     * - 각종 상태 초기화
+     * - SpreadJS 인스턴스 정리
+     */
     const handleCleanup = useCallback(() => {
-        // resetUploadState를 ref를 통해 호출하여 의존성 제거
+        console.log(`🧹 [MainSpreadSheet] 메모리 정리 시작`);
+
+        // 업로드 상태 초기화
         try {
-            resetUploadStateRef.current?.();
+            resetUploadState();
+            console.log(`✅ [MainSpreadSheet] 업로드 상태 초기화 완료`);
         } catch (error) {
-            console.warn('resetUploadState cleanup warning:', error);
+            console.warn(`⚠️ [MainSpreadSheet] 업로드 상태 초기화 경고:`, error);
         }
 
+        // 내보내기 상태 초기화
         try {
             resetExportState();
+            console.log(`✅ [MainSpreadSheet] 내보내기 상태 초기화 완료`);
         } catch (error) {
-            console.warn('resetExportState cleanup warning:', error);
+            console.warn(`⚠️ [MainSpreadSheet] 내보내기 상태 초기화 경고:`, error);
         }
 
+        // 스프레드시트 생성 상태 초기화
         try {
             resetCreateState();
+            console.log(`✅ [MainSpreadSheet] 생성 상태 초기화 완료`);
         } catch (error) {
-            console.warn('resetCreateState cleanup warning:', error);
+            console.warn(`⚠️ [MainSpreadSheet] 생성 상태 초기화 경고:`, error);
         }
 
+        // SpreadJS 인스턴스 정리
         if (spreadRef.current) {
             try {
                 spreadRef.current.destroy && spreadRef.current.destroy();
+                console.log(`✅ [MainSpreadSheet] SpreadJS 인스턴스 정리 완료`);
             } catch (error) {
-                console.warn('Cleanup warning:', error);
+                console.warn(`⚠️ [MainSpreadSheet] SpreadJS 인스턴스 정리 경고:`, error);
             }
         }
-    }, [resetExportState, resetCreateState, spreadRef]);
 
-    // 컴포넌트 언마운트 시 정리
+        console.log(`✅ [MainSpreadSheet] 메모리 정리 완료`);
+    }, [resetUploadState, resetExportState, resetCreateState, spreadRef]);
+
+    // ============================================================================
+    // Effect 훅들
+    // ============================================================================
+
+    /**
+     * 컴포넌트 언마운트 시 메모리 정리
+     */
     useEffect(() => {
         return () => {
+            console.log(`🔄 [MainSpreadSheet] 컴포넌트 언마운트, 정리 작업 시작`);
             handleCleanup();
         };
     }, [handleCleanup]);
 
-    // URL 파라미터 확인 및 디버깅
+    /**
+     * URL 파라미터 유효성 검증 및 디버깅
+     */
     useEffect(() => {
-        console.log('🔍 URL 파라미터 확인:', { spreadSheetId, chatId });
+        console.log(`🔍 [MainSpreadSheet] URL 파라미터 확인:`, { spreadSheetId, chatId });
 
         if (!spreadSheetId || !chatId) {
-            console.warn('⚠️ 필수 URL 파라미터가 누락되었습니다:', { spreadSheetId, chatId });
+            console.warn(`⚠️ [MainSpreadSheet] 필수 URL 파라미터가 누락됨:`, { spreadSheetId, chatId });
         }
     }, [spreadSheetId, chatId]);
 
-    // 화면 크기 변경 시 SpreadJS 크기 조정
+    /**
+     * 화면 크기 변경 시 SpreadJS 크기 조정
+     * - 파일 업로드 여부에 따라 높이 계산
+     * - SpreadJS 인스턴스 리프레시
+     */
     useEffect(() => {
         const handleResize = () => {
-            setHostStyle({
+            const newHostStyle = {
                 width: '100vw',
                 height: isFileUploaded ? 'calc(100vh - 24px)' : '100vh',
                 minWidth: '100%',
                 boxSizing: 'border-box' as const,
-            });
+            };
+
+            console.log(`📐 [MainSpreadSheet] 화면 크기 조정:`, newHostStyle);
+            setHostStyle(newHostStyle);
 
             // SpreadJS 인스턴스가 있으면 리사이즈
             if (spreadRef.current) {
                 setTimeout(() => {
+                    console.log(`🔄 [MainSpreadSheet] SpreadJS 리프레시 실행`);
                     spreadRef.current.refresh();
                 }, 100);
             }
         };
 
+        console.log(`📐 [MainSpreadSheet] 리사이즈 이벤트 리스너 등록`);
         window.addEventListener('resize', handleResize);
+
         // 최초 1회 적용 및 isFileUploaded 변경 시 높이 갱신
         handleResize();
-        return () => window.removeEventListener('resize', handleResize);
+
+        return () => {
+            console.log(`📐 [MainSpreadSheet] 리사이즈 이벤트 리스너 제거`);
+            window.removeEventListener('resize', handleResize);
+        };
     }, [spreadRef, isFileUploaded]);
 
-
-    // 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리
+    /**
+     * 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리
+     * - 채팅이 닫힐 때 300ms 지연 후 버튼 표시 (애니메이션 시간과 맞춤)
+     */
     useEffect(() => {
         if (isChatVisible) {
-            // 채팅이 열릴 때는 handleShowChat에서 이미 처리했으므로 아무것도 하지 않음
+            console.log(`💬 [MainSpreadSheet] 채팅 열림 - 버튼 처리 없음`);
             return;
         } else {
-            // 채팅이 닫힐 때는 300ms 지연 후 버튼 표시 (채팅 닫힘 애니메이션 시간과 맞춤)
+            console.log(`💬 [MainSpreadSheet] 채팅 닫힘 - 300ms 후 버튼 표시 예약`);
             const timer = setTimeout(() => {
+                console.log(`💬 [MainSpreadSheet] 채팅 버튼 표시`);
                 uiActions.setShowChatButton(true);
-            }, 300); // 300ms 지연
+            }, 300);
 
-            return () => clearTimeout(timer);
+            return () => {
+                console.log(`💬 [MainSpreadSheet] 채팅 버튼 타이머 해제`);
+                clearTimeout(timer);
+            };
         }
     }, [isChatVisible, uiActions]);
 
 
-    // 드래그&드롭 이벤트 핸들러들
-    const handleDragEnter = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        uiActions.incrementDragCounter();
-        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-            uiActions.setDragActive(true);
-        }
-    }, [uiActions]);
+    // ============================================================================
+    // 이벤트 핸들러들
+    // ============================================================================
 
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        uiActions.decrementDragCounter();
-    }, [uiActions]);
-
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    }, []);
-
-    const handleDrop = useCallback(async (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        uiActions.resetDragCounter();
-
-        const files = e.dataTransfer.files;
-        if (!files || files.length === 0) return;
-
-        // 파일 이름들을 콘솔에 출력
-        console.log('📁 드래그&드롭으로 업로드할 파일들:');
-        Array.from(files).forEach((file, index) => {
-            console.log(`  ${index + 1}. ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-        });
-
-        try {
-            await uploadFiles(files);
-        } catch (error) {
-            console.error('드래그&드롭 업로드 실패:', error);
-        }
-    }, [uploadFiles, uiActions]);
-
-
-    // 통합 파일 업로드 핸들러 (단일/다중 자동 처리)
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (!files || files.length === 0) return;
-
-        // 파일 이름들을 콘솔에 출력
-        console.log('📁 클릭으로 선택한 파일들:');
-        Array.from(files).forEach((file, index) => {
-            console.log(`  ${index + 1}. ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-        });
-
-        try {
-            // 새로운 통합 업로드 함수 사용
-            await uploadFiles(files);
-        } catch (error) {
-            // 오류는 이미 훅에서 처리됨
-        }
-
-        // 파일 입력 초기화
-        event.target.value = '';
-    };
-
-    // 새 스프레드시트 생성 핸들러
+    /**
+     * 새 스프레드시트 생성 핸들러
+     * - 빈 스프레드시트 생성
+     * - 초기 데이터 구조 설정
+     * - 백엔드 API 호출
+     */
     const handleNewSpreadsheet = async () => {
+        console.log(`📄 [MainSpreadSheet] 새 스프레드시트 생성 시작`);
+
         const success = createNewSpreadsheet();
-        if (!success) return;
+        if (!success) {
+            console.error(`❌ [MainSpreadSheet] 새 스프레드시트 생성 실패`);
+            return;
+        }
 
         try {
-            // 사용자 ID 가져오기 (로그인 사용자 또는 게스트)
-            const currentUserId = userId;
-
             // 새 스프레드시트의 초기 JSON 데이터 구조
             const initialJsonData = {
                 fileName: '새 스프레드시트',
@@ -343,7 +313,15 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 createdAt: new Date().toISOString(),
                 type: 'new_spreadsheet'
             };
-            // 업로드(Create)로직 수정 필요
+
+            console.log(`🚀 [MainSpreadSheet] 새 스프레드시트 API 호출:`, {
+                fileName: '새 스프레드시트',
+                spreadsheetId: spreadSheetId,
+                chatId,
+                userId
+            });
+
+            // 백엔드 API 호출
             await createSheet({
                 fileName: '새 스프레드시트',
                 spreadsheetId: spreadSheetId,
@@ -353,36 +331,53 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             });
 
             // 업로드 상태 초기화
-            resetUploadStateRef.current?.();
-            console.log('✅ 새 스프레드시트 생성 완료');
+            resetUploadState();
+            console.log(`✅ [MainSpreadSheet] 새 스프레드시트 생성 완료`);
+
         } catch (error) {
-            console.error('스프레드시트 생성 실패:', error);
+            console.error(`❌ [MainSpreadSheet] 새 스프레드시트 생성 실패:`, error);
         }
     };
 
+    // ============================================================================
+    // 렌더링
+    // ============================================================================
+
     return (
         <div className="w-full h-screen box-border flex flex-col bg-gray-50">
-            {/* 숨겨진 파일 업로드 input (항상 렌더링) */}
+            {/* 숨겨진 파일 업로드 input - 통합 훅에서 관리 */}
             <input
                 id="file-upload"
                 type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileUpload}
+                accept=".xlsx,.xls,.csv,.sjs,.json"
+                multiple
+                onChange={handleFileSelect}
                 disabled={uploadState.isUploading}
                 className="hidden"
             />
 
             {/* 상단 툴바 및 상태 표시: 파일 업로드 후에만 표시 */}
             {isFileUploaded && (
-                <div className="flex-shrink-0 w-full h-6 bg-white flex items-center justify-between ">
+                <div className="flex-shrink-0 w-full h-6 bg-white flex items-center justify-between">
+                    {/* 스프레드시트 툴바 - 내보내기 및 새 파일 기능 */}
                     <SpreadSheetToolbar
-                        onSaveAsExcel={() => saveAsExcel()}
-                        onSaveAsCSV={() => saveAsCSV()}
-                        onSaveAsJSON={() => saveAsJSON()}
+                        onSaveAsExcel={() => {
+                            console.log(`💾 [MainSpreadSheet] Excel 내보내기 요청`);
+                            saveAsExcel();
+                        }}
+                        onSaveAsCSV={() => {
+                            console.log(`💾 [MainSpreadSheet] CSV 내보내기 요청`);
+                            saveAsCSV();
+                        }}
+                        onSaveAsJSON={() => {
+                            console.log(`💾 [MainSpreadSheet] JSON 내보내기 요청`);
+                            saveAsJSON();
+                        }}
                         isExporting={exportState.isExporting}
                         onNewSpreadsheet={handleNewSpreadsheet}
                     />
 
+                    {/* 채팅 버튼 - 조건부 표시 */}
                     <ChatButton
                         onClick={handleShowChat}
                         isVisible={uiState.showChatButton}
@@ -390,15 +385,16 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 </div>
             )}
 
-            {/* 파일 업로드 영역 및 SpreadJS */}
+            {/* 파일 업로드 영역 및 SpreadJS 렌더링 */}
             <FileUploadSheetRender
                 isFileUploaded={isFileUploaded}
-                isDragActive={uiState.isDragActive}
+                isDragActive={isDragActive}
                 uploadState={uploadState}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
+                onUploadButtonClick={handleUploadButtonClick}
                 initSpread={initSpread}
                 hostStyle={hostStyle}
             />
