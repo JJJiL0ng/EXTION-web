@@ -21,7 +21,7 @@ export default function Footer() {
           <div className="col-span-2 md:col-span-2">
             <Link href="/" className="flex items-center mb-4">
               <Image
-                src="/EXTION_text_logo.png"
+                src="/Extion_text_Logo.png"//addf
                 alt="Extion logo"
                 width={160}
                 height={50}
