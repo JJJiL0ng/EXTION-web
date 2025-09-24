@@ -48,7 +48,6 @@ export const useChatInputBoxHook = ({
 
   // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
   const { spread } = useSpreadsheetContext();
-  spread.options.allowDynamicArray = true; // 동적 배열 허용
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
@@ -63,6 +62,16 @@ export const useChatInputBoxHook = ({
   const { isConnected, isConnecting, connect, executeAiJob } = useAiChatApiConnector();
 
   const { activeSheetName } = useGetActiveSheetName();
+
+  // Spread 객체 초기화 시 옵션 설정
+  useEffect(() => {
+    if (spread && spread.options) {
+      console.log('🔧 [ChatInputBoxHook] Setting spread options');
+      spread.options.allowDynamicArray = true; // 동적 배열 허용
+    } else {
+      console.log('⏳ [ChatInputBoxHook] Spread object not ready yet');
+    }
+  }, [spread]);
 
   // AI Chat API 서버 연결
   useEffect(() => {
@@ -182,12 +191,17 @@ export const useChatInputBoxHook = ({
 
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
-      
+
+      // Spread 객체가 초기화되지 않은 경우 처리
+      if (!spread) {
+        console.warn('⚠️ [ChatInputBoxHook] Spreadsheet not initialized yet, please wait...');
+        return;
+      }
+
       // 전송 상태 시작
       setIsSendingMessage(true);
 
       const messageToSend = message;
-      const selectedSheetsToSend = selectedSheets;
 
       // 메시지 전송 전에 입력창 초기화
       setMessage('');
@@ -233,7 +247,7 @@ export const useChatInputBoxHook = ({
             parsedSheetNames: useSpreadsheetNamesStore.getState().selectedSheets.map(s => s.name),
             jobId: `jobId_${safeRandomUUID()}`,
             spreadSheetVersionId: useSpreadSheetVersionStore.getState().spreadSheetVersionId,
-            ...(isSpreadSheetDataDirty(spread) && {
+            ...(spread && isSpreadSheetDataDirty(spread) && {
               newVersionSpreadSheetData: spread.toJSON({
                 includeBindingSource: true,
                 ignoreFormula: false,
@@ -249,8 +263,10 @@ export const useChatInputBoxHook = ({
             }),
             editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || null // 낙관적 잠금을 위한 버전 번호
           };
-          // 전송 직후 시트의 dirty 데이터 모두 초기화
-          clearAllDirtyData(spread);
+          // 전송 직후 시트의 dirty 데이터 모두 초기화 (spread 객체가 있을 때만)
+          if (spread) {
+            clearAllDirtyData(spread);
+          }
 
           console.log('📤📤📤📤📤📤📤📤📤📤📤 AI request payload:', aiChatApiRequest);
           console.log('📊 [ChatInputBoxHook] Current version before request:', useSpreadSheetVersionStore.getState().spreadSheetVersionId);
@@ -271,8 +287,12 @@ export const useChatInputBoxHook = ({
                 console.warn('⚠️ [ChatInputBoxHook] Invalid version id received:', result.spreadSheetVersionId);
               }
             }
-            // 시트에 데이터 편집 명령 적용
-            applyDataEditCommands({ dataEditChatRes: result.dataEditChatRes as dataEditChatRes, spread: spread });
+            // 시트에 데이터 편집 명령 적용 (spread 객체가 있을 때만)
+            if (spread) {
+              applyDataEditCommands({ dataEditChatRes: result.dataEditChatRes as dataEditChatRes, spread: spread });
+            } else {
+              console.warn('⚠️ [ChatInputBoxHook] Spread object not available for applying data edit commands');
+            }
 
           } catch (aiError) {
             console.error('❌ [ChatInputBoxHook] AI job failed:', aiError);

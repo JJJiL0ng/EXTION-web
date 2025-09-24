@@ -4,7 +4,7 @@ import { useFileUpload } from './useFileUpload';
 import { useSheetCreate } from '../data_save/useSheetCreate';
 import { useSpreadsheetUploadStore } from '../../../_store/sheet/spreadsheetUploadStore';
 import useFileNameStore from '@/_store/sheet/fileNameStore';
-import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
+// import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useUIState } from '../common/useUIState';
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
 
@@ -47,7 +47,7 @@ export const useFileUploadIntegration = ({
   const chatId = params.ChatId as string;
 
   // 상태 관리 훅들
-  const { showChat } = useChatVisibility(); // 채팅 가시성 제어
+  // const { showChat } = useChatVisibility(); // 채팅 가시성 제어
   const { uiState, actions: uiActions } = useUIState(); // 통합 UI 상태
   const { setIsFileUploaded } = useSpreadsheetUploadStore(); // 파일 업로드 상태
 
@@ -90,15 +90,15 @@ export const useFileUploadIntegration = ({
       setIsFileUploaded(true, fileName);
 
       // 4. 자동 채팅 열기 (첫 번째만)
-      if (!uiState.hasAutoOpenedChat) {
-        console.log(`🤖 [FileUploadIntegration] 자동 채팅 열기 예약 (0.5초 후)`);
-        setTimeout(() => {
-          console.log(`🤖 [FileUploadIntegration] 자동 채팅 열기 실행`);
-          uiActions.setAutoOpenedChat(true);
-          uiActions.setShowChatButton(false);
-          showChat();
-        }, 500);
-      }
+      // if (!uiState.hasAutoOpenedChat) {
+      //   console.log(`🤖 [FileUploadIntegration] 자동 채팅 열기 예약 (0.5초 후)`);
+      //   setTimeout(() => {
+      //     console.log(`🤖 [FileUploadIntegration] 자동 채팅 열기 실행`);
+      //     uiActions.setAutoOpenedChat(true);
+      //     uiActions.setShowChatButton(false);
+      //     showChat();
+      //   }, 500);
+      // }
 
       // 5. 스프레드시트 생성 API 호출
       console.log(`🚀 [FileUploadIntegration] 스프레드시트 생성 API 호출 시작`);
@@ -142,7 +142,7 @@ export const useFileUploadIntegration = ({
     setIsFileUploaded,
     uiState.hasAutoOpenedChat,
     uiActions,
-    showChat,
+    // showChat,
     createSheet,
     spreadSheetId,
     chatId,
