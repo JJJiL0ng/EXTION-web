@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 // Hooks
 import { useFileUploadIntegration } from '../../_hooks/sheet/file_upload_export/useFileUploadIntegration';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
-import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
+// import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useUIState } from '../../_hooks/sheet/common/useUIState';
 import { useSpreadJSInit } from '../../_hooks/sheet/spreadjs/useSpreadJSInit';
 import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
@@ -43,7 +43,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     const chatId = params.ChatId as string;
 
     // 채팅 가시성 제어
-    const { isChatVisible, showChat } = useChatVisibility();
+    // const { isChatVisible, showChat } = useChatVisibility();
 
     // 통합된 UI 상태 관리
     const { uiState, actions: uiActions } = useUIState();
@@ -58,7 +58,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         spreadSheetId,
         chatId,
         isFileUploaded,
-        isChatVisible
+        // isChatVisible
     });
 
     // ============================================================================
@@ -66,11 +66,11 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     // ============================================================================
 
     // AI 버튼 클릭 핸들러 - 통합된 상태 사용
-    const handleShowChat = useCallback(() => {
-        console.log(`🤖 [MainSpreadSheet] 채팅 버튼 클릭`);
-        uiActions.setShowChatButton(false); // 즉시 버튼 제거
-        showChat(); // 채팅 열기
-    }, [showChat, uiActions]);
+    // const handleShowChat = useCallback(() => {
+    //     console.log(`🤖 [MainSpreadSheet] 채팅 버튼 클릭`);
+    //     uiActions.setShowChatButton(false); // 즉시 버튼 제거
+    //     showChat(); // 채팅 열기
+    // }, [showChat, uiActions]);
 
     // SpreadJS 호스트 스타일 설정
     const [hostStyle, setHostStyle] = useState({
@@ -262,24 +262,27 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
      * 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리
      * - 채팅이 닫힐 때 300ms 지연 후 버튼 표시 (애니메이션 시간과 맞춤)
      */
-    useEffect(() => {
-        if (isChatVisible) {
-            console.log(`💬 [MainSpreadSheet] 채팅 열림 - 버튼 처리 없음`);
-            return;
-        } else {
-            console.log(`💬 [MainSpreadSheet] 채팅 닫힘 - 300ms 후 버튼 표시 예약`);
-            const timer = setTimeout(() => {
-                console.log(`💬 [MainSpreadSheet] 채팅 버튼 표시`);
-                uiActions.setShowChatButton(true);
-            }, 300);
+    // useEffect(() => {
+    //     if (isChatVisible) {
+    //         console.log(`💬 [MainSpreadSheet] 채팅 열림 - 버튼 처리 없음`);
+    //         return;
+    //     } else {
+    //         console.log(`💬 [MainSpreadSheet] 채팅 닫힘 - 300ms 후 버튼 표시 예약`);
+    //         const timer = setTimeout(() => {
+    //             console.log(`💬 [MainSpreadSheet] 채팅 버튼 표시`);
+    //             uiActions.setShowChatButton(true);
+    //         }, 300);
 
-            return () => {
-                console.log(`💬 [MainSpreadSheet] 채팅 버튼 타이머 해제`);
-                clearTimeout(timer);
-            };
-        }
-    }, [isChatVisible, uiActions]);
-
+    //         return () => {
+    //             console.log(`💬 [MainSpreadSheet] 채팅 버튼 타이머 해제`);
+    //             clearTimeout(timer);
+    //         };
+    //     }
+    // }, [isChatVisible, uiActions]);
+    const higerChatZindex = () => {
+        console.log('🤖 [ChatTabBar] higerChatZindex 호출');
+        // 채팅의 z인덱스를 높여서 채팅이 보이게 하는 로직
+    }
 
     // ============================================================================
     // 이벤트 핸들러들
@@ -379,7 +382,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
                     {/* 채팅 버튼 - 조건부 표시 */}
                     <ChatButton
-                        onClick={handleShowChat}
+                        onClick={higerChatZindex}
                         isVisible={uiState.showChatButton}
                     />
                 </div>

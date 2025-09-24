@@ -1,13 +1,17 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { Send, Paperclip, Settings, ChevronDown, X, MessagesSquare } from 'lucide-react';
-import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
+// import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 
 
 const ChatTabBar = () => {
     const [activeTab, setActiveTab] = useState('chat');
     const tabBarRef = useRef<HTMLDivElement>(null);
-    const { hideChat } = useChatVisibility();
+    // const { hideChat } = useChatVisibility();
+    const lowerChatZindex = () => {
+        console.log('🤖 [ChatTabBar] lowerChatZindex 호출');
+        // 채팅의 z인덱스를 낮춰서 채팅이 보이지 않게 하는 로직
+    }
 
     const handleTabClick = (tab: string) => {
         setActiveTab(tab);
@@ -23,7 +27,7 @@ const ChatTabBar = () => {
             <button 
                 className="flex items-center gap-1 px-2 py-0 text-sm text-white rounded-md transition-colors duration-200"
                 style={{ backgroundColor: '#005ed9' }}
-                onClick={hideChat}
+                onClick={lowerChatZindex}
             >
                 <img src="/EXTION_new_logo_white.svg" alt="Extion Logo" className="w-4 h-4" />
                 AI
@@ -37,7 +41,8 @@ const ChatTabBar = () => {
             </button> */}
             <button
                 className={`pr-2 py-0 rounded ${activeTab === 'settings' ? 'text-white' : 'text-gray-700'} flex items-center h-full`}
-                onClick={hideChat}
+                // onClick={hideChat}
+                onClick={lowerChatZindex}
             >
                 <X size={18} />
             </button>

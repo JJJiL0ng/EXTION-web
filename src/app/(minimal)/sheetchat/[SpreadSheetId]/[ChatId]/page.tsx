@@ -3,7 +3,7 @@
 import FileUploadContainer from "@/_components/chat/FileUploadChattingContainer";
 import dynamic from "next/dynamic";
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisibilityContext";
+// import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisibilityContext";
 import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
 import { useParams } from "next/navigation";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
@@ -25,7 +25,7 @@ export default function Home() {
   const params = useParams();
   const { setSpreadSheetId } = useSpreadsheetIdStore();
   const { setChatId } = useChatStore();
-  
+
   const [leftWidth, setLeftWidth] = useState(75); // 초기값 70%
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,12 +37,12 @@ export default function Home() {
   // URL 파라미터에서 spreadsheetId와 chatId를 추출하여 store에 저장
   useEffect(() => {
     console.log('🔍 [Page] URL Parameters:', { params });
-    
+
     if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
       console.log('📊 [Page] Setting spreadsheetId:', params.SpreadSheetId);
       setSpreadSheetId(params.SpreadSheetId);
     }
-    
+
     if (params?.ChatId && typeof params.ChatId === 'string') {
       console.log('💬 [Page] Setting chatId:', params.ChatId);
       setChatId(params.ChatId);
@@ -63,10 +63,10 @@ export default function Home() {
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging || !containerRef.current) return;
-    
+
     const containerRect = containerRef.current.getBoundingClientRect();
     const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-    
+
     // 최소/최대 너비 제한 (20% ~ 80%)
     const clampedWidth = Math.min(Math.max(newLeftWidth, 20), 80);
     setLeftWidth(clampedWidth);
@@ -94,18 +94,18 @@ export default function Home() {
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   return (
-    <ChatVisibilityProvider initialVisible={false}>
-  <SpreadsheetProvider spreadRef={spreadRef}>
-        <HomeContent 
-          leftWidth={leftWidth}
-          setLeftWidth={setLeftWidth}
-          isDragging={isDragging}
-          containerRef={containerRef}
-          handleMouseDown={handleMouseDown}
-          spreadRef={spreadRef}
-        />
-      </SpreadsheetProvider>
-    </ChatVisibilityProvider>
+    // <ChatVisibilityProvider initialVisible={false}>
+    <SpreadsheetProvider spreadRef={spreadRef}>
+      <HomeContent
+        leftWidth={leftWidth}
+        setLeftWidth={setLeftWidth}
+        isDragging={isDragging}
+        containerRef={containerRef}
+        handleMouseDown={handleMouseDown}
+        spreadRef={spreadRef}
+      />
+    </SpreadsheetProvider>
+    // </ChatVisibilityProvider>
   );
 }
 
@@ -118,33 +118,35 @@ interface HomeContentProps {
   spreadRef: React.MutableRefObject<any>;
 }
 
-function HomeContent({ 
-  leftWidth, 
+function HomeContent({
+  leftWidth,
   setLeftWidth,
-  isDragging, 
-  containerRef, 
+  isDragging,
+  containerRef,
   handleMouseDown,
   spreadRef
 }: HomeContentProps) {
-  const { isChatVisible } = useChatVisibility();
-  
+  // const { isChatVisible } = useChatVisibility();
+
 
 
 
   // 채팅이 숨겨질 때 스프레드시트 너비를 100%로 조정
-  const actualLeftWidth = isChatVisible ? leftWidth : 100;
+  // const actualLeftWidth = isChatVisible ? leftWidth : 100;
 
   return (
     <div ref={containerRef} className="flex h-screen">
-      <div 
+      <div
         className="h-screen overflow-hidden transition-all duration-300"
-        style={{ width: `${actualLeftWidth}%` }}
+        // style={{ width: `${actualLeftWidth}%` }}
+        style={{ width: `${100}%` }}
+
       >
         <MainSpreadSheet spreadRef={spreadRef} />
       </div>
-      
+
       {/* 채팅이 보일 때만 드래그 가능한 구분선 표시 - 깔끔한 닫힘 */}
-      {isChatVisible && (
+      {/* {isChatVisible && ( */}
         <div
           className={`
             w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize 
@@ -158,17 +160,18 @@ function HomeContent({
             <div className="w-1 h-8 bg-gray-600 rounded-full"></div>
           </div>
         </div>
-      )}
-      
+      {/* )} */}
+
       {/* 채팅 컨테이너 표시 - 깔끔한 닫힘 */}
-      {isChatVisible && (
-        <div 
+      {/* {isChatVisible && ( */}
+      {/* //이 FileUploadChattingContainer의 z인덱스틀 조절시켜서 채팅이 보이게 했다가 안보이게 했다가 해야함 */}
+        <div
           className="h-screen overflow-hidden transition-all duration-300"
           style={{ width: `${100 - leftWidth}%` }}
         >
           <FileUploadContainer />
         </div>
-      )}
+      {/* )} */}
     </div>
   );
 }
