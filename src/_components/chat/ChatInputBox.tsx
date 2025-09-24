@@ -77,6 +77,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         {/* 메인 입력 영역 */}
         <div className="px-3 py-2">
           <textarea
+            id="chat-input-message"
+            name="chatMessage"
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -86,7 +88,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholder={placeholder}
-            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[12px] leading-6"
+            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[24px] leading-6"
             disabled={false} // 항상 타이핑 가능하게 변경
             rows={1}
           />

@@ -53,7 +53,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     const { isFileUploaded, setIsFileUploaded } = useSpreadsheetUploadStore();
 
     // 채팅 z-index 상태 관리
-    const { showChat } = useChattingComponentZindexStore();
+    const { showChat, isVisible: isChatVisible } = useChattingComponentZindexStore();
 
     // 인증 상태 관리
     const userId = getOrCreateGuestId();
@@ -266,23 +266,23 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
      * 채팅 가시성 변화에 따른 Chat 버튼 표시 지연 처리
      * - 채팅이 닫힐 때 300ms 지연 후 버튼 표시 (애니메이션 시간과 맞춤)
      */
-    // useEffect(() => {
-    //     if (isChatVisible) {
-    //         console.log(`💬 [MainSpreadSheet] 채팅 열림 - 버튼 처리 없음`);
-    //         return;
-    //     } else {
-    //         console.log(`💬 [MainSpreadSheet] 채팅 닫힘 - 300ms 후 버튼 표시 예약`);
-    //         const timer = setTimeout(() => {
-    //             console.log(`💬 [MainSpreadSheet] 채팅 버튼 표시`);
-    //             uiActions.setShowChatButton(true);
-    //         }, 300);
+    useEffect(() => {
+        if (isChatVisible) {
+            console.log(`💬 [MainSpreadSheet] 채팅 열림 - 버튼 숨김`);
+            uiActions.setShowChatButton(false);
+        } else {
+            console.log(`💬 [MainSpreadSheet] 채팅 닫힘 - 300ms 후 버튼 표시 예약`);
+            const timer = setTimeout(() => {
+                console.log(`💬 [MainSpreadSheet] 채팅 버튼 표시`);
+                uiActions.setShowChatButton(true);
+            }, 300);
 
-    //         return () => {
-    //             console.log(`💬 [MainSpreadSheet] 채팅 버튼 타이머 해제`);
-    //             clearTimeout(timer);
-    //         };
-    //     }
-    // }, [isChatVisible, uiActions]);
+            return () => {
+                console.log(`💬 [MainSpreadSheet] 채팅 버튼 타이머 해제`);
+                clearTimeout(timer);
+            };
+        }
+    }, [isChatVisible, uiActions]);
     const higerChatZindex = () => {
         console.log('🤖 [MainSpreadSheet] higerChatZindex 호출');
         showChat(); // 채팅의 z인덱스를 높여서 채팅이 보이게 하는 로직
@@ -385,6 +385,16 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                     />
 
                     {/* 채팅 버튼 - 조건부 표시 */}
+                    <ChatButton
+                        onClick={higerChatZindex}
+                        isVisible={uiState.showChatButton}
+                    />
+                </div>
+            )}
+
+            {/* 파일 업로드되지 않은 상태에서도 채팅 버튼 표시 */}
+            {!isFileUploaded && (
+                <div className="absolute top-4 right-4 z-10">
                     <ChatButton
                         onClick={higerChatZindex}
                         isVisible={uiState.showChatButton}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatMode } from './useChatMode';
 import { useSelectedSheetInfoStore } from '../sheet/common/useSelectedSheetInfoStore';
 import { aiChatStore } from '@/_store/aiChat/aiChatStore';
@@ -159,18 +159,25 @@ export const useChatInputBoxHook = ({
   // 활성 시트명이 변경될 때 자동 동기화는 하지 않음
 
   // textarea 높이 조정
-  const adjustTextareaHeight = () => {
+  const adjustTextareaHeight = useCallback(() => {
     if (textareaRef.current) {
+      // 빈 메시지일 때는 최소 높이로 고정
+      if (!message.trim()) {
+        textareaRef.current.style.height = '24px';
+        return;
+      }
+      
       textareaRef.current.style.height = 'auto';
       const scrollHeight = textareaRef.current.scrollHeight;
       const maxHeight = 120;
-      textareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+      const minHeight = 24; // line-height와 일치
+      textareaRef.current.style.height = `${Math.max(minHeight, Math.min(scrollHeight, maxHeight))}px`;
     }
-  };
+  }, [message]);
 
   useEffect(() => {
     adjustTextareaHeight();
-  }, [message]);
+  }, [adjustTextareaHeight]);
 
   // 모달 외부 클릭 시 닫기
   useEffect(() => {
