@@ -8,6 +8,7 @@ import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
 import { useParams } from "next/navigation";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
+import { useChattingComponentZindexStore } from "@/_store/handleZindex/chattingComponentZindexStore";
 import { enableMapSet } from 'immer';
 
 
@@ -127,29 +128,28 @@ function HomeContent({
   spreadRef
 }: HomeContentProps) {
   // const { isChatVisible } = useChatVisibility();
+  const { isVisible } = useChattingComponentZindexStore();
 
 
 
 
   // 채팅이 숨겨질 때 스프레드시트 너비를 100%로 조정
-  // const actualLeftWidth = isChatVisible ? leftWidth : 100;
+  const actualLeftWidth = isVisible ? leftWidth : 100;
 
   return (
     <div ref={containerRef} className="flex h-screen">
       <div
         className="h-screen overflow-hidden transition-all duration-300"
-        // style={{ width: `${actualLeftWidth}%` }}
-        style={{ width: `${100}%` }}
-
+        style={{ width: `${actualLeftWidth}%` }}
       >
         <MainSpreadSheet spreadRef={spreadRef} />
       </div>
 
       {/* 채팅이 보일 때만 드래그 가능한 구분선 표시 - 깔끔한 닫힘 */}
-      {/* {isChatVisible && ( */}
+      {isVisible && (
         <div
           className={`
-            w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize 
+            w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize
             relative group transition-colors duration-200
             ${isDragging ? 'bg-[#005de9]' : ''}
           `}
@@ -160,18 +160,15 @@ function HomeContent({
             <div className="w-1 h-8 bg-gray-600 rounded-full"></div>
           </div>
         </div>
-      {/* )} */}
+      )}
 
-      {/* 채팅 컨테이너 표시 - 깔끔한 닫힘 */}
-      {/* {isChatVisible && ( */}
-      {/* //이 FileUploadChattingContainer의 z인덱스틀 조절시켜서 채팅이 보이게 했다가 안보이게 했다가 해야함 */}
-        <div
-          className="h-screen overflow-hidden transition-all duration-300"
-          style={{ width: `${100 - leftWidth}%` }}
-        >
-          <FileUploadContainer />
-        </div>
-      {/* )} */}
+      {/* 채팅 컨테이너 표시 - z-index로 제어됨 */}
+      <div
+        className="h-screen overflow-hidden transition-all duration-300"
+        style={{ width: `${100 - actualLeftWidth}%` }}
+      >
+        <FileUploadContainer />
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
 // Stores
 import { useSpreadsheetUploadStore } from '../../_store/sheet/spreadsheetUploadStore';
 import useFileNameStore from '@/_store/sheet/fileNameStore';
+import { useChattingComponentZindexStore } from '@/_store/handleZindex/chattingComponentZindexStore';
 
 // Utils
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
@@ -50,6 +51,9 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
 
     // 파일 업로드 상태 관리 (Zustand)
     const { isFileUploaded, setIsFileUploaded } = useSpreadsheetUploadStore();
+
+    // 채팅 z-index 상태 관리
+    const { showChat } = useChattingComponentZindexStore();
 
     // 인증 상태 관리
     const userId = getOrCreateGuestId();
@@ -280,8 +284,8 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     //     }
     // }, [isChatVisible, uiActions]);
     const higerChatZindex = () => {
-        console.log('🤖 [ChatTabBar] higerChatZindex 호출');
-        // 채팅의 z인덱스를 높여서 채팅이 보이게 하는 로직
+        console.log('🤖 [MainSpreadSheet] higerChatZindex 호출');
+        showChat(); // 채팅의 z인덱스를 높여서 채팅이 보이게 하는 로직
     }
 
     // ============================================================================

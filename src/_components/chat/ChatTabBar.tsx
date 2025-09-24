@@ -2,15 +2,18 @@
 import React, { useState, useRef } from 'react';
 import { Send, Paperclip, Settings, ChevronDown, X, MessagesSquare } from 'lucide-react';
 // import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
+import { useChattingComponentZindexStore } from '@/_store/handleZindex/chattingComponentZindexStore';
 
 
 const ChatTabBar = () => {
     const [activeTab, setActiveTab] = useState('chat');
     const tabBarRef = useRef<HTMLDivElement>(null);
     // const { hideChat } = useChatVisibility();
+    const { hideChat } = useChattingComponentZindexStore();
+
     const lowerChatZindex = () => {
         console.log('🤖 [ChatTabBar] lowerChatZindex 호출');
-        // 채팅의 z인덱스를 낮춰서 채팅이 보이지 않게 하는 로직
+        hideChat(); // 채팅의 z인덱스를 낮춰서 채팅이 보이지 않게 하는 로직
     }
 
     const handleTabClick = (tab: string) => {
