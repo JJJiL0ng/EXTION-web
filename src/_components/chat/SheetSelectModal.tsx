@@ -56,11 +56,11 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
     <div className="p-2 absolute bottom-full left-0 right-0 z-50">
       <div className="sheet-select-modal bg-white border-2 border-gray-200 rounded-xl p-2 w-64 max-h-96 overflow-auto shadow-lg">
         <div className="px-2 flex justify-between items-center mb-1">
-          <span className="text-sm text-gray-700 font-semibold">시트 추가</span>
+          <span className="text-sm text-gray-700 font-semibold">Add sheets</span>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-xl"
-            aria-label="닫기"
+            aria-label="Close modal"
           >
             <X />
           </button>
@@ -71,7 +71,7 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
           <div className="border-t border-gray-200 py-1 px-2" />
       {spreadSheetNames.length === 0 ? (
             <p className="text-gray-400 text-center py-4">
-              사용 가능한 시트가 없습니다.
+              No sheets available.
             </p>
           ) : (
             <div className="px-1 flex flex-wrap gap-2 items-start justify-start">
@@ -83,7 +83,7 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
                   className="hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <SelectedSheetNameCard
-                    fileName="모든 파일 추가"
+                    fileName="Select all sheets"
                     showIcon={true}
                     mode='modal-whole-file'
                     isSelected={isAllSheetsSelected}

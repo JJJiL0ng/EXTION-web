@@ -172,12 +172,9 @@ export const useChatInputBoxHook = ({
       const maxHeight = 120;
       const minHeight = 24; // line-height와 일치
       textareaRef.current.style.height = `${Math.max(minHeight, Math.min(scrollHeight, maxHeight))}px`;
+      adjustTextareaHeight();
     }
   }, [message]);
-
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [adjustTextareaHeight]);
 
   // 모달 외부 클릭 시 닫기
   useEffect(() => {

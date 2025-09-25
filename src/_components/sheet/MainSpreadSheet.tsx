@@ -267,10 +267,13 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
      * - 채팅이 닫힐 때 300ms 지연 후 버튼 표시 (애니메이션 시간과 맞춤)
      */
     useEffect(() => {
+        console.log(`💬 [MainSpreadSheet] useEffect 실행: isChatVisible=${isChatVisible}, showChatButton=${uiState.showChatButton}`);
+        
         if (isChatVisible) {
             console.log(`💬 [MainSpreadSheet] 채팅 열림 - 버튼 숨김`);
             uiActions.setShowChatButton(false);
-        } else {
+        } else if (!uiState.showChatButton) {
+            // 채팅이 닫혀있고, 버튼이 숨겨진 상태일 때만 타이머 설정
             console.log(`💬 [MainSpreadSheet] 채팅 닫힘 - 300ms 후 버튼 표시 예약`);
             const timer = setTimeout(() => {
                 console.log(`💬 [MainSpreadSheet] 채팅 버튼 표시`);
@@ -281,8 +284,10 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 console.log(`💬 [MainSpreadSheet] 채팅 버튼 타이머 해제`);
                 clearTimeout(timer);
             };
+        } else {
+            console.log(`💬 [MainSpreadSheet] 조건 불충족 - 아무 작업 안함`);
         }
-    }, [isChatVisible, uiActions]);
+    }, [isChatVisible, uiState.showChatButton]);
     const higerChatZindex = () => {
         console.log('🤖 [MainSpreadSheet] higerChatZindex 호출');
         showChat(); // 채팅의 z인덱스를 높여서 채팅이 보이게 하는 로직
