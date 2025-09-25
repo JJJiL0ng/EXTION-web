@@ -29,18 +29,24 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     selectedFile,
     showModeModal,
     setShowModeModal,
+    showModelModal,
+    setShowModelModal,
+    isComposing,
     isFocused,
     mode,
     setMode,
+    model,
+    setModel,
     selectedSheets,
     removeSelectedSheet,
     isSendingMessage,
     isConnected,
-    
+
     // Refs
     textareaRef,
     modeModalRef,
-    
+    modelModalRef,
+
     // Handlers
     handleSend,
     handleKeyDown,
@@ -57,14 +63,14 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         <div className="p-3 flex items-center justify-between relative">
           <div className="flex items-center gap-2 flex-wrap">
             {/* 파일 선택 버튼을 가장 왼쪽에 배치 */}
-            <FileAddButton 
-              onClick={onFileAddClick} 
+            <FileAddButton
+              onClick={onFileAddClick}
               isSelected={selectedSheets.length > 0}
             />
 
             {/* 선택된 시트들 표시 */}
             {selectedSheets.map((sheet) => (
-              <SelectedSheetNameCard 
+              <SelectedSheetNameCard
                 key={sheet.name}
                 fileName={sheet.name}
                 onRemove={() => removeSelectedSheet(sheet.name)}
@@ -88,7 +94,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholder={placeholder}
-            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[24px] leading-6"
+            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[12px] leading-6"
             disabled={false} // 항상 타이핑 가능하게 변경
             rows={1}
           />
@@ -98,7 +104,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         <div className="px-3 py-1 flex items-center justify-between relative">
           <div className="flex items-center">
             {/* 모드 선택 */}
-            <div className="py-2 relative" ref={modeModalRef}>
+           <div className="flex items-center space-x-2 mr-2">
+             <div className="py-1 relative" ref={modeModalRef}>
               <button
                 onClick={() => setShowModeModal(!showModeModal)}
                 className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors w-20"
@@ -117,92 +124,116 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                   {/* agent 옵션 */}
                   <button
                     onClick={() => {
-                      setMode('agent');
+                      setMode('Agent');
                       setShowModeModal(false);
                     }}
-                    className="w-full px-3 py-2 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
-                    >
+                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
+                  >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-left ">
-                      agent <span className="text-xs text-gray-500">Auto apply changes</span>
+                      <span className="text-left gap-1">
+                        Agent <span className="text-xs text-gray-500">auto apply changes</span>
                       </span>
                       {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
                       <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                      {mode === 'agent' ? <Check size={16} /> : null}
+                        {mode === 'Agent' ? <Check size={16} /> : null}
                       </span>
                     </div>
-                    </button>
-                    {/* edit 옵션 */}
-                    <button
+                  </button>
+                  {/* edit 옵션 */}
+                  <button
                     onClick={() => {
-                      setMode('edit');
+                      setMode('Edit');
                       setShowModeModal(false);
                     }}
-                    className="w-full px-3 py-2 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
-                    >
+                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left">
-                      edit <span className="text-xs text-gray-500">Manual apply changes</span>
+                        Edit <span className="text-xs text-gray-500">manual apply changes</span>
                       </span>
                       <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                      {mode === 'edit' ? <Check size={16} /> : null}
+                        {mode === 'Edit' ? <Check size={16} /> : null}
                       </span>
                     </div>
-                    </button>
+                  </button>
                 </div>
               )}
             </div>
 
             {/* 모델 선택 */}
-            {/* <div className="relative" ref={modelModalRef}>
+            <div className="py-1 relative" ref={modelModalRef}>
               <button
                 onClick={() => setShowModelModal(!showModelModal)}
-                className="flex items-center justify-between gap-2 rounded-lg px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 transition-colors w-40"
+                className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors w-36"
                 disabled={disabled}
               >
                 <span className="capitalize">{model}</span>
-                <ChevronDown size={16} />
+                <span className="flex items-center" style={{ height: '24px' }}>
+                  <ChevronDown size={16} /> {/* 크기 크게 조정 */}
+                </span>
               </button>
-              
+
               {/* 모델 선택 모달 */}
-            {/* {showModelModal && (
-                <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 ">
+              {showModelModal && (
+                <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-64">
+                  {/* Extion large 옵션 */}
                   <button
                     onClick={() => {
-                      setModel('Claude-sonnet-4');
+                      setModel('Extion large');
                       setShowModelModal(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                      model === 'Claude-sonnet-4' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
+                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
                   >
-                    Claude-sonnet-4
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-left gap-1">
+                        Extion Large <span className="text-xs text-gray-500">largest model</span>
+                      </span>
+                      {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
+                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                        {model === 'Extion large' ? <Check size={16} /> : null}
+                      </span>
+                    </div>
                   </button>
+                  {/* Extion medium 옵션 */}
                   <button
                     onClick={() => {
-                      setModel('OpenAi-GPT-4o');
+                      setModel('Extion medium');
                       setShowModelModal(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                      model === 'OpenAi-GPT-4o' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
+                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 text-gray-700"
                   >
-                    OpenAi-GPT-4o
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-left">
+                        Extion medium <span className="text-xs text-gray-500">balanced model</span>
+                      </span>
+                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                        {model === 'Extion medium' ? <Check size={16} /> : null}
+                      </span>
+                    </div>
                   </button>
+                  {/* Extion small 옵션 */}
                   <button
                     onClick={() => {
-                      setModel('Gemini-2.5-pro');
+                      setModel('Extion small');
                       setShowModelModal(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                      model === 'Gemini-2.5-pro' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
+                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
                   >
-                    Gemini-2.5-pro
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-left">
+                        Extion small <span className="text-xs text-gray-500">fast response</span>
+                      </span>
+                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                        {model === 'Extion small' ? <Check size={16} /> : null}
+                      </span>
+                    </div>
                   </button>
                 </div>
               )}
-            </div> */}
+            </div>
+           </div>
+
+
           </div>
 
           {/* 전송 버튼 */}
@@ -211,7 +242,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             disabled={disabled || isSendingMessage || (!message.trim() && !selectedFile)}
             className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${disabled || isSendingMessage || (!message.trim() && !selectedFile)
               ? 'bg-gray-300 text-white cursor-not-allowed'
-              : isConnected 
+              : isConnected
                 ? 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
                 : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
               }`}

@@ -39,18 +39,23 @@ export const useChatInputBoxHook = ({
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showModeModal, setShowModeModal] = useState(false);
+  const [showModelModal, setShowModelModal] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
+  const modelModalRef = useRef<HTMLDivElement>(null);
 
   // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
   const { spread } = useSpreadsheetContext();
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
+
+  const [model, setModel] = useState<'Extion large' | 'Extion medium' | 'Extion small'>('Extion small');
+
 
   // useSelectedSheetInfoStore 훅 사용
   const { selectedSheets, removeSelectedSheet, addSelectedSheet } = useSelectedSheetInfoStore();
@@ -121,7 +126,7 @@ export const useChatInputBoxHook = ({
 
   // 최초 1회만 activeSheetName을 기본 선택으로 추가 (컴포넌트 마운트 시에만)
   const didInitDefaultSelection = useRef(false);
-  
+
   useEffect(() => {
     console.log('🔍 [ChatInputBoxHook] Default selection effect triggered:', {
       didInitDefaultSelection: didInitDefaultSelection.current,
@@ -135,7 +140,7 @@ export const useChatInputBoxHook = ({
       console.log('🚫 [ChatInputBoxHook] Already initialized, skipping');
       return;
     }
-    
+
     // activeSheetName이 없으면 대기
     if (!activeSheetName) {
       console.log('⏳ [ChatInputBoxHook] No activeSheetName yet, waiting...');
@@ -149,7 +154,7 @@ export const useChatInputBoxHook = ({
       didInitDefaultSelection.current = true;
       return;
     }
-    
+
     console.log('🎯 [ChatInputBoxHook] Adding default sheet:', activeSheetName);
     addSelectedSheet(activeSheetName);
     didInitDefaultSelection.current = true;
@@ -166,7 +171,7 @@ export const useChatInputBoxHook = ({
         textareaRef.current.style.height = '24px';
         return;
       }
-      
+
       textareaRef.current.style.height = 'auto';
       const scrollHeight = textareaRef.current.scrollHeight;
       const maxHeight = 120;
@@ -191,6 +196,22 @@ export const useChatInputBoxHook = ({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showModeModal]);
+
+  // 모델 모달 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (showModelModal && modelModalRef.current && !modelModalRef.current.contains(target)) {
+        setShowModelModal(false);
+      }
+    };
+
+    if (showModelModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showModelModal]);
 
 
   const handleSend = async () => {
@@ -347,10 +368,14 @@ export const useChatInputBoxHook = ({
     setSelectedFile,
     showModeModal,
     setShowModeModal,
+    showModelModal,
+    setShowModelModal,
     isComposing,
     isFocused,
     mode,
     setMode,
+    model,
+    setModel,
     selectedSheets,
     removeSelectedSheet,
     addSelectedSheet,
@@ -362,6 +387,7 @@ export const useChatInputBoxHook = ({
     fileInputRef,
     textareaRef,
     modeModalRef,
+    modelModalRef,
 
     // Handlers
     handleSend,

@@ -17,14 +17,14 @@ export const useChatMode = () => {
 
   // 채팅 모드 토글 함수
   const toggleMode = useCallback(() => {
-    setMode(mode === 'agent' ? 'edit' : 'agent');
+    setMode(mode === 'Agent' ? 'Edit' : 'Agent');
   }, [mode, setMode]);
 
   // 에이전트 모드인지 확인
-  const isAgentMode = mode === 'agent';
+  const isAgentMode = mode === 'Agent';
   
   // 에디트 모드인지 확인
-  const isEditMode = mode === 'edit';
+  const isEditMode = mode === 'Edit';
 
   // 새로운 채팅 세션 시작
   const startNewChatSession = useCallback((newChatId: string) => {
