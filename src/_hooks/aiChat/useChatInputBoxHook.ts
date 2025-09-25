@@ -15,6 +15,7 @@ import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetNa
 import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
 import { isSpreadSheetDataDirty } from '@/_utils/sheet/authSave/isSpreadSheetDataDirty';
 import { clearAllDirtyData } from '@/_utils/sheet/authSave/clearAllDirtyData';
+import { aiModelType } from '@/_types/apiConnector/ai-chat-api/aiChatApi.types';
 
 // 브라우저 Web Crypto API 사용 + 폴백
 const safeRandomUUID = () => {
@@ -54,7 +55,7 @@ export const useChatInputBoxHook = ({
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
 
-  const [model, setModel] = useState<'Extion large' | 'Extion medium' | 'Extion small'>('Extion small');
+  const [model, setModel] = useState<aiModelType>('Extion small' as aiModelType);
 
 
   // useSelectedSheetInfoStore 훅 사용
@@ -286,7 +287,8 @@ export const useChatInputBoxHook = ({
                 includeUnsupportedStyle: true
               }),
             }),
-            editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || null // 낙관적 잠금을 위한 버전 번호
+            editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || null, // 낙관적 잠금을 위한 버전 번호
+            aiModel: model
           };
           // 전송 직후 시트의 dirty 데이터 모두 초기화 (spread 객체가 있을 때만)
           if (spread) {

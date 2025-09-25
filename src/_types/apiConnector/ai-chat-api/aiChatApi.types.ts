@@ -17,6 +17,7 @@ export interface aiChatApiReq {
     newVersionSpreadSheetData?: Record<string, any>; // Optional: 새 버전의 데이터(변경사항이 있을시에만 프론트에서 보내줄 예정)
     editLockVersion: number | null; // Optional: 낙관적 잠금을 위한 버전 번호 (없을 시 최신 버전 사용)
     parentChatBranchId?: string; // Optional: 대화 분기 시에 부모 브랜치 ID (없을 시 null)
+    aiModel: aiModelType; // 사용할 AI 모델 이름
 }
 export interface aiChatApiRes {
     jobId: string;
@@ -26,5 +27,7 @@ export interface aiChatApiRes {
     spreadSheetVersionId: string;
     editLockVersion: number; // Optional: 낙관적 잠금을 위한 버전 번호 (없을 시 최신 버전 사용)
 }
+
+export type aiModelType = 'Extion small' | 'Extion medium' | 'Extion large';
 
 
