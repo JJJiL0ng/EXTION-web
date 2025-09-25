@@ -127,7 +127,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                       setMode('Agent');
                       setShowModeModal(false);
                     }}
-                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
+                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left gap-1">
@@ -145,7 +145,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                       setMode('Edit');
                       setShowModeModal(false);
                     }}
-                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
+                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left">
@@ -175,14 +175,14 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
               {/* 모델 선택 모달 */}
               {showModelModal && (
-                <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-64">
+                <div className="py-1 absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded-lg shadow-lg z-50 w-64">
                   {/* Extion large 옵션 */}
                   <button
                     onClick={() => {
                       setModel('Extion large');
                       setShowModelModal(false);
                     }}
-                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
+                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t-lg text-gray-700"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left gap-1">
@@ -200,7 +200,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                       setModel('Extion medium');
                       setShowModelModal(false);
                     }}
-                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 text-gray-700"
+                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 text-gray-700"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left">
@@ -217,7 +217,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                       setModel('Extion small');
                       setShowModelModal(false);
                     }}
-                    className="w-full px-3 py-1 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
+                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-b-lg text-gray-700"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-left">
