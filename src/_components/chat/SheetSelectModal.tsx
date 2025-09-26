@@ -56,7 +56,7 @@ export const FileSelectModal: React.FC<FileSelectModalProps> = ({
     <div className="p-2 absolute bottom-full left-0 right-0 z-50">
       <div className="sheet-select-modal bg-white border-2 border-gray-200 rounded-xl p-2 w-64 max-h-96 overflow-auto shadow-lg">
         <div className="px-2 flex justify-between items-center mb-1">
-          <span className="text-sm text-gray-700 font-semibold">Add sheets</span>
+          <span className="text-sm text-gray-700 font-semibold">Select sheets</span>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-xl"
