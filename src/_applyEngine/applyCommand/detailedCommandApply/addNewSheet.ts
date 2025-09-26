@@ -4,13 +4,14 @@ import createUniqueSheetName from './createUniqueSheetName';
 interface AddNewSheetProps {
     sheetName: string;
     spread: any;
+    range?: number[];
 }
 
 interface AddNewSheetReturn {
     uniqueSheetName: string;
 }
 
-const addNewSheet = ({ sheetName, spread }: AddNewSheetProps):  AddNewSheetReturn => {
+const addNewSheet = ({ sheetName, spread, range }: AddNewSheetProps):  AddNewSheetReturn => {
 
     let uniqueSheetName = '';
 
