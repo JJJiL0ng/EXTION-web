@@ -149,19 +149,19 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                     </button>
 
                     {/* Dropdown menu */}
-                    <div className="absolute left-0 w-48 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
+                    <div className="absolute left-0 w-24 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
                         <div className="">
                             <button
                                 onClick={onSaveAsExcel}
                                 disabled={isExporting}
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
+                                className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
                             >
                                 Excel (.xlsx)
                             </button>
                             <button
                                 onClick={onSaveAsCSV}
                                 disabled={isExporting}
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
+                                className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
                             >
                                 CSV (.csv)
                             </button>

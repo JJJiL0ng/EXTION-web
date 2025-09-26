@@ -108,7 +108,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
              <div className="py-1 relative" ref={modeModalRef}>
               <button
                 onClick={() => setShowModeModal(!showModeModal)}
-                className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors w-20"
+                className="flex items-center justify-center gap-1 rounded-lg px-2 text-xs text-gray-700 hover:bg-gray-200 transition-colors w-20"
                 disabled={disabled}
               // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
               >
@@ -164,7 +164,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             <div className="py-1 relative" ref={modelModalRef}>
               <button
                 onClick={() => setShowModelModal(!showModelModal)}
-                className="flex items-center justify-center gap-1 rounded-lg px-2 text-sm text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors w-36"
+                className="flex items-center justify-center gap-1 rounded-lg px-2 text-xs text-gray-700 hover:bg-gray-200 transition-colors w-36"
                 disabled={disabled}
               >
                 <span className="capitalize">{model}</span>
