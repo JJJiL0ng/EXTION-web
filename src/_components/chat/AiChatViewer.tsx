@@ -142,7 +142,13 @@ const AiChatViewer = () => {
         }
 
         if (!chatId || !chatSessionId) {
-          console.error('❌ chatId 또는 chatSessionId가 없습니다');
+          if (!chatId && !chatSessionId) {
+            console.error('❌ chatId 및 chatSessionId가 없습니다');
+          } else if (!chatId) {
+            console.error('❌ chatId가 없습니다');
+          } else {
+            console.error('❌ chatSessionId가 없습니다');
+          }
           return;
         }
 

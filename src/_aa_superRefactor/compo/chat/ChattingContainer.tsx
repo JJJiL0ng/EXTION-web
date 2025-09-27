@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ChatInputBox from "../../../_components/chat/ChatInputBox";
 import ChatTabBar from "../../../_components/chat/ChatTabBar";
 import AiChatViewer from "../../../_components/chat/AiChatViewer";
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
+import { FileSelectModal } from "../../../_components/chat/SheetSelectModal";
+
 export default function ChattingContainer() {
 
-  // aiChatStore 사용
+  // aiChatStore 사용ㅁㄴㅇㄹ
   const { wsError } = aiChatStore();
 
   // 초기화 상태 관리 (간단한 구현)
@@ -18,7 +20,30 @@ export default function ChattingContainer() {
     // aiChatStore에서 에러를 클리어하는 로직이 필요하다면 여기서 구현
     console.log('Error cleared');
   };
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+  const handleSelectSheet = (sheetName: string) => {
+    console.log('Selected sheet:', sheetName);
+    // 시트 선택/해제는 모달 내부에서 처리되므로 여기서는 별도 로직 불필요
+  };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isModalOpen) {
+        // 모달 외부 클릭 시 닫기 (모달 자체 내부 클릭은 제외)
+        const target = event.target as Element;
+        if (!target.closest('.sheet-select-modal')) {
+          setIsModalOpen(false);
+        }
+      }
+    };
+
+    if (isModalOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isModalOpen]);
   return (
     <div
       className="bg-whiteh h-full flex flex-col bg-white w-full"
@@ -51,17 +76,27 @@ export default function ChattingContainer() {
           <div className="flex-1 overflow-y-auto">
             <AiChatViewer />
           </div>
-
+          <div className="relative">
+            {/* 파일 선택 모달 - ChatInputBox 바로 위에 위치 */}
+            {isModalOpen && (
+              <FileSelectModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                onSelectSheet={handleSelectSheet}
+              />
+            )}
+          </div>
 
           {/* 채팅 입력 박스 - 최하단 */}
           <div>
             <ChatInputBox
               // userId={userId}
               disabled={false} // 임시로 항상 활성화
+              onFileAddClick={handleOpenModal}
             />
           </div>
         </>
       )}
     </div>
   );
-}
+}   

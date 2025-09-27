@@ -1,5 +1,5 @@
 // src/_components/chat/FileUploadChattingContainer.tsx
-// 파일 업로드일때 채팅 컨테이너
+// 파일 업로드일때 채팅 컨테이너ㅁㅇㄹㄴㅁ
 import React, { useState, useEffect } from "react";
 import ChatInputBox from "./ChatInputBox";
 import ChatTabBar from "./ChatTabBar";
