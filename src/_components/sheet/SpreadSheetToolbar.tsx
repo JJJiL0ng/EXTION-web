@@ -99,12 +99,12 @@ export const SpreadSheetToolbar: React.FC = () => {
         }
     }, [isEditing]);
     return (
-        <div className="w-full h-7 bg-white flex items-center justify-between px-2 box-border">
-            <div className="flex items-center space-x-6">
+        <div className="w-full h-7 bg-white flex items-center justify-between box-border">
+            <div className="flex items-center ">
                 {/* Home */}
                 <button
                     onClick={() => window.location.href = '/dashboard'}
-                    className="px-2 pl-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
+                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
                 >
                     <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
                 </button>
@@ -119,7 +119,7 @@ export const SpreadSheetToolbar: React.FC = () => {
                                 onChange={(e) => setEditValue(e.target.value)}
                                 onBlur={handleEditComplete}
                                 onKeyDown={handleKeyDown}
-                                className="px-2 py-1 text-sm text-gray-700 font-medium bg-white border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
+                                className="px-2 text-sm text-gray-700 font-medium bg-white border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
                                 placeholder="Enter file name"
                             />
                         ) : (
