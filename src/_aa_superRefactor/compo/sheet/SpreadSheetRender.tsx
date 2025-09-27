@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useSpreadJSInit } from '../../../_hooks/sheet/spreadjs/useSpreadJSInit';
 import { SpreadSheets, Worksheet, Column } from "@mescius/spread-sheets-react";
 import * as GC from "@mescius/spread-sheets";
@@ -11,55 +11,46 @@ GC.Spread.Sheets.LicenseKey = SpreadJSKey;
 GC.Spread.Common.CultureManager.culture("en-us");
 
 interface SpreadSheetProps {
-    sheetWidthNum: number;
+    sheetWidthNum: number; // refresh 트리거용으로 유지
 }
 
 export default function SpreadSheet({ sheetWidthNum }: SpreadSheetProps) {
     // spread 인스턴스를 저장할 ref
     const spreadRef = useRef<any>(null);
 
-    const [hostStyle, setHostStyle] = useState({
-        width: `${sheetWidthNum}%`,
-        height:  '100vh',
-        minWidth: `${sheetWidthNum}%`,
-        boxSizing: 'border-box' as const,
-    });
-
-    // sheetWidthNum 변경사항을 감지하여 hostStyle 업데이트 및 SpreadJS resize 호출
+    // sheetWidthNum 변경사항을 감지하여 SpreadJS resize 호출
     useEffect(() => {
-        setHostStyle({
-            width: `${sheetWidthNum}%`,
-            height: '100vh',
-            minWidth: `${sheetWidthNum}%`,
-            boxSizing: 'border-box' as const,
-        });
-
-        // SpreadJS 인스턴스가 있으면 명시적으로 resize 호출
+        // SpreadJS 인스턴스가 있으면 즉시 refresh 호출
         if (spreadRef.current) {
-            setTimeout(() => {
-                // 여러 가지 방법으로 SpreadJS 크기 업데이트 시도
-                spreadRef.current.refresh();
-                spreadRef.current.invalidateLayout();
-                spreadRef.current.repaint();
-
-                // window resize 이벤트도 발생시켜서 SpreadJS가 크기 변경을 인식하도록 함
-                window.dispatchEvent(new Event('resize'));
-            }, 10);
+            // requestAnimationFrame을 사용하여 브라우저 렌더링 사이클에 맞춰 실행
+            requestAnimationFrame(() => {
+                if (spreadRef.current) {
+                    spreadRef.current.refresh();
+                }
+            });
         }
     }, [sheetWidthNum]);
 
     let initSpread = function (spread: any) {
         // spread 인스턴스를 ref에 저장
         spreadRef.current = spread;
-        let sheet = spread.getActiveSheet();
     };
 
     return (
-        <div style={hostStyle}>
+        <div
+            className="w-full h-full"
+            style={{
+                transform: 'translateZ(0)', // GPU 가속 활성화
+                backfaceVisibility: 'hidden' // 렌더링 최적화
+            }}
+        >
             <SpreadSheets
-                key={`spread-${sheetWidthNum}`}
                 workbookInitialized={(spread) => initSpread(spread)}
-                hostStyle={{ width: '100%', height: '100%' }}>
+                hostStyle={{
+                    width: '100%',
+                    height: '100%',
+                    transform: 'translateZ(0)' // SpreadJS 자체도 GPU 가속
+                }}>
             </SpreadSheets>
         </div>
     );

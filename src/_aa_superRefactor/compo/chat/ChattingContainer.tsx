@@ -9,11 +9,7 @@ import { ChatInitMode, UploadedFileInfo } from "../../../_types/chat.types";
 // import { getOrCreateGuestId } from "../../_utils/guestUtils";
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
 
-interface MainChattingContainerProps {
-  chattingWidthNum: number;
-}
-
-export default function ChattingContainer({ chattingWidthNum }: MainChattingContainerProps) {
+export default function ChattingContainer() {
   
   // aiChatStore 사용
   const { wsError } = aiChatStore();
@@ -28,9 +24,8 @@ export default function ChattingContainer({ chattingWidthNum }: MainChattingCont
   };
 
   return (
-    <div 
-      className="bg-whiteh h-full flex flex-col bg-white"
-      style={{ width: `${chattingWidthNum}%`, minWidth: `${chattingWidthNum}%` }}
+    <div
+      className="bg-whiteh h-full flex flex-col bg-white w-full"
     >
       {/* 초기화되지 않은 경우 로딩 표시 */}
       {!isInitialized ? (

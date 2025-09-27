@@ -15,8 +15,6 @@ const SpreadSheet = dynamic(
     { ssr: false }
 );
 
-
-
 export default function Home() {
     const spreadRef = useMemo(() => ({ current: null }), []);
     const {
@@ -39,14 +37,32 @@ export default function Home() {
         >
             <SpreadsheetProvider spreadRef={spreadRef}>
 
-                <SpreadSheet sheetWidthNum={leftWidth} />
+                <div
+                    className="flex-shrink-0"
+                    style={{
+                        width: `${leftWidth}%`,
+                        willChange: isResizing ? 'width' : 'auto',
+                        transition: isResizing ? 'none' : 'width 0.1s ease-out'
+                    }}
+                >
+                    <SpreadSheet sheetWidthNum={leftWidth} />
+                </div>
 
                 <Resizer
                     onMouseDown={startResize}
                     isResizing={isResizing}
                 />
 
-                <ChattingContainer chattingWidthNum={rightWidth} />
+                <div
+                    className="flex-1"
+                    style={{
+                        width: `${rightWidth}%`,
+                        willChange: isResizing ? 'width' : 'auto',
+                        transition: isResizing ? 'none' : 'width 0.1s ease-out'
+                    }}
+                >
+                    <ChattingContainer />
+                </div>
 
             </SpreadsheetProvider>
         </div>
