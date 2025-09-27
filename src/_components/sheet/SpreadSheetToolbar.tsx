@@ -1,35 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import ChatOpenButton from '@/_aa_superRefactor/compo/shared/ChatOpenButton';
 import useFileNameStore from '@/_store/sheet/fileNameStore';
 import { renameSheet } from '@/_hooks/sheet/fileName/useRename';
-interface SpreadSheetToolbarProps {
-    // Export related
-    onSaveAsExcel: () => void;
-    onSaveAsCSV: () => void;
-    onSaveAsJSON: () => void;
-    isExporting: boolean;
-
-    // New spreadsheet
-    onNewSpreadsheet: () => void;
-
-    // (Optional) Upload related - currently managed by parent (Main)
-    onFileUpload?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    isUploading?: boolean;
-}
-
+import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
+import { useSpreadsheetContext } from '@/_contexts/SpreadsheetContext';
 /**
  * Spreadsheet top toolbar component
  */
-export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
-    onSaveAsExcel,
-    onSaveAsCSV,
-    onSaveAsJSON,
-    isExporting,
-    onNewSpreadsheet
-}) => {
+export const SpreadSheetToolbar: React.FC = () => {
+    const { spread } = useSpreadsheetContext();
+    const {
+        exportState,
+        saveAsExcel,
+        saveAsCSV,
+    } = useFileExport(spread, {
+        defaultFileName: 'spreadsheet',
+        onExportSuccess: (fileName: string) => {
+            console.log(`✅ [MainSpreadSheet] 파일 저장 성공: ${fileName}`);
+        },
+        onExportError: (error: Error) => {
+            console.error(`❌ [MainSpreadSheet] 파일 저장 실패:`, error);
+            alert(`파일 저장 중 오류가 발생했습니다: ${error.message}`);
+        }
+    });
     const fileName = useFileNameStore((state) => state.fileName);
     const setFileName = useFileNameStore((state) => state.setFileName);
-    
+
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
     const [previousFileName, setPreviousFileName] = useState<string | null>(null);
@@ -102,7 +99,7 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
         }
     }, [isEditing]);
     return (
-        <div className="w-full h-6 bg-white flex items-center px-2 box-border">
+        <div className="w-full h-7 bg-white flex items-center justify-between px-2 box-border">
             <div className="flex items-center space-x-6">
                 {/* Home */}
                 <button
@@ -136,7 +133,7 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                         )}
                     </div>
                 )}
-               
+
                 {/* File upload input is managed by parent (Main) */}
 
                 {/* Export dropdown */}
@@ -152,15 +149,15 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                     <div className="absolute left-0 w-24 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
                         <div className="">
                             <button
-                                onClick={onSaveAsExcel}
-                                disabled={isExporting}
+                                onClick={() => saveAsExcel()}
+                                disabled={exportState.isExporting}
                                 className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
                             >
                                 Excel (.xlsx)
                             </button>
                             <button
-                                onClick={onSaveAsCSV}
-                                disabled={isExporting}
+                                onClick={() => saveAsCSV()}
+                                disabled={exportState.isExporting}
                                 className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
                             >
                                 CSV (.csv)
@@ -183,6 +180,11 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({
                 >
                     Reset Sheet
                 </button> */}
+            </div>
+            
+            {/* Chat button - positioned on the right with symmetric padding */}
+            <div className="px-2 pr-2">
+                <ChatOpenButton />
             </div>
         </div>
     );

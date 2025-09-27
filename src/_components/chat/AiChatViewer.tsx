@@ -240,7 +240,7 @@ const AiChatViewer = () => {
 
   return (
     <div className="chat-viewer h-full flex flex-col relative">
-      <div className="border-b-2 border-[#D9D9D9]"></div>
+      {/* <div className="border-b-2 border-[#D9D9D9]"></div> */}
 
       {/* 롤백 에러 알림 */}
       {rollbackError && (

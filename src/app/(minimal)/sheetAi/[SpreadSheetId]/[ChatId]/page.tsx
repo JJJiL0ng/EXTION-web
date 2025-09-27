@@ -56,40 +56,46 @@ export default function Home() {
     });
 
     return (
-        <div
-            ref={containerRef}
-            className="flex h-screen"
-            style={{ overflow: 'hidden' }}
-        >
+        <div className="flex flex-col h-screen" style={{ overflow: 'hidden' }}>
             <SpreadsheetProvider spreadRef={spreadRef}>
-
-                <div
-                    className="flex-shrink-0"
-                    style={{
-                        width: `${leftWidth}%`,
-                        willChange: isResizing ? 'width' : 'auto',
-                        transition: isResizing ? 'none' : 'width 0.1s ease-out'
-                    }}
-                >
-                    <SpreadSheet sheetWidthNum={leftWidth} spreadRef={spreadRef} />
+                {/* 2층: 스프레드시트 툴바 - 전체 너비 */}
+                <div className="flex-shrink-0 w-full border-b-2 border-gray-200">
+                    <SpreadSheetToolbar />
                 </div>
 
-                <Resizer
-                    onMouseDown={startResize}
-                    isResizing={isResizing}
-                />
-
+                {/* 1층: 스프레드시트 | 리사이저 | 채팅 컨테이너 */}
                 <div
-                    className="flex-1"
-                    style={{
-                        width: `${rightWidth}%`,
-                        willChange: isResizing ? 'width' : 'auto',
-                        transition: isResizing ? 'none' : 'width 0.1s ease-out'
-                    }}
+                    ref={containerRef}
+                    className="flex flex-1"
+                    style={{ overflow: 'hidden' }}
                 >
-                    <ChattingContainer />
-                </div>
+                    <div
+                        className="flex-shrink-0"
+                        style={{
+                            width: `${leftWidth}%`,
+                            willChange: isResizing ? 'width' : 'auto',
+                            transition: isResizing ? 'none' : 'width 0.1s ease-out'
+                        }}
+                    >
+                        <SpreadSheet sheetWidthNum={leftWidth} spreadRef={spreadRef} />
+                    </div>
 
+                    <Resizer
+                        onMouseDown={startResize}
+                        isResizing={isResizing}
+                    />
+
+                    <div
+                        className="flex-1"
+                        style={{
+                            width: `${rightWidth}%`,
+                            willChange: isResizing ? 'width' : 'auto',
+                            transition: isResizing ? 'none' : 'width 0.1s ease-out'
+                        }}
+                    >
+                        <ChattingContainer />
+                    </div>
+                </div>
             </SpreadsheetProvider>
         </div>
     )

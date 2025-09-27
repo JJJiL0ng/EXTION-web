@@ -68,9 +68,9 @@ export default function ChattingContainer() {
         </div>
       ) : (
         <>
-          <div>
+          {/* <div>
             <ChatTabBar />
-          </div>
+          </div> */}
 
           {/* 채팅 뷰어 */}
           <div className="flex-1 overflow-y-auto">

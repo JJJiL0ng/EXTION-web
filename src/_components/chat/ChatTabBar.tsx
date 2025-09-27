@@ -31,12 +31,12 @@ const ChatTabBar = () => {
                 style={{ minHeight: '1.5rem' }} // 40px for better vertical alignment
             >
                 <button
-                    className="flex items-center gap-1 px-2 py-0 text-sm text-white rounded-md transition-colors duration-200"
+                    className="flex items-center gap-1 px-2 py-0 text-sm text-white rounded transition-colors duration-200"
                     style={{ backgroundColor: '#005ed9' }}
                     onClick={lowerChatZindex}
                 >
                     <img src="/EXTION_new_logo_white.svg" alt="Extion Logo" className="w-4 h-4" />
-                    AI
+                    Extion 
                 </button>
                 <div className="flex-1" />
                 {/* <button

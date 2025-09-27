@@ -133,22 +133,22 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
      * - Excel, CSV, JSON 형식으로 내보내기 지원
      * - 내보내기 상태 추적
      */
-    const {
-        exportState,
-        saveAsExcel,
-        saveAsCSV,
-        saveAsJSON,
-        resetExportState
-    } = useFileExport(spreadRef.current, {
-        defaultFileName: 'spreadsheet',
-        onExportSuccess: (fileName: string) => {
-            console.log(`✅ [MainSpreadSheet] 파일 저장 성공: ${fileName}`);
-        },
-        onExportError: (error: Error) => {
-            console.error(`❌ [MainSpreadSheet] 파일 저장 실패:`, error);
-            alert(`파일 저장 중 오류가 발생했습니다: ${error.message}`);
-        }
-    });
+    // const {
+    //     exportState,
+    //     saveAsExcel,
+    //     saveAsCSV,
+    //     saveAsJSON,
+    //     resetExportState
+    // } = useFileExport(spreadRef.current, {
+    //     defaultFileName: 'spreadsheet',
+    //     onExportSuccess: (fileName: string) => {
+    //         console.log(`✅ [MainSpreadSheet] 파일 저장 성공: ${fileName}`);
+    //     },
+    //     onExportError: (error: Error) => {
+    //         console.error(`❌ [MainSpreadSheet] 파일 저장 실패:`, error);
+    //         alert(`파일 저장 중 오류가 발생했습니다: ${error.message}`);
+    //     }
+    // });
 
     // ============================================================================
     // 메모리 관리 및 정리
@@ -170,14 +170,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             console.warn(`⚠️ [MainSpreadSheet] 업로드 상태 초기화 경고:`, error);
         }
 
-        // 내보내기 상태 초기화
-        try {
-            resetExportState();
-            console.log(`✅ [MainSpreadSheet] 내보내기 상태 초기화 완료`);
-        } catch (error) {
-            console.warn(`⚠️ [MainSpreadSheet] 내보내기 상태 초기화 경고:`, error);
-        }
-
         // 스프레드시트 생성 상태 초기화
         try {
             resetCreateState();
@@ -197,7 +189,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
         }
 
         console.log(`✅ [MainSpreadSheet] 메모리 정리 완료`);
-    }, [resetUploadState, resetExportState, resetCreateState, spreadRef]);
+    }, [resetUploadState, resetCreateState, spreadRef]);
 
     // ============================================================================
     // Effect 훅들
@@ -372,22 +364,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             {isFileUploaded && (
                 <div className="flex-shrink-0 w-full h-6 bg-white flex items-center justify-between">
                     {/* 스프레드시트 툴바 - 내보내기 및 새 파일 기능 */}
-                    <SpreadSheetToolbar
-                        onSaveAsExcel={() => {
-                            console.log(`💾 [MainSpreadSheet] Excel 내보내기 요청`);
-                            saveAsExcel();
-                        }}
-                        onSaveAsCSV={() => {
-                            console.log(`💾 [MainSpreadSheet] CSV 내보내기 요청`);
-                            saveAsCSV();
-                        }}
-                        onSaveAsJSON={() => {
-                            console.log(`💾 [MainSpreadSheet] JSON 내보내기 요청`);
-                            saveAsJSON();
-                        }}
-                        isExporting={exportState.isExporting}
-                        onNewSpreadsheet={handleNewSpreadsheet}
-                    />
+                    <SpreadSheetToolbar/>
 
                     {/* 채팅 버튼 - 조건부 표시 */}
                     <ChatButton
