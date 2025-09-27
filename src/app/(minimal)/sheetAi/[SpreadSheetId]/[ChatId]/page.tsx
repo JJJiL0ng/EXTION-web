@@ -35,10 +35,10 @@ export default function Home() {
         }
 
         // 저장된 값 확인
-        // setTimeout(() => {
-        //     const { spreadSheetId } = useSpreadsheetIdStore.getState();
-        //     const { chatId } = useChatStore.getState();
-        // }, 100);
+        setTimeout(() => {
+            const { spreadSheetId } = useSpreadsheetIdStore.getState();
+            const { chatId } = useChatStore.getState();
+        }, 100);
     }, [params, setSpreadSheetId, setChatId]);
 
     const spreadRef = useMemo(() => ({ current: null }), []);
@@ -71,7 +71,7 @@ export default function Home() {
                         transition: isResizing ? 'none' : 'width 0.1s ease-out'
                     }}
                 >
-                    <SpreadSheet sheetWidthNum={leftWidth} />
+                    <SpreadSheet sheetWidthNum={leftWidth} spreadRef={spreadRef} />
                 </div>
 
                 <Resizer

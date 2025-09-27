@@ -19,9 +19,10 @@ GC.Spread.Common.CultureManager.culture("en-us");
 
 interface SpreadSheetProps {
     sheetWidthNum: number; // refresh 트리거용으로 유지
+    spreadRef: React.MutableRefObject<any>; // Context가 폴링하는 ref
 }
 
-export default function SpreadSheet({ sheetWidthNum }: SpreadSheetProps) {
+export default function SpreadSheet({ sheetWidthNum, spreadRef }: SpreadSheetProps) {
     const { spreadSheetId } = useSpreadsheetIdStore();
     const { chatId } = useChatStore();
 
@@ -44,8 +45,6 @@ export default function SpreadSheet({ sheetWidthNum }: SpreadSheetProps) {
 
     const stableSpreadsheetVersionId = useSpreadSheetVersionStore((state) => state.spreadSheetVersionId);
     const stableActivity = 'normal';
-    // spread 인스턴스를 저장할 ref
-    const spreadRef = useRef<any>(null);
 
     const { exists, loading, error } = useCheckAndLoadOnMount(
         stableSpreadsheetId,
@@ -70,8 +69,9 @@ export default function SpreadSheet({ sheetWidthNum }: SpreadSheetProps) {
     }, [sheetWidthNum]);
 
     let initSpread = function (spread: any) {
-        // spread 인스턴스를 ref에 저장
+        // props로 받은 ref에 저장 (Context가 폴링하는 바로 그 ref)
         spreadRef.current = spread;
+        console.log('🔄 [SpreadSheetRender] spread 인스턴스 설정됨:', !!spread);
     };
 
     return (
