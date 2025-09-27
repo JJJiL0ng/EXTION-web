@@ -42,7 +42,7 @@ export const SpreadSheetToolbar: React.FC = () => {
 
     // 편집 완료
     const handleEditComplete = async () => {
-        if (editValue.trim() && editValue !== fileName) {
+        if (editValue.trim() && editValue !== fileName && editValue.trim().length <= 20) {
             // 기존 파일명을 임시 저장
             setPreviousFileName(fileName);
 
@@ -100,7 +100,7 @@ export const SpreadSheetToolbar: React.FC = () => {
     }, [isEditing]);
     return (
         <div className="w-full h-7 bg-white flex items-center justify-between box-border">
-            <div className="flex items-center ">
+            <div className="flex items-center gap-2">
                 {/* Home */}
                 <button
                     onClick={() => window.location.href = '/dashboard'}
@@ -119,8 +119,9 @@ export const SpreadSheetToolbar: React.FC = () => {
                                 onChange={(e) => setEditValue(e.target.value)}
                                 onBlur={handleEditComplete}
                                 onKeyDown={handleKeyDown}
-                                className="px-2 text-sm text-gray-700 font-medium bg-white border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
+                                className="px-2 text-sm text-gray-700 font-medium bg-white border border-[#005de9] rounded focus:outline-none focus:ring-1 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
                                 placeholder="Enter file name"
+                                maxLength={20}
                             />
                         ) : (
                             <button
