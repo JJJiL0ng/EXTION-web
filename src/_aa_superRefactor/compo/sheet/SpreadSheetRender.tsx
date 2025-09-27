@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { useSpreadJSInit } from '../../../_hooks/sheet/spreadjs/useSpreadJSInit';
 import { SpreadSheets, Worksheet, Column } from "@mescius/spread-sheets-react";
+import { useCheckAndLoadOnMount } from "@/_hooks/sheet/data_save/useCheckAndLoad";
+import { useParams } from 'next/navigation';
+import { getOrCreateGuestId } from "@/_utils/guestUtils";
+import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
+import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
+import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
+
 import * as GC from "@mescius/spread-sheets";
 
 
@@ -15,8 +22,39 @@ interface SpreadSheetProps {
 }
 
 export default function SpreadSheet({ sheetWidthNum }: SpreadSheetProps) {
+    const { spreadSheetId } = useSpreadsheetIdStore();
+    const { chatId } = useChatStore();
+
+    // ID들을 안정화하여 불필요한 훅 재실행 방지
+    const stableSpreadsheetId = useMemo(() => {
+        console.log(`🔧 [FileUploadSheetRender] SpreadSheet ID 안정화: ${spreadSheetId}`);
+        return spreadSheetId || '';
+    }, [spreadSheetId]);
+
+    const stableChatId = useMemo(() => {
+        console.log(`🔧 [FileUploadSheetRender] Chat ID 안정화: ${chatId}`);
+        return chatId || '';
+    }, [chatId]);
+
+    const stableUserId = useMemo(() => {
+        const userId = getOrCreateGuestId();
+        console.log(`🔧 [FileUploadSheetRender] User ID 안정화: ${userId}`);
+        return userId;
+    }, []);
+
+    const stableSpreadsheetVersionId = useSpreadSheetVersionStore((state) => state.spreadSheetVersionId);
+    const stableActivity = 'normal';
     // spread 인스턴스를 저장할 ref
     const spreadRef = useRef<any>(null);
+
+    const { exists, loading, error } = useCheckAndLoadOnMount(
+        stableSpreadsheetId,
+        stableChatId,
+        stableUserId,
+        stableActivity,
+        stableSpreadsheetVersionId
+    );
+    console.log('✅ [SpreadSheetRender] exists, loading, error:', { exists, loading, error });
 
     // sheetWidthNum 변경사항을 감지하여 SpreadJS resize 호출
     useEffect(() => {

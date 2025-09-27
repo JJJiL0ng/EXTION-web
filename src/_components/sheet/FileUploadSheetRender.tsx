@@ -80,6 +80,7 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
 
     const stableSpreadsheetVersionId = useSpreadSheetVersionStore((state) => state.spreadSheetVersionId);
     const stableActivity = 'normal';
+    ///////////////////////////////////////////////////////////////////////////////
 
     /**
      * 백엔드 데이터 존재 여부 확인

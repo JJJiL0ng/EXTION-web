@@ -2,21 +2,17 @@
 
 import React, { useState } from "react";
 import ChatInputBox from "../../../_components/chat/ChatInputBox";
-// import ChatViewer from "./ChatViewer";
 import ChatTabBar from "../../../_components/chat/ChatTabBar";
-import { ChatInitMode, UploadedFileInfo } from "../../../_types/chat.types";
-// import { useChatFlow, useChatStore } from "../../_hooks/chat/useChatStore";
-// import { getOrCreateGuestId } from "../../_utils/guestUtils";
+import AiChatViewer from "../../../_components/chat/AiChatViewer";
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
-
 export default function ChattingContainer() {
-  
+
   // aiChatStore 사용
   const { wsError } = aiChatStore();
-  
+
   // 초기화 상태 관리 (간단한 구현)
   const [isInitialized] = useState(true);
-  
+
   // 에러 클리어 함수
   const clearError = () => {
     // aiChatStore에서 에러를 클리어하는 로직이 필요하다면 여기서 구현
@@ -37,7 +33,7 @@ export default function ChattingContainer() {
           <div className="text-center max-w-md p-6">
             <div className="text-red-600 mb-4">초기화 중 오류가 발생했습니다</div>
             <div className="text-gray-600 mb-4 text-sm">{wsError}</div>
-            <button 
+            <button
               onClick={clearError}
               className="px-4 py-2 bg-[#005de9] text-white rounded hover:bg-blue-600"
             >
@@ -47,27 +43,19 @@ export default function ChattingContainer() {
         </div>
       ) : (
         <>
-          {/* 채팅 탭바 - 기존 채팅 모드에서만 표시 */}
-          {/* {chatFlow.availableActions.canShowChatList && (
-            <div>
-              <ChatTabBar />
-            </div>
-          )} */}
           <div>
-              <ChatTabBar />
-            </div>
-          
+            <ChatTabBar />
+          </div>
+
           {/* 채팅 뷰어 */}
           <div className="flex-1 overflow-y-auto">
-            {/* <ChatViewer userId={userId} /> */}
-            <div className="p-4 text-center text-gray-500">
-              채팅 뷰어 컴포넌트 준비 중...
-            </div>
+            <AiChatViewer />
           </div>
-          
+
+
           {/* 채팅 입력 박스 - 최하단 */}
           <div>
-            <ChatInputBox 
+            <ChatInputBox
               // userId={userId}
               disabled={false} // 임시로 항상 활성화
             />
