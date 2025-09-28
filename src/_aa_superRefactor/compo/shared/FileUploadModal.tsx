@@ -1,16 +1,11 @@
 'use client';
 
-import React, { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import React, { useState, useRef, DragEvent, ChangeEvent, useCallback, useEffect } from 'react';
 import { X, Upload, File, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useSheetCreate } from '../../../_hooks/sheet/data_save/useSheetCreate';
-
 import { useGenerateSpreadSheetId } from '../../../_hooks/sheet/common/useGenerateSpreadSheetId';
 import { useGenerateChatId } from '../../../_hooks/aiChat/useGenerateChatId';
-
-import { useSpreadsheetContext } from '@/_contexts/SpreadsheetContext';
-
-import GC from '@mescius/spread-sheets';
-
+import { IO } from '@grapecity/spread-excelio';
 interface FileUploadModalProps {
     isOpen: boolean;
     userId: string; // Optional userId prop
@@ -24,24 +19,93 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
     // onClose,
     // onFileSelect,
 }) => {
-    const { spread } = useSpreadsheetContext();
-
     const { createSheet } = useSheetCreate();
-
     const { generateSpreadSheetId } = useGenerateSpreadSheetId();
     const { generateChatId } = useGenerateChatId();
 
-    const maxFileSize = 50; // 50mb 기본 세팅
+    const maxFileSize = 50; // 50MB
     const multiple = false;
-    const acceptedFileTypes = 'xlsx, csv, xls';
-
+    const acceptedFileTypes = '.xlsx,.xls,.csv';
 
     const [isDragOver, setIsDragOver] = useState(false);
-    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-    const [error, setError] = useState<string>('');
-    const [isUploading, setIsUploading] = useState(false);
     const [uploadSuccess, setUploadSuccess] = useState(false);
+    const [successFileName, setSuccessFileName] = useState<string>('');
+    const [isUploading, setIsUploading] = useState(false);
+    const [error, setError] = useState<string>('');
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+
+    // ExcelIO를 사용한 파일 처리 함수
+    const processFile = useCallback(async (file: File) => {
+        setIsUploading(true);
+        setError('');
+        setSelectedFile(file);
+        
+        console.log(`📁 [FileUploadModal] 파일 처리 시작: ${file.name}`);
+
+        try {
+            // 파일 크기 검증
+            if (file.size > maxFileSize * 1024 * 1024) {
+                throw new Error(`파일 크기가 너무 큽니다. 최대 ${maxFileSize}MB까지 지원됩니다.`);
+            }
+
+            // 파일 확장자 검증
+            const fileExtension = file.name.toLowerCase().split('.').pop();
+            if (!['xlsx', 'xls', 'csv'].includes(fileExtension || '')) {
+                throw new Error('지원하지 않는 파일 형식입니다. Excel(.xlsx, .xls) 또는 CSV 파일만 업로드 가능합니다.');
+            }
+
+            // ExcelIO 인스턴스 생성
+            const excelIO = new IO();
+
+            // 파일을 JSON으로 변환
+            excelIO.open(file, async (jsonData: any) => {
+                try {
+                    console.log(`📄 [FileUploadModal] JSON 변환 완료, 데이터 크기: ${JSON.stringify(jsonData).length}자`);
+
+                    const spreadsheetId = generateSpreadSheetId();
+                    const chatId = generateChatId();
+
+                    // API 호출
+                    await createSheet({
+                        fileName: file.name,
+                        spreadsheetId,
+                        chatId,
+                        userId,
+                        jsonData
+                    });
+
+                    console.log(`✅ [FileUploadModal] 스프레드시트 생성 API 호출 성공`);
+
+                    // 업로드 성공 상태로 변경
+                    setIsUploading(false);
+                    setUploadSuccess(true);
+                    setSuccessFileName(file.name);
+
+                    // 짧은 딜레이 후 새창 열기
+                    setTimeout(() => {
+                        const url = `/sheetAi/${spreadsheetId}/${chatId}`;
+                        window.open(url, '_blank');
+                    }, 500);
+
+                } catch (apiError) {
+                    console.error('❌ [FileUploadModal] API 호출 실패:', apiError);
+                    setError('파일 업로드 중 오류가 발생했습니다. 다시 시도해 주세요.');
+                    setIsUploading(false);
+                }
+            }, (ioError: any) => {
+                console.error('❌ [FileUploadModal] 파일 변환 실패:', ioError);
+                setError('파일을 읽는 중 오류가 발생했습니다. 파일이 손상되었거나 지원하지 않는 형식일 수 있습니다.');
+                setIsUploading(false);
+            });
+
+        } catch (validationError: any) {
+            console.error('❌ [FileUploadModal] 파일 검증 실패:', validationError);
+            setError(validationError.message || '파일 처리 중 오류가 발생했습니다.');
+            setIsUploading(false);
+        }
+    }, [createSheet, generateSpreadSheetId, generateChatId, userId, maxFileSize]);
 
     if (!isOpen) return null;
 
@@ -57,133 +121,46 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         setIsDragOver(false);
     };
 
-    const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragOver(false);
 
-        const files = Array.from(e.dataTransfer.files);
-        handleFileSelection(files);
-    };
-
-    const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        handleFileSelection(files);
-    };
-
-    const handleFileSelection = (files: File[]) => {
-        setError('');
-
-        // Validate file size
-        const oversizedFiles = files.filter(file => file.size > maxFileSize * 1024 * 1024);
-        if (oversizedFiles.length > 0) {
-            setError(`Some files exceed the maximum size of ${maxFileSize}MB`);
+        if (isUploading) {
             return;
         }
 
-        if (!multiple && files.length > 1) {
-            setError('Please select only one file');
+        const files = e.dataTransfer.files;
+        if (!files || files.length === 0) {
+            console.log(`⚠️ [FileUploadModal] 드롭된 파일이 없음`);
             return;
         }
 
-        setSelectedFiles(files);
-    };
-
-    const removeFile = (index: number) => {
-        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    };
-
-    const handleUpload = async () => {
-        if (selectedFiles.length === 0) {
-            setError('Please select a file to upload');
-            return;
-        }
-
-        setIsUploading(true);
-        setError('');
-
-        // DOM에 임시로 SpreadJS 워크북 컨테이너를 생성합니다.
-        const tempDiv = document.createElement('div');
-        tempDiv.style.display = 'none';
-        document.body.appendChild(tempDiv);
+        const file = files[0]; // 첫 번째 파일만 처리
+        console.log(`📥 [FileUploadModal] 파일 드롭 감지: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         
-        const workbook = new spread.Workbook(tempDiv);
-        const file = selectedFiles[0];
+        await processFile(file);
+    };
 
-        try {
-            // 간단한 방법으로 먼저 빈 데이터로 workbook을 초기화합니다.
-            console.log('📄 파일 처리를 시작합니다:', file.name);
-            
-            // 파일 확장자 확인
-            const fileName = file.name.toLowerCase();
-            const isCSV = fileName.endsWith('.csv');
-            const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-            
-            if (!isCSV && !isExcel) {
-                throw new Error('지원하지 않는 파일 형식입니다.');
-            }
-
-            // 기본적인 워크시트 설정
-            const worksheet = workbook.getActiveSheet();
-            worksheet.name('Imported Data');
-            
-            // 파일이 성공적으로 로드되었다고 가정하고 진행
-            // (실제 파일 내용 파싱은 나중에 구현)
-            console.log('📄 파일이 메모리에 성공적으로 로드되었습니다.');
-            
-        } catch (e) {
-            // 파일이 손상되었거나 유효하지 않은 경우 여기서 에러를 잡습니다.
-            console.error('SpreadJS 파일 로드 중 에러 발생:', e);
-            setError('선택한 파일이 유효하지 않거나 손상되었습니다. 다른 파일을 시도해 주세요.');
-            setIsUploading(false); // 로딩 스피너 중지
-            // 임시 DOM 요소 정리
-            document.body.removeChild(tempDiv);
-            return; // 함수 실행 중단
+    const handleFileInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
+        if (isUploading) {
+            e.target.value = '';
+            return;
         }
 
-        // 여기서 selectedFile을 spreadjs를 이용해서 json으로 변환하고 API 호출
-        const jsonData = workbook.toJSON({
-            includeBindingSource: true,
-            ignoreFormula: false,
-            ignoreStyle: false,
-            saveAsView: true,
-            rowHeadersAsFrozenColumns: false,
-            columnHeadersAsFrozenRows: false,
-            includeAutoMergedCells: true,
-            saveR1C1Formula: true,
-            includeUnsupportedFormula: true,
-            includeUnsupportedStyle: true
-        });
-
-        console.log(`📄 [FileUploadIntegration] JSON 변환 완료, 데이터 크기: ${JSON.stringify(jsonData).length}자`);
-
-        try {
-            // API 호출
-            await createSheet({
-                fileName: selectedFiles[0].name,
-                spreadsheetId: generateSpreadSheetId(),
-                chatId: generateChatId(),
-                userId,
-                jsonData
-            });
-
-            console.log(`✅ [FileUploadIntegration] 스프레드시트 생성 API 호출 성공`);
-            
-            // 업로드 성공 상태로 변경
-            setUploadSuccess(true);
-            setIsUploading(false);
-            
-        } catch (apiError) {
-            console.error('API 호출 중 에러 발생:', apiError);
-            setError('파일 업로드 중 오류가 발생했습니다. 다시 시도해 주세요.');
-            setIsUploading(false);
-        } finally {
-            // 임시 DOM 요소 정리
-            document.body.removeChild(tempDiv);
+        const files = e.target.files;
+        if (!files || files.length === 0) {
+            console.log(`⚠️ [FileUploadModal] 선택된 파일이 없음`);
+            return;
         }
 
-        // onFileSelect?.(selectedFiles);
-        // onClose();
+        const file = files[0]; // 첫 번째 파일만 처리
+        console.log(`📁 [FileUploadModal] 클릭으로 선택한 파일: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        
+        await processFile(file);
+        
+        // 파일 입력 초기화
+        e.target.value = '';
     };
 
     const formatFileSize = (bytes: number) => {
@@ -195,10 +172,11 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
     };
 
     const resetUpload = () => {
-        setSelectedFiles([]);
+        setSelectedFile(null);
         setError('');
         setIsUploading(false);
         setUploadSuccess(false);
+        setSuccessFileName('');
     };
 
     return (
@@ -253,10 +231,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                                        {selectedFiles[0]?.name}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {selectedFiles[0] && formatFileSize(selectedFiles[0].size)}
+                                                        {successFileName}
                                                     </p>
                                                 </div>
                                             </div>
@@ -268,7 +243,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                     ) : (
                         <>
                             {/* Upload Area */}
-                            {selectedFiles.length === 0 ? (
+                            {!selectedFile ? (
                                 <div
                                     className={`
                   relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200
@@ -288,6 +263,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                                         accept={acceptedFileTypes}
                                         onChange={handleFileInputChange}
                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        disabled={isUploading}
                                     />
 
                                     <div className="flex flex-col items-center space-y-4">
@@ -318,9 +294,10 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
 
                                         <button
                                             onClick={() => fileInputRef.current?.click()}
-                                            className="px-6 py-2 bg-[#005de9] hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                                            disabled={isUploading}
+                                            className="px-6 py-2 bg-[#005de9] hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Select File
+                                            {isUploading ? 'Processing...' : 'Select File'}
                                         </button>
 
                                         <div className="text-xs text-gray-400 dark:text-gray-500 space-y-1">
@@ -333,14 +310,21 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                                 <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 text-center bg-gray-50 dark:bg-gray-800/50 opacity-60">
                                     <div className="flex flex-col items-center space-y-3">
                                         <div className="p-4 rounded-full bg-gray-200 dark:bg-gray-700">
-                                            <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                                            {isUploading ? (
+                                                <Loader2 className="w-8 h-8 text-[#005de9] animate-spin" />
+                                            ) : (
+                                                <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                                            )}
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-lg font-medium text-gray-500 dark:text-gray-400">
-                                                File selected
+                                                {isUploading ? 'Processing file...' : 'File selected'}
                                             </p>
                                             <p className="text-sm text-gray-400 dark:text-gray-500">
-                                                Remove the current file to select a different one
+                                                {isUploading 
+                                                    ? 'Converting file to spreadsheet format...'
+                                                    : 'Remove the current file to select a different one'
+                                                }
                                             </p>
                                         </div>
                                     </div>
@@ -356,7 +340,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                             )}
 
                             {/* Selected File */}
-                            {selectedFiles.length > 0 && (
+                            {selectedFile && (
                                 <div className="space-y-3">
                                     <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                                         Selected File
@@ -369,23 +353,22 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                                        {selectedFiles[0].name}
+                                                        {selectedFile.name}
                                                     </p>
                                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {formatFileSize(selectedFiles[0].size)}
+                                                        {formatFileSize(selectedFile.size)}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedFiles([]);
-                                                    setError('');
-                                                }}
-                                                className="p-1 hover:bg-[#005de9]/10 dark:hover:bg-[#005de9]/20 rounded transition-colors"
-                                                title="Remove file and select a different one"
-                                            >
-                                                <X className="w-6 h-6 text-[#005de9] hover:text-[#003bb0] dark:text-[#66a3ff] dark:hover:text-[#cfe4ff]" />
-                                            </button>
+                                            {!isUploading && (
+                                                <button
+                                                    onClick={resetUpload}
+                                                    className="p-1 hover:bg-[#005de9]/10 dark:hover:bg-[#005de9]/20 rounded transition-colors"
+                                                    title="Remove file and select a different one"
+                                                >
+                                                    <X className="w-6 h-6 text-[#005de9] hover:text-[#003bb0] dark:text-[#66a3ff] dark:hover:text-[#cfe4ff]" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -398,31 +381,11 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                 {!uploadSuccess && (
                     <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                         <button
-                            // onClick={onClose}
+                            onClick={resetUpload}
                             className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors"
+                            disabled={isUploading}
                         >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleUpload}
-                            disabled={selectedFiles.length === 0 || isUploading}
-                            className={`
-                  px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2
-                  ${selectedFiles.length > 0 && !isUploading
-                                    ? 'bg-[#005de9] hover:bg-blue-700 text-white'
-                                    : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                                }
-                `}
-                        >
-                            {isUploading && <Loader2 className="w-4 h-4 animate-spin" />}
-                            <span>
-                                {isUploading
-                                    ? 'Uploading...'
-                                    : selectedFiles.length > 0
-                                        ? 'Upload File'
-                                        : 'Upload'
-                                }
-                            </span>
+                            {isUploading ? 'Processing...' : 'Cancel'}
                         </button>
                     </div>
                 )}
