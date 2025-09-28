@@ -9,14 +9,13 @@ import { IO } from '@grapecity/spread-excelio';
 interface FileUploadModalProps {
     isOpen: boolean;
     userId: string; // Optional userId prop
-    // onClose: () => void;
-    // onFileSelect?: (files: File[]) => void;
+    onClose: () => void;
 }
 
 const FileUploadModal: React.FC<FileUploadModalProps> = ({
     isOpen,
     userId,
-    // onClose,
+    onClose,
     // onFileSelect,
 }) => {
     const { createSheet } = useSheetCreate();
@@ -35,6 +34,33 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // 업로드 성공 시 모달 자동 닫기
+    // useEffect(() => {
+    //     if (uploadSuccess) {
+    //         const timer = setTimeout(() => {
+    //             onClose();
+    //             // 상태 초기화
+    //             setUploadSuccess(false);
+    //             setSuccessFileName('');
+    //             setSelectedFile(null);
+    //             setError('');
+    //         }, 2000); // 2초 후 자동 닫기
+
+    //         return () => clearTimeout(timer);
+    //     }
+    // }, [uploadSuccess, onClose]);
+
+    // 모달이 닫힐 때 상태 초기화
+    useEffect(() => {
+        if (!isOpen) {
+            setUploadSuccess(false);
+            setSuccessFileName('');
+            setSelectedFile(null);
+            setError('');
+            setIsUploading(false);
+            setIsDragOver(false);
+        }
+    }, [isOpen]);
 
     // CSV 파일을 SpreadJS 형식으로 변환하는 함수
     const processCsvFile = useCallback((file: File): Promise<any> => {
@@ -360,12 +386,14 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         setSuccessFileName('');
     };
 
+    if (!isOpen) return null;
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            // onClick={onClose}
+                onClick={onClose}
             />
 
             {/* Modal */}
@@ -376,7 +404,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                         Upload Spreadsheet
                     </h2>
                     <button
-                        // onClick={onClose}
+                        onClick={onClose}
                         className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                     >
                         <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />

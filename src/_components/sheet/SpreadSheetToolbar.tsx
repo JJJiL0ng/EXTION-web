@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import ChatOpenButton from '@/_aa_superRefactor/compo/shared/ChatOpenButton';
+import FileUploadModal from '@/_aa_superRefactor/compo/shared/FileUploadModal';
 import useFileNameStore from '@/_store/sheet/fileNameStore';
 import { renameSheet } from '@/_hooks/sheet/fileName/useRename';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
@@ -36,6 +37,7 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
     const [previousFileName, setPreviousFileName] = useState<string | null>(null);
+    const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // 편집 모드 시작
@@ -104,104 +106,124 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
             inputRef.current.select();
         }
     }, [isEditing]);
+
+    // 파일 업로드 모달 열기
+    const handleOpenFileUploadModal = () => {
+        setIsFileUploadModalOpen(true);
+    };
+
+    // 파일 업로드 모달 닫기
+    const handleCloseFileUploadModal = () => {
+        setIsFileUploadModalOpen(false);
+    };
     return (
-        <div className="w-full h-7 bg-white flex items-center justify-between box-border">
-            <div className="flex items-center gap-2">
-                {/* Home */}
-                <button
-                    onClick={() => window.location.href = '/dashboard'}
-                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
-                >
-                    <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
-                </button>
-
-                {/* File name display/edit or Open File button based on mode */}
-                {sheetMode === 'FileUploaded' ? (
-                    fileName && (
-                        <div className="relative">
-                            {isEditing ? (
-                                <input
-                                    ref={inputRef}
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onBlur={handleEditComplete}
-                                    onKeyDown={handleKeyDown}
-                                    className="px-2 text-sm text-gray-700 font-medium bg-white border border-[#005de9] rounded focus:outline-none focus:ring-1 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
-                                    placeholder="Enter file name"
-                                    maxLength={20}
-                                />
-                            ) : (
-                                <button
-                                    onClick={handleEditStart}
-                                    className="px-2 py-1 text-sm text-gray-700 font-medium hover:bg-gray-100 rounded-md cursor-text transition-colors duration-150"
-                                    title="Click to rename file"
-                                >
-                                    {fileName}
-                                </button>
-                            )}
-                        </div>
-                    )
-                ) : (
+        <>
+            <div className="w-full h-7 bg-white flex items-center justify-between box-border">
+                <div className="flex items-center gap-2">
+                    {/* Home */}
                     <button
-                        className="flex justify-center items-center px-2 py-1 text-sm text-white font-medium bg-[#005de9] hover:bg-[#0052d1] rounded transition-colors duration-150 h-6"
-                        title="Open a file to start editing"
+                        onClick={() => window.location.href = '/dashboard'}
+                        className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
                     >
-                        Open File
-                    </button>
-                )}
-
-                {/* File upload input is managed by parent (Main) */}
-
-                {/* Export dropdown */}
-                <div className="relative group">
-                    <button className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center">
-                        Export
-                        <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
                     </button>
 
-                    {/* Dropdown menu */}
-                    <div className="absolute left-0 w-24 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
-                        <div className="">
-                            <button
-                                onClick={() => saveAsExcel()}
-                                disabled={exportState.isExporting}
-                                className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
-                            >
-                                Excel (.xlsx)
-                            </button>
-                            <button
-                                onClick={() => saveAsCSV()}
-                                disabled={exportState.isExporting}
-                                className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
-                            >
-                                CSV (.csv)
-                            </button>
-                            {/* <button
-                                onClick={onSaveAsJSON}
-                                disabled={isExporting}
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                JSON (.json)
-                            </button> */}
+                    {/* File name display/edit or Open File button based on mode */}
+                    {sheetMode === 'FileUploaded' ? (
+                        fileName && (
+                            <div className="relative">
+                                {isEditing ? (
+                                    <input
+                                        ref={inputRef}
+                                        value={editValue}
+                                        onChange={(e) => setEditValue(e.target.value)}
+                                        onBlur={handleEditComplete}
+                                        onKeyDown={handleKeyDown}
+                                        className="px-2 text-sm text-gray-700 font-medium bg-white border border-[#005de9] rounded focus:outline-none focus:ring-1 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
+                                        placeholder="Enter file name"
+                                        maxLength={20}
+                                    />
+                                ) : (
+                                    <button
+                                        onClick={handleEditStart}
+                                        className="px-2 py-1 text-sm text-gray-700 font-medium hover:bg-gray-100 rounded-md cursor-text transition-colors duration-150"
+                                        title="Click to rename file"
+                                    >
+                                        {fileName}
+                                    </button>
+                                )}
+                            </div>
+                        )
+                    ) : (
+                        <button
+                            onClick={handleOpenFileUploadModal}
+                            className="flex justify-center items-center px-2 py-1 text-sm text-white font-medium bg-[#005de9] hover:bg-[#0052d1] rounded transition-colors duration-150 h-6"
+                            title="Open a file to start editing"
+                        >
+                            Open File
+                        </button>
+                    )}
+
+                    {/* File upload input is managed by parent (Main) */}
+
+                    {/* Export dropdown */}
+                    <div className="relative group">
+                        <button className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center">
+                            Export
+                            <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        {/* Dropdown menu */}
+                        <div className="absolute left-0 w-24 bg-white rounded-md shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-10">
+                            <div className="">
+                                <button
+                                    onClick={() => saveAsExcel()}
+                                    disabled={exportState.isExporting}
+                                    className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
+                                >
+                                    Excel (.xlsx)
+                                </button>
+                                <button
+                                    onClick={() => saveAsCSV()}
+                                    disabled={exportState.isExporting}
+                                    className="block w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed first:rounded-t-md last:rounded-b-md"
+                                >
+                                    CSV (.csv)
+                                </button>
+                                {/* <button
+                                    onClick={onSaveAsJSON}
+                                    disabled={isExporting}
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    JSON (.json)
+                                </button> */}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* New spreadsheet */}
-                {/* <button
-                    onClick={onNewSpreadsheet}
-                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-                >
-                    Reset Sheet
-                </button> */}
+                    {/* New spreadsheet */}
+                    {/* <button
+                        onClick={onNewSpreadsheet}
+                        className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
+                    >
+                        Reset Sheet
+                    </button> */}
+                </div>
+                
+                {/* Chat button - positioned on the right with symmetric padding */}
+                <div className="px-2 pr-2">
+                    <ChatOpenButton />
+                </div>
             </div>
             
-            {/* Chat button - positioned on the right with symmetric padding */}
-            <div className="px-2 pr-2">
-                <ChatOpenButton />
-            </div>
-        </div>
+            {/* File Upload Modal */}
+            <FileUploadModal 
+                isOpen={isFileUploadModalOpen}
+                userId="" // TODO: userId를 props나 store에서 가져와야 함
+                onClose={handleCloseFileUploadModal}
+            />
+        </>
     );
 };
