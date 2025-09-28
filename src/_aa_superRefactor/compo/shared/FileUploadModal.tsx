@@ -25,7 +25,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
 
     const maxFileSize = 50; // 50MB
     const multiple = false;
-    const acceptedFileTypes = '.xlsx,.xls,.csv';
+    const acceptedFileTypes = '.xlsx,.csv';
 
     const [isDragOver, setIsDragOver] = useState(false);
     const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -224,8 +224,8 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
 
             // 파일 확장자 검증
             const fileExtension = file.name.toLowerCase().split('.').pop();
-            if (!['xlsx', 'xls', 'csv'].includes(fileExtension || '')) {
-                throw new Error('지원하지 않는 파일 형식입니다. Excel(.xlsx, .xls) 또는 CSV 파일만 업로드 가능합니다.');
+            if (!['xlsx', 'csv'].includes(fileExtension || '')) {
+                throw new Error('지원하지 않는 파일 형식입니다. Excel(.xlsx) 또는 CSV 파일만 업로드 가능합니다.');
             }
 
             let jsonData: any;
@@ -482,7 +482,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                                         </button>
 
                                         <div className="text-xs text-gray-400 dark:text-gray-500 space-y-1">
-                                            <p>Supported formats: Excel (.xlsx, .xls) and CSV (.csv)</p>
+                                            <p>Supported formats: Excel (.xlsx) and CSV (.csv)</p>
                                             <p>Maximum file size: {maxFileSize}MB</p>
                                         </div>
                                     </div>
