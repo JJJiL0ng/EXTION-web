@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import ChatOpenButton from '@/_aa_superRefactor/compo/shared/ChatOpenButton';
@@ -8,7 +10,11 @@ import { useSpreadsheetContext } from '@/_contexts/SpreadsheetContext';
 /**
  * Spreadsheet top toolbar component
  */
-export const SpreadSheetToolbar: React.FC = () => {
+export interface SpreadSheetToolbarProps {
+    sheetMode: 'FileUploaded' | 'IsNotFileUploaded';
+}
+
+export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode}) => {
     const { spread } = useSpreadsheetContext();
     const {
         exportState,
@@ -109,30 +115,39 @@ export const SpreadSheetToolbar: React.FC = () => {
                     <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
                 </button>
 
-                {/* File name display/edit */}
-                {fileName && (
-                    <div className="relative">
-                        {isEditing ? (
-                            <input
-                                ref={inputRef}
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                onBlur={handleEditComplete}
-                                onKeyDown={handleKeyDown}
-                                className="px-2 text-sm text-gray-700 font-medium bg-white border border-[#005de9] rounded focus:outline-none focus:ring-1 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
-                                placeholder="Enter file name"
-                                maxLength={20}
-                            />
-                        ) : (
-                            <button
-                                onClick={handleEditStart}
-                                className="px-2 py-1 text-sm text-gray-700 font-medium hover:bg-gray-100 rounded-md cursor-text transition-colors duration-150"
-                                title="Click to rename file"
-                            >
-                                {fileName}
-                            </button>
-                        )}
-                    </div>
+                {/* File name display/edit or Open File button based on mode */}
+                {sheetMode === 'FileUploaded' ? (
+                    fileName && (
+                        <div className="relative">
+                            {isEditing ? (
+                                <input
+                                    ref={inputRef}
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onBlur={handleEditComplete}
+                                    onKeyDown={handleKeyDown}
+                                    className="px-2 text-sm text-gray-700 font-medium bg-white border border-[#005de9] rounded focus:outline-none focus:ring-1 focus:ring-[#005de9] focus:border-transparent min-w-[120px]"
+                                    placeholder="Enter file name"
+                                    maxLength={20}
+                                />
+                            ) : (
+                                <button
+                                    onClick={handleEditStart}
+                                    className="px-2 py-1 text-sm text-gray-700 font-medium hover:bg-gray-100 rounded-md cursor-text transition-colors duration-150"
+                                    title="Click to rename file"
+                                >
+                                    {fileName}
+                                </button>
+                            )}
+                        </div>
+                    )
+                ) : (
+                    <button
+                        className="flex justify-center items-center px-2 py-1 text-sm text-white font-medium bg-[#005de9] hover:bg-[#0052d1] rounded transition-colors duration-150 h-6"
+                        title="Open a file to start editing"
+                    >
+                        Open File
+                    </button>
                 )}
 
                 {/* File upload input is managed by parent (Main) */}

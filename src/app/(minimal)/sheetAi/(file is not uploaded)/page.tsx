@@ -1,3 +1,4 @@
+//게스트 유저들이 처음 들어왔을떄 체험해보고 사용해볼 수 있는 페이지 파일을 업로드 하지 않고 사용하게 됨
 "use client";
 import React, { useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
@@ -15,7 +16,7 @@ import dynamic from "next/dynamic";
 
 const SpreadSheet = dynamic(
     () => {
-        return import("../../../../../_aa_superRefactor/compo/sheet/SpreadSheetRender");
+        return import("../../../../_aa_superRefactor/compo/sheet/SpreadSheetRender");
     },
     { ssr: false }
 );
@@ -60,7 +61,7 @@ export default function Home() {
             <SpreadsheetProvider spreadRef={spreadRef}>
                 {/* 2층: 스프레드시트 툴바 - 전체 너비 */}
                 <div className="flex-shrink-0 w-full border-b-2 border-gray-200">
-                    <SpreadSheetToolbar sheetMode="FileUploaded"/>
+                    <SpreadSheetToolbar sheetMode="IsNotFileUploaded"/>
                 </div>
 
                 {/* 1층: 스프레드시트 | 리사이저 | 채팅 컨테이너 */}

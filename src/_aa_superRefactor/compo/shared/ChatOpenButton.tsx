@@ -11,7 +11,7 @@ export default function ChatOpenButton() {
     }
     return (
         <button
-                    className="flex items-center gap-1 px-2 py-0 text-sm text-white rounded transition-colors duration-200"
+                    className="flex items-center gap-1 px-2 py-1 text-sm text-white rounded transition-colors duration-200 h-6"
                     style={{ backgroundColor: '#005ed9' }}
                     onClick={handleOpenChatSection}
                 >

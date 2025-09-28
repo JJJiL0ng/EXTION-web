@@ -364,7 +364,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
             {isFileUploaded && (
                 <div className="flex-shrink-0 w-full h-6 bg-white flex items-center justify-between">
                     {/* 스프레드시트 툴바 - 내보내기 및 새 파일 기능 */}
-                    <SpreadSheetToolbar/>
+                    {/* <SpreadSheetToolbar/> */}
 
                     {/* 채팅 버튼 - 조건부 표시 */}
                     <ChatButton
