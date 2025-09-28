@@ -36,12 +36,184 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
 
 
+    // CSV 파일을 SpreadJS 형식으로 변환하는 함수
+    const processCsvFile = useCallback((file: File): Promise<any> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const text = e.target?.result as string;
+                    if (!text) {
+                        reject(new Error('CSV 파일을 읽을 수 없습니다.'));
+                        return;
+                    }
+
+                    console.log(`📊 [FileUploadModal] CSV 텍스트 길이: ${text.length}자`);
+
+                    // CSV 파싱 (RFC 4180 표준 준수)
+                    const lines = text.split(/\r\n|\n|\r/).filter(line => line.trim());
+                    const data: string[][] = [];
+
+                    for (const line of lines) {
+                        const row: string[] = [];
+                        let current = '';
+                        let inQuotes = false;
+                        let i = 0;
+
+                        while (i < line.length) {
+                            const char = line[i];
+                            const nextChar = line[i + 1];
+
+                            if (char === '"') {
+                                if (inQuotes && nextChar === '"') {
+                                    // 따옴표 이스케이프 처리 ("")
+                                    current += '"';
+                                    i += 2;
+                                } else {
+                                    // 따옴표 시작/끝
+                                    inQuotes = !inQuotes;
+                                    i++;
+                                }
+                            } else if (char === ',' && !inQuotes) {
+                                // 필드 구분자
+                                row.push(current.trim());
+                                current = '';
+                                i++;
+                            } else {
+                                current += char;
+                                i++;
+                            }
+                        }
+
+                        // 마지막 필드 추가
+                        row.push(current.trim());
+                        data.push(row);
+                    }
+
+                    console.log(`📊 [FileUploadModal] CSV 파싱 완료: ${data.length}행, ${data[0]?.length || 0}열`);
+
+                    // SpreadJS 표준 형식의 JSON 생성
+                    const jsonData = {
+                        frc: 1,
+                        name: "",
+                        sheets: {
+                            "Sheet1": {
+                                data: {
+                                    dataTable: {},
+                                    defaultDataNode: {
+                                        style: {
+                                            themeFont: "Body"
+                                        }
+                                    }
+                                },
+                                name: "Sheet1",
+                                index: 0,
+                                order: 0,
+                                theme: "Office",
+                                states: {},
+                                visible: 1,
+                                rowCount: Math.max(data.length + 50, 999), // 여유 공간 추가
+                                cellStates: {},
+                                isSelected: true,
+                                selections: {
+                                    "0": {
+                                        col: 0,
+                                        row: 0,
+                                        colCount: 1,
+                                        rowCount: 1
+                                    },
+                                    length: 1
+                                },
+                                columnCount: Math.max(data[0]?.length || 0, 25), // 최소 25열
+                                defaultData: {},
+                                rowOutlines: {
+                                    items: []
+                                },
+                                topCellIndex: 0,
+                                colHeaderData: {
+                                    defaultDataNode: {
+                                        style: {
+                                            themeFont: "Body"
+                                        }
+                                    }
+                                },
+                                leftCellIndex: 0,
+                                rowHeaderData: {
+                                    defaultDataNode: {
+                                        style: {
+                                            themeFont: "Body"
+                                        }
+                                    }
+                                },
+                                columnOutlines: {
+                                    items: []
+                                },
+                                autoMergeRangeInfos: [],
+                                outlineColumnOptions: {}
+                            }
+                        },
+                        version: "18.1.4",
+                        docProps: {
+                            docPropsApp: {},
+                            docPropsCore: {}
+                        },
+                        customList: [],
+                        sheetCount: 1,
+                        calcOnDemand: true,
+                        namedPatterns: {},
+                        sheetTabCount: 0,
+                        builtInFileIcons: {},
+                        allowDynamicArray: true,
+                        allowUserDragDrop: false,
+                        scrollIgnoreHidden: true,
+                        defaultSheetTabStyles: {}
+                    };
+
+                    // 데이터를 SpreadJS 표준 dataTable 형식으로 변환
+                    data.forEach((row, rowIndex) => {
+                        const rowData: any = {};
+                        row.forEach((cell, colIndex) => {
+                            if (cell !== '') {
+                                // 숫자인지 확인
+                                const numValue = parseFloat(cell);
+                                const isNumber = !isNaN(numValue) && isFinite(numValue) && cell.trim() !== '';
+
+                                rowData[colIndex.toString()] = {
+                                    value: isNumber ? numValue : cell
+                                };
+                            }
+                        });
+
+                        // 행에 데이터가 있는 경우에만 추가
+                        if (Object.keys(rowData).length > 0) {
+                            (jsonData.sheets.Sheet1.data.dataTable as any)[rowIndex.toString()] = rowData;
+                        }
+                    });
+
+                    console.log(`📄 [FileUploadModal] CSV → SpreadJS JSON 변환 완료`);
+                    resolve(jsonData);
+
+                } catch (error) {
+                    console.error('❌ [FileUploadModal] CSV 파싱 실패:', error);
+                    reject(new Error('CSV 파일 형식을 인식할 수 없습니다. 파일이 올바른 CSV 형식인지 확인해 주세요.'));
+                }
+            };
+
+            reader.onerror = () => {
+                reject(new Error('파일을 읽는 중 오류가 발생했습니다.'));
+            };
+
+            // UTF-8로 읽기 시도, 실패하면 다른 인코딩 시도
+            reader.readAsText(file, 'utf-8');
+        });
+    }, []);
+
     // ExcelIO를 사용한 파일 처리 함수
     const processFile = useCallback(async (file: File) => {
         setIsUploading(true);
         setError('');
         setSelectedFile(file);
-        
+
         console.log(`📁 [FileUploadModal] 파일 처리 시작: ${file.name}`);
 
         try {
@@ -56,56 +228,65 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                 throw new Error('지원하지 않는 파일 형식입니다. Excel(.xlsx, .xls) 또는 CSV 파일만 업로드 가능합니다.');
             }
 
-            // ExcelIO 인스턴스 생성
-            const excelIO = new IO();
+            let jsonData: any;
 
-            // 파일을 JSON으로 변환
-            excelIO.open(file, async (jsonData: any) => {
-                try {
-                    console.log(`📄 [FileUploadModal] JSON 변환 완료, 데이터 크기: ${JSON.stringify(jsonData).length}자`);
-
-                    const spreadsheetId = generateSpreadSheetId();
-                    const chatId = generateChatId();
-
-                    // API 호출
-                    await createSheet({
-                        fileName: file.name,
-                        spreadsheetId,
-                        chatId,
-                        userId,
-                        jsonData
+            if (fileExtension === 'csv') {
+                // CSV 파일은 별도 처리
+                console.log(`📊 [FileUploadModal] CSV 파일 직접 처리 시작`);
+                jsonData = await processCsvFile(file);
+            } else {
+                // Excel 파일은 ExcelIO 사용
+                console.log(`📊 [FileUploadModal] Excel 파일 ExcelIO 처리 시작`);
+                jsonData = await new Promise((resolve, reject) => {
+                    const excelIO = new IO();
+                    excelIO.open(file, (data: any) => {
+                        console.log(`📄 [FileUploadModal] ExcelIO 변환 완료`);
+                        resolve(data);
+                    }, (error: any) => {
+                        console.error('❌ [FileUploadModal] ExcelIO 변환 실패:', error);
+                        reject(error);
                     });
+                });
+            }
 
-                    console.log(`✅ [FileUploadModal] 스프레드시트 생성 API 호출 성공`);
-
-                    // 업로드 성공 상태로 변경
-                    setIsUploading(false);
-                    setUploadSuccess(true);
-                    setSuccessFileName(file.name);
-
-                    // 짧은 딜레이 후 새창 열기
-                    setTimeout(() => {
-                        const url = `/sheetAi/${spreadsheetId}/${chatId}`;
-                        window.open(url, '_blank');
-                    }, 500);
-
-                } catch (apiError) {
-                    console.error('❌ [FileUploadModal] API 호출 실패:', apiError);
-                    setError('파일 업로드 중 오류가 발생했습니다. 다시 시도해 주세요.');
-                    setIsUploading(false);
-                }
-            }, (ioError: any) => {
-                console.error('❌ [FileUploadModal] 파일 변환 실패:', ioError);
-                setError('파일을 읽는 중 오류가 발생했습니다. 파일이 손상되었거나 지원하지 않는 형식일 수 있습니다.');
-                setIsUploading(false);
+            console.log(`📊 [FileUploadModal] 변환된 데이터 구조:`, {
+                version: jsonData.version,
+                sheetCount: jsonData.sheetCount,
+                sheets: Object.keys(jsonData.sheets || {}),
+                dataSize: JSON.stringify(jsonData).length
             });
 
-        } catch (validationError: any) {
-            console.error('❌ [FileUploadModal] 파일 검증 실패:', validationError);
-            setError(validationError.message || '파일 처리 중 오류가 발생했습니다.');
+            const spreadsheetId = generateSpreadSheetId();
+            const chatId = generateChatId();
+
+            // API 호출
+            await createSheet({
+                fileName: file.name,
+                spreadsheetId,
+                chatId,
+                userId,
+                jsonData
+            });
+
+            console.log(`✅ [FileUploadModal] 스프레드시트 생성 API 호출 성공`);
+
+            // 업로드 성공 상태로 변경
+            setIsUploading(false);
+            setUploadSuccess(true);
+            setSuccessFileName(file.name);
+
+            // 짧은 딜레이 후 새창 열기
+            setTimeout(() => {
+                const url = `/sheetAi/${spreadsheetId}/${chatId}`;
+                window.open(url, '_blank');
+            }, 500);
+
+        } catch (error: any) {
+            console.error('❌ [FileUploadModal] 파일 처리 실패:', error);
+            setError(error.message || '파일 처리 중 오류가 발생했습니다.');
             setIsUploading(false);
         }
-    }, [createSheet, generateSpreadSheetId, generateChatId, userId, maxFileSize]);
+    }, [createSheet, generateSpreadSheetId, generateChatId, userId, maxFileSize, processCsvFile]);
 
     if (!isOpen) return null;
 
