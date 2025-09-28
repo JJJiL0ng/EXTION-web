@@ -51,98 +51,101 @@ export function HeroButtons() {
 
 
   // handleFileChange를 컴포넌트 내부로 이동
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      console.log('선택된 파일:', file.name, file.type, file.size);
+  // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const files = event.target.files;
+  //   if (files && files.length > 0) {
+  //     const file = files[0];
+  //     console.log('선택된 파일:', file.name, file.type, file.size);
 
-      // 파일 유효성 검사
-      const allowedTypes = [
-        'application/vnd.ms-excel', // .xls
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-        'text/csv', // .csv
-        'application/csv' // .csv (일부 브라우저)
-      ];
+  //     // 파일 유효성 검사
+  //     const allowedTypes = [
+  //       'application/vnd.ms-excel', // .xls
+  //       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+  //       'text/csv', // .csv
+  //       'application/csv' // .csv (일부 브라우저)
+  //     ];
 
-      const fileExtension = file.name.toLowerCase().split('.').pop();
-      const allowedExtensions = ['xls', 'xlsx', 'csv'];
+  //     const fileExtension = file.name.toLowerCase().split('.').pop();
+  //     const allowedExtensions = ['xls', 'xlsx', 'csv'];
 
-      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension || '')) {
-        alert('지원되는 파일 형식이 아닙니다. Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다.');
-        return;
-      }
+  //     if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension || '')) {
+  //       alert('지원되는 파일 형식이 아닙니다. Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다.');
+  //       return;
+  //     }
 
-      // 파일 크기 제한 (예: 10MB)
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
-        alert('파일 크기가 너무 큽니다. 10MB 이하의 파일만 업로드 가능합니다.');
-        return;
-      }
+  //     // 파일 크기 제한 (예: 10MB)
+  //     const maxSize = 10 * 1024 * 1024; // 10MB
+  //     if (file.size > maxSize) {
+  //       alert('파일 크기가 너무 큽니다. 10MB 이하의 파일만 업로드 가능합니다.');
+  //       return;
+  //     }
 
-      // 새 ID 생성 후 파일과 함께 스토어에 저장
-      const spreadsheetId = generateSpreadSheetId();
-      const chatId = generateChatId();
+  //     // 새 ID 생성 후 파일과 함께 스토어에 저장
+  //     const spreadsheetId = generateSpreadSheetId();
+  //     const chatId = generateChatId();
 
-      resetChatSessionId(); // chatSessionId 초기화
-      resetSpreadSheetVersion(); // spreadSheetVersionId 초기화
-      resetEditLockVersion(); // editLockVersion 초기화
+  //     resetChatSessionId(); // chatSessionId 초기화
+  //     resetSpreadSheetVersion(); // spreadSheetVersionId 초기화
+  //     resetEditLockVersion(); // editLockVersion 초기화
 
-      // 디버깅: 초기화 후 로컬 스토리지 상태 확인 (약간의 지연 후)
-      setTimeout(() => {
-        console.log('Reset 후 로컬 스토리지 상태:', localStorage.getItem('spreadsheet-version-storage'));
-        console.log('Reset 후 스토어 상태:', useSpreadSheetVersionStore.getState());
-      }, 100);
+  //     // 디버깅: 초기화 후 로컬 스토리지 상태 확인 (약간의 지연 후)
+  //     setTimeout(() => {
+  //       console.log('Reset 후 로컬 스토리지 상태:', localStorage.getItem('spreadsheet-version-storage'));
+  //       console.log('Reset 후 스토어 상태:', useSpreadSheetVersionStore.getState());
+  //     }, 100);
 
 
-      // 새 창에서 sheetchat 페이지 열기
-      const url = `/sheetchat/${spreadsheetId}/${chatId}`;
-      window.open(url, '_blank');
+  //     // 새 창에서 sheetchat 페이지 열기
+  //     const url = `/sheetchat/${spreadsheetId}/${chatId}`;
+  //     window.open(url, '_blank');
 
-      console.log('파일 업로드 처리 완료:', file.name);
-      console.log('새 창 URL:', url);
-    }
-  };
+  //     console.log('파일 업로드 처리 완료:', file.name);
+  //     console.log('새 창 URL:', url);
+  //   }
+  // };
 
   // 새로운 SpreadSheet ID와 Chat ID를 생성하여 동적 URL 만들기
-  const createNewSheetChatUrl = () => {
-    const spreadsheetId = generateSpreadSheetId();
-    const chatId = generateChatId();
-    return `/sheetchat/${spreadsheetId}/${chatId}`;
-  };
+  // const createNewSheetChatUrl = () => {
+  //   const spreadsheetId = generateSpreadSheetId();
+  //   const chatId = generateChatId();
+  //   return `/sheetchat/${spreadsheetId}/${chatId}`;
+  // };
 
   // 새 시트 생성 버튼 클릭 핸들러
-  const handleNewSheetClick = () => {
-    // ID 생성 및 초기화
-    resetChatSessionId(); // chatSessionId 초기화
-    resetSpreadSheetVersion(); // spreadSheetVersionId 초기화
-    resetEditLockVersion(); // editLockVersion 초기화
+  // const handleNewSheetClick = () => {
+  //   // ID 생성 및 초기화
+  //   resetChatSessionId(); // chatSessionId 초기화
+  //   resetSpreadSheetVersion(); // spreadSheetVersionId 초기화
+  //   resetEditLockVersion(); // editLockVersion 초기화
 
-    // 디버깅 로그
-    setTimeout(() => {
-      console.log('handleNewSheetClick - Reset 후 로컬 스토리지:', localStorage.getItem('spreadsheet-version-storage'));
-      console.log('handleNewSheetClick - Reset 후 스토어 상태:', useSpreadSheetVersionStore.getState());
-    }, 100);
+  //   // 디버깅 로그
+  //   setTimeout(() => {
+  //     console.log('handleNewSheetClick - Reset 후 로컬 스토리지:', localStorage.getItem('spreadsheet-version-storage'));
+  //     console.log('handleNewSheetClick - Reset 후 스토어 상태:', useSpreadSheetVersionStore.getState());
+  //   }, 100);
 
-    window.open(createNewSheetChatUrl(), '_blank');
-  };
+  //   // window.open(createNewSheetChatUrl(), '_blank');
+    
+  // };
 
 
   return (
     <div className="flex flex-row gap-4 sm:gap-6 justify-center items-center mb-8 lg:mb-12">
-      <Button
-        variant="secondary"
-        size="lg"
-        className="text-white bg-[#005de9] hover:bg-blue-700 px-2 py-2 border-2 border-[#005de9] text-lg lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl w-[150px] sm:w-[160px] rounded-full"
-        onClick={handleNewSheetClick}
-      >
-        <span className="flex items-center gap-2">
-          Start for free
-          {/* <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-        </svg> */}
-        </span>
-      </Button>
+      <Link href="/trypage">
+        <Button
+          variant="secondary"
+          size="lg"
+          className="text-white bg-[#005de9] hover:bg-blue-700 px-2 py-2 border-2 border-[#005de9] text-lg lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl w-[150px] sm:w-[160px] rounded-full"
+          // onClick={handleNewSheetClick}
+        >
+          <span className="flex items-center gap-2">
+            Start for free
+            {/* <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg> */}
+          </span>
+        </Button>
+      </Link>
 
       <Button
         variant="outline"

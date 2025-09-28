@@ -1,174 +1,102 @@
 "use client";
-
-import FileUploadContainer from "@/_components/chat/FileUploadChattingContainer";
-import dynamic from "next/dynamic";
-import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
-// import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisibilityContext";
-import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
+import React, { useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
+
+import { SpreadSheetToolbar } from "@/_components/sheet/SpreadSheetToolbar";
+import ChattingContainer from "@/_aa_superRefactor/compo/chat/ChattingContainer";
+import { Resizer } from "@/_aa_superRefactor/compo/resize/Resizer";
+import { useResizer } from "@/_aa_superRefactor/hookkk/resize/useResizer";
+import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
+import { useCheckAndLoadOnMount } from "@/_hooks/sheet/data_save/useCheckAndLoad";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
-import { useChattingComponentZindexStore } from "@/_store/handleZindex/chattingComponentZindexStore";
-import { enableMapSet } from 'immer';
 
+import dynamic from "next/dynamic";
 
-// Immer MapSet 플러그인 활성화
-enableMapSet();
-
-const MainSpreadSheet = dynamic(
-  () => {
-    return import("../../../../../_components/sheet/MainSpreadSheet");
-  },
-  { ssr: false }
+const SpreadSheet = dynamic(
+    () => {
+        return import("../../../../../_aa_superRefactor/compo/sheet/SpreadSheetRender");
+    },
+    { ssr: false }
 );
 
 export default function Home() {
-  const params = useParams();
-  const { setSpreadSheetId } = useSpreadsheetIdStore();
-  const { setChatId } = useChatStore();
+    const params = useParams();
+    const { setSpreadSheetId } = useSpreadsheetIdStore();
+    const { setChatId } = useChatStore();
 
-  const [leftWidth, setLeftWidth] = useState(75); // 초기값 70%
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
+            setSpreadSheetId(params.SpreadSheetId);
+        }
 
-  // spreadjs 컨텍스트 인스턴스를 담은 인스턴스 - 페이지 이동해도 유지되도록 useMemo 사용
-  const spreadRef = useMemo(() => ({ current: null }), []);
+        if (params?.ChatId && typeof params.ChatId === 'string') {
+            setChatId(params.ChatId);
+        }
 
+        // 저장된 값 확인
+        setTimeout(() => {
+            const { spreadSheetId } = useSpreadsheetIdStore.getState();
+            const { chatId } = useChatStore.getState();
+        }, 100);
+    }, [params, setSpreadSheetId, setChatId]);
 
-  // URL 파라미터에서 spreadsheetId와 chatId를 추출하여 store에 저장
-  useEffect(() => {
-    console.log('🔍 [Page] URL Parameters:', { params });
+    const spreadRef = useMemo(() => ({ current: null }), []);
 
-    if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
-      console.log('📊 [Page] Setting spreadsheetId:', params.SpreadSheetId);
-      setSpreadSheetId(params.SpreadSheetId);
-    }
+    const {
+        leftWidth,
+        rightWidth,
+        isResizing,
+        containerRef,
+        startResize
+    } = useResizer({
+        initialLeftWidth: 80,
+        minLeftWidth: 50,
+        maxLeftWidth: 80
+    });
 
-    if (params?.ChatId && typeof params.ChatId === 'string') {
-      console.log('💬 [Page] Setting chatId:', params.ChatId);
-      setChatId(params.ChatId);
-    }
+    return (
+        <div className="flex flex-col h-screen" style={{ overflow: 'hidden' }}>
+            <SpreadsheetProvider spreadRef={spreadRef}>
+                {/* 2층: 스프레드시트 툴바 - 전체 너비 */}
+                <div className="flex-shrink-0 w-full border-b-2 border-gray-200">
+                    <SpreadSheetToolbar sheetMode="FileUploaded"/>
+                </div>
 
-    // 저장된 값 확인
-    setTimeout(() => {
-      const { spreadSheetId } = useSpreadsheetIdStore.getState();
-      const { chatId } = useChatStore.getState();
-      console.log('✅ [Page] Stored values:', { spreadSheetId, chatId });
-    }, 100);
-  }, [params, setSpreadSheetId, setChatId]);
+                {/* 1층: 스프레드시트 | 리사이저 | 채팅 컨테이너 */}
+                <div
+                    ref={containerRef}
+                    className="flex flex-1"
+                    style={{ overflow: 'hidden' }}
+                >
+                    <div
+                        className="flex-shrink-0"
+                        style={{
+                            width: `${leftWidth}%`,
+                            willChange: isResizing ? 'width' : 'auto',
+                            transition: isResizing ? 'none' : 'width 0.1s ease-out'
+                        }}
+                    >
+                        <SpreadSheet sheetWidthNum={leftWidth} spreadRef={spreadRef} />
+                    </div>
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
+                    <Resizer
+                        onMouseDown={startResize}
+                        isResizing={isResizing}
+                    />
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !containerRef.current) return;
-
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-
-    // 최소/최대 너비 제한 (20% ~ 80%)
-    const clampedWidth = Math.min(Math.max(newLeftWidth, 20), 80);
-    setLeftWidth(clampedWidth);
-  }, [isDragging]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  // 마우스 이벤트 리스너 등록
-  React.useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  return (
-    // <ChatVisibilityProvider initialVisible={false}>
-    <SpreadsheetProvider spreadRef={spreadRef}>
-      <HomeContent
-        leftWidth={leftWidth}
-        setLeftWidth={setLeftWidth}
-        isDragging={isDragging}
-        containerRef={containerRef}
-        handleMouseDown={handleMouseDown}
-        spreadRef={spreadRef}
-      />
-    </SpreadsheetProvider>
-    // </ChatVisibilityProvider>
-  );
-}
-
-interface HomeContentProps {
-  leftWidth: number;
-  setLeftWidth: (width: number) => void;
-  isDragging: boolean;
-  containerRef: React.RefObject<HTMLDivElement>;
-  handleMouseDown: (e: React.MouseEvent) => void;
-  spreadRef: React.MutableRefObject<any>;
-}
-
-function HomeContent({
-  leftWidth,
-  setLeftWidth,
-  isDragging,
-  containerRef,
-  handleMouseDown,
-  spreadRef
-}: HomeContentProps) {
-  // const { isChatVisible } = useChatVisibility();
-  const { isVisible } = useChattingComponentZindexStore();
-
-
-
-
-  // 채팅이 숨겨질 때 스프레드시트 너비를 100%로 조정
-  const actualLeftWidth = isVisible ? leftWidth : 100;
-
-  return (
-    <div ref={containerRef} className="flex h-screen">
-      <div
-        className="h-screen overflow-hidden transition-all duration-300"
-        style={{ width: `${actualLeftWidth}%` }}
-      >
-        <MainSpreadSheet spreadRef={spreadRef} />
-      </div>
-
-      {/* 채팅이 보일 때만 드래그 가능한 구분선 표시 - 깔끔한 닫힘 */}
-      {isVisible && (
-        <div
-          className={`
-            w-1 bg-gray-300 hover:bg-gray-400 cursor-col-resize
-            relative group transition-colors duration-200
-            ${isDragging ? 'bg-[#005de9]' : ''}
-          `}
-          onMouseDown={handleMouseDown}
-        >
-          {/* 드래그 핸들 표시 */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-1 h-8 bg-gray-600 rounded-full"></div>
-          </div>
+                    <div
+                        className="flex-1"
+                        style={{
+                            width: `${rightWidth}%`,
+                            willChange: isResizing ? 'width' : 'auto',
+                            transition: isResizing ? 'none' : 'width 0.1s ease-out'
+                        }}
+                    >
+                        <ChattingContainer />
+                    </div>
+                </div>
+            </SpreadsheetProvider>
         </div>
-      )}
-
-      {/* 채팅 컨테이너 표시 - z-index로 제어됨 */}
-      <div
-        className="h-screen overflow-hidden transition-all duration-300"
-        style={{ width: `${100 - actualLeftWidth}%` }}
-      >
-        <FileUploadContainer />
-      </div>
-    </div>
-  );
+    )
 }

@@ -303,7 +303,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
 
             // 짧은 딜레이 후 새창 열기
             setTimeout(() => {
-                const url = `/sheetAi/${spreadsheetId}/${chatId}`;
+                const url = `/sheetchat/${spreadsheetId}/${chatId}`;
                 window.open(url, '_blank');
             }, 500);
 
