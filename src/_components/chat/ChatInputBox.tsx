@@ -60,8 +60,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     <div className="p-2 mx-auto justify-center w-full max-full">
       <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded overflow-hidden transition-colors`}>
         {/* 상단 영역 - 파일 선택 + 선택된 시트들 */}
-        <div className="px-2 py-1 flex items-center justify-between relative">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="px-1.5 py-1.5 flex items-center justify-between relative">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {/* 파일 선택 버튼을 가장 왼쪽에 배치 */}
             <FileAddButton
               onClick={onFileAddClick}
@@ -81,7 +81,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         </div>
         {/* <div className="border-t border-gray-200" /> */}
         {/* 메인 입력 영역 */}
-        <div className="px-3 py-2">
+        <div className="px-2 py-1.5">
           <textarea
             id="chat-input-message"
             name="chatMessage"
@@ -101,11 +101,11 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         </div>
 
         {/* 하단 영역 - 컨트롤들 */}
-        <div className="px-2 flex items-center justify-between relative">
+        <div className="p-1.5 flex items-center justify-between ">
           <div className="flex items-center">
             {/* 모드 선택 */}
            <div className="flex items-center space-x-2 mr-2">
-             <div className="py-1 relative" ref={modeModalRef}>
+             <div className=" relative" ref={modeModalRef}>
               <button
                 onClick={() => setShowModeModal(!showModeModal)}
                 className="flex items-center justify-center gap-1 rounded px-2 text-xs text-gray-700 hover:bg-gray-200 transition-colors w-20"
@@ -120,7 +120,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
               {/* 모드 선택 모달 */}
               {showModeModal && (
-                <div className="absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-50 w-56">
+                <div className="absolute bottom-full left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-50 w-56">
                   {/* agent 옵션 */}
                   <button
                     onClick={() => {
@@ -129,7 +129,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                     }}
                     className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t text-gray-700"
                   >
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="items-center justify-between gap-3">
                       <span className="text-left gap-1">
                         Agent <span className="text-xs text-gray-500">auto apply changes</span>
                       </span>
@@ -161,7 +161,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             </div>
 
             {/* 모델 선택 */}
-            <div className="py-1 relative" ref={modelModalRef}>
+            <div className="relative" ref={modelModalRef}>
               <button
                 onClick={() => setShowModelModal(!showModelModal)}
                 className="flex items-center justify-center gap-1 rounded px-2 text-xs text-gray-700 hover:bg-gray-200 transition-colors w-36"
