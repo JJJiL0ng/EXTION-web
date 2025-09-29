@@ -344,7 +344,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         e.stopPropagation();
         setIsDragOver(false);
 
-        if (isUploading || selectedFile) {
+        if (isUploading) {
             return;
         }
 
@@ -357,24 +357,11 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         const file = files[0]; // 첫 번째 파일만 처리
         console.log(`📥 [FileUploadModal] 파일 드롭 감지: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         
-        // 파일 유효성 검사만 수행하고 선택 상태로 설정
-        const fileExtension = file.name.toLowerCase().split('.').pop();
-        if (!['xlsx', 'csv'].includes(fileExtension || '')) {
-            setError('지원하지 않는 파일 형식입니다. Excel(.xlsx) 또는 CSV 파일만 업로드 가능합니다.');
-            return;
-        }
-
-        if (file.size > maxFileSize * 1024 * 1024) {
-            setError(`파일 크기가 너무 큽니다. 최대 ${maxFileSize}MB까지 지원됩니다.`);
-            return;
-        }
-
-        setSelectedFile(file);
-        setError('');
+        await processFile(file);
     };
 
     const handleFileInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
-        if (isUploading || selectedFile) {
+        if (isUploading) {
             e.target.value = '';
             return;
         }
@@ -388,22 +375,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         const file = files[0]; // 첫 번째 파일만 처리
         console.log(`📁 [FileUploadModal] 클릭으로 선택한 파일: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         
-        // 파일 유효성 검사만 수행하고 선택 상태로 설정
-        const fileExtension = file.name.toLowerCase().split('.').pop();
-        if (!['xlsx', 'csv'].includes(fileExtension || '')) {
-            setError('지원하지 않는 파일 형식입니다. Excel(.xlsx) 또는 CSV 파일만 업로드 가능합니다.');
-            e.target.value = '';
-            return;
-        }
-
-        if (file.size > maxFileSize * 1024 * 1024) {
-            setError(`파일 크기가 너무 큽니다. 최대 ${maxFileSize}MB까지 지원됩니다.`);
-            e.target.value = '';
-            return;
-        }
-
-        setSelectedFile(file);
-        setError('');
+        await processFile(file);
         
         // 파일 입력 초기화
         e.target.value = '';
@@ -423,11 +395,6 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         setIsUploading(false);
         setUploadSuccess(false);
         setSuccessFileName('');
-    };
-
-    const handleUpload = async () => {
-        if (!selectedFile) return;
-        await processFile(selectedFile);
     };
 
     if (!isOpen) return null;
@@ -593,12 +560,12 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                             )}
 
                             {/* Selected File */}
-                            {selectedFile && !isUploading && (
+                            {selectedFile && (
                                 <div className="space-y-3">
                                     <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                                         Selected File
                                     </h3>
-                                    <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-[#005de9] rounded-lg">
+                                    <div className="p-4 dark:bg-gray-800 border border-[#005de9] rounded-lg">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center space-x-3 flex-1 min-w-0">
                                                 <div className="p-2 bg-[#005de9]/10 dark:bg-[#005de9]/20 rounded-lg">
@@ -613,37 +580,15 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                                                     </p>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={resetUpload}
-                                                className="p-1 hover:bg-[#005de9]/10 dark:hover:bg-[#005de9]/20 rounded transition-colors"
-                                                title="Remove file and select a different one"
-                                            >
-                                                <X className="w-6 h-6 text-[#005de9] hover:text-[#003bb0] dark:text-[#66a3ff] dark:hover:text-[#cfe4ff]" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Uploading State */}
-                            {isUploading && selectedFile && (
-                                <div className="space-y-3">
-                                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                                        Uploading File
-                                    </h3>
-                                    <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-[#005de9] rounded-lg">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="p-2 bg-[#005de9]/10 dark:bg-[#005de9]/20 rounded-lg">
-                                                <Loader2 className="w-5 h-5 text-[#005de9] animate-spin" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                                    {selectedFile.name}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    Converting file to spreadsheet format...
-                                                </p>
-                                            </div>
+                                            {!isUploading && (
+                                                <button
+                                                    onClick={resetUpload}
+                                                    className="p-1 hover:bg-[#005de9]/10 dark:hover:bg-[#005de9]/20 rounded transition-colors"
+                                                    title="Remove file and select a different one"
+                                                >
+                                                    <X className="w-6 h-6 text-[#005de9] hover:text-[#003bb0] dark:text-[#66a3ff] dark:hover:text-[#cfe4ff]" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -654,15 +599,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
 
                 {/* Footer */}
                 {!uploadSuccess && (
-                    <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 dark:bg-gray-800/50">
-                        {selectedFile && !isUploading && (
-                            <button
-                                onClick={handleUpload}
-                                className="px-6 py-2 bg-[#005de9] hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                            >
-                                Upload
-                            </button>
-                        )}
+                    <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                         <button
                             onClick={resetUpload}
                             className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors"
