@@ -5,7 +5,13 @@ import { X, Upload, File, AlertCircle, CheckCircle, Loader2 } from 'lucide-react
 import { useSheetCreate } from '../../../_hooks/sheet/data_save/useSheetCreate';
 import { useGenerateSpreadSheetId } from '../../../_hooks/sheet/common/useGenerateSpreadSheetId';
 import { useGenerateChatId } from '../../../_hooks/aiChat/useGenerateChatId';
-import { IO } from '@grapecity/spread-excelio';
+// Dynamic import for ExcelIO to avoid SSR issues
+let ExcelIO: any = null;
+if (typeof window !== 'undefined') {
+  import("@grapecity/spread-excelio").then(module => {
+    ExcelIO = module;
+  });
+}
 interface FileUploadModalProps {
     isOpen: boolean;
     userId: string; // Optional userId prop
@@ -263,8 +269,13 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
             } else {
                 // Excel 파일은 ExcelIO 사용
                 console.log(`📊 [FileUploadModal] Excel 파일 ExcelIO 처리 시작`);
+
+                if (!ExcelIO) {
+                    throw new Error('ExcelIO library not loaded');
+                }
+
                 jsonData = await new Promise((resolve, reject) => {
-                    const excelIO = new IO();
+                    const excelIO = new ExcelIO.IO();
                     excelIO.open(file, (data: any) => {
                         console.log(`📄 [FileUploadModal] ExcelIO 변환 완료`);
                         resolve(data);

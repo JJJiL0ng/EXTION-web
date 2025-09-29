@@ -6,6 +6,11 @@ const nextConfig = {
           exclude: ['error', 'warn'] // error와 warn은 유지
       } : false
   },
+
+  // SSR 설정 - SpreadJS 브라우저 전용 라이브러리 처리
+  experimental: {
+    esmExternals: false
+  },
   
   // 이미지 최적화
   images: {

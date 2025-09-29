@@ -1,5 +1,8 @@
 //게스트 유저들이 처음 들어왔을떄 체험해보고 사용해볼 수 있는 페이지 파일을 업로드 하지 않고 사용하게 됨
 "use client";
+
+// Force dynamic rendering to avoid SSR issues with SpreadJS
+export const dynamic = 'force-dynamic';
 import React, { useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 
@@ -12,9 +15,9 @@ import { useCheckAndLoadOnMount } from "@/_hooks/sheet/data_save/useCheckAndLoad
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
 
-import dynamic from "next/dynamic";
+import dynamicImport from "next/dynamic";
 
-const SpreadSheet = dynamic(
+const SpreadSheet = dynamicImport(
     () => {
         return import("../../../../_aa_superRefactor/compo/sheet/SpreadSheetRender");
     },
