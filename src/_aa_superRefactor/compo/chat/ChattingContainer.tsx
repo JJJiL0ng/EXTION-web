@@ -88,7 +88,7 @@ export default function ChattingContainer() {
           </div>
 
           {/* 채팅 입력 박스 - 최하단 */}
-          <div>
+          <div className="relative overflow-visible">
             <ChatInputBox
               // userId={userId}
               disabled={false} // 임시로 항상 활성화

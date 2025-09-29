@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { ChatMode } from '../../_hooks/aiChat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
@@ -56,9 +56,53 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     handleBlur,
   } = useChatInputBoxHook({ userId });
 
+  // Textarea 높이 관리
+  const [textareaHeight, setTextareaHeight] = useState('auto');
+  const minHeight = 24; // 1.5rem (leading-6)
+  const maxHeight = 120; // 약 5줄 정도
+
+  // Textarea 높이 자동 조절 함수
+  const adjustTextareaHeight = useCallback(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      textarea.style.height = 'auto';
+      const scrollHeight = textarea.scrollHeight;
+      
+      if (scrollHeight <= maxHeight) {
+        textarea.style.height = `${Math.max(scrollHeight, minHeight)}px`;
+        textarea.style.overflowY = 'hidden';
+      } else {
+        textarea.style.height = `${maxHeight}px`;
+        textarea.style.overflowY = 'auto';
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxHeight, minHeight]);
+
+  // 메시지 변경 시 높이 조절
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [message, adjustTextareaHeight]);
+
+  // 컴포넌트 마운트 시 높이 조절
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [adjustTextareaHeight]);
+
+  // message 변경 핸들러 오버라이드
+  const handleMessageChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+  }, [setMessage]);
+
+  // 포커스 핸들러 오버라이드
+  const handleTextareaFocus = useCallback(() => {
+    handleFocus();
+    adjustTextareaHeight();
+  }, [handleFocus, adjustTextareaHeight]);
+
   return (
-    <div className="p-2 mx-auto justify-center w-full max-full">
-      <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded overflow-hidden transition-colors`}>
+    <div className="p-1.5 mx-auto justify-center w-full max-full">
+      <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded transition-colors relative`}>
         {/* 상단 영역 - 파일 선택 + 선택된 시트들 */}
         <div className="px-1.5 py-1.5 flex items-center justify-between relative">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -87,16 +131,21 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             name="chatMessage"
             ref={textareaRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleMessageChange}
             onKeyDown={handleKeyDown}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
-            onFocus={handleFocus}
+            onFocus={handleTextareaFocus}
             onBlur={handleBlur}
             placeholder={placeholder}
-            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[12px] leading-6"
-            disabled={false} // 항상 타이핑 가능하게 변경
-            rows={1}
+            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent leading-6"
+            disabled={false}
+            style={{
+              minHeight: `${minHeight}px`,
+              maxHeight: `${maxHeight}px`,
+              height: 'auto',
+              overflowY: 'hidden'
+            }}
           />
         </div>
 
@@ -120,7 +169,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
               {/* 모드 선택 모달 */}
               {showModeModal && (
-                <div className="absolute bottom-full left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-50 w-56">
+                <div className="absolute bottom-full mb-2 left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-[100] w-56">
                   {/* agent 옵션 */}
                   <button
                     onClick={() => {
@@ -129,8 +178,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                     }}
                     className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t text-gray-700"
                   >
-                    <div className="items-center justify-between gap-3">
-                      <span className="text-left gap-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-left">
                         Agent <span className="text-xs text-gray-500">auto apply changes</span>
                       </span>
                       {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
@@ -175,7 +224,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
               {/* 모델 선택 모달 */}
               {showModelModal && (
-                <div className="py-1 absolute bottom-full mb-1 left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-50 w-64">
+                <div className="absolute bottom-full mb-2 left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-[100] w-64">
                   {/* Extion large 옵션 */}
                   <button
                     onClick={() => {
@@ -185,7 +234,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
                     className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t text-gray-700"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-left gap-1">
+                      <span className="text-left">
                         Extion Large <span className="text-xs text-gray-500">largest model</span>
                       </span>
                       {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
