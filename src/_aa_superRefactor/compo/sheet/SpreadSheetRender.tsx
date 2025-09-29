@@ -78,8 +78,8 @@ export default function SpreadSheet({ sheetWidthNum, spreadRef }: SpreadSheetPro
         <div
             className="w-full h-full"
             style={{
-                transform: 'translateZ(0)', // GPU 가속 활성화
-                backfaceVisibility: 'hidden' // 렌더링 최적화
+                // transform: 'translateZ(0)', // GPU 가속 활성화
+                // backfaceVisibility: 'hidden' // 렌더링 최적화
             }}
         >
             <SpreadSheets
@@ -87,7 +87,7 @@ export default function SpreadSheet({ sheetWidthNum, spreadRef }: SpreadSheetPro
                 hostStyle={{
                     width: '100%',
                     height: '100%',
-                    transform: 'translateZ(0)' // SpreadJS 자체도 GPU 가속
+                    // transform: 'translateZ(0)' // SpreadJS 자체도 GPU 가속
                 }}>
             </SpreadSheets>
         </div>
