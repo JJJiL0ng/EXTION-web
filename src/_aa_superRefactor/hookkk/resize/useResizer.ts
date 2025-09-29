@@ -28,7 +28,7 @@ interface UseResizerProps {
 }
 
 export const useResizer = ({
-    initialLeftWidth = 70,
+    initialLeftWidth = 75,
     minLeftWidth = 20,
     maxLeftWidth = 80
 }: UseResizerProps = {}) => {

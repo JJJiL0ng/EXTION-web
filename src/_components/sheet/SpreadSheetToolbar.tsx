@@ -8,6 +8,7 @@ import useFileNameStore from '@/_store/sheet/fileNameStore';
 import { renameSheet } from '@/_hooks/sheet/fileName/useRename';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
 import { useSpreadsheetContext } from '@/_contexts/SpreadsheetContext';
+import { getOrCreateGuestId } from '@/_utils/guestUtils';
 /**
  * Spreadsheet top toolbar component
  */
@@ -39,6 +40,8 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
     const [previousFileName, setPreviousFileName] = useState<string | null>(null);
     const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const userId = getOrCreateGuestId();
 
     // 편집 모드 시작
     const handleEditStart = () => {
@@ -119,7 +122,7 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
     return (
         <>
             <div className="w-full h-7 bg-white flex items-center justify-between box-border">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pl-2">
                     {/* Home */}
                     <button
                         onClick={() => window.location.href = '/dashboard'}
@@ -221,7 +224,7 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
             {/* File Upload Modal */}
             <FileUploadModal 
                 isOpen={isFileUploadModalOpen}
-                userId="" // TODO: userId를 props나 store에서 가져와야 함
+                userId={userId} 
                 onClose={handleCloseFileUploadModal}
             />
         </>

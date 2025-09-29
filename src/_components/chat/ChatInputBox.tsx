@@ -60,7 +60,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     <div className="p-2 mx-auto justify-center w-full max-full">
       <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded overflow-hidden transition-colors`}>
         {/* 상단 영역 - 파일 선택 + 선택된 시트들 */}
-        <div className="p-3 flex items-center justify-between relative">
+        <div className="px-2 py-1 flex items-center justify-between relative">
           <div className="flex items-center gap-2 flex-wrap">
             {/* 파일 선택 버튼을 가장 왼쪽에 배치 */}
             <FileAddButton
@@ -79,7 +79,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             ))}
           </div>
         </div>
-        <div className="border-t border-gray-200" />
+        {/* <div className="border-t border-gray-200" /> */}
         {/* 메인 입력 영역 */}
         <div className="px-3 py-2">
           <textarea
@@ -101,7 +101,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         </div>
 
         {/* 하단 영역 - 컨트롤들 */}
-        <div className="px-3 py-1 flex items-center justify-between relative">
+        <div className="px-2 flex items-center justify-between relative">
           <div className="flex items-center">
             {/* 모드 선택 */}
            <div className="flex items-center space-x-2 mr-2">

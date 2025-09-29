@@ -51,7 +51,7 @@ export default function Home() {
         containerRef,
         startResize
     } = useResizer({
-        initialLeftWidth: 80,
+        initialLeftWidth: 75,
         minLeftWidth: 50,
         maxLeftWidth: 80
     });
