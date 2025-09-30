@@ -18,6 +18,7 @@ export interface aiChatApiReq {
     editLockVersion: number | null; // Optional: 낙관적 잠금을 위한 버전 번호 (없을 시 최신 버전 사용)
     parentChatBranchId?: string; // Optional: 대화 분기 시에 부모 브랜치 ID (없을 시 null)
     aiModel: aiModelType; // 사용할 AI 모델 이름
+    isEmtpySheet: boolean; // 시트가 비어있는지 여부
 }
 export interface aiChatApiRes {
     jobId: string;

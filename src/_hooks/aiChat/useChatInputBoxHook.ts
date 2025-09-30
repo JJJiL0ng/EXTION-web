@@ -16,6 +16,7 @@ import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdS
 import { isSpreadSheetDataDirty } from '@/_utils/sheet/authSave/isSpreadSheetDataDirty';
 import { clearAllDirtyData } from '@/_utils/sheet/authSave/clearAllDirtyData';
 import { aiModelType } from '@/_types/apiConnector/ai-chat-api/aiChatApi.types';
+import { useIsEmptySheetStore } from '@/_aa_superRefactor/store/sheet/isEmptySheetStore';
 
 // 브라우저 Web Crypto API 사용 + 폴백
 const safeRandomUUID = () => {
@@ -68,6 +69,8 @@ export const useChatInputBoxHook = ({
   const { isConnected, isConnecting, connect, executeAiJob } = useAiChatApiConnector();
 
   const { activeSheetName } = useGetActiveSheetName();
+
+  const { isEmptySheet, setIsEmptySheet } = useIsEmptySheetStore();
 
   // Spread 객체 초기화 시 옵션 설정
   useEffect(() => {
@@ -288,7 +291,8 @@ export const useChatInputBoxHook = ({
               }),
             }),
             editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || null, // 낙관적 잠금을 위한 버전 번호
-            aiModel: model
+            aiModel: model, 
+            isEmtpySheet: isEmptySheet
           };
           // 전송 직후 시트의 dirty 데이터 모두 초기화 (spread 객체가 있을 때만)
           if (spread) {
@@ -320,6 +324,8 @@ export const useChatInputBoxHook = ({
             } else {
               console.warn('⚠️ [ChatInputBoxHook] Spread object not available for applying data edit commands');
             }
+
+            setIsEmptySheet(false); // 시트가 비어있지 않음으로 설정
 
           } catch (aiError) {
             console.error('❌ [ChatInputBoxHook] AI job failed:', aiError);
