@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 
 import { SpreadSheetToolbar } from "@/_components/sheet/SpreadSheetToolbar";
@@ -7,9 +7,10 @@ import ChattingContainer from "@/_aa_superRefactor/compo/chat/ChattingContainer"
 import { Resizer } from "@/_aa_superRefactor/compo/resize/Resizer";
 import { useResizer } from "@/_aa_superRefactor/hookkk/resize/useResizer";
 import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
-import { useCheckAndLoadOnMount } from "@/_hooks/sheet/data_save/useCheckAndLoad";
+
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
+import { useIsEmptySheetStore } from "@/_aa_superRefactor/store/sheet/isEmptySheetStore";
 
 import dynamic from "next/dynamic";
 
@@ -24,6 +25,8 @@ export default function Home() {
     const params = useParams();
     const { setSpreadSheetId } = useSpreadsheetIdStore();
     const { setChatId } = useChatStore();
+    const { setIsEmptySheet } = useIsEmptySheetStore();
+
 
     useEffect(() => {
         if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
@@ -33,15 +36,13 @@ export default function Home() {
         if (params?.ChatId && typeof params.ChatId === 'string') {
             setChatId(params.ChatId);
         }
+        setIsEmptySheet(true);
 
-        // 저장된 값 확인
-        setTimeout(() => {
-            const { spreadSheetId } = useSpreadsheetIdStore.getState();
-            const { chatId } = useChatStore.getState();
-        }, 100);
     }, [params, setSpreadSheetId, setChatId]);
 
     const spreadRef = useMemo(() => ({ current: null }), []);
+
+    // 초기값을 시트가 업로드 되어 있는 상태라서false로 설정
 
     const {
         leftWidth,
@@ -60,7 +61,7 @@ export default function Home() {
             <SpreadsheetProvider spreadRef={spreadRef}>
                 {/* 2층: 스프레드시트 툴바 - 전체 너비 */}
                 <div className="flex-shrink-0 w-full border-b-2 border-gray-200">
-                    <SpreadSheetToolbar sheetMode="FileUploaded"/>
+                    <SpreadSheetToolbar />
                 </div>
 
                 {/* 1층: 스프레드시트 | 리사이저 | 채팅 컨테이너 */}

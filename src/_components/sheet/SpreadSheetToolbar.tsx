@@ -9,14 +9,12 @@ import { renameSheet } from '@/_hooks/sheet/fileName/useRename';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
 import { useSpreadsheetContext } from '@/_contexts/SpreadsheetContext';
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
+import { useIsEmptySheetStore } from '@/_aa_superRefactor/store/sheet/isEmptySheetStore';
+ 
 /**
  * Spreadsheet top toolbar component
  */
-export interface SpreadSheetToolbarProps {
-    sheetMode: 'FileUploaded' | 'IsNotFileUploaded';
-}
-
-export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode}) => {
+export const SpreadSheetToolbar: React.FC = () => {
     const { spread } = useSpreadsheetContext();
     const {
         exportState,
@@ -42,6 +40,9 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
     const inputRef = useRef<HTMLInputElement>(null);
 
     const userId = getOrCreateGuestId();
+
+
+    const { isEmptySheet, setIsEmptySheet } = useIsEmptySheetStore();
 
     // 편집 모드 시작
     const handleEditStart = () => {
@@ -132,7 +133,15 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
                     </button>
 
                     {/* File name display/edit or Open File button based on mode */}
-                    {sheetMode === 'FileUploaded' ? (
+                    {isEmptySheet ? (
+                        <button
+                            onClick={handleOpenFileUploadModal}
+                            className="flex justify-center items-center px-2 py-1 text-sm text-white font-medium bg-[#005de9] hover:bg-[#0052d1] rounded transition-colors duration-150 h-6"
+                            title="Open a file to start editing"
+                        >
+                            Open File
+                        </button>
+                    ) : (
                         fileName && (
                             <div className="relative">
                                 {isEditing ? (
@@ -157,14 +166,6 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
                                 )}
                             </div>
                         )
-                    ) : (
-                        <button
-                            onClick={handleOpenFileUploadModal}
-                            className="flex justify-center items-center px-2 py-1 text-sm text-white font-medium bg-[#005de9] hover:bg-[#0052d1] rounded transition-colors duration-150 h-6"
-                            title="Open a file to start editing"
-                        >
-                            Open File
-                        </button>
                     )}
 
                     {/* File upload input is managed by parent (Main) */}
