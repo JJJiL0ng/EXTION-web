@@ -34,10 +34,12 @@ const safeRandomUUID = () => {
 
 interface UseChatInputBoxHookProps {
   userId?: string;
+  isSheetUploaded?: boolean; // 시트 업로드 여부
 }
 
 export const useChatInputBoxHook = ({
-  userId = getOrCreateGuestId()
+  userId = getOrCreateGuestId(),
+  isSheetUploaded = false
 }: UseChatInputBoxHookProps = {}) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -127,41 +129,48 @@ export const useChatInputBoxHook = ({
   //   };
   // }, []);
 
-  // 최초 1회만 activeSheetName을 기본 선택으로 추가 (컴포넌트 마운트 시에만)
+  // activeSheetName을 기본 선택으로 추가 (컴포넌트 마운트 시 또는 isSheetUploaded 변경 시)
   const didInitDefaultSelection = useRef(false);
 
-  useEffect(() => {
-    console.log('🔍 [ChatInputBoxHook] Default selection effect triggered:', {
-      didInitDefaultSelection: didInitDefaultSelection.current,
-      activeSheetName,
-      selectedSheetsLength: selectedSheets.length,
-      selectedSheets: selectedSheets.map(s => s.name)
-    });
+  // useEffect(() => {
+  //   console.log('🔍 [ChatInputBoxHook] Default selection effect triggered:', {
+  //     didInitDefaultSelection: didInitDefaultSelection.current,
+  //     activeSheetName,
+  //     isSheetUploaded,
+  //     selectedSheetsLength: selectedSheets.length,
+  //     selectedSheets: selectedSheets.map(s => s.name)
+  //   });
 
-    // 이미 초기화했으면 실행하지 않음
-    if (didInitDefaultSelection.current) {
-      console.log('🚫 [ChatInputBoxHook] Already initialized, skipping');
-      return;
-    }
+  //   // isSheetUploaded가 변경되면 초기화 상태를 리셋하여 다시 선택할 수 있게 함
+  //   if (isSheetUploaded && didInitDefaultSelection.current) {
+  //     console.log('📋 [ChatInputBoxHook] Sheet uploaded, resetting initialization flag');
+  //     didInitDefaultSelection.current = false;
+  //   }
 
-    // activeSheetName이 없으면 대기
-    if (!activeSheetName) {
-      console.log('⏳ [ChatInputBoxHook] No activeSheetName yet, waiting...');
-      return;
-    }
+  //   // 이미 초기화했고 시트가 업로드되지 않았으면 실행하지 않음
+  //   if (didInitDefaultSelection.current && !isSheetUploaded) {
+  //     console.log('🚫 [ChatInputBoxHook] Already initialized, skipping');
+  //     return;
+  //   }
 
-    // 이미 선택된 시트가 있는지 현재 상태를 직접 확인
-    const currentSelectedSheets = selectedSheets;
-    if (currentSelectedSheets.length > 0) {
-      console.log('✅ [ChatInputBoxHook] Sheets already selected, marking as initialized');
-      didInitDefaultSelection.current = true;
-      return;
-    }
+  //   // activeSheetName이 없으면 대기
+  //   if (!activeSheetName) {
+  //     console.log('⏳ [ChatInputBoxHook] No activeSheetName yet, waiting...');
+  //     return;
+  //   }
 
-    console.log('🎯 [ChatInputBoxHook] Adding default sheet:', activeSheetName);
-    addSelectedSheet(activeSheetName);
-    didInitDefaultSelection.current = true;
-  }, [activeSheetName, addSelectedSheet, selectedSheets]);
+  //   // 이미 선택된 시트가 있는지 현재 상태를 직접 확인 (시트 업로드 시에는 무시)
+  //   const currentSelectedSheets = selectedSheets;
+  //   if (currentSelectedSheets.length > 0 && !isSheetUploaded) {
+  //     console.log('✅ [ChatInputBoxHook] Sheets already selected, marking as initialized');
+  //     didInitDefaultSelection.current = true;
+  //     return;
+  //   }
+
+  //   console.log('🎯 [ChatInputBoxHook] Adding default sheet:', activeSheetName);
+  //   addSelectedSheet(activeSheetName);
+  //   didInitDefaultSelection.current = true;
+  // }, [activeSheetName, addSelectedSheet, selectedSheets, isSheetUploaded]);
 
   // 이 로직은 제거됨 - 모달에서 시트 선택 시 activeSheetName이 간섭하지 않도록 함
   // 활성 시트명이 변경될 때 자동 동기화는 하지 않음
