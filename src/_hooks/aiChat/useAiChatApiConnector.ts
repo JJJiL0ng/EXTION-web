@@ -85,6 +85,7 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
       });
 
       globalConnector.onTasksExecuted((data) => {
+        console.log('📦 [useAiChatApiConnector] onTasksExecuted received data:', data);
         const pending = pendingJobsRef.current.get(data.jobId);
         if (pending) {
           // aiChatApiRes 형태로 반환
@@ -94,7 +95,9 @@ export const useAiChatApiConnector = (): UseAiChatApiConnectorReturn => {
             taskManagerOutput: pending.plan,
             dataEditChatRes: data.dataEditChatRes,
             spreadSheetVersionId: data.spreadSheetVersionId,
-            editLockVersion: data.editLockVersion
+            editLockVersion: data.editLockVersion,
+            messageId: data.messageId,
+            fileName: data.fileName
           });
           pendingJobsRef.current.delete(data.jobId);
         }

@@ -7,7 +7,7 @@ export interface aiChatApiReq {
     spreadsheetId: string;
     chatId: string;
     chatSessionId: string | null; // 특정 채팅 세션을 구분하기 위한 ID (새로운 대화 시작시마다 변경)
-    userChatSessionBranchId: string ; // 프론트에서 생성해서 유저 채팅 상태에 저장해두고 롤백 시에 사용될거임, 프론트에서 이걸 message의 id로 사용함
+    userChatSessionBranchId: string; // 프론트에서 생성해서 유저 채팅 상태에 저장해두고 롤백 시에 사용될거임, 프론트에서 이걸 message의 id로 사용함
     userId: string;
     chatMode: 'agent' | 'edit';
     userQuestionMessage: string;
@@ -18,7 +18,7 @@ export interface aiChatApiReq {
     editLockVersion: number | null; // Optional: 낙관적 잠금을 위한 버전 번호 (없을 시 최신 버전 사용)
     parentChatBranchId?: string; // Optional: 대화 분기 시에 부모 브랜치 ID (없을 시 null)
     aiModel: aiModelType; // 사용할 AI 모델 이름
-    isEmtpySheet: boolean; // 시트가 비어있는지 여부
+    isEmptySheet: boolean; // 시트가 비어있는지 여부
 }
 export interface aiChatApiRes {
     jobId: string;
@@ -27,6 +27,8 @@ export interface aiChatApiRes {
     dataEditChatRes: dataEditChatRes;
     spreadSheetVersionId: string;
     editLockVersion: number; // Optional: 낙관적 잠금을 위한 버전 번호 (없을 시 최신 버전 사용)
+    messageId: string; // DB에서 생성된 메시지 ID
+    fileName?: string; // Optional: 생성된 파일 이름
 }
 
 export type aiModelType = 'Extion small' | 'Extion medium' | 'Extion large';

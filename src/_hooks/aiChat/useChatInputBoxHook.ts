@@ -17,6 +17,7 @@ import { isSpreadSheetDataDirty } from '@/_utils/sheet/authSave/isSpreadSheetDat
 import { clearAllDirtyData } from '@/_utils/sheet/authSave/clearAllDirtyData';
 import { aiModelType } from '@/_types/apiConnector/ai-chat-api/aiChatApi.types';
 import { useIsEmptySheetStore } from '@/_aa_superRefactor/store/sheet/isEmptySheetStore';
+import useFileNameStore from '@/_store/sheet/fileNameStore';
 
 // 브라우저 Web Crypto API 사용 + 폴백
 const safeRandomUUID = () => {
@@ -95,10 +96,8 @@ export const useChatInputBoxHook = ({
         try {
           console.log('🔌 [ChatInputBoxHook] Attempting to connect to AI Chat server');
           const serverUrl = process.env.NEXT_PUBLIC_API_URL || 'ws://localhost:8080';
-          console.log('🔌 [ChatInputBoxHook] Using server URL:', serverUrl);
 
           await connect(serverUrl);
-          console.log('✅ [ChatInputBoxHook] Successfully connected to AI Chat server');
         } catch (error) {
           console.error('❌ [ChatInputBoxHook] Failed to connect to AI Chat server:', error);
         }
@@ -113,20 +112,20 @@ export const useChatInputBoxHook = ({
   }, [isConnected, isConnecting, connect]);
 
   // 연결 상태 변화 로깅
-  useEffect(() => {
-    console.log('🔗 [ChatInputBoxHook] Connection status changed:', {
-      isConnected,
-      isConnecting,
-      timestamp: new Date().toISOString()
-    });
-  }, [isConnected, isConnecting]);
+  // useEffect(() => {
+  //   console.log('🔗 [ChatInputBoxHook] Connection status changed:', {
+  //     isConnected,
+  //     isConnecting,
+  //     timestamp: new Date().toISOString()
+  //   });
+  // }, [isConnected, isConnecting]);
 
   // 컴포넌트 언마운트 로깅
-  useEffect(() => {
-    return () => {
-      console.log('🏗️ [ChatInputBoxHook] Hook unmounting');
-    };
-  }, []);
+  // useEffect(() => {
+  //   return () => {
+  //     console.log('🏗️ [ChatInputBoxHook] Hook unmounting');
+  //   };
+  // }, []);
 
   // 최초 1회만 activeSheetName을 기본 선택으로 추가 (컴포넌트 마운트 시에만)
   const didInitDefaultSelection = useRef(false);
@@ -291,8 +290,8 @@ export const useChatInputBoxHook = ({
               }),
             }),
             editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || null, // 낙관적 잠금을 위한 버전 번호
-            aiModel: model, 
-            isEmtpySheet: isEmptySheet
+            aiModel: model,
+            isEmptySheet: isEmptySheet
           };
           // 전송 직후 시트의 dirty 데이터 모두 초기화 (spread 객체가 있을 때만)
           if (spread) {
@@ -308,12 +307,16 @@ export const useChatInputBoxHook = ({
 
             // AI 응답을 채팅 스토어에 추가, spreadSheetVersionNum 업데이트
             if (result) {
+              setIsEmptySheet(false); // 시트가 비어있지 않음으로 설정
+
               aiChatStore.getState().addAiMessage(result);
               // 다른 저장소 쓰는 프로퍼티들은 값이 유효한지 간단히 체크 후 저장
               if (typeof result.spreadSheetVersionId === 'string' && result.spreadSheetVersionId && result.editLockVersion && result.chatSessionId) {
                 useSpreadSheetVersionStore.getState().setSpreadSheetVersion(result.spreadSheetVersionId);
                 useSpreadSheetVersionStore.getState().setEditLockVersion(result.editLockVersion);
                 useChatIdStore.getState().setChatSessionId(result.chatSessionId);
+                useFileNameStore.getState().setFileName(result.fileName || ''); // 파일 이름이 있으면 설정, 없으면 빈 문자열
+                console.log('asfasfasfsdafsafhhhhhhhㅗㅗㅗㅗ',result.fileName);
               } else {
                 console.warn('⚠️ [ChatInputBoxHook] Invalid version id received:', result.spreadSheetVersionId);
               }
@@ -325,7 +328,6 @@ export const useChatInputBoxHook = ({
               console.warn('⚠️ [ChatInputBoxHook] Spread object not available for applying data edit commands');
             }
 
-            setIsEmptySheet(false); // 시트가 비어있지 않음으로 설정
 
           } catch (aiError) {
             console.error('❌ [ChatInputBoxHook] AI job failed:', aiError);

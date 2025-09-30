@@ -53,7 +53,7 @@ export default function SpreadSheet({ sheetWidthNum, spreadRef }: SpreadSheetPro
         stableActivity,
         stableSpreadsheetVersionId
     );
-    console.log('✅ [SpreadSheetRender] exists, loading, error:', { exists, loading, error });
+    // console.log('✅ [SpreadSheetRender] exists, loading, error:', { exists, loading, error });
 
     // sheetWidthNum 변경사항을 감지하여 SpreadJS resize 호출
     useEffect(() => {

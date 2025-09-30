@@ -18,6 +18,7 @@ import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
 import { useGenerateSpreadSheetId } from "@/_hooks/sheet/common/useGenerateSpreadSheetId";
 import { useGenerateChatId } from "@/_hooks/aiChat/useGenerateChatId";
 import { useIsEmptySheetStore } from "@/_aa_superRefactor/store/sheet/isEmptySheetStore";
+import { useSpreadSheetVersionStore } from "@/_store/sheet/spreadSheetVersionIdStore";
 
 import dynamicImport from "next/dynamic";
 
@@ -36,6 +37,8 @@ export default function Home() {
     const { setChatId } = useChatStore();
     const { setIsEmptySheet } = useIsEmptySheetStore();
 
+    const { setEditLockVersion } = useSpreadSheetVersionStore();
+
     const spreadRef = useMemo(() => ({ current: null }), []);
 
     // useEffect를 사용하여 컴포넌트 마운트 시에만 ID를 생성하고 설정
@@ -48,6 +51,8 @@ export default function Home() {
         // 초기값을 시트가 업로드 되어 있는 상태라서 true로 설정
         // const [isEmptySheet, setIsEmptySheet] = useState(true);
         setIsEmptySheet(true);
+        setEditLockVersion(1);
+
     }, [generateSpreadSheetId, generateChatId, setSpreadSheetId, setChatId, setIsEmptySheet]);
 
 
