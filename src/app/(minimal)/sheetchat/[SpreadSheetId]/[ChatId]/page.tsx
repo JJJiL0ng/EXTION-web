@@ -36,7 +36,7 @@ export default function Home() {
         if (params?.ChatId && typeof params.ChatId === 'string') {
             setChatId(params.ChatId);
         }
-        setIsEmptySheet(true);
+        setIsEmptySheet(false);
 
     }, [params, setSpreadSheetId, setChatId]);
 
