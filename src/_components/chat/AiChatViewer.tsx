@@ -142,7 +142,13 @@ const AiChatViewer = () => {
         }
 
         if (!chatId || !chatSessionId) {
-          console.error('❌ chatId 또는 chatSessionId가 없습니다');
+          if (!chatId && !chatSessionId) {
+            console.error('❌ chatId 및 chatSessionId가 없습니다');
+          } else if (!chatId) {
+            console.error('❌ chatId가 없습니다');
+          } else {
+            console.error('❌ chatSessionId가 없습니다');
+          }
           return;
         }
 
@@ -234,7 +240,7 @@ const AiChatViewer = () => {
 
   return (
     <div className="chat-viewer h-full flex flex-col relative">
-      <div className="border-b-2 border-[#D9D9D9]"></div>
+      {/* <div className="border-b-2 border-[#D9D9D9]"></div> */}
 
       {/* 롤백 에러 알림 */}
       {rollbackError && (
@@ -293,7 +299,7 @@ const AiChatViewer = () => {
             {messages.map((message, index) => (
               <div key={message.id} className="w-full">
                 <div
-                  className={`w-full rounded-lg px-2 py-2 ${message.type === 'user'
+                  className={`w-full rounded px-2 py-2 ${message.type === 'user'
                       ? 'bg-white text-gray-900 border border-gray-300'
                       : ''
                     }`}
@@ -313,7 +319,7 @@ const AiChatViewer = () => {
                           handleRollBackButtonClick(previousMessage?.id);
                         }}
                         disabled={isRollbackLoading}
-                        className={`p-1 rounded-md transition-colors duration-200 ${isRollbackLoading
+                        className={`p-1 rounded transition-colors duration-200 ${isRollbackLoading
                             ? 'text-gray-400 cursor-not-allowed'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                           }`}
@@ -323,7 +329,7 @@ const AiChatViewer = () => {
                       </button>
                       <button
                         onClick={() => handleRating(message.id, 'like')}
-                        className={`p-1 rounded-md transition-colors duration-200 ${messageRatings[message.id] === 'like'
+                        className={`p-1 rounded transition-colors duration-200 ${messageRatings[message.id] === 'like'
                             ? 'text-[#005de9] bg-gray-200'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                           }`}
@@ -333,7 +339,7 @@ const AiChatViewer = () => {
                       </button>
                       <button
                         onClick={() => handleRating(message.id, 'dislike')}
-                        className={`p-1 rounded-md transition-colors duration-200 ${messageRatings[message.id] === 'dislike'
+                        className={`p-1 rounded transition-colors duration-200 ${messageRatings[message.id] === 'dislike'
                             ? 'text-[#005de9] bg-gray-200'
                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                           }`}
@@ -359,7 +365,7 @@ const AiChatViewer = () => {
             {/* AI 응답 대기 중 TypingIndicator 표시 */}
             {isSendingMessage && (
               <div className="w-full">
-                <div className="w-full rounded-lg px-2">
+                <div className="w-full rounded px-2">
                   <TypingIndicator
                     variant="wave"
                     color="#005ed9"

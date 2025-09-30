@@ -122,6 +122,6 @@ export default async function HomePage() {
         {/* <DeviceSection /> */}
         {/* Review 섹션 - 전환 직전 배치 */}
       </main>
-    </>
+    </> 
   )
 }

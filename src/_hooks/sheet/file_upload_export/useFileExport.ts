@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, use } from 'react';
 import * as GC from "@mescius/spread-sheets";
+import useFileNameStore from '@/_store/sheet/fileNameStore';
 
 interface ExportState {
   isExporting: boolean;
@@ -38,7 +39,9 @@ export const useFileExport = (
     setExportState(prev => ({ ...prev, isExporting: true, error: null }));
 
     try {
-      const finalFileName = fileName || defaultFileName;
+      // store에서 가져온 fileName을 우선 사용, 없으면 매개변수, 그것도 없으면 기본값
+      const finalFileName = fileName || useFileNameStore.getState().fileName || defaultFileName;
+      console.log('✅ [asdfsadfasfasfasfsadf] saveAsJSON - finalFileName:', finalFileName);
       const fullFileName = `${finalFileName}.json`;
 
       const jsonData = spreadInstance.toJSON({
@@ -97,7 +100,8 @@ export const useFileExport = (
     setExportState(prev => ({ ...prev, isExporting: true, error: null }));
 
     try {
-      const finalFileName = fileName || defaultFileName;
+      // store에서 가져온 fileName을 우선 사용, 없으면 매개변수, 그것도 없으면 기본값
+      const finalFileName = fileName || useFileNameStore.getState().fileName || defaultFileName;
       const fullFileName = `${finalFileName}.xlsx`;
 
       const exportOptions = {
@@ -175,7 +179,8 @@ export const useFileExport = (
     setExportState(prev => ({ ...prev, isExporting: true, error: null }));
 
     try {
-      const finalFileName = fileName || defaultFileName;
+      // store에서 가져온 fileName을 우선 사용, 없으면 매개변수, 그것도 없으면 기본값
+      const finalFileName = fileName || useFileNameStore.getState().fileName || defaultFileName;
       const fullFileName = `${finalFileName}.csv`;
 
       const exportOptions = {
@@ -251,7 +256,8 @@ export const useFileExport = (
     setExportState(prev => ({ ...prev, isExporting: true, error: null }));
 
     try {
-      const finalFileName = fileName || defaultFileName;
+      // store에서 가져온 fileName을 우선 사용, 없으면 매개변수, 그것도 없으면 기본값
+      const finalFileName = fileName || useFileNameStore.getState().fileName || defaultFileName;
       const fullFileName = `${finalFileName}.sjs`;
 
       const jsonData = spreadInstance.toJSON({

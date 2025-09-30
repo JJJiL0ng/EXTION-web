@@ -1,5 +1,5 @@
 // src/_components/chat/FileUploadChattingContainer.tsx
-// 파일 업로드일때 채팅 컨테이너
+// 파일 업로드일때 채팅 컨테이너ㅁㅇㄹㄴㅁ
 import React, { useState, useEffect } from "react";
 import ChatInputBox from "./ChatInputBox";
 import ChatTabBar from "./ChatTabBar";
@@ -7,6 +7,7 @@ import AiChatViewer from "./AiChatViewer";
 import { FileSelectModal } from "./SheetSelectModal";
 import { ChatInitMode, UploadedFileInfo } from "../../_types/chat.types";
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
+import { useChattingComponentZindexStore } from "@/_store/handleZindex/chattingComponentZindexStore";
 
 interface FileUploadChattingContainerProps {
   initMode?: ChatInitMode;
@@ -22,6 +23,9 @@ export default function FileUploadChattingContainer(_props: FileUploadChattingCo
 
   // aiChatStore 사용
   const { wsError } = aiChatStore();
+
+  // 채팅 z-index 상태 관리
+  const { isVisible, zIndex } = useChattingComponentZindexStore();
   
   // 초기화 상태 관리 (간단한 구현)
   const [isInitialized] = useState(true);
@@ -61,7 +65,15 @@ export default function FileUploadChattingContainer(_props: FileUploadChattingCo
   }, [isModalOpen]);
 
   return (
-    <div className="bg-white border-gray-200 h-full flex flex-col">
+    <div
+      className="bg-white border-gray-200 h-full flex flex-col transition-all duration-300"
+      style={{
+        zIndex: zIndex,
+        opacity: isVisible ? 1 : 0,
+        visibility: isVisible ? 'visible' : 'hidden',
+        pointerEvents: isVisible ? 'auto' : 'none'
+      }}
+    >
       {/* 초기화되지 않은 경우 로딩 표시 */}
       {!isInitialized ? (
         <div className="flex-1 flex items-center justify-center">

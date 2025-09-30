@@ -55,7 +55,7 @@ export const SelectedSheetNameCard: React.FC<{
     return (
       //현재 border 컬러가 적용이 안되는 에러가 있음 추후 확인해야함 : todo
       <div
-        className="inline-flex items-center px-2 py-1 bg-white border hover:bg-gray-50 border-gray-300 text-xs font-medium rounded-lg cursor-pointer transition-all duration-200 relative h-[28px]"
+        className="inline-flex items-center px-2 py-1 bg-white border hover:bg-gray-50 border-gray-300 text-xs font-medium rounded cursor-pointer transition-all duration-200 relative h-[28px]"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={handleClick}

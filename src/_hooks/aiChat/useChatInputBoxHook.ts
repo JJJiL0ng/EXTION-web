@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatMode } from './useChatMode';
 import { useSelectedSheetInfoStore } from '../sheet/common/useSelectedSheetInfoStore';
 import { aiChatStore } from '@/_store/aiChat/aiChatStore';
@@ -8,13 +8,14 @@ import useSpreadsheetNamesStore from '@/_store/sheet/spreadSheetNamesStore';
 import useChatIdStore from '@/_store/chat/chatIdAndChatSessionIdStore';
 import { useAiChatApiConnector } from './useAiChatApiConnector';
 import { aiChatApiReq } from '@/_types/apiConnector/ai-chat-api/aiChatApi.types';
-import applyDataEditCommands from '@/_utils/sheet/applyCommand/commandApplyRouter';
+import applyDataEditCommands from '@/_applyEngine/applyCommand/commandApplyRouter';
 import { useSpreadsheetContext } from "@/_contexts/SpreadsheetContext";
 import { dataEditChatRes } from "@/_types/apiConnector/ai-chat-api/dataEdit.types";
 import { useGetActiveSheetName } from '@/_hooks/sheet/common/useGetActiveSheetName';
 import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
 import { isSpreadSheetDataDirty } from '@/_utils/sheet/authSave/isSpreadSheetDataDirty';
 import { clearAllDirtyData } from '@/_utils/sheet/authSave/clearAllDirtyData';
+import { aiModelType } from '@/_types/apiConnector/ai-chat-api/aiChatApi.types';
 
 // 브라우저 Web Crypto API 사용 + 폴백
 const safeRandomUUID = () => {
@@ -39,19 +40,23 @@ export const useChatInputBoxHook = ({
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showModeModal, setShowModeModal] = useState(false);
+  const [showModelModal, setShowModelModal] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modeModalRef = useRef<HTMLDivElement>(null);
+  const modelModalRef = useRef<HTMLDivElement>(null);
 
   // useSpreadsheetContext 훅을 사용해서 spread 객체 가져오기
   const { spread } = useSpreadsheetContext();
-  spread.options.allowDynamicArray = true; // 동적 배열 허용
 
   // useChatMode 훅을 사용해서 mode 상태와 액션 가져오기
   const { mode, setMode } = useChatMode();
+
+  const [model, setModel] = useState<aiModelType>('Extion small' as aiModelType);
+
 
   // useSelectedSheetInfoStore 훅 사용
   const { selectedSheets, removeSelectedSheet, addSelectedSheet } = useSelectedSheetInfoStore();
@@ -63,6 +68,16 @@ export const useChatInputBoxHook = ({
   const { isConnected, isConnecting, connect, executeAiJob } = useAiChatApiConnector();
 
   const { activeSheetName } = useGetActiveSheetName();
+
+  // Spread 객체 초기화 시 옵션 설정
+  useEffect(() => {
+    if (spread && spread.options) {
+      console.log('🔧 [ChatInputBoxHook] Setting spread options');
+      spread.options.allowDynamicArray = true; // 동적 배열 허용
+    } else {
+      console.log('⏳ [ChatInputBoxHook] Spread object not ready yet');
+    }
+  }, [spread]);
 
   // AI Chat API 서버 연결
   useEffect(() => {
@@ -112,7 +127,7 @@ export const useChatInputBoxHook = ({
 
   // 최초 1회만 activeSheetName을 기본 선택으로 추가 (컴포넌트 마운트 시에만)
   const didInitDefaultSelection = useRef(false);
-  
+
   useEffect(() => {
     console.log('🔍 [ChatInputBoxHook] Default selection effect triggered:', {
       didInitDefaultSelection: didInitDefaultSelection.current,
@@ -126,7 +141,7 @@ export const useChatInputBoxHook = ({
       console.log('🚫 [ChatInputBoxHook] Already initialized, skipping');
       return;
     }
-    
+
     // activeSheetName이 없으면 대기
     if (!activeSheetName) {
       console.log('⏳ [ChatInputBoxHook] No activeSheetName yet, waiting...');
@@ -140,7 +155,7 @@ export const useChatInputBoxHook = ({
       didInitDefaultSelection.current = true;
       return;
     }
-    
+
     console.log('🎯 [ChatInputBoxHook] Adding default sheet:', activeSheetName);
     addSelectedSheet(activeSheetName);
     didInitDefaultSelection.current = true;
@@ -150,17 +165,21 @@ export const useChatInputBoxHook = ({
   // 활성 시트명이 변경될 때 자동 동기화는 하지 않음
 
   // textarea 높이 조정
-  const adjustTextareaHeight = () => {
+  const adjustTextareaHeight = useCallback(() => {
     if (textareaRef.current) {
+      // 빈 메시지일 때는 최소 높이로 고정
+      if (!message.trim()) {
+        textareaRef.current.style.height = '24px';
+        return;
+      }
+
       textareaRef.current.style.height = 'auto';
       const scrollHeight = textareaRef.current.scrollHeight;
       const maxHeight = 120;
-      textareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+      const minHeight = 24; // line-height와 일치
+      textareaRef.current.style.height = `${Math.max(minHeight, Math.min(scrollHeight, maxHeight))}px`;
+      adjustTextareaHeight();
     }
-  };
-
-  useEffect(() => {
-    adjustTextareaHeight();
   }, [message]);
 
   // 모달 외부 클릭 시 닫기
@@ -179,15 +198,36 @@ export const useChatInputBoxHook = ({
     }
   }, [showModeModal]);
 
+  // 모델 모달 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (showModelModal && modelModalRef.current && !modelModalRef.current.contains(target)) {
+        setShowModelModal(false);
+      }
+    };
+
+    if (showModelModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showModelModal]);
+
 
   const handleSend = async () => {
     if (message.trim() || selectedFile) {
-      
+
+      // Spread 객체가 초기화되지 않은 경우 처리
+      if (!spread) {
+        console.warn('⚠️ [ChatInputBoxHook] Spreadsheet not initialized yet, please wait...');
+        return;
+      }
+
       // 전송 상태 시작
       setIsSendingMessage(true);
 
       const messageToSend = message;
-      const selectedSheetsToSend = selectedSheets;
 
       // 메시지 전송 전에 입력창 초기화
       setMessage('');
@@ -233,7 +273,7 @@ export const useChatInputBoxHook = ({
             parsedSheetNames: useSpreadsheetNamesStore.getState().selectedSheets.map(s => s.name),
             jobId: `jobId_${safeRandomUUID()}`,
             spreadSheetVersionId: useSpreadSheetVersionStore.getState().spreadSheetVersionId,
-            ...(isSpreadSheetDataDirty(spread) && {
+            ...(spread && isSpreadSheetDataDirty(spread) && {
               newVersionSpreadSheetData: spread.toJSON({
                 includeBindingSource: true,
                 ignoreFormula: false,
@@ -247,10 +287,13 @@ export const useChatInputBoxHook = ({
                 includeUnsupportedStyle: true
               }),
             }),
-            editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || null // 낙관적 잠금을 위한 버전 번호
+            editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || null, // 낙관적 잠금을 위한 버전 번호
+            aiModel: model
           };
-          // 전송 직후 시트의 dirty 데이터 모두 초기화
-          clearAllDirtyData(spread);
+          // 전송 직후 시트의 dirty 데이터 모두 초기화 (spread 객체가 있을 때만)
+          if (spread) {
+            clearAllDirtyData(spread);
+          }
 
           console.log('📤📤📤📤📤📤📤📤📤📤📤 AI request payload:', aiChatApiRequest);
           console.log('📊 [ChatInputBoxHook] Current version before request:', useSpreadSheetVersionStore.getState().spreadSheetVersionId);
@@ -271,8 +314,12 @@ export const useChatInputBoxHook = ({
                 console.warn('⚠️ [ChatInputBoxHook] Invalid version id received:', result.spreadSheetVersionId);
               }
             }
-            // 시트에 데이터 편집 명령 적용
-            applyDataEditCommands({ dataEditChatRes: result.dataEditChatRes as dataEditChatRes, spread: spread });
+            // 시트에 데이터 편집 명령 적용 (spread 객체가 있을 때만)
+            if (spread) {
+              applyDataEditCommands({ dataEditChatRes: result.dataEditChatRes as dataEditChatRes, spread: spread });
+            } else {
+              console.warn('⚠️ [ChatInputBoxHook] Spread object not available for applying data edit commands');
+            }
 
           } catch (aiError) {
             console.error('❌ [ChatInputBoxHook] AI job failed:', aiError);
@@ -323,10 +370,14 @@ export const useChatInputBoxHook = ({
     setSelectedFile,
     showModeModal,
     setShowModeModal,
+    showModelModal,
+    setShowModelModal,
     isComposing,
     isFocused,
     mode,
     setMode,
+    model,
+    setModel,
     selectedSheets,
     removeSelectedSheet,
     addSelectedSheet,
@@ -338,6 +389,7 @@ export const useChatInputBoxHook = ({
     fileInputRef,
     textareaRef,
     modeModalRef,
+    modelModalRef,
 
     // Handlers
     handleSend,

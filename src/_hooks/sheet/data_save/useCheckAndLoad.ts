@@ -9,6 +9,7 @@ import { QUERY_KEYS } from '@/_config/queryConfig';
 import type { CheckAndLoadRes } from '@/_types/apiConnector/check-and-load-api/chectAndLoadApi';
 import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdStore';
 import useFileNameStore from '@/_store/sheet/fileNameStore';
+import useChatStore from '@/_store/chat/chatIdAndChatSessionIdStore';
 /**
  * 컴포넌트 마운트 시, 스프레드시트/채팅 존재 여부를 서버에 확인하고(필요 시 로드)하는 커스텀 훅.
  * TanStack Query 기반으로 개선된 버전
@@ -126,7 +127,7 @@ export const useCheckAndLoadOnMount = (
     const responseChatHistory = useMemo(() => response?.chatHistory, [response?.chatHistory]);
     const responseSpreadSheetData = useMemo(() => response?.spreadSheetData, [response?.spreadSheetData]);
     const responseSpreadSheetVersionId = useMemo(() => response?.spreadSheetVersionId, [response?.spreadSheetVersionId]);
-
+    const responseChatSessionId = useMemo(() => response?.chatSessionId, [response?.chatSessionId]);
     // 현재 스토어의 버전 ID 가져오기 (중복 업데이트 방지용)
     const currentVersionId = useSpreadSheetVersionStore(state => state.spreadSheetVersionId);
 
@@ -158,6 +159,10 @@ export const useCheckAndLoadOnMount = (
         if (responseSpreadSheetVersionId && responseSpreadSheetVersionId !== currentVersionId) {
             console.log('🔄 SpreadSheet Version 업데이트:', responseSpreadSheetVersionId);
             setSpreadSheetVersion(responseSpreadSheetVersionId);
+        }
+        // chatSessionId를 aiChatStore에 저장
+        if (responseChatSessionId) {        
+            useChatStore.getState().setChatSessionId(responseChatSessionId);
         }
 
         // 채팅 히스토리 로드 (한 번만)

@@ -12,5 +12,6 @@ export class CheckAndLoadRes {
   fileName: string = '';
   spreadSheetVersionId: string | null = null;
   spreadSheetData?: Record<string, any>;
+  chatSessionId?: string | null = null;
   chatHistory?: previousMessagesContent[] | null;
 }

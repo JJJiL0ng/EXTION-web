@@ -1,49 +1,31 @@
 "use client";
-import React, { useState, useRef } from 'react';
-import { Send, Paperclip, Settings, ChevronDown, X, MessagesSquare } from 'lucide-react';
-import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
+import React from 'react';
+import { PanelRightClose, Settings } from 'lucide-react';
 
 
 const ChatTabBar = () => {
-    const [activeTab, setActiveTab] = useState('chat');
-    const tabBarRef = useRef<HTMLDivElement>(null);
-    const { hideChat } = useChatVisibility();
-
-    const handleTabClick = (tab: string) => {
-        setActiveTab(tab);
-    };
 
     return (
         <div>
-            <div
-            ref={tabBarRef}
-            className="px-2 flex items-center space-x-4 h-6"
-            style={{ minHeight: '1.5rem' }} // 40px for better vertical alignment
-            >
-            <button 
-                className="flex items-center gap-1 px-2 py-0 text-sm text-white rounded-md transition-colors duration-200"
-                style={{ backgroundColor: '#005ed9' }}
-                onClick={hideChat}
-            >
-                <img src="/EXTION_new_logo_white.svg" alt="Extion Logo" className="w-4 h-4" />
-                AI
-            </button>
-            <div className="flex-1" />
-            {/* <button
-                className={`py-0 rounded ${activeTab === 'settings' ? 'text-white' : 'text-gray-700'} flex items-center h-full`}
-                onClick={() => handleTabClick('settings')}
-            >
-                <Settings size={18} />
-            </button> */}
-            <button
-                className={`pr-2 py-0 rounded ${activeTab === 'settings' ? 'text-white' : 'text-gray-700'} flex items-center h-full`}
-                onClick={hideChat}
-            >
-                <X size={18} />
-            </button>
+            <div className="flex items-center justify-between h-7">
+                {/* PanelRightClose 버튼 (왼쪽 정렬) */}
+                <button
+                    aria-label="panel-close"
+                    className="px-2 py-1.5 rounded hover:bg-gray-100 transition-colors flex items-center justify-center"
+                >
+                    <PanelRightClose className="w-5 h-5 text-gray-500 stroke-[1.5]" />
+                </button>
+                
+                {/* Settings 버튼 (오른쪽 정렬) */}
+                <button
+                    aria-label="settings"
+                    className="px-2 py-1.5 rounded hover:bg-gray-100 transition-colors flex items-center justify-center"
+                >
+                    <Settings className="w-5 h-5 text-gray-500 stroke-[1.5]" />
+                </button>
             </div>
+            <div className="border-b border-gray-200" />
         </div>
-
     );
 }
 export default ChatTabBar;

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type ChatMode = 'agent' | 'edit';
+type ChatMode = 'Agent' | 'Edit';
 
 interface chatModeState {
   chatId: string | null;
@@ -13,7 +13,7 @@ interface chatModeState {
 
 const useChatModeStore = create<chatModeState>((set) => ({
   chatId: null,
-  mode: 'agent',
+  mode: 'Agent',
   
   setChatId: (newChatId: string) => set({ chatId: newChatId }),
   
@@ -23,7 +23,7 @@ const useChatModeStore = create<chatModeState>((set) => ({
   
   resetSettings: () => set({ 
     chatId: null, 
-    mode: 'agent'
+    mode: 'Agent'
   }),
 }));
 
