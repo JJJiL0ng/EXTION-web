@@ -160,15 +160,17 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
     // AI 메시지 추가
     addAiMessage: (aiChatApiRes: aiChatApiRes) => {
         // dataEditChatRes인 경우 aiChatApiRes 형태로 변환
-        const aiResponse: aiChatApiRes = 'dataEditCommands' in aiChatApiRes
-            ? {
+        const aiResponse: aiChatApiRes = ('dataEditCommands' in aiChatApiRes)
+            ? ({
                 jobId: uuidv4(),
-                chatSessionId: aiChatApiRes.chatSessionId,
-                taskManagerOutput: aiChatApiRes.taskManagerOutput,
-                dataEditChatRes: aiChatApiRes.dataEditChatRes,
-                spreadSheetVersionId: aiChatApiRes.spreadSheetVersionId,
-                editLockVersion: aiChatApiRes.editLockVersion || 1,
-              }
+                // aiChatApiRes 타입에 required인 messageId를 보장하여 타입 충돌을 방지
+                messageId: (aiChatApiRes as any).messageId ?? uuidv4(),
+                chatSessionId: (aiChatApiRes as any).chatSessionId,
+                taskManagerOutput: (aiChatApiRes as any).taskManagerOutput,
+                dataEditChatRes: (aiChatApiRes as any).dataEditChatRes,
+                spreadSheetVersionId: (aiChatApiRes as any).spreadSheetVersionId,
+                editLockVersion: (aiChatApiRes as any).editLockVersion ?? 1,
+              } as aiChatApiRes)
             : aiChatApiRes;
 
         const newMessage: ChatMessage = {
