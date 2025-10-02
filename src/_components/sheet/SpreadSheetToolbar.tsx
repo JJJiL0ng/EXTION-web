@@ -227,7 +227,7 @@ export const SpreadSheetToolbar: React.FC = () => {
                     <button
                         className="flex items-center gap-1 px-2 py-1 text-sm text-white rounded transition-colors duration-200 h-6"
                         style={{ backgroundColor: '#005de9' }}
-                        onClick={handleToggleChat}
+                        // onClick={handleToggleChat}
                     >
                         <Image src="/EXTION_new_logo_white.svg" alt="Extion Logo" width={16} height={16} />
                         Extion 
