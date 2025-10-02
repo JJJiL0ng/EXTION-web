@@ -31,6 +31,10 @@ export const valueConverterEngine = ({ spread, dataEditCommand }: ValueConverter
             const cellValue = targetSheet.getValue(row, col);
 
             if (cellValue && typeof cellValue === 'string') {
+                if (cellValue === findText) {
+                    targetSheet.setValue(row, col, replaceText);
+                }
+
                 if (cellValue.indexOf(findText) !== -1) {
                     const newValue = cellValue.replace(new RegExp(findText, 'g'), replaceText);
                     targetSheet.setValue(row, col, newValue);
