@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import ChatOpenButton from '@/_aa_superRefactor/compo/shared/ChatOpenButton';
 import FileUploadModal from '@/_aa_superRefactor/compo/shared/FileUploadModal';
 import useFileNameStore from '@/_store/sheet/fileNameStore';
 import { renameSheet } from '@/_hooks/sheet/fileName/useRename';
@@ -10,6 +9,7 @@ import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExpo
 import { useSpreadsheetContext } from '@/_contexts/SpreadsheetContext';
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
 import { useIsEmptySheetStore } from '@/_aa_superRefactor/store/sheet/isEmptySheetStore';
+import { useChatVisibilityState } from '@/_aa_superRefactor/store/chat/chatVisibilityStore';
  
 /**
  * Spreadsheet top toolbar component
@@ -43,6 +43,12 @@ export const SpreadSheetToolbar: React.FC = () => {
 
 
     const { isEmptySheet, setIsEmptySheet } = useIsEmptySheetStore();
+    const { chatVisability, setChatVisability } = useChatVisibilityState();
+
+    // 채팅 가시성 토글 함수
+    const handleToggleChat = () => {
+        setChatVisability(!chatVisability);
+    };
 
     // 편집 모드 시작
     const handleEditStart = () => {
@@ -218,7 +224,14 @@ export const SpreadSheetToolbar: React.FC = () => {
                 
                 {/* Chat button - positioned on the right with symmetric padding */}
                 <div className="px-2 pr-2">
-                    <ChatOpenButton />
+                    <button
+                        className="flex items-center gap-1 px-2 py-1 text-sm text-white rounded transition-colors duration-200 h-6"
+                        style={{ backgroundColor: '#005de9' }}
+                        onClick={handleToggleChat}
+                    >
+                        <Image src="/EXTION_new_logo_white.svg" alt="Extion Logo" width={16} height={16} />
+                        Extion 
+                    </button>
                 </div>
             </div>
             
