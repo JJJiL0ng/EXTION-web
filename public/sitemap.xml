@@ -1,49 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
-        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
-
-    <!-- Main homepage -->
-    <url>
-        <loc>https://extion.ai</loc>
-        <lastmod>2025-01-01</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>1.0</priority>
-        
-        <!-- Main demo video information -->
-        <video:video>
-            <video:thumbnail_loc>https://video.extion.ai/main-demo-thum.png</video:thumbnail_loc>
-            <video:title>Extion Demo - Excel Automation with Natural Language</video:title>
-            <video:description>Automate Excel table organization, chart creation, and data analysis with natural language commands using Extion</video:description>
-            <video:content_loc>https://video.extion.ai/main-demo.MP4</video:content_loc>
-            <video:duration>30</video:duration>
-            <video:family_friendly>yes</video:family_friendly>
-        </video:video>
-        
-        <!-- Main image information -->
-        <image:image>
-            <image:loc>https://extion.ai/og-image.jpg</image:loc>
-            <image:title>Extion - Excel AI Tool, No Formulas Required</image:title>
-            <image:caption>AI tool that automates Excel tasks with natural language</image:caption>
-        </image:image>
-    </url>
-
-    <!-- Privacy Policy (required for beta signup) -->
-    <url>
-        <loc>https://extion.ai/privacy</loc>
-        <lastmod>2025-01-01</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.5</priority>
-    </url>
-
-    <!-- Terms of Service -->
-    <url>
-        <loc>https://extion.ai/terms</loc>
-        <lastmod>2025-01-01</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.4</priority>
-    </url>
-
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://extion.ai/</loc>
+    <lastmod>2025-10-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://extion.ai/trypage</loc>
+    <lastmod>2025-10-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://extion.ai/privacy</loc>
+    <lastmod>2025-10-02</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://extion.ai/terms</loc>
+    <lastmod>2025-10-02</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
 </urlset>

@@ -58,7 +58,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
 
   // Textarea 높이 관리
   const [textareaHeight, setTextareaHeight] = useState('auto');
-  const minHeight = 24; // 1.5rem (leading-6)
+  const minHeight = 20; // 1.5rem (leading-6)
   const maxHeight = 120; // 약 5줄 정도
 
   // Textarea 높이 자동 조절 함수
@@ -138,7 +138,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
             onFocus={handleTextareaFocus}
             onBlur={handleBlur}
             placeholder={placeholder}
-            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent leading-6"
+            className="w-full resize-none border-none outline-none text-gray-800 placeholder-gray-400 bg-transparent leading-4"
             disabled={false}
             style={{
               minHeight: `${minHeight}px`,
