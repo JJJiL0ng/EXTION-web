@@ -3,7 +3,7 @@
 
 // Force dynamic rendering to avoid SSR issues with SpreadJS
 export const dynamic = 'force-dynamic';
-import React, { useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 
 import { SpreadSheetToolbar } from "@/_components/sheet/SpreadSheetToolbar";
@@ -11,9 +11,14 @@ import ChattingContainer from "@/_aa_superRefactor/compo/chat/ChattingContainer"
 import { Resizer } from "@/_aa_superRefactor/compo/resize/Resizer";
 import { useResizer } from "@/_aa_superRefactor/hookkk/resize/useResizer";
 import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
-import { useCheckAndLoadOnMount } from "@/_hooks/sheet/data_save/useCheckAndLoad";
+
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
+
+import { useGenerateSpreadSheetId } from "@/_hooks/sheet/common/useGenerateSpreadSheetId";
+import { useGenerateChatId } from "@/_hooks/aiChat/useGenerateChatId";
+import { useIsEmptySheetStore } from "@/_aa_superRefactor/store/sheet/isEmptySheetStore";
+import { useSpreadSheetVersionStore } from "@/_store/sheet/spreadSheetVersionIdStore";
 
 import dynamicImport from "next/dynamic";
 
@@ -25,27 +30,31 @@ const SpreadSheet = dynamicImport(
 );
 
 export default function Home() {
-    const params = useParams();
+
+    const { generateSpreadSheetId } = useGenerateSpreadSheetId();
+    const { generateChatId } = useGenerateChatId();
     const { setSpreadSheetId } = useSpreadsheetIdStore();
     const { setChatId } = useChatStore();
+    const { setIsEmptySheet } = useIsEmptySheetStore();
 
-    useEffect(() => {
-        if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
-            setSpreadSheetId(params.SpreadSheetId);
-        }
-
-        if (params?.ChatId && typeof params.ChatId === 'string') {
-            setChatId(params.ChatId);
-        }
-
-        // 저장된 값 확인
-        setTimeout(() => {
-            const { spreadSheetId } = useSpreadsheetIdStore.getState();
-            const { chatId } = useChatStore.getState();
-        }, 100);
-    }, [params, setSpreadSheetId, setChatId]);
+    const { setEditLockVersion } = useSpreadSheetVersionStore();
 
     const spreadRef = useMemo(() => ({ current: null }), []);
+
+    // useEffect를 사용하여 컴포넌트 마운트 시에만 ID를 생성하고 설정
+    useEffect(() => {
+        const SpreadSheetID = generateSpreadSheetId();
+        const ChatID = generateChatId();
+
+        setSpreadSheetId(SpreadSheetID);
+        setChatId(ChatID);
+        // 초기값을 시트가 업로드 되어 있는 상태라서 true로 설정
+        // const [isEmptySheet, setIsEmptySheet] = useState(true);
+        setIsEmptySheet(true);
+        setEditLockVersion(1);
+
+    }, [generateSpreadSheetId, generateChatId, setSpreadSheetId, setChatId, setIsEmptySheet]);
+
 
     const {
         leftWidth,
@@ -64,7 +73,7 @@ export default function Home() {
             <SpreadsheetProvider spreadRef={spreadRef}>
                 {/* 2층: 스프레드시트 툴바 - 전체 너비 */}
                 <div className="flex-shrink-0 w-full border-b-2 border-gray-200">
-                    <SpreadSheetToolbar sheetMode="IsNotFileUploaded"/>
+                    <SpreadSheetToolbar />
                 </div>
 
                 {/* 1층: 스프레드시트 | 리사이저 | 채팅 컨테이너 */}

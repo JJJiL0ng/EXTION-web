@@ -6,6 +6,7 @@ import ChatTabBar from "../../../_components/chat/ChatTabBar";
 import AiChatViewer from "../../../_components/chat/AiChatViewer";
 import { aiChatStore } from "@/_store/aiChat/aiChatStore";
 import { FileSelectModal } from "../../../_components/chat/SheetSelectModal";
+import { useChatVisibilityState } from "@/_aa_superRefactor/store/chat/chatVisibilityStore";
 
 export default function ChattingContainer() {
 
@@ -14,6 +15,8 @@ export default function ChattingContainer() {
 
   // 초기화 상태 관리 (간단한 구현)
   const [isInitialized] = useState(true);
+
+  const { chatVisability, setChatVisability } = useChatVisibilityState();
 
   // 에러 클리어 함수
   const clearError = () => {
@@ -28,6 +31,15 @@ export default function ChattingContainer() {
     console.log('Selected sheet:', sheetName);
     // 시트 선택/해제는 모달 내부에서 처리되므로 여기서는 별도 로직 불필요
   };
+
+  // chatVisability에 따른 z-index와 visibility 스타일 결정
+  const chatContainerStyle = {
+    zIndex: chatVisability ? 50 : -1,
+    visibility: chatVisability ? 'visible' : 'hidden',
+    opacity: chatVisability ? 1 : 0,
+    transition: 'opacity 0.2s ease-in-out, visibility 0.2s ease-in-out'
+  } as React.CSSProperties;
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isModalOpen) {
@@ -47,6 +59,7 @@ export default function ChattingContainer() {
   return (
     <div
       className="bg-whiteh h-full flex flex-col bg-white w-full"
+      style={chatContainerStyle}
     >
       {/* 초기화되지 않은 경우 로딩 표시 */}
       {!isInitialized ? (
@@ -68,9 +81,9 @@ export default function ChattingContainer() {
         </div>
       ) : (
         <>
-          <div>
+          {/* <div>
             <ChatTabBar />
-          </div>
+          </div> */}
 
           {/* 채팅 뷰어 */}
           <div className="flex-1 overflow-y-auto">

@@ -20,4 +20,5 @@ export enum dataEditCommandType {
     APPLY_STYLE = 'apply_style',
     SUMMARY_EDIT_HISTORY = 'summary_edit_history',
     FIlTer_DATA = 'filter_data',
+    VALUE_CONVERTER = 'value_converter'
 }

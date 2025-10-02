@@ -14,6 +14,7 @@
     "@grapecity/spread-excelio": "^18.2.3",
     "@handsontable/react": "^15.3.0",
     "@handsontable/react-wrapper": "^15.3.0",
+    "@mescius/spread-excelio": "^18.2.3",
     "@mescius/spread-sheets": "^18.1.4",
     "@mescius/spread-sheets-charts": "^18.1.4",
     "@mescius/spread-sheets-io": "^18.1.4",

@@ -92,6 +92,8 @@ export class AiChatApiConnector {
         timestamp: string;
         spreadSheetVersionId: string;
         editLockVersion: number;
+        messageId: string;
+        fileName?: string;
       }
     ) => void
   ): void {
@@ -119,7 +121,7 @@ export class AiChatApiConnector {
     this.socket.off('ai_job_planned', callback);
   }
 
-  offTasksExecuted(callback?: (data: { jobId: string; dataEditChatRes: dataEditChatRes; executionTime: number; timestamp: string; spreadSheetVersionId: string; }) => void): void {
+  offTasksExecuted(callback?: (data: { jobId: string; chatSessionId: string; dataEditChatRes: dataEditChatRes; executionTime: number; timestamp: string; spreadSheetVersionId: string; editLockVersion: number; messageId: string; fileName?: string; }) => void): void {
     if (!this.socket) return;
     this.socket.off('ai_tasks_executed', callback);
   }

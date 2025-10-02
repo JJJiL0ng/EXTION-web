@@ -16,6 +16,8 @@ import { useSpreadSheetVersionStore } from '@/_store/sheet/spreadSheetVersionIdS
 import { isSpreadSheetDataDirty } from '@/_utils/sheet/authSave/isSpreadSheetDataDirty';
 import { clearAllDirtyData } from '@/_utils/sheet/authSave/clearAllDirtyData';
 import { aiModelType } from '@/_types/apiConnector/ai-chat-api/aiChatApi.types';
+import { useIsEmptySheetStore } from '@/_aa_superRefactor/store/sheet/isEmptySheetStore';
+import useFileNameStore from '@/_store/sheet/fileNameStore';
 
 // 브라우저 Web Crypto API 사용 + 폴백
 const safeRandomUUID = () => {
@@ -32,10 +34,12 @@ const safeRandomUUID = () => {
 
 interface UseChatInputBoxHookProps {
   userId?: string;
+  isSheetUploaded?: boolean; // 시트 업로드 여부
 }
 
 export const useChatInputBoxHook = ({
-  userId = getOrCreateGuestId()
+  userId = getOrCreateGuestId(),
+  isSheetUploaded = false
 }: UseChatInputBoxHookProps = {}) => {
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -69,6 +73,8 @@ export const useChatInputBoxHook = ({
 
   const { activeSheetName } = useGetActiveSheetName();
 
+  const { isEmptySheet, setIsEmptySheet } = useIsEmptySheetStore();
+
   // Spread 객체 초기화 시 옵션 설정
   useEffect(() => {
     if (spread && spread.options) {
@@ -92,10 +98,8 @@ export const useChatInputBoxHook = ({
         try {
           console.log('🔌 [ChatInputBoxHook] Attempting to connect to AI Chat server');
           const serverUrl = process.env.NEXT_PUBLIC_API_URL || 'ws://localhost:8080';
-          console.log('🔌 [ChatInputBoxHook] Using server URL:', serverUrl);
 
           await connect(serverUrl);
-          console.log('✅ [ChatInputBoxHook] Successfully connected to AI Chat server');
         } catch (error) {
           console.error('❌ [ChatInputBoxHook] Failed to connect to AI Chat server:', error);
         }
@@ -110,56 +114,63 @@ export const useChatInputBoxHook = ({
   }, [isConnected, isConnecting, connect]);
 
   // 연결 상태 변화 로깅
-  useEffect(() => {
-    console.log('🔗 [ChatInputBoxHook] Connection status changed:', {
-      isConnected,
-      isConnecting,
-      timestamp: new Date().toISOString()
-    });
-  }, [isConnected, isConnecting]);
+  // useEffect(() => {
+  //   console.log('🔗 [ChatInputBoxHook] Connection status changed:', {
+  //     isConnected,
+  //     isConnecting,
+  //     timestamp: new Date().toISOString()
+  //   });
+  // }, [isConnected, isConnecting]);
 
   // 컴포넌트 언마운트 로깅
-  useEffect(() => {
-    return () => {
-      console.log('🏗️ [ChatInputBoxHook] Hook unmounting');
-    };
-  }, []);
+  // useEffect(() => {
+  //   return () => {
+  //     console.log('🏗️ [ChatInputBoxHook] Hook unmounting');
+  //   };
+  // }, []);
 
-  // 최초 1회만 activeSheetName을 기본 선택으로 추가 (컴포넌트 마운트 시에만)
+  // activeSheetName을 기본 선택으로 추가 (컴포넌트 마운트 시 또는 isSheetUploaded 변경 시)
   const didInitDefaultSelection = useRef(false);
 
-  useEffect(() => {
-    console.log('🔍 [ChatInputBoxHook] Default selection effect triggered:', {
-      didInitDefaultSelection: didInitDefaultSelection.current,
-      activeSheetName,
-      selectedSheetsLength: selectedSheets.length,
-      selectedSheets: selectedSheets.map(s => s.name)
-    });
+  // useEffect(() => {
+  //   console.log('🔍 [ChatInputBoxHook] Default selection effect triggered:', {
+  //     didInitDefaultSelection: didInitDefaultSelection.current,
+  //     activeSheetName,
+  //     isSheetUploaded,
+  //     selectedSheetsLength: selectedSheets.length,
+  //     selectedSheets: selectedSheets.map(s => s.name)
+  //   });
 
-    // 이미 초기화했으면 실행하지 않음
-    if (didInitDefaultSelection.current) {
-      console.log('🚫 [ChatInputBoxHook] Already initialized, skipping');
-      return;
-    }
+  //   // isSheetUploaded가 변경되면 초기화 상태를 리셋하여 다시 선택할 수 있게 함
+  //   if (isSheetUploaded && didInitDefaultSelection.current) {
+  //     console.log('📋 [ChatInputBoxHook] Sheet uploaded, resetting initialization flag');
+  //     didInitDefaultSelection.current = false;
+  //   }
 
-    // activeSheetName이 없으면 대기
-    if (!activeSheetName) {
-      console.log('⏳ [ChatInputBoxHook] No activeSheetName yet, waiting...');
-      return;
-    }
+  //   // 이미 초기화했고 시트가 업로드되지 않았으면 실행하지 않음
+  //   if (didInitDefaultSelection.current && !isSheetUploaded) {
+  //     console.log('🚫 [ChatInputBoxHook] Already initialized, skipping');
+  //     return;
+  //   }
 
-    // 이미 선택된 시트가 있는지 현재 상태를 직접 확인
-    const currentSelectedSheets = selectedSheets;
-    if (currentSelectedSheets.length > 0) {
-      console.log('✅ [ChatInputBoxHook] Sheets already selected, marking as initialized');
-      didInitDefaultSelection.current = true;
-      return;
-    }
+  //   // activeSheetName이 없으면 대기
+  //   if (!activeSheetName) {
+  //     console.log('⏳ [ChatInputBoxHook] No activeSheetName yet, waiting...');
+  //     return;
+  //   }
 
-    console.log('🎯 [ChatInputBoxHook] Adding default sheet:', activeSheetName);
-    addSelectedSheet(activeSheetName);
-    didInitDefaultSelection.current = true;
-  }, [activeSheetName, addSelectedSheet, selectedSheets]);
+  //   // 이미 선택된 시트가 있는지 현재 상태를 직접 확인 (시트 업로드 시에는 무시)
+  //   const currentSelectedSheets = selectedSheets;
+  //   if (currentSelectedSheets.length > 0 && !isSheetUploaded) {
+  //     console.log('✅ [ChatInputBoxHook] Sheets already selected, marking as initialized');
+  //     didInitDefaultSelection.current = true;
+  //     return;
+  //   }
+
+  //   console.log('🎯 [ChatInputBoxHook] Adding default sheet:', activeSheetName);
+  //   addSelectedSheet(activeSheetName);
+  //   didInitDefaultSelection.current = true;
+  // }, [activeSheetName, addSelectedSheet, selectedSheets, isSheetUploaded]);
 
   // 이 로직은 제거됨 - 모달에서 시트 선택 시 activeSheetName이 간섭하지 않도록 함
   // 활성 시트명이 변경될 때 자동 동기화는 하지 않음
@@ -288,7 +299,8 @@ export const useChatInputBoxHook = ({
               }),
             }),
             editLockVersion: useSpreadSheetVersionStore.getState().editLockVersion || null, // 낙관적 잠금을 위한 버전 번호
-            aiModel: model
+            aiModel: model,
+            isEmptySheet: isEmptySheet
           };
           // 전송 직후 시트의 dirty 데이터 모두 초기화 (spread 객체가 있을 때만)
           if (spread) {
@@ -304,12 +316,16 @@ export const useChatInputBoxHook = ({
 
             // AI 응답을 채팅 스토어에 추가, spreadSheetVersionNum 업데이트
             if (result) {
+              setIsEmptySheet(false); // 시트가 비어있지 않음으로 설정
+
               aiChatStore.getState().addAiMessage(result);
               // 다른 저장소 쓰는 프로퍼티들은 값이 유효한지 간단히 체크 후 저장
               if (typeof result.spreadSheetVersionId === 'string' && result.spreadSheetVersionId && result.editLockVersion && result.chatSessionId) {
                 useSpreadSheetVersionStore.getState().setSpreadSheetVersion(result.spreadSheetVersionId);
                 useSpreadSheetVersionStore.getState().setEditLockVersion(result.editLockVersion);
                 useChatIdStore.getState().setChatSessionId(result.chatSessionId);
+                useFileNameStore.getState().setFileName(result.fileName || ''); // 파일 이름이 있으면 설정, 없으면 빈 문자열
+                console.log('asfasfasfsdafsafhhhhhhhㅗㅗㅗㅗ',result.fileName);
               } else {
                 console.warn('⚠️ [ChatInputBoxHook] Invalid version id received:', result.spreadSheetVersionId);
               }
@@ -320,6 +336,7 @@ export const useChatInputBoxHook = ({
             } else {
               console.warn('⚠️ [ChatInputBoxHook] Spread object not available for applying data edit commands');
             }
+
 
           } catch (aiError) {
             console.error('❌ [ChatInputBoxHook] AI job failed:', aiError);

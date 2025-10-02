@@ -2,21 +2,19 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import ChatOpenButton from '@/_aa_superRefactor/compo/shared/ChatOpenButton';
 import FileUploadModal from '@/_aa_superRefactor/compo/shared/FileUploadModal';
 import useFileNameStore from '@/_store/sheet/fileNameStore';
 import { renameSheet } from '@/_hooks/sheet/fileName/useRename';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
 import { useSpreadsheetContext } from '@/_contexts/SpreadsheetContext';
 import { getOrCreateGuestId } from '@/_utils/guestUtils';
+import { useIsEmptySheetStore } from '@/_aa_superRefactor/store/sheet/isEmptySheetStore';
+import { useChatVisibilityState } from '@/_aa_superRefactor/store/chat/chatVisibilityStore';
+ 
 /**
  * Spreadsheet top toolbar component
  */
-export interface SpreadSheetToolbarProps {
-    sheetMode: 'FileUploaded' | 'IsNotFileUploaded';
-}
-
-export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode}) => {
+export const SpreadSheetToolbar: React.FC = () => {
     const { spread } = useSpreadsheetContext();
     const {
         exportState,
@@ -42,6 +40,15 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
     const inputRef = useRef<HTMLInputElement>(null);
 
     const userId = getOrCreateGuestId();
+
+
+    const { isEmptySheet, setIsEmptySheet } = useIsEmptySheetStore();
+    const { chatVisability, setChatVisability } = useChatVisibilityState();
+
+    // 채팅 가시성 토글 함수
+    const handleToggleChat = () => {
+        setChatVisability(!chatVisability);
+    };
 
     // 편집 모드 시작
     const handleEditStart = () => {
@@ -132,7 +139,15 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
                     </button>
 
                     {/* File name display/edit or Open File button based on mode */}
-                    {sheetMode === 'FileUploaded' ? (
+                    {isEmptySheet ? (
+                        <button
+                            onClick={handleOpenFileUploadModal}
+                            className="flex justify-center items-center px-2 py-1 text-sm text-white font-medium bg-[#005de9] hover:bg-[#0052d1] rounded transition-colors duration-150 h-6"
+                            title="Open a file to start editing"
+                        >
+                            Open File
+                        </button>
+                    ) : (
                         fileName && (
                             <div className="relative">
                                 {isEditing ? (
@@ -157,14 +172,6 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
                                 )}
                             </div>
                         )
-                    ) : (
-                        <button
-                            onClick={handleOpenFileUploadModal}
-                            className="flex justify-center items-center px-2 py-1 text-sm text-white font-medium bg-[#005de9] hover:bg-[#0052d1] rounded transition-colors duration-150 h-6"
-                            title="Open a file to start editing"
-                        >
-                            Open File
-                        </button>
                     )}
 
                     {/* File upload input is managed by parent (Main) */}
@@ -217,7 +224,14 @@ export const SpreadSheetToolbar: React.FC<SpreadSheetToolbarProps> = ({sheetMode
                 
                 {/* Chat button - positioned on the right with symmetric padding */}
                 <div className="px-2 pr-2">
-                    <ChatOpenButton />
+                    <button
+                        className="flex items-center gap-1 px-2 py-1 text-sm text-white rounded transition-colors duration-200 h-6"
+                        style={{ backgroundColor: '#005de9' }}
+                        // onClick={handleToggleChat}
+                    >
+                        <Image src="/EXTION_new_logo_white.svg" alt="Extion Logo" width={16} height={16} />
+                        Extion 
+                    </button>
                 </div>
             </div>
             
