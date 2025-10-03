@@ -43,6 +43,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string>('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [sheetUrl, setSheetUrl] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 업로드 성공 시 모달 자동 닫기
@@ -70,6 +71,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
             setError('');
             setIsUploading(false);
             setIsDragOver(false);
+            setSheetUrl('');
         }
     }, [isOpen]);
 
@@ -315,9 +317,12 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
             setUploadSuccess(true);
             setSuccessFileName(file.name);
 
-            // 짧은 딜레이 후 새창 열기
+            // URL 저장
+            const url = `/sheetchat/${spreadsheetId}/${chatId}`;
+            setSheetUrl(url);
+
+            // 짧은 딜레이 후 새창 열기 (팝업 차단 시 실패할 수 있음)
             setTimeout(() => {
-                const url = `/sheetchat/${spreadsheetId}/${chatId}`;
                 window.open(url, '_blank');
             }, 500);
 
@@ -398,6 +403,13 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
         setIsUploading(false);
         setUploadSuccess(false);
         setSuccessFileName('');
+        setSheetUrl('');
+    };
+
+    const openInNewTab = () => {
+        if (sheetUrl) {
+            window.open(sheetUrl, '_blank');
+        }
     };
 
     if (!isOpen) return null;
@@ -460,6 +472,20 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Open in New Tab Button */}
+                                <div className="flex flex-col items-center space-y-3 w-full">
+                                  
+                                    <button
+                                        onClick={openInNewTab}
+                                        className="w-full px-6 py-3 bg-[#005de9] hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
+                                    >
+                                        Open in New Tab
+                                    </button>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        If the spreadsheet did not open automatically, click the button above to open it.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -602,7 +628,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({
 
                 {/* Footer */}
                 {!uploadSuccess && (
-                    <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50">
                         <button
                             onClick={resetUpload}
                             className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors"
