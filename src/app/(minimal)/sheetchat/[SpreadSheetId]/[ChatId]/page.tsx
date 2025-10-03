@@ -11,7 +11,8 @@ import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
 import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
 import { useIsEmptySheetStore } from "@/_aa_superRefactor/store/sheet/isEmptySheetStore";
-import { useChatVisibilityState } from "@/_aa_superRefactor/store/chat/chatVisibilityStore"
+import { useChatVisibilityState } from "@/_aa_superRefactor/store/chat/chatVisibilityStore";
+import useFileNameStore from "@/_store/sheet/fileNameStore";
 
 import dynamic from "next/dynamic";
 
@@ -28,6 +29,7 @@ export default function Home() {
     const { setChatId } = useChatStore();
     const { setIsEmptySheet } = useIsEmptySheetStore();
     const { chatVisability, setChatVisability } = useChatVisibilityState();
+    const fileName = useFileNameStore((state) => state.fileName);
 
     // chatVisability에 따라 동적으로 레이아웃 비율 계산
     const dynamicLeftWidth = chatVisability ? 75 : 100;
@@ -62,6 +64,15 @@ export default function Home() {
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [params]);
+
+    // 파일명이 변경될 때마다 페이지 제목(탭 제목) 동적 업데이트
+    useEffect(() => {
+        if (fileName) {
+            document.title = fileName;
+        } else {
+            document.title = "EXTION"; // 기본 제목
+        }
+    }, [fileName]);
 
     const spreadRef = useMemo(() => ({ current: null }), []);
 
