@@ -1,11 +1,11 @@
 'use client'
 
 import Image from 'next/image'
-import { Button } from '@/_aaa_sheetChat/_components/lendingComponents/lending-common-ui/Button'
+import { Button } from '@/_lending/lendingComponents/lending-common-ui/Button'
 import { scrollToElement } from '@/_aaa_sheetChat/_utils/lending-utils/lending-utils'
 import { useRouter } from 'next/navigation'
-import { useGenerateSpreadSheetId } from '../../../../_hooks/sheet/common/useGenerateSpreadSheetId'
-import { useGenerateChatId } from '../../../../_hooks/aiChat/useGenerateChatId';
+import { useGenerateSpreadSheetId } from '../../../../_aaa_sheetChat/_hooks/sheet/common/useGenerateSpreadSheetId'
+import { useGenerateChatId } from '../../../../_aaa_sheetChat/_hooks/aiChat/useGenerateChatId';
 import useChatStore from '@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore'
 import {useSpreadSheetVersionStore} from '@/_aaa_sheetChat/_store/sheet/spreadSheetVersionIdStore';
 import Link from 'next/link'
@@ -131,7 +131,7 @@ export function HeroButtons() {
 
   return (
     <div className="flex flex-row gap-4 sm:gap-6 justify-center items-center mb-8 lg:mb-12">
-      <Link href="/trypage">
+      <Link href="/invite-check">
         <Button
           variant="secondary"
           size="lg"

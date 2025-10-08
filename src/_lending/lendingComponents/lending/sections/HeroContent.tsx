@@ -1,5 +1,5 @@
 import { HeroButtons } from './HeroButtons'
-import { heroData } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/hero'
+import { heroData } from '@/_lending/lendingComponents/lending/data/hero'
 
 // 서버에서 렌더링되는 정적 콘텐츠 - SSG 최적화
 export function HeroContent() {

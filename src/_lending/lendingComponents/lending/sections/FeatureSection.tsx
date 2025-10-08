@@ -1,6 +1,6 @@
 import { FeatureHeader } from './FeatureHeader'
 import { FeatureItem } from './FeatureItem'
-import { featuresData, type Feature } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/features'
+import { featuresData, type Feature } from '@/_lending/lendingComponents/lending/data/features'
 
 interface FeatureSectionProps {
   features?: Feature[]

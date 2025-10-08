@@ -36,7 +36,13 @@ const config: Config = {
     'px-10',
     'opacity-40', 
     'bg-[#F0F2F5]',
-    'bg-[#005de9]'
+    'bg-[#005de9]',
+    'bg-[#EEF2F6]',
+    'from-[#5865F2] to-[#7289DA]',
+    'text-[#5865F2]',
+    'max-w-sm',
+    'pt-6',
+    'from-blue-50 via-white to-indigo-50'
     
 
   ],

@@ -1,4 +1,4 @@
-import { featuresData } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/features'
+import { featuresData } from '@/_lending/lendingComponents/lending/data/features'
 
 // SSG로 렌더링되는 Feature 섹션 헤더
 export function FeatureHeader() {

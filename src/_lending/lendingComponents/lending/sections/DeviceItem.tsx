@@ -1,4 +1,4 @@
-import type { Device } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/devices'
+import type { Device } from '@/_lending/lendingComponents/lending/data/devices'
 import Image from 'next/image'
 
 interface DeviceItemProps {

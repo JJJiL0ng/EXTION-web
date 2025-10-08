@@ -1,9 +1,9 @@
 'use client'
 
-import { VideoPlayer } from '@/_aaa_sheetChat/_components/lendingComponents/lending/VideoPlayer'
+import { VideoPlayer } from '@/_lending/lendingComponents/lending/VideoPlayer'
 import { HeroVideoStatic } from './HeroVideoStatic'
 import { useState, useEffect } from 'react'
-import { heroData } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/hero'
+import { heroData } from '@/_lending/lendingComponents/lending/data/hero'
 
 // 클라이언트에서만 로드되는 영상 컴포넌트 - 하이드레이션 최적화
 export function HeroVideo() {

@@ -1,6 +1,6 @@
 import { DeviceHeader } from './DeviceHeader'
 import { DeviceItem } from './DeviceItem'
-import { devicesData, type Device } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/devices'
+import { devicesData, type Device } from '@/_lending/lendingComponents/lending/data/devices'
 
 interface DeviceSectionProps {
   devices?: Device[]

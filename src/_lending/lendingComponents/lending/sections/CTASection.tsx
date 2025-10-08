@@ -2,7 +2,7 @@
 
 import { CTAHeader } from './CTAHeader'
 import { CTABenefits } from './CTABenefits'
-import { ctaData } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/cta'
+import { ctaData } from '@/_lending/lendingComponents/lending/data/cta'
 
 export function CTASection() {
   return (

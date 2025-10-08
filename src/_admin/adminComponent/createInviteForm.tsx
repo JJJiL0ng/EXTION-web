@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useCreateInviteCode } from '../adminHooks/useCreateInviteCode';
-import { Input } from '@/_aaa_sheetChat/_components/lendingComponents/lending-common-ui/Input';
-import { Button } from '@/_aaa_sheetChat/_components/lendingComponents/lending-common-ui/Button';
+import { Input } from '@/_lending/lendingComponents/lending-common-ui/Input';
+import { Button } from '@/_lending/lendingComponents/lending-common-ui/Button';
 
 export const CreateInviteForm = () => {
   const [note, setNote] = useState('');

@@ -1,4 +1,4 @@
-import { ctaData } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/cta'
+import { ctaData } from '@/_lending/lendingComponents/lending/data/cta'
 
 // 혜택 아이콘 매핑
 const getBenefitIcon = (id: number) => {

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Button } from '@/_aaa_sheetChat/_components/lendingComponents/lending-common-ui/Button'
+import { Button } from '@/_lending/lendingComponents/lending-common-ui/Button'
 import { scrollToElement } from '@/_aaa_sheetChat/_utils/lending-utils/lending-utils'
 import { useRouter } from 'next/navigation'
 
@@ -52,7 +52,7 @@ export default function Header() {
           </Link>
 
           {/* 베타 신청 버튼 */}
-          <Link href="/trypage">
+          <Link href="/invite-check">
             <Button
               size="sm"
               className="bg-[#005de9] hover:bg-blue-700 px-3 py-1.5 text-sm transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg rounded"

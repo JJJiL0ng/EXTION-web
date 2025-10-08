@@ -1,5 +1,5 @@
-import { VideoPlayer } from '@/_aaa_sheetChat/_components/lendingComponents/lending/VideoPlayer'
-import type { Feature } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/features'
+import { VideoPlayer } from '@/_lending/lendingComponents/lending/VideoPlayer'
+import type { Feature } from '@/_lending/lendingComponents/lending/data/features'
 
 interface FeatureItemProps {
   feature: Feature

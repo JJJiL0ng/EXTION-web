@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { heroData } from '@/_aaa_sheetChat/_components/lendingComponents/lending/data/hero'
+import { heroData } from '@/_lending/lendingComponents/lending/data/hero'
 
 // SSG로 렌더링되는 비디오 정적 콘텐츠
 export function HeroVideoStatic() {
