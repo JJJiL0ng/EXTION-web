@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import { generateMetadata } from '@/_utils/lending-utils/seo'
+import { generateMetadata } from '@/_aaa_sheetChat/_utils/lending-utils/seo'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import QueryProvider from '@/_providers/QueryProvider'
+import QueryProvider from '@/_aaa_sheetChat/_providers/QueryProvider'
 import './globals.css'
 
 export const metadata: Metadata = generateMetadata({

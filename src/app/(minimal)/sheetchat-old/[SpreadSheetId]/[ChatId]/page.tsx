@@ -1,14 +1,14 @@
 "use client";
 
-import FileUploadContainer from "@/_components/chat/FileUploadChattingContainer";
+import FileUploadContainer from "@/_aaa_sheetChat/_components/chat/FileUploadChattingContainer";
 import dynamic from "next/dynamic";
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 // import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisibilityContext";
-import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
+import { SpreadsheetProvider } from "@/_aaa_sheetChat/_contexts/SpreadsheetContext";
 import { useParams } from "next/navigation";
-import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
-import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
-import { useChattingComponentZindexStore } from "@/_store/handleZindex/chattingComponentZindexStore";
+import useSpreadsheetIdStore from "@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore";
+import useChatStore from "@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore";
+import { useChattingComponentZindexStore } from "@/_aaa_sheetChat/_store/handleZindex/chattingComponentZindexStore";
 import { enableMapSet } from 'immer';
 
 
@@ -17,7 +17,7 @@ enableMapSet();
 
 const MainSpreadSheet = dynamic(
   () => {
-    return import("../../../../../_components/sheet/MainSpreadSheet");
+    return import("../../../../../_aaa_sheetChat/_components/sheet/MainSpreadSheet");
   },
   { ssr: false }
 );
