@@ -135,7 +135,7 @@ export function HeroButtons() {
         <Button
           variant="secondary"
           size="lg"
-          className="text-white bg-[#005de9] hover:bg-blue-700 px-1 py-1 sm:px-2 sm:py-2 lg:px-2 lg:py-2 border-2 border-[#005de9] text-sm sm:text-base lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl rounded"
+          className="text-white bg-[#005de9] hover:bg-blue-700 px-4 py-2 sm:px-2 sm:py-2 lg:px-2 lg:py-2 border-2 border-[#005de9] text-base sm:text-base lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl rounded"
           // onClick={handleNewSheetClick}
         >
           <span className="flex items-center">
@@ -147,7 +147,7 @@ export function HeroButtons() {
       <Button
         variant="outline"
         size="lg"
-        className="px-1 py-1 sm:px-2 sm:py-2 lg:px-2 lg:py-2 text-sm sm:text-base lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 rounded"
+        className="px-4 py-2 sm:px-2 sm:py-2 lg:px-2 lg:py-2 text-base sm:text-base lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 rounded"
         onClick={() => {
           if (typeof window !== 'undefined') {
         window.open('https://discord.gg/4BS9TxG8MA', '_blank', 'noopener,noreferrer');
