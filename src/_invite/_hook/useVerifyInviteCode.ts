@@ -18,6 +18,7 @@ export const useVerifyInviteCode = () => {
             setData(result);
             if (result.userId) {
                 setUserId(result.userId);
+                console.log(`🔧 rererere: ${result.userId}`);
             }
             return result;
         } catch (err) {

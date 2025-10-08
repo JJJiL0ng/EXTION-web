@@ -8,7 +8,7 @@ import { Undo2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import useSpreadsheetIdStore from "@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore";
 
-import { getOrCreateGuestId } from '../../_utils/guestUtils';
+import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 
 import TypingIndicator from './TypingIndicator';
 import RollbackAlert from './RollbackAlert';
@@ -152,15 +152,14 @@ const AiChatViewer = () => {
           return;
         }
 
-        // userId는 현재 Firebase Auth에서 가져와야 할 것 같습니다
-        // 임시로 'current-user'를 사용하거나, Firebase Auth 구현이 필요합니다
-        const userId = getOrCreateGuestId();
+        // userId는 useUserIdStore에서 가져옴
+        const userId = useUserIdStore.getState().userId;
 
         // 요청 데이터 로깅
         const rollbackRequest = {
           spreadSheetId: spreadsheetId,
           chatId: chatId,
-          userId: userId,
+          userId: userId!,
           chatSessionId: chatSessionId,
           chatSessionBranchId: targetMessageId, // 롤백 대상 메시지의 chatSessionBranchId
         };

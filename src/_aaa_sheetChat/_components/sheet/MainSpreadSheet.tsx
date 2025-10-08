@@ -17,7 +17,7 @@ import useFileNameStore from '@/_aaa_sheetChat/_store/sheet/fileNameStore';
 import { useChattingComponentZindexStore } from '@/_aaa_sheetChat/_store/handleZindex/chattingComponentZindexStore';
 
 // Utils
-import { getOrCreateGuestId } from '@/_aaa_sheetChat/_utils/guestUtils';
+import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 import { configureLicense } from '../../_utils/sheet/spreadJSConfig';
 
 // Components
@@ -56,7 +56,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     const { showChat, isVisible: isChatVisible } = useChattingComponentZindexStore();
 
     // 인증 상태 관리
-    const userId = getOrCreateGuestId();
+    const userId = useUserIdStore((state) => state.userId);
 
     console.log(`🔍 [MainSpreadSheet] 컴포넌트 렌더링:`, {
         spreadSheetId,
@@ -330,7 +330,7 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
                 fileName: '새 스프레드시트',
                 spreadsheetId: spreadSheetId,
                 chatId,
-                userId,
+                userId: userId!,
                 jsonData: initialJsonData
             });
 

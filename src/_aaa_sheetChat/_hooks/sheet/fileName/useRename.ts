@@ -1,5 +1,5 @@
 import { renameSheetApiConnector } from '@/_aaa_sheetChat/_ApiConnector/sheet/renameSheetApi';
-import { getOrCreateGuestId } from '@/_aaa_sheetChat/_utils/guestUtils';
+import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 import useSpreadsheetIdStore from '@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore';
 import useFileNameStore from '@/_aaa_sheetChat/_store/sheet/fileNameStore';
 
@@ -7,7 +7,7 @@ export const renameSheet = async (newFileName: string) => {
     try {
         const renameSheetReq = {
             spreadSheetId: useSpreadsheetIdStore.getState().spreadSheetId!,
-            userId: getOrCreateGuestId(),
+            userId: useUserIdStore.getState().userId!,
             newFileName,
         };
         console.log('🚀 [renameSheet] 스프레드시트 이름 변경 시작:', renameSheetReq);

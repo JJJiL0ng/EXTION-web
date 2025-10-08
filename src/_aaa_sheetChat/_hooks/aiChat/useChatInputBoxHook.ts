@@ -3,7 +3,7 @@ import { useChatMode } from './useChatMode';
 import { useSelectedSheetInfoStore } from '../sheet/common/useSelectedSheetInfoStore';
 import { aiChatStore } from '@/_aaa_sheetChat/_store/aiChat/aiChatStore';
 import useSpreadsheetIdStore from '@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore';
-import { getOrCreateGuestId } from '../../_utils/guestUtils';
+import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 import useSpreadsheetNamesStore from '@/_aaa_sheetChat/_store/sheet/spreadSheetNamesStore';
 import useChatIdStore from '@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore';
 import { useAiChatApiConnector } from './useAiChatApiConnector';
@@ -33,14 +33,13 @@ const safeRandomUUID = () => {
 };
 
 interface UseChatInputBoxHookProps {
-  userId?: string;
   isSheetUploaded?: boolean; // 시트 업로드 여부
 }
 
 export const useChatInputBoxHook = ({
-  userId = getOrCreateGuestId(),
   isSheetUploaded = false
 }: UseChatInputBoxHookProps = {}) => {
+  const userId = useUserIdStore((state) => state.userId);
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showModeModal, setShowModeModal] = useState(false);
@@ -278,7 +277,7 @@ export const useChatInputBoxHook = ({
             chatId: useChatIdStore.getState().chatId!,
             chatSessionId: useChatIdStore.getState().chatSessionId,
             userChatSessionBranchId: userChatSessionBranchId,
-            userId,
+            userId: userId!,
             chatMode: mode,
             userQuestionMessage: messageToSend,
             parsedSheetNames: useSpreadsheetNamesStore.getState().selectedSheets.map(s => s.name),

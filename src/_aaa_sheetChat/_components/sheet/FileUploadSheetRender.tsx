@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { SpreadSheets } from "@mescius/spread-sheets-react";
 import { useCheckAndLoadOnMount } from "@/_aaa_sheetChat/_hooks/sheet/data_save/useCheckAndLoad";
 import { useParams } from 'next/navigation';
-import { getOrCreateGuestId } from "@/_aaa_sheetChat/_utils/guestUtils";
+import useUserIdStore from "@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore";
 import useSpreadsheetIdStore from "@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore";
 import { useSpreadSheetVersionStore } from '@/_aaa_sheetChat/_store/sheet/spreadSheetVersionIdStore';
@@ -72,11 +72,11 @@ const FileUploadSheetRenderComponent: React.FC<FileUploadSheetRenderProps> = ({
         return chatId || '';
     }, [chatId]);
 
+    const userId = useUserIdStore((state) => state.userId);
     const stableUserId = useMemo(() => {
-        const userId = getOrCreateGuestId();
         console.log(`🔧 [FileUploadSheetRender] User ID 안정화: ${userId}`);
-        return userId;
-    }, []);
+        return userId || '';
+    }, [userId]);
 
     const stableSpreadsheetVersionId = useSpreadSheetVersionStore((state) => state.spreadSheetVersionId);
     const stableActivity = 'normal';

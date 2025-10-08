@@ -7,6 +7,7 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/_components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/_aaa_sheetChat/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/_lending/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
@@ -34,7 +35,7 @@ const config: Config = {
     'w-56',
     'bg-gray-200',
     'px-10',
-    'opacity-40', 
+    'opacity-40',
     'bg-[#F0F2F5]',
     'bg-[#005de9]',
     'bg-[#EEF2F6]',
@@ -43,7 +44,7 @@ const config: Config = {
     'max-w-sm',
     'pt-6',
     'from-blue-50 via-white to-indigo-50'
-    
+
 
   ],
   theme: {
@@ -60,26 +61,26 @@ const config: Config = {
       },
       keyframes: {
         'grid-scan-horizontal': {
-          '0%': { 
+          '0%': {
             backgroundPosition: '-200px 0',
           },
-          '100%': { 
+          '100%': {
             backgroundPosition: 'calc(100% + 200px) 0',
           },
         },
         'grid-scan-vertical': {
-          '0%': { 
+          '0%': {
             backgroundPosition: '0 -200px',
           },
-          '100%': { 
+          '100%': {
             backgroundPosition: '0 calc(100% + 200px)',
           },
         },
         'line-wave': {
-          '0%, 100%': { 
+          '0%, 100%': {
             opacity: '0.3',
           },
-          '50%': { 
+          '50%': {
             opacity: '1',
           },
         },

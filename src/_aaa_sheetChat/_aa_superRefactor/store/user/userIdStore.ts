@@ -1,3 +1,4 @@
+//새롭게 작성된 userId store 코드입니다.
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 

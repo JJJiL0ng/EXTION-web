@@ -7,7 +7,7 @@ import useFileNameStore from '@/_aaa_sheetChat/_store/sheet/fileNameStore';
 import { renameSheet } from '@/_aaa_sheetChat/_hooks/sheet/fileName/useRename';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
 import { useSpreadsheetContext } from '@/_aaa_sheetChat/_contexts/SpreadsheetContext';
-import { getOrCreateGuestId } from '@/_aaa_sheetChat/_utils/guestUtils';
+import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 import { useIsEmptySheetStore } from '@/_aaa_sheetChat/_aa_superRefactor/store/sheet/isEmptySheetStore';
 import { useChatVisibilityState } from '@/_aaa_sheetChat/_aa_superRefactor/store/chat/chatVisibilityStore';
  
@@ -39,8 +39,7 @@ export const SpreadSheetToolbar: React.FC = () => {
     const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const userId = getOrCreateGuestId();
-
+    const userId = useUserIdStore((state) => state.userId);
 
     const { isEmptySheet, setIsEmptySheet } = useIsEmptySheetStore();
     const { chatVisability, setChatVisability } = useChatVisibilityState();
@@ -236,9 +235,9 @@ export const SpreadSheetToolbar: React.FC = () => {
             </div>
             
             {/* File Upload Modal */}
-            <FileUploadModal 
+            <FileUploadModal
                 isOpen={isFileUploadModalOpen}
-                userId={userId} 
+                userId={userId!}
                 onClose={handleCloseFileUploadModal}
             />
         </>

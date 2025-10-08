@@ -5,23 +5,22 @@ import { ChevronDown, Check } from 'lucide-react';
 import { ChatMode } from '../../_hooks/aiChat/useChatMode';
 import SelectedSheetNameCard from './SelectedSheetNameCard';
 import FileAddButton from './FileAddButton';
-import { getOrCreateGuestId } from '../../_utils/guestUtils';
+import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 import { useChatInputBoxHook } from '../../_hooks/aiChat/useChatInputBoxHook';
 
 interface ChatInputBoxProps {
   onSendMessage?: (message: string, mode: ChatMode, selectedFile?: File) => void;
   placeholder?: string;
   disabled?: boolean;
-  userId?: string;
   onFileAddClick?: () => void;
 }
 
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
   placeholder = "Enter your changes...",
   disabled = false,
-  userId = getOrCreateGuestId(),
   onFileAddClick
 }) => {
+  const userId = useUserIdStore((state) => state.userId);
   const {
     // State
     message,
@@ -54,7 +53,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
     handleCompositionEnd,
     handleFocus,
     handleBlur,
-  } = useChatInputBoxHook({ userId });
+  } = useChatInputBoxHook();
 
   // Textarea 높이 관리
   const [textareaHeight, setTextareaHeight] = useState('auto');

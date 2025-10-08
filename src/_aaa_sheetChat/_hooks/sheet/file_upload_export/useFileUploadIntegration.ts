@@ -6,7 +6,7 @@ import { useSpreadsheetUploadStore } from '../../../_store/sheet/spreadsheetUplo
 import useFileNameStore from '@/_aaa_sheetChat/_store/sheet/fileNameStore';
 // import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useUIState } from '../common/useUIState';
-import { getOrCreateGuestId } from '@/_aaa_sheetChat/_utils/guestUtils';
+import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 
 /**
  * 파일 업로드 통합 훅의 설정 인터페이스
@@ -53,7 +53,7 @@ export const useFileUploadIntegration = ({
   const { setIsFileUploaded } = useSpreadsheetUploadStore(); // 파일 업로드 상태
 
   // 사용자 인증 정보
-  const userId = getOrCreateGuestId();
+  const userId = useUserIdStore((state) => state.userId);
 
   // 스프레드시트 생성 훅
   const { createSheet } = useSheetCreate();
@@ -125,7 +125,7 @@ export const useFileUploadIntegration = ({
         fileName,
         spreadsheetId: spreadSheetId,
         chatId,
-        userId,
+        userId: userId!,
         jsonData
       });
 
