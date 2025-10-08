@@ -135,7 +135,7 @@ export const SpreadSheetToolbar: React.FC = () => {
                         onClick={() => window.location.href = '/dashboard'}
                         className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md flex items-center"
                     >
-                        <Image src="/EXTION_new_logo.svg" alt="Logo" width={16} height={16} />
+                        <Image src="/extion-small-blue.svg" alt="Logo" width={16} height={16} />
                     </button>
 
                     {/* File name display/edit or Open File button based on mode */}
@@ -229,7 +229,7 @@ export const SpreadSheetToolbar: React.FC = () => {
                         style={{ backgroundColor: '#005de9' }}
                         // onClick={handleToggleChat}
                     >
-                        <Image src="/EXTION_new_logo_white.svg" alt="Extion Logo" width={16} height={16} />
+                        <Image src="/extion-small-white.svg" alt="Extion Logo" width={10} height={10} />
                         Extion 
                     </button>
                 </div>

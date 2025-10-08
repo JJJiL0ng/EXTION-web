@@ -135,14 +135,12 @@ export function HeroButtons() {
         <Button
           variant="secondary"
           size="lg"
-          className="text-white bg-[#005de9] hover:bg-blue-700 px-2 py-2 border-2 border-[#005de9] text-lg lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl w-[150px] sm:w-[160px] rounded"
+          className="text-white bg-[#005de9] hover:bg-blue-700 px-1 py-1 border-2 border-[#005de9] text-lg lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl w-[180px] sm:w-[200px] rounded"
           // onClick={handleNewSheetClick}
         >
           <span className="flex items-center gap-2">
             Start for free
-            {/* <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg> */}
+            <Image src="/extion-small-white.svg" alt="Extion logo" width={20} height={20} className="inline-block" />
           </span>
         </Button>
       </Link>
@@ -150,7 +148,7 @@ export function HeroButtons() {
       <Button
         variant="outline"
         size="lg"
-        className="px-2 py-2 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 w-[150px] sm:w-[160px] rounded"
+        className="px-1 py-1 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 w-[150px] sm:w-[160px] rounded"
         onClick={() => {
           if (typeof window !== 'undefined') {
         window.open('https://discord.gg/4BS9TxG8MA', '_blank', 'noopener,noreferrer');

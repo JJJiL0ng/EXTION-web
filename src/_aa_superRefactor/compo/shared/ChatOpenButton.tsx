@@ -15,7 +15,7 @@ export default function ChatOpenButton() {
                     style={{ backgroundColor: '#005de9' }}
                     onClick={handleOpenChatSection}
                 >
-                    <img src="/EXTION_new_logo_white.svg" alt="Extion Logo" className="w-4 h-4" />
+                    <img src="/extion-small-white.svg" alt="Extion Logo" className="w-4 h-4" />
                     Extion 
                 </button>
     )

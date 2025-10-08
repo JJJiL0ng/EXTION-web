@@ -284,7 +284,7 @@ const AiChatViewer = () => {
           <div className="flex items-center justify-center h-full text-gray-700">
             <div className="text-center">
               <Image
-                src="/EXTION_new_logo.svg"
+                src="/extion-small-blue.svg"
                 alt="Extion Logo"
                 width={64}
                 height={64}

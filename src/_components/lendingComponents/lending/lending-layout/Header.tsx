@@ -11,7 +11,7 @@ export default function Header() {
 
   const handleBetaClick = () => {
     router.push('/dashboard')
-    
+
     // 이벤트 트래킹
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'cta_click', {
@@ -23,36 +23,36 @@ export default function Header() {
   }
 
   return (
-  <header className="bg-[#EEF2F6]/10 border-b border-blue-100/50 sticky top-0 z-50 backdrop-blur-sm">
+    <header className="bg-[#EEF2F6]/10 border-b border-blue-100/50 sticky top-0 z-50 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-  <div className="flex justify-between items-center h-14 sm:h-12">
-          <Link 
-            href="/" 
+        <div className="flex justify-between items-center h-14 sm:h-12">
+          <Link
+            href="/"
             className="flex items-center"
             aria-label="엑션 홈페이지로 이동"
           >
             {/* Mobile Logo */}
             <Image
-              src="/EXTION_new_logo.svg"
-              alt="엑션 로고"
+              src="/extion-small-blue.svg"
+              alt="extion logo"
               width={120}
-              height={40}
-              className="h-7 w-auto sm:hidden"
+              height={50}
+              className="h-10 w-auto sm:hidden"
               priority
             />
             {/* Desktop Logo */}
             <Image
-              src="/EXTION_new_logo.svg"
-              alt="엑션 로고"
+              src="/extion-big-blue.svg"
+              alt="extion logo"
               width={160}
               height={50}
               className="hidden sm:block h-9 w-auto"
               priority
             />
           </Link>
-          
+
           {/* 베타 신청 버튼 */}
-          <Button 
+          <Button
             size="sm"
             className="bg-[#005de9] hover:bg-blue-700 px-3 py-1.5 text-sm transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg rounded"
             onClick={handleBetaClick}
