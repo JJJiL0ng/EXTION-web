@@ -52,15 +52,17 @@ export default function Header() {
           </Link>
 
           {/* 베타 신청 버튼 */}
-          <Button
-            size="sm"
-            className="bg-[#005de9] hover:bg-blue-700 px-3 py-1.5 text-sm transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg rounded"
-            onClick={handleBetaClick}
-          >
-            <span className="flex items-center gap-2">
-              start for free
-            </span>
-          </Button>
+          <Link href="/trypage">
+            <Button
+              size="sm"
+              className="bg-[#005de9] hover:bg-blue-700 px-3 py-1.5 text-sm transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg rounded"
+            >
+              <span className="flex items-center gap-2">
+                Start for free
+                <Image src="/extion-small-white.svg" alt="Extion logo" width={16} height={16} className="inline-block" />
+              </span>
+            </Button>
+          </Link>
         </div>
       </div>
     </header>

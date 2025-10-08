@@ -148,7 +148,7 @@ export function HeroButtons() {
       <Button
         variant="outline"
         size="lg"
-        className="px-1 py-1 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 w-[150px] sm:w-[160px] rounded"
+        className="px-1 py-1 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 w-[180px] sm:w-[200px] rounded"
         onClick={() => {
           if (typeof window !== 'undefined') {
         window.open('https://discord.gg/4BS9TxG8MA', '_blank', 'noopener,noreferrer');
