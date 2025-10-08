@@ -55,7 +55,7 @@ export default function Header() {
           <Link href="/invite-check">
             <Button
               size="sm"
-              className="bg-[#005de9] hover:bg-blue-700 px-1 py-1.5 text-sm transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg rounded"
+              className="bg-[#005de9] hover:bg-blue-700 px-2 py-1 text-xs sm:px-1.5 sm:py-1 sm:text-md transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg rounded"
             >
               <span className="flex items-center gap-2">
                 Start for free

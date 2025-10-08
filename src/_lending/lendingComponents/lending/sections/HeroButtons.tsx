@@ -130,12 +130,12 @@ export function HeroButtons() {
 
 
   return (
-    <div className="flex flex-row gap-4 sm:gap-6 justify-center items-center mb-8 lg:mb-12">
+    <div className="flex flex-row gap-2 sm:gap-4 lg:gap-6 justify-center items-center mb-8 lg:mb-12">
       <Link href="/invite-check">
         <Button
           variant="secondary"
           size="lg"
-          className="text-white bg-[#005de9] hover:bg-blue-700 px-1 py-1 border-2 border-[#005de9] text-lg lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl rounded"
+          className="text-white bg-[#005de9] hover:bg-blue-700 px-1 py-1 sm:px-2 sm:py-2 lg:px-2 lg:py-2 border-2 border-[#005de9] text-sm sm:text-base lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl rounded"
           // onClick={handleNewSheetClick}
         >
           <span className="flex items-center">
@@ -147,16 +147,16 @@ export function HeroButtons() {
       <Button
         variant="outline"
         size="lg"
-        className="px-1 py-1 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 rounded"
+        className="px-1 py-1 sm:px-2 sm:py-2 lg:px-2 lg:py-2 text-sm sm:text-base lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 rounded"
         onClick={() => {
           if (typeof window !== 'undefined') {
         window.open('https://discord.gg/4BS9TxG8MA', '_blank', 'noopener,noreferrer');
           }
         }}
       >
-        <span className="flex items-center gap-2">
+        <span className="flex items-center gap-1.5 sm:gap-2">
           Discord
-          <Image src="/discord.png" alt="Discord logo" width={24} height={24} className="inline-block" />
+          <Image src="/discord.png" alt="Discord logo" width={20} height={20} className="inline-block sm:w-6 sm:h-6" />
         </span>
       </Button>
     </div >
