@@ -15,6 +15,11 @@ export default function InviteCheck() {
     const [attempts, setAttempts] = useState(0);
 
     const handleCheck = async () => {
+        // 이미 로딩 중이면 중복 요청 방지
+        if (isLoading) {
+            return;
+        }
+
         if (attempts >= MAX_ATTEMPTS) {
             setMessage("Maximum attempts exceeded. Please refresh the page.");
             return;

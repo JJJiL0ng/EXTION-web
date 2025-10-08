@@ -135,12 +135,11 @@ export function HeroButtons() {
         <Button
           variant="secondary"
           size="lg"
-          className="text-white bg-[#005de9] hover:bg-blue-700 px-1 py-1 border-2 border-[#005de9] text-lg lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl w-[180px] sm:w-[200px] rounded"
+          className="text-white bg-[#005de9] hover:bg-blue-700 px-1 py-1 border-2 border-[#005de9] text-lg lg:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl rounded"
           // onClick={handleNewSheetClick}
         >
-          <span className="flex items-center gap-2">
+          <span className="flex items-center">
             Start for free
-            <Image src="/extion-small-white.svg" alt="Extion logo" width={20} height={20} className="inline-block" />
           </span>
         </Button>
       </Link>
@@ -148,7 +147,7 @@ export function HeroButtons() {
       <Button
         variant="outline"
         size="lg"
-        className="px-1 py-1 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 w-[180px] sm:w-[200px] rounded"
+        className="px-1 py-1 text-lg lg:text-xl border-2 hover:bg-blue-50 transition-all duration-200 rounded"
         onClick={() => {
           if (typeof window !== 'undefined') {
         window.open('https://discord.gg/4BS9TxG8MA', '_blank', 'noopener,noreferrer');
