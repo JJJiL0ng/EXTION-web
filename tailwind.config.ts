@@ -43,7 +43,10 @@ const config: Config = {
     'text-[#5865F2]',
     'max-w-sm',
     'pt-6',
-    'from-blue-50 via-white to-indigo-50'
+    'from-blue-50 via-white to-indigo-50',
+    'px-1.5',
+    'py-1.5',
+    'h-9',
 
 
   ],
