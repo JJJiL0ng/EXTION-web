@@ -53,7 +53,7 @@ export default function InviteCheck() {
     return (
         <main className="min-h-screen flex items-center justify-center p-4 sm:p-4 font-sans" style={{ backgroundColor: '#EEF2F6' }}>
             <div className="w-full max-w-md sm:max-w-sm">
-                <div className="bg-white rounded sm:rounded shadow-lg p-6 sm:p-6">
+                <div className="bg-[#EEF2F6] border-2 border-dashed border-gray-400 rounded sm:rounded p-6 sm:p-6">
                     {/* 로고 영역 */}
                     <div className="text-center mb-4 sm:mb-6 pt-6">
                         <Image 

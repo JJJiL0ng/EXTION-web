@@ -47,6 +47,7 @@ const config: Config = {
     'px-1.5',
     'py-1.5',
     'h-9',
+    'border-3',
 
 
   ],
