@@ -4,7 +4,7 @@
 // Force dynamic rendering to avoid SSR issues with SpreadJS
 export const dynamic = 'force-dynamic';
 import React, { useState, useMemo, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { SpreadSheetToolbar } from "@/_aaa_sheetChat/_components/sheet/SpreadSheetToolbar";
 import ChattingContainer from "@/_aaa_sheetChat/_aa_superRefactor/compo/chat/ChattingContainer";
@@ -19,6 +19,7 @@ import { useGenerateSpreadSheetId } from "@/_aaa_sheetChat/_hooks/sheet/common/u
 import { useGenerateChatId } from "@/_aaa_sheetChat/_hooks/aiChat/useGenerateChatId";
 import { useIsEmptySheetStore } from "@/_aaa_sheetChat/_aa_superRefactor/store/sheet/isEmptySheetStore";
 import { useSpreadSheetVersionStore } from "@/_aaa_sheetChat/_store/sheet/spreadSheetVersionIdStore";
+import useUserIdStore from "@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore";
 
 import dynamicImport from "next/dynamic";
 
@@ -30,6 +31,8 @@ const SpreadSheet = dynamicImport(
 );
 
 export default function Home() {
+    const router = useRouter();
+    const userId = useUserIdStore((state) => state.userId);
 
     const { generateSpreadSheetId } = useGenerateSpreadSheetId();
     const { generateChatId } = useGenerateChatId();
@@ -40,6 +43,17 @@ export default function Home() {
     const { setEditLockVersion } = useSpreadSheetVersionStore();
 
     const spreadRef = useMemo(() => ({ current: null }), []);
+
+    // userId 검증 - 없으면 /invite-check로 리다이렉트
+    useEffect(() => {
+        if (!userId) {
+            console.log('⚠️ [TryPage] userId 없음 - /invite-check로 리다이렉트');
+            router.push('/invite-check');
+            return;
+        }
+
+        console.log('✅ [TryPage] userId 존재:', userId);
+    }, [userId, router]);
 
     // useEffect를 사용하여 컴포넌트 마운트 시에만 ID를 생성하고 설정
     useEffect(() => {
