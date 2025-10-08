@@ -1,5 +1,5 @@
-import Header from '@/_components/lendingComponents/lending/lending-layout/Header'
-import Footer from '@/_components/lendingComponents/lending/lending-layout/Footer'
+import Header from '@/_aaa_sheetChat/_components/lendingComponents/lending/lending-layout/Header'
+import Footer from '@/_aaa_sheetChat/_components/lendingComponents/lending/lending-layout/Footer'
 
 export default function MainLayout({
   children,

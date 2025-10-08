@@ -2,23 +2,23 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 
-import { SpreadSheetToolbar } from "@/_components/sheet/SpreadSheetToolbar";
-import ChattingContainer from "@/_aa_superRefactor/compo/chat/ChattingContainer";
-import { Resizer } from "@/_aa_superRefactor/compo/resize/Resizer";
-import { useResizer } from "@/_aa_superRefactor/hookkk/resize/useResizer";
-import { SpreadsheetProvider } from "@/_contexts/SpreadsheetContext";
+import { SpreadSheetToolbar } from "@/_aaa_sheetChat/_components/sheet/SpreadSheetToolbar";
+import ChattingContainer from "@/_aaa_sheetChat/_aa_superRefactor/compo/chat/ChattingContainer";
+import { Resizer } from "@/_aaa_sheetChat/_aa_superRefactor/compo/resize/Resizer";
+import { useResizer } from "@/_aaa_sheetChat/_aa_superRefactor/hookkk/resize/useResizer";
+import { SpreadsheetProvider } from "@/_aaa_sheetChat/_contexts/SpreadsheetContext";
 
-import useSpreadsheetIdStore from "@/_store/sheet/spreadSheetIdStore";
-import useChatStore from "@/_store/chat/chatIdAndChatSessionIdStore";
-import { useIsEmptySheetStore } from "@/_aa_superRefactor/store/sheet/isEmptySheetStore";
-import { useChatVisibilityState } from "@/_aa_superRefactor/store/chat/chatVisibilityStore";
-import useFileNameStore from "@/_store/sheet/fileNameStore";
+import useSpreadsheetIdStore from "@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore";
+import useChatStore from "@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore";
+import { useIsEmptySheetStore } from "@/_aaa_sheetChat/_aa_superRefactor/store/sheet/isEmptySheetStore";
+import { useChatVisibilityState } from "@/_aaa_sheetChat/_aa_superRefactor/store/chat/chatVisibilityStore";
+import useFileNameStore from "@/_aaa_sheetChat/_store/sheet/fileNameStore";
 
 import dynamic from "next/dynamic";
 
 const SpreadSheet = dynamic(
     () => {
-        return import("../../../../../_aa_superRefactor/compo/sheet/SpreadSheetRender");
+        return import("../../../../../_aaa_sheetChat/_aa_superRefactor/compo/sheet/SpreadSheetRender");
     },
     { ssr: false }
 );

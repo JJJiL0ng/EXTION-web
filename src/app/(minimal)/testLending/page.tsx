@@ -1,4 +1,4 @@
-import HeroSection from "@/_components/lendingComponents/TestHeroSection";
+import HeroSection from "@/_aaa_sheetChat/_components/lendingComponents/TestHeroSection";
 
 const TestLendingPage = () => {
   return (
