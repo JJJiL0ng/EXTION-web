@@ -103,6 +103,11 @@ const nextConfig = {
   // API 프록시 설정 (CORS 문제 해결)
   async rewrites() {
       return [
+          // PostHog 프록시 설정 (Ad-blocker 우회)
+          {
+              source: '/ingest/:path*',
+              destination: 'https://us.i.posthog.com/:path*',
+          },
           {
               source: '/api/chatandsheet/:path*',
               destination: 'http://localhost:8080/chatandsheet/:path*',
