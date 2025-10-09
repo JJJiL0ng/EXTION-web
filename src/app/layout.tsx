@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
 import { generateMetadata } from '@/_aaa_sheetChat/_utils/lending-utils/seo'
-import { SpeedInsights } from "@vercel/speed-insights/next"
 import QueryProvider from '@/_aaa_sheetChat/_providers/QueryProvider'
 import './globals.css'
 import { PHProvider } from '@/_analytics/posthog/PHproivder'
@@ -88,7 +87,6 @@ export default function RootLayout({
             {children}
           </QueryProvider>
         </PHProvider>
-        <SpeedInsights />
       </body>
     </html>
   )

@@ -105,7 +105,11 @@ const nextConfig = {
       return [
           // PostHog 프록시 설정 (Ad-blocker 우회)
           {
-              source: '/ingest/:path*',
+              source: '/api/ph/static/:path*',
+              destination: 'https://us-assets.i.posthog.com/static/:path*',
+          },
+          {
+              source: '/api/ph/:path*',
               destination: 'https://us.i.posthog.com/:path*',
           },
           {

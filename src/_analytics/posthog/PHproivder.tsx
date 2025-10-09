@@ -8,7 +8,7 @@ export function PHProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
             posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-                api_host: '/ingest', // ⭐ 여기 변경!
+                 api_host: '/api/ph',
                 ui_host: 'https://us.posthog.com', // ⭐ 추가!
                 capture_pageview: true,
                 capture_pageleave: true, 
