@@ -70,6 +70,7 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
             content,
             timestamp: Date.now(),
             status: 'pending', // 전송 대기 상태
+            chatSessionBranchId: userChatSessionBranchId, // chatSessionBranchId 저장
         };
 
         set(produce((state: AiChatState) => {
@@ -187,6 +188,8 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
     },
     addLoadedPreviousMessages: (previousMessagesContent: previousMessagesContent[]) => {
       // 백엔드에서 내려온 기존 히스토리(user/assistant 역할 + content) 배열을 ChatMessage 형태로 변환하여 스토어에 적재
+      console.log('📥 [aiChatStore] 채팅 히스토리 로드 시작:', previousMessagesContent.length, '개 메시지');
+
       set(produce((state: AiChatState) => {
           // 1) 기존 메시지 초기화
           state.messages = [];
@@ -195,25 +198,43 @@ export const aiChatStore = create<AiChatState & ChatActions>((set) => ({
           const baseTime = Date.now();
           previousMessagesContent.forEach((m, idx) => {
               if (m.role === 'user') {
-                  state.messages.push({
-                      id: uuidv4(),
-                      type: 'user',
+                  const userMessage = {
+                      id: m.chatSessionBranchId || uuidv4(), // chatSessionBranchId가 있으면 사용, 없으면 uuid 생성
+                      type: 'user' as const,
                       content: m.content,
                       timestamp: baseTime + idx, // 단조 증가 보장
                       // 이미 서버에 존재하는 과거 메시지이므로 'sent' 로 표기 (UI에서 재전송 동작 X)
-                      status: 'sent'
+                      status: 'sent' as const,
+                      chatSessionBranchId: m.chatSessionBranchId || uuidv4(), // chatSessionBranchId 저장
+                  };
+
+                  console.log(`✅ [aiChatStore] User 메시지 추가:`, {
+                      content: m.content.substring(0, 30) + '...',
+                      chatSessionBranchId: userMessage.chatSessionBranchId
                   });
+
+                  state.messages.push(userMessage);
               } else if (m.role === 'assistant') {
-                  state.messages.push({
+                  const assistantMessage = {
                       id: uuidv4(),
-                      type: 'assistant',
+                      type: 'assistant' as const,
                       content: m.content,
                       timestamp: baseTime + idx,
-                      status: 'completed',
-                      isStreaming: false
+                      status: 'completed' as const,
+                      isStreaming: false,
+                      chatSessionBranchId: m.chatSessionBranchId, // assistant도 chatSessionBranchId 저장
+                  };
+
+                  console.log(`✅ [aiChatStore] Assistant 메시지 추가:`, {
+                      content: m.content.substring(0, 30) + '...',
+                      chatSessionBranchId: assistantMessage.chatSessionBranchId
                   });
+
+                  state.messages.push(assistantMessage);
               }
           });
+
+          console.log('✅ [aiChatStore] 채팅 히스토리 로드 완료:', state.messages.length, '개 메시지 저장됨');
       }));
     },
 

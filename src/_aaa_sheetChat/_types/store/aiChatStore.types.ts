@@ -8,17 +8,20 @@ interface BaseMessage {
   timestamp: number;
   status: MessageStatus;
   isStreaming?: boolean; // assistant 메시지일때만 사용되는 필드임
+  chatSessionBranchId?: string; // 롤백용 chatSessionBranchId 저장
 }
 
 export interface UserMessage extends BaseMessage {
   type: 'user';       // 'type'을 고정된 문자열 리터럴로 지정 (이것이 식별자)
   content: string;    // UserMessage의 content는 항상 string
+  chatSessionBranchId: string; // user 메시지는 필수로 chatSessionBranchId를 가짐
 }
 
 export interface AssistantMessage extends BaseMessage {
   type: 'assistant';
   content: string; // taskManagerOutput.reason 타입이 들어갈 예정
   aiChatRes?: aiChatApiRes; // AssistantMessage는 둘 다 가능
+  chatSessionBranchId?: string; // assistant 메시지는 optional
 }
 
 export interface SystemMessage extends BaseMessage {
@@ -59,4 +62,5 @@ export interface AiChatState {
 export interface previousMessagesContent {
     role: 'user' | 'assistant';
     content: string;
+    chatSessionBranchId?: string; // 백엔드에서 제공하는 경우 저장
 }
