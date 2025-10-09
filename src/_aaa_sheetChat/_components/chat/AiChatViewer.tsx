@@ -114,76 +114,97 @@ const AiChatViewer = () => {
   }, [isAtBottom, isAutoScrollEnabled, lastScrollTop]);
 
 
-  const handleRollBackButtonClick = (messageId?: string) => {
-    if (messageId) {
-      setPendingRollbackMessageId(messageId);
+  const handleRollBackButtonClick = (chatSessionBranchId?: string) => {
+    if (chatSessionBranchId) {
+      setPendingRollbackMessageId(chatSessionBranchId);
       if (!dontShowRollbackAlert) {
         setShowRollbackAlert(true);
       } else {
-        executeRollback(messageId);
-        // useRollbackMessageLoadSheet(apiConnector);
+        executeRollback(chatSessionBranchId);
       }
     }
   }
 
-  const executeRollback = async (messageId?: string) => {
-    const targetMessageId = messageId || pendingRollbackMessageId;
-    if (targetMessageId) {
-      console.log('RollBack button clicked for message ID:', targetMessageId);
+  const executeRollback = useCallback(async (chatSessionBranchId?: string) => {
+    const targetBranchId = chatSessionBranchId || pendingRollbackMessageId;
+    if (!targetBranchId) {
+      console.error('❌ chatSessionBranchId가 없습니다');
+      return;
+    }
 
-      try {
-        // 필요한 정보 수집
-        const spreadsheetId = useSpreadsheetIdStore.getState().spreadSheetId;
-        const { chatId, chatSessionId } = useChatStore.getState();
+    console.log('🔄 롤백 시작 - chatSessionBranchId:', targetBranchId);
 
-        if (!spreadsheetId) {
-          console.error('❌ spreadsheetId가 없습니다');
-          return;
-        }
+    try {
+      // 필요한 정보 수집 - 실행 시점의 최신 상태를 가져옴
+      const spreadsheetId = useSpreadsheetIdStore.getState().spreadSheetId;
+      const chatStoreState = useChatStore.getState();
+      const chatId = chatStoreState.chatId;
+      const chatSessionId = chatStoreState.chatSessionId;
 
-        if (!chatId || !chatSessionId) {
-          if (!chatId && !chatSessionId) {
-            console.error('❌ chatId 및 chatSessionId가 없습니다');
-          } else if (!chatId) {
-            console.error('❌ chatId가 없습니다');
-          } else {
-            console.error('❌ chatSessionId가 없습니다');
-          }
-          return;
-        }
+      console.log('🔍 현재 채팅 상태:', {
+        chatId,
+        chatSessionId,
+        spreadsheetId,
+        targetBranchId
+      });
 
-        // userId는 useUserIdStore에서 가져옴
-        const userId = useUserIdStore.getState().userId;
+      if (!spreadsheetId) {
+        console.error('❌ spreadsheetId가 없습니다');
+        return;
+      }
 
-        // 요청 데이터 로깅
-        const rollbackRequest = {
-          spreadSheetId: spreadsheetId,
-          chatId: chatId,
-          userId: userId!,
-          chatSessionId: chatSessionId,
-          chatSessionBranchId: targetMessageId, // 롤백 대상 메시지의 chatSessionBranchId
-        };
-
-        console.log('🔍 롤백 요청 데이터:', rollbackRequest);
-
-        // 백엔드 롤백 API 호출
-        const result = await executeBackendRollback(rollbackRequest);
-
-        if (result) {
-          console.log('✅ 백엔드 롤백 성공:', result);
-          // 프론트엔드 상태도 롤백
-          rollbackMessage(targetMessageId);
+      if (!chatId || !chatSessionId) {
+        if (!chatId && !chatSessionId) {
+          console.error('❌ chatId 및 chatSessionId가 없습니다');
+        } else if (!chatId) {
+          console.error('❌ chatId가 없습니다');
         } else {
-          console.error('❌ 백엔드 롤백 실패 - result가 null');
+          console.error('❌ chatSessionId가 없습니다');
         }
-      } catch (error) {
-        console.error('❌ 롤백 중 오류 발생:', error);
+        return;
       }
 
-      // 롤백 후 상태 초기화
-      setPendingRollbackMessageId(null);
+      // userId는 useUserIdStore에서 가져옴
+      const userId = useUserIdStore.getState().userId;
+
+      // 요청 데이터 생성
+      const rollbackRequest = {
+        spreadSheetId: spreadsheetId,
+        chatId: chatId,
+        userId: userId!,
+        chatSessionId: chatSessionId,
+        chatSessionBranchId: targetBranchId, // 메시지에 저장된 chatSessionBranchId 사용
+      };
+
+      console.log('📤 롤백 요청 데이터:', rollbackRequest);
+
+      // 백엔드 롤백 API 호출
+      const result = await executeBackendRollback(rollbackRequest);
+
+      if (result) {
+        console.log('✅ 백엔드 롤백 성공:', result);
+
+        // 프론트엔드 상태도 롤백 - chatSessionBranchId로 메시지 찾기
+        const targetMessage = messages.find(
+          msg => msg.type === 'user' && msg.chatSessionBranchId === targetBranchId
+        );
+
+        if (targetMessage) {
+          rollbackMessage(targetMessage.id);
+          console.log('✅ 프론트엔드 롤백 완료 - 메시지 ID:', targetMessage.id);
+        } else {
+          console.warn('⚠️ 롤백할 메시지를 찾을 수 없습니다:', targetBranchId);
+        }
+      } else {
+        console.error('❌ 백엔드 롤백 실패 - result가 null');
+      }
+    } catch (error) {
+      console.error('❌ 롤백 중 오류 발생:', error);
     }
-  }
+
+    // 롤백 후 상태 초기화
+    setPendingRollbackMessageId(null);
+  }, [pendingRollbackMessageId, executeBackendRollback, rollbackMessage, messages]);
 
   // 좋아요/싫어요 버튼 핸들러
   const handleRating = (messageId: string, rating: 'like' | 'dislike') => {
@@ -314,8 +335,17 @@ const AiChatViewer = () => {
                     <div className="flex items-center gap mt-2">
                       <button
                         onClick={() => {
-                          const previousMessage = index > 0 ? messages[index - 1] : null; // 이전 메시지(ux상으로 랜더링 중인 assistant 메시지의 바로 이전 메시지, 즉 user 메시지)
-                          handleRollBackButtonClick(previousMessage?.id);
+                          // 이전 user 메시지의 chatSessionBranchId를 가져옴
+                          const previousMessage = index > 0 ? messages[index - 1] : null;
+                          const chatSessionBranchId = previousMessage?.type === 'user'
+                            ? previousMessage.chatSessionBranchId
+                            : undefined;
+
+                          if (chatSessionBranchId) {
+                            handleRollBackButtonClick(chatSessionBranchId);
+                          } else {
+                            console.warn('⚠️ chatSessionBranchId를 찾을 수 없습니다', previousMessage);
+                          }
                         }}
                         disabled={isRollbackLoading}
                         className={`p-1 rounded transition-colors duration-200 ${isRollbackLoading

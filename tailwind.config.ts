@@ -8,6 +8,7 @@ const config: Config = {
     "./src/_components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/_aaa_sheetChat/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/_lending/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/_admin/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
