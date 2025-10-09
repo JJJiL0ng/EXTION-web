@@ -63,19 +63,23 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased min-h-screen">
-        {/* Google Analytics */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-806D12QQE5"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-806D12QQE5');
-          `}
-        </Script>
+        {/* Google Analytics - Production only */}
+        {process.env.NODE_ENV === 'production' && (
+          <>
+            <Script
+              src="https://www.googletagmanager.com/gtag/js?id=G-806D12QQE5"
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'G-806D12QQE5');
+              `}
+            </Script>
+          </>
+        )}
         
         <QueryProvider>
           {children}
