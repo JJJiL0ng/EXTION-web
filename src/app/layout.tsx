@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import { generateMetadata } from '@/_aaa_sheetChat/_utils/lending-utils/seo'
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import QueryProvider from '@/_aaa_sheetChat/_providers/QueryProvider'
@@ -62,6 +63,20 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased min-h-screen">
+        {/* Google Analytics */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-806D12QQE5"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-806D12QQE5');
+          `}
+        </Script>
+        
         <QueryProvider>
           {children}
         </QueryProvider>
