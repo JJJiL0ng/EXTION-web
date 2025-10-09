@@ -4,6 +4,8 @@ import { generateMetadata } from '@/_aaa_sheetChat/_utils/lending-utils/seo'
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import QueryProvider from '@/_aaa_sheetChat/_providers/QueryProvider'
 import './globals.css'
+import { PHProvider } from '@/_analytics/posthog/PHproivder'
+
 
 export const metadata: Metadata = generateMetadata({
   title: 'Extion.ai | Sheet AI agent',
@@ -42,7 +44,7 @@ export default function RootLayout({
             })
           }}
         />
-        
+
         {/* 웹사이트 구조화된 데이터 */}
         <script
           type="application/ld+json"
@@ -80,10 +82,12 @@ export default function RootLayout({
             </Script>
           </>
         )}
-        
-        <QueryProvider>
-          {children}
-        </QueryProvider>
+
+        <PHProvider>
+          <QueryProvider>
+            {children}
+          </QueryProvider>
+        </PHProvider>
         <SpeedInsights />
       </body>
     </html>
