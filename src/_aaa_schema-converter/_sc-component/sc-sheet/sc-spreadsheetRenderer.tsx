@@ -1,40 +1,98 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef, useMemo, useState } from "react";
-import { SpreadSheets, Worksheet, Column } from "@mescius/spread-sheets-react";
+import React, { useState } from 'react';
+import { SpreadSheets } from '@mescius/spread-sheets-react';
+import * as GC from '@mescius/spread-sheets';
+import '@mescius/spread-sheets-io';
+import '@mescius/spread-sheets-resources-ko';
 
-import * as GC from "@mescius/spread-sheets";
-
-
+// 샘플용 라이선스
 const SpreadJSKey = "extion.ai|www.extion.ai,994437339345835#B14QusSMWhke8lnc4pUc8EXSwo7dVZTdiBzLYN6U5dHN6Q4bVhmTjRWRYJGauVkawIFdNl7b7V6YzoGWkRjUM9mTxEUe4J6UE3ENLtyK6U6Twg6V6ZkVoFnMRZDULh7UVpHcyBlTJd4S9s6dvMTSnJ7LalkRJJ5TUhzcE3EcHdDRwQDe6dHTxEGeycDMsJEbiFFV92SOXJGZ5llMwg7M9VzMsJGSrEkds36R7h5dnJGTtxGZ69EcpFFcvcHe0JVU52me9gzZ5J4KaFmZVRlQStUciNlRwYmQZt6VWdDWuFFVklzVtdFdxRzNqV6UZJVb83UeZdkI0IyUiwiI6EDMCBTNFdjI0ICSiwyM4UTN7YDO4kTM0IicfJye#4Xfd5nIIlkSCJiOiMkIsICOx8idgMlSgQWYlJHcTJiOi8kI1tlOiQmcQJCLiYjM6UDNwACMygDM5IDMyIiOiQncDJCLikWYu86bpRHel9yd7dHLpFmLu3Wa4hXZiojIz5GRiwiIkqI1cSI1sa00wyY1iojIh94QiwiI5MDO5QzM9MzM7MDN4kTOiojIklkIs4XXbpjInxmZiwSZzxWYmpjIyNHZisnOiwmbBJye0ICRiwiI34zdIlDas9GerImVuF7alljavpFOKVlbSNVOJtWcsdjN4cFNWplZ6FTUrEzcsNFW5EEc8M7UGREaDFHULp7L9JHZnpGU9p4dVVHO8FTSNFGa8VzROVURx5GR4EESHlTNjRWULt";
 GC.Spread.Sheets.LicenseKey = SpreadJSKey;
 GC.Spread.Common.CultureManager.culture("en-us");
 
-interface SpreadSheetProps {
-    sheetWidthNum: number; // refresh 트리거용으로 유지
+export interface SpreadSheetProps {
     spreadRef: React.MutableRefObject<any>; // Context가 폴링하는 ref
+    file?: File; // Optional file to load
 }
 
-export default function SpreadSheet() {
+export default function SpreadSheet({ spreadRef, file }: SpreadSheetProps) {
   const [hostStyle, setHostStyle] = useState({
     width: '100%',
-    height: '600px',
+    height: '100%',
     border: '1px solid darkgray',
   });
-interface InitSpreadFunction {
-    (spread: GC.Spread.Sheets.Workbook): void;
-}
+  
+  let initSpread = function ({spread} : {spread: any}) {
+    // Assign spread to ref for context polling
+    if (spreadRef) {
+      spreadRef.current = spread;
+    }
 
-let initSpread: InitSpreadFunction = function (spread: GC.Spread.Sheets.Workbook) {
-    let sheet: GC.Spread.Sheets.Worksheet = spread.getActiveSheet();
-    sheet
+    // If file is provided, load it
+    if (file) {
+      const fileExtension = file.name.toLowerCase().split('.').pop();
+      let importOptions;
+
+      if (fileExtension === 'csv') {
+        importOptions = {
+          fileType: GC.Spread.Sheets.FileType.csv,
+          includeStyles: true,
+          includeFormulas: true
+        };
+      } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+        importOptions = {
+          fileType: GC.Spread.Sheets.FileType.excel,
+          includeStyles: true,
+          includeFormulas: true
+        };
+      } else {
+        console.error('Unsupported file type:', fileExtension);
+        return;
+      }
+
+      // Import the file directly using spread.import()
+      spread.import(
+        file,
+        () => {
+          try {
+            console.log('File loaded successfully:', file.name);
+            // Get the active sheet after import completes
+            const sheet = spread.getActiveSheet();
+            if (sheet && sheet.resumePaint && typeof sheet.resumePaint === 'function') {
+              sheet.resumePaint();
+            }
+          } catch (error) {
+            console.error('Error in success callback:', error);
+          }
+        },
+        (error: any) => {
+          try {
+            console.error('Error loading file:', error);
+            // Try to get the active sheet and resume painting
+            const sheet = spread.getActiveSheet();
+            if (sheet && sheet.resumePaint && typeof sheet.resumePaint === 'function') {
+              sheet.resumePaint();
+            }
+          } catch (resumeError) {
+            console.error('Error in error callback:', resumeError);
+          }
+        },
+        importOptions
+      );
+    } else {
+      // Default initialization if no file
+      let sheet = spread.getActiveSheet();
+      sheet
         .getCell(0, 0)
         .vAlign(GC.Spread.Sheets.VerticalAlign.center)
         .value('Hello SpreadJS!');
-};
+    }
+  };
+  
   return (
     <SpreadSheets
-      workbookInitialized={(spread) => initSpread(spread)}
+      workbookInitialized={(spread) => initSpread({spread})}
       hostStyle={hostStyle}
     ></SpreadSheets>
   );

@@ -23,11 +23,13 @@ export default function ScContainer() {
     };
 
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 font-sans" style={{ backgroundColor: '#EEF2F6' }}>
+      <>
         {step === 'upload' ? (
-          <div className="w-full max-w-5xl sm:max-w-4xl">
-            <div className="bg-white border-2 border-dashed border-gray-400 rounded sm:rounded p-6 sm:p-6">
-              <TwoFileUpload onFilesReady={handleFilesReady} />
+          <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 font-sans" style={{ backgroundColor: '#EEF2F6' }}>
+            <div className="w-full max-w-5xl sm:max-w-4xl">
+              <div className="bg-white border-2 border-dashed border-gray-400 rounded sm:rounded p-6 sm:p-6">
+                <TwoFileUpload onFilesReady={handleFilesReady} />
+              </div>
             </div>
           </div>
         ) : (
@@ -39,7 +41,7 @@ export default function ScContainer() {
             />
           )
         )}
-      </div>
+      </>
     );
 
 }
