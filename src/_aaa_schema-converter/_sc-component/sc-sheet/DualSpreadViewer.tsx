@@ -4,8 +4,7 @@
 // Force dynamic rendering to avoid SSR issues with SpreadJS
 export const dynamic = 'force-dynamic';
 import React, { useState, useMemo, useEffect } from "react";
-
-import { SpreadsheetProvider } from "@/_aaa_sheetChat/_contexts/SpreadsheetContext";
+import { RangeSelector } from "./RangeSelector";
 
 import dynamicImport from "next/dynamic";
 
@@ -20,13 +19,39 @@ export interface DualSpreadViewerProps {
     sourceFile: File;
     targetFile: File;
     onBack: () => void;
+    spreadRefSourceSheet: React.MutableRefObject<any>;
+    spreadRefTargetSheet: React.MutableRefObject<any>;
 }
 
-export default function DualSpreadViewer({ sourceFile, targetFile, onBack }: DualSpreadViewerProps) {
-    const spreadRefSourceSheet = useMemo(() => ({ current: null }), []);
-    const spreadRefTargetSheet = useMemo(() => ({ current: null }), []);
+export default function DualSpreadViewer({
+    sourceFile,
+    targetFile,
+    onBack,
+    spreadRefSourceSheet,
+    spreadRefTargetSheet
+}: DualSpreadViewerProps) {
+    // spread ref가 변경될 때 리렌더링을 트리거하기 위한 state
+    const [sourceSpread, setSourceSpread] = useState<any>(null);
+    const [targetSpread, setTargetSpread] = useState<any>(null);
 
-    
+    // spread ref가 설정되면 state 업데이트
+    useEffect(() => {
+        const checkInterval = setInterval(() => {
+            if (spreadRefSourceSheet.current && !sourceSpread) {
+                setSourceSpread(spreadRefSourceSheet.current);
+            }
+            if (spreadRefTargetSheet.current && !targetSpread) {
+                setTargetSpread(spreadRefTargetSheet.current);
+            }
+            if (spreadRefSourceSheet.current && spreadRefTargetSheet.current) {
+                clearInterval(checkInterval);
+            }
+        }, 100);
+
+        return () => clearInterval(checkInterval);
+    }, [sourceSpread, targetSpread, spreadRefSourceSheet, spreadRefTargetSheet]);
+
+
     return (
         <div className="flex flex-col h-screen w-screen fixed inset-0" style={{ overflow: 'hidden' }}>
             {/* Back Button */}
@@ -46,11 +71,10 @@ export default function DualSpreadViewer({ sourceFile, targetFile, onBack }: Dua
                     <div className="p-2 bg-gray-100 border-b rounded-t-lg">
                         <h3 className="font-semibold truncate">Source: {sourceFile.name}</h3>
                     </div>
-                    <SpreadsheetProvider spreadRef={spreadRefSourceSheet}>
-                        <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
-                            <SpreadSheet spreadRef={spreadRefSourceSheet} file={sourceFile} />
-                        </div>
-                    </SpreadsheetProvider>
+                    <RangeSelector spread={sourceSpread} viewerType="source"/>
+                    <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
+                        <SpreadSheet spreadRef={spreadRefSourceSheet} file={sourceFile} />
+                    </div>
                 </div>
 
                 {/* Target Spreadsheet - Right */}
@@ -58,11 +82,10 @@ export default function DualSpreadViewer({ sourceFile, targetFile, onBack }: Dua
                     <div className="p-2 bg-gray-100 border-b rounded-t-lg">
                         <h3 className="font-semibold truncate">Target: {targetFile.name}</h3>
                     </div>
-                    <SpreadsheetProvider spreadRef={spreadRefTargetSheet}>
-                        <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
-                            <SpreadSheet spreadRef={spreadRefTargetSheet} file={targetFile} />
-                        </div>
-                    </SpreadsheetProvider>
+                    <RangeSelector spread={targetSpread} viewerType="target"/>
+                    <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
+                        <SpreadSheet spreadRef={spreadRefTargetSheet} file={targetFile} />
+                    </div>
                 </div>
             </div>
         </div>
