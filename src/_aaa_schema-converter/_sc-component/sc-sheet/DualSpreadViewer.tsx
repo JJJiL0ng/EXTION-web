@@ -5,6 +5,8 @@
 export const dynamic = 'force-dynamic';
 import React, { useState, useMemo, useEffect } from "react";
 import { RangeSelector } from "./RangeSelector";
+import FFileUploadButton from "./FIleUploadButton";
+import { useFileState } from "@/_aaa_schema-converter/_sc-context/FileStateProvider";
 
 import dynamicImport from "next/dynamic";
 
@@ -16,20 +18,18 @@ const SpreadSheet = dynamicImport(
 );
 
 export interface DualSpreadViewerProps {
-    sourceFile: File;
-    targetFile: File;
-    onBack: () => void;
+    onBack?: () => void;
     spreadRefSourceSheet: React.MutableRefObject<any>;
     spreadRefTargetSheet: React.MutableRefObject<any>;
 }
 
 export default function DualSpreadViewer({
-    sourceFile,
-    targetFile,
     onBack,
     spreadRefSourceSheet,
     spreadRefTargetSheet
 }: DualSpreadViewerProps) {
+    const { sourceFile, targetFile } = useFileState();
+
     // spread ref가 변경될 때 리렌더링을 트리거하기 위한 state
     const [sourceSpread, setSourceSpread] = useState<any>(null);
     const [targetSpread, setTargetSpread] = useState<any>(null);
@@ -55,36 +55,44 @@ export default function DualSpreadViewer({
     return (
         <div className="flex flex-col h-screen w-screen fixed inset-0" style={{ overflow: 'hidden' }}>
             {/* Back Button */}
-            <div className="p-2 bg-white border-b flex-shrink-0">
-                <button 
-                    onClick={onBack}
-                    className="px-4 py-2 bg-[#005de9] text-white rounded hover:bg-blue-600"
-                >
-                    ← 돌아가기
-                </button>
-            </div>
+            {onBack && (
+                <div className="p-2 bg-white border-b flex-shrink-0">
+                    <button
+                        onClick={onBack}
+                        className="px-4 py-2 bg-[#005de9] text-white rounded hover:bg-blue-600"
+                    >
+                        ← 돌아가기
+                    </button>
+                </div>
+            )}
             
             {/* Spreadsheets Side by Side */}
             <div className="flex flex-1 gap-4 p-4" style={{ overflow: 'hidden' }}>
                 {/* Source Spreadsheet - Left */}
                 <div className="flex-1 flex flex-col border rounded-lg shadow-sm" style={{ minWidth: 0, overflow: 'hidden' }}>
-                    <div className="p-2 bg-gray-100 border-b rounded-t-lg">
-                        <h3 className="font-semibold truncate">Source: {sourceFile.name}</h3>
+                    <div className="p-2 bg-gray-100 border-b rounded-t-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            {!sourceFile && <FFileUploadButton viewerType="source" />}
+                            {sourceFile && <h3 className="font-semibold truncate">Source: {sourceFile.name}</h3>}
+                        </div>
                     </div>
-                    <RangeSelector spread={sourceSpread} viewerType="source"/>
+                    {sourceFile && <RangeSelector spread={sourceSpread} viewerType="source"/>}
                     <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
-                        <SpreadSheet spreadRef={spreadRefSourceSheet} file={sourceFile} />
+                        <SpreadSheet spreadRef={spreadRefSourceSheet} file={sourceFile || undefined} />
                     </div>
                 </div>
 
                 {/* Target Spreadsheet - Right */}
                 <div className="flex-1 flex flex-col border rounded-lg shadow-sm" style={{ minWidth: 0, overflow: 'hidden' }}>
-                    <div className="p-2 bg-gray-100 border-b rounded-t-lg">
-                        <h3 className="font-semibold truncate">Target: {targetFile.name}</h3>
+                    <div className="p-2 bg-gray-100 border-b rounded-t-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            {!targetFile && <FFileUploadButton viewerType="target" />}
+                            {targetFile && <h3 className="font-semibold truncate">Target: {targetFile.name}</h3>}
+                        </div>
                     </div>
-                    <RangeSelector spread={targetSpread} viewerType="target"/>
+                    {targetFile && <RangeSelector spread={targetSpread} viewerType="target"/>}
                     <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
-                        <SpreadSheet spreadRef={spreadRefTargetSheet} file={targetFile} />
+                        <SpreadSheet spreadRef={spreadRefTargetSheet} file={targetFile || undefined} />
                     </div>
                 </div>
             </div>
