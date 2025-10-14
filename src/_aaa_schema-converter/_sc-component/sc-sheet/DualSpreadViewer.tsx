@@ -28,7 +28,7 @@ export default function DualSpreadViewer({
     spreadRefSourceSheet,
     spreadRefTargetSheet
 }: DualSpreadViewerProps) {
-    const { sourceFile, targetFile } = useFileState();
+    const { sourceFile, targetFile, setSourceFile, setTargetFile } = useFileState();
 
     // spread ref가 변경될 때 리렌더링을 트리거하기 위한 state
     const [sourceSpread, setSourceSpread] = useState<any>(null);
@@ -71,9 +71,19 @@ export default function DualSpreadViewer({
                 {/* Source Spreadsheet - Left */}
                 <div className="flex-1 flex flex-col border rounded-lg shadow-sm" style={{ minWidth: 0, overflow: 'hidden' }}>
                     <div className="p-2 bg-gray-100 border-b rounded-t-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
                             {!sourceFile && <FFileUploadButton viewerType="source" />}
-                            {sourceFile && <h3 className="font-semibold truncate">Source: {sourceFile.name}</h3>}
+                            {sourceFile && (
+                                <>
+                                    <h3 className="font-semibold truncate">Source: {sourceFile.name}</h3>
+                                    <button
+                                        onClick={() => setSourceFile(null)}
+                                        className="ml-2 px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition flex-shrink-0"
+                                    >
+                                        Change File
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                     {sourceFile && <RangeSelector spread={sourceSpread} viewerType="source"/>}
@@ -85,9 +95,19 @@ export default function DualSpreadViewer({
                 {/* Target Spreadsheet - Right */}
                 <div className="flex-1 flex flex-col border rounded-lg shadow-sm" style={{ minWidth: 0, overflow: 'hidden' }}>
                     <div className="p-2 bg-gray-100 border-b rounded-t-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
                             {!targetFile && <FFileUploadButton viewerType="target" />}
-                            {targetFile && <h3 className="font-semibold truncate">Target: {targetFile.name}</h3>}
+                            {targetFile && (
+                                <>
+                                    <h3 className="font-semibold truncate">Target: {targetFile.name}</h3>
+                                    <button
+                                        onClick={() => setTargetFile(null)}
+                                        className="ml-2 px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition flex-shrink-0"
+                                    >
+                                        Change File
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                     {targetFile && <RangeSelector spread={targetSpread} viewerType="target"/>}

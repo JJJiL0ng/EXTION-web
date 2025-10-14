@@ -25,8 +25,12 @@ export default function SpreadSheet({ spreadRef, file }: SpreadSheetProps) {
 
   // Watch for file changes and reload
   useEffect(() => {
-    if (spreadRef.current && file) {
-      const spread = spreadRef.current;
+    if (!spreadRef.current) return;
+
+    const spread = spreadRef.current;
+
+    if (file) {
+      // File is provided - load it
       const fileExtension = file.name.toLowerCase().split('.').pop();
       let importOptions;
 
@@ -74,6 +78,15 @@ export default function SpreadSheet({ spreadRef, file }: SpreadSheetProps) {
         },
         importOptions
       );
+    } else {
+      // File is null - reset to empty state
+      spread.clearSheets();
+      spread.addSheet(0);
+      const sheet = spread.getActiveSheet();
+      sheet
+        .getCell(0, 0)
+        .vAlign(GC.Spread.Sheets.VerticalAlign.center)
+        .value('Upload a file to get started');
     }
   }, [file, spreadRef]);
 
