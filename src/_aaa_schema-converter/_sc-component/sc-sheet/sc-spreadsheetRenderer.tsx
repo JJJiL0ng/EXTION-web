@@ -86,7 +86,12 @@ export default function SpreadSheet({ spreadRef, file }: SpreadSheetProps) {
       sheet
         .getCell(0, 0)
         .vAlign(GC.Spread.Sheets.VerticalAlign.center)
-        .value('Upload a file to get started');
+        .value('Upload');
+
+      sheet.getCell(0, 1).value('a .csv or ');
+      sheet.getCell(0, 2).value(' .xlsx file');
+      sheet.getCell(0, 3).value('to get ');
+      sheet.getCell(0, 4).value('started!');
     }
   }, [file, spreadRef]);
 
@@ -156,8 +161,8 @@ export default function SpreadSheet({ spreadRef, file }: SpreadSheetProps) {
       sheet.getCell(0, 1).value('a .csv or ');
 
       sheet.getCell(0, 2).value(' .xlsx file');
-      sheet.getCell(0,3).value('to get ');
-      sheet.getCell(0,4).value('started!');
+      sheet.getCell(0, 3).value('to get ');
+      sheet.getCell(0, 4).value('started!');
     }
   };
 

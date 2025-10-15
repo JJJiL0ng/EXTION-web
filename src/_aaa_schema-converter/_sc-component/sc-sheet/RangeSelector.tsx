@@ -1,5 +1,5 @@
 import { useGetSheetRange } from "@/_aaa_schema-converter/_sc-hook/useGetSheetRanage";
-
+import { useGetActiveSheetName } from "@/_aaa_schema-converter/_sc-hook/useGetActiveSheetName";
 
 interface RangeSelectorProps {
     spread: any;
@@ -28,6 +28,8 @@ export const RangeSelector: React.FC<RangeSelectorProps> = ({ spread, viewerType
         ? startCell 
         : `${startCell}:${endCell}`;
 
+    const activeSheetName = useGetActiveSheetName({ viewerType, spread });
+
     return (
         <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200 shadow-sm">
             <div className="flex items-center gap-2">
@@ -52,6 +54,11 @@ export const RangeSelector: React.FC<RangeSelectorProps> = ({ spread, viewerType
                 <span className="flex items-center gap-1">
                     <span className="font-medium">셀:</span>
                     <span className="font-mono">{rowCount * colCount}</span>
+                </span>
+                <span className="text-gray-300">|</span>
+                <span className="flex items-center gap-1">
+                    <span className="font-medium">시트:</span>
+                    <span className="font-mono">{activeSheetName}</span>
                 </span>
             </div>
         </div>
