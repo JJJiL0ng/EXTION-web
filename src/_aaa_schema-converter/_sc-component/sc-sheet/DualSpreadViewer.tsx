@@ -7,6 +7,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { RangeSelector } from "./RangeSelector";
 import FFileUploadButton from "./FIleUploadButton";
 import { useFileState } from "@/_aaa_schema-converter/_sc-context/FileStateProvider";
+import { MappingTopBar } from "./MappingTopBar";
 
 import dynamicImport from "next/dynamic";
 
@@ -51,9 +52,19 @@ export default function DualSpreadViewer({
         return () => clearInterval(checkInterval);
     }, [sourceSpread, targetSpread, spreadRefSourceSheet, spreadRefTargetSheet]);
 
+    // 매핑 시작 핸들러
+    const handleStartMapping = () => {
+        // TODO: 여기에 실제 매핑 로직을 구현하세요
+        console.log('매핑 프로세스 시작...');
+        // 예: API 호출, 상태 업데이트 등
+    };
+
 
     return (
         <div className="flex flex-col h-screen w-screen fixed inset-0" style={{ overflow: 'hidden' }}>
+            {/* 매핑 정보 및 시작 버튼 탭바 */}
+            <MappingTopBar onStartMapping={handleStartMapping} />
+            
             {/* Back Button */}
             {onBack && (
                 <div className="p-2 bg-white border-b flex-shrink-0">

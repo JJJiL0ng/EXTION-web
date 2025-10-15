@@ -8,6 +8,6 @@ interface SourceSheetRangeStore {
 }
 
 export const useSourceSheetRangeStore = create<SourceSheetRangeStore>((set) => ({
-    sourceRange: [0, 0, 0, 0],
+    sourceRange: [0, 0, 1, 1], // 기본값: 1행 × 1열
     setSourceRange: (sourceRange) => set({ sourceRange }),
 }));

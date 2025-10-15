@@ -6,6 +6,6 @@ interface TargetSheetRangeStore {
 }
 
 export const useTargetSheetRangeStore = create<TargetSheetRangeStore>((set) => ({
-    targetRange: [0, 0, 0, 0],
+    targetRange: [0, 0, 1, 1], // 기본값: 1행 × 1열
     setTargetRange: (targetRange) => set({ targetRange }),
 }));
