@@ -15,9 +15,9 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, s
     const isMappingReady = useIsMappingReady();
     const sourceRange = useSourceSheetRangeStore((state) => state.sourceRange);
     const targetRange = useTargetSheetRangeStore((state) => state.targetRange);
-    const { uploadSheetAndMapping } = useUploadSheetAndMapping({ spreadSourceRef, spreadTargetRef });
+    const { uploadSheetAndMapping, isLoading } = useUploadSheetAndMapping({ spreadSourceRef, spreadTargetRef });
 
-    const handleStartMapping = () => {
+    const handleStartMapping = async () => {
         console.log('매핑 시작:', {
             sourceRange: {
                 row: sourceRange[0],
@@ -32,9 +32,7 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, s
                 colCount: targetRange[3]
             }
         });
-        uploadSheetAndMapping();
-        
-
+        await uploadSheetAndMapping();
     };
 
     return (
@@ -85,14 +83,22 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, s
                 {/* 오른쪽: 매핑 시작 버튼 */}
                 <button
                     onClick={handleStartMapping}
-                    disabled={!isMappingReady}
-                    className={`px-6 py-2 rounded-lg font-medium text-sm transition-all ${
-                        isMappingReady
+                    disabled={!isMappingReady || isLoading}
+                    className={`px-6 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${
+                        isLoading
+                            ? 'bg-gray-400 text-white cursor-not-allowed'
+                            : isMappingReady
                             ? 'bg-[#005de9] text-white hover:bg-[#004bb8] shadow-sm hover:shadow cursor-pointer'
                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     }`}
                 >
-                    {isMappingReady ? '매핑 시작' : '파일 업로드 후 드레그 하여 영역을 선택하세요'}
+                    {isLoading && (
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    )}
+                    {isLoading ? '매핑 중...' : isMappingReady ? '매핑 시작' : '파일 업로드 후 드레그 하여 영역을 선택하세요'}
                 </button>
             </div>
 

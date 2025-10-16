@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { UploadSheetsReqDto, UploadSheetsResDto } from "../_sc-type/uploadSheets.types"
 import { uploadSheetsAndMappingAPiConnector } from "../_sc-apiConnector/uploadSheetsAndMapping.apiConnector";
 import { useTargetSheetRangeStore } from "../_sc-store/targetSheetRangeStore";
@@ -9,9 +10,11 @@ import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userId
 export interface useUploadSheetAndMappingProps {
     spreadSourceRef: any;
     spreadTargetRef: any;
+    isLoading?: boolean;
 }
 
 export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: useUploadSheetAndMappingProps) => {
+    const [isLoading, setIsLoading] = useState(false);
     const sourceSheetName = useSourceSheetNameStore((state) => state.sourceSheetName);
     const targetSheetName = useTargetSheetNameStore((state) => state.targetSheetName);
     const sourceRange = useSourceSheetRangeStore((state) => state.sourceRange);
@@ -21,6 +24,11 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
     const userId = useUserIdStore((state) => state.userId);
 
     const uploadSheetAndMapping = async (workFlowId?: string): Promise<UploadSheetsResDto | null> => {
+        if (isLoading) {
+            console.log('Already uploading...');
+            return null;
+        }
+
         if (!sourceSheetName || !targetSheetName) {
             console.error('Source or Target sheet name is missing');
             return null;
@@ -36,6 +44,8 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
             console.error('SpreadJS instances are not initialized');
             return null;
         }
+
+        setIsLoading(true);
 
         // toJSON 호출을 함수 내부로 이동 (.current를 통해 실제 인스턴스의 toJSON 메서드 호출)
         const sourceSheetData = spreadSourceRef.current.toJSON({
@@ -86,9 +96,11 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
         } catch (error) {
             console.error('Error uploading sheets and mapping:', error);
             return null;
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    return { uploadSheetAndMapping };
+    return { uploadSheetAndMapping, isLoading };
 
 }
