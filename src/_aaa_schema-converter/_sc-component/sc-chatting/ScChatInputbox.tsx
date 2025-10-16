@@ -112,7 +112,7 @@ export default function ScChatInputbox({
 
     return (
         <div className="p-1.5 mx-auto justify-center w-full max-full">
-            <div className={`bg-white border-2 ${isFocused ? 'border-[#005DE9]' : 'border-gray-200'} rounded transition-colors relative`}>
+            <div className={`bg-white border-2 ${isFocused ? 'border-[#005de9]' : 'border-gray-200'} rounded transition-colors relative`}>
                 {/* 상단 영역 - TODO: 파일 선택 기능 추가 필요 */}
                 <div className="px-1.5 py-1.5 flex items-center justify-between relative">
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -158,8 +158,8 @@ export default function ScChatInputbox({
                         className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${disabled || isSendingMessage || !message.trim()
                             ? 'bg-gray-300 text-white cursor-not-allowed'
                             : isConnected
-                                ? 'bg-[#005DE9] text-white hover:bg-blue-700 active:scale-95'
-                                : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-95'
+                                ? 'bg-[#005de9] text-white hover:bg-[#004bb7] active:scale-95'
+                                : 'bg-gray-500 text-white hover:bg-gray-600 active:scale-95'
                             }`}
                         title={!isConnected ? 'Connecting to AI server...' : 'Send message'}
                     >

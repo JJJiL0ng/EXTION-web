@@ -23,9 +23,11 @@ export default function ScChattingViewer() {
               }`}
             >
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                className={`${
+                  message.role === "user" ? "max-w-[80%]" : "w-full"
+                } rounded-lg px-4 py-2 ${
                   message.role === "user"
-                    ? "bg-blue-500 text-white"
+                    ? "bg-[#005de9] text-white"
                     : "bg-gray-100 text-gray-900"
                 }`}
               >
@@ -35,7 +37,7 @@ export default function ScChattingViewer() {
                 <div
                   className={`text-xs mt-1 ${
                     message.role === "user"
-                      ? "text-blue-100"
+                      ? "text-gray-200"
                       : "text-gray-500"
                   }`}
                 >

@@ -59,7 +59,7 @@ export default function DualSpreadViewer({
                 <div className="p-2 bg-white border-b flex-shrink-0">
                     <button
                         onClick={onBack}
-                        className="px-4 py-2 bg-[#005de9] text-white rounded hover:bg-blue-600"
+                        className="px-4 py-2 bg-[#005de9] text-white rounded hover:bg-[#004bb7]"
                     >
                         ← 돌아가기
                     </button>
