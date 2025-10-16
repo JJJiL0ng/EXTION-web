@@ -7,6 +7,7 @@ import { useSourceSheetNameStore } from "../_sc-store/sourceSheetNameStore";
 import { useTargetSheetNameStore } from "../_sc-store/targetSheetNameStore";
 import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 import { useScChattingVisabliltyStore } from '../_sc-store/scChattingVisabiltyStore';
+import { useScChattingStore } from '../_sc-store/scChattingStore';
 
 export interface useUploadSheetAndMappingProps {
     spreadSourceRef: any;
@@ -23,6 +24,8 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
     const isExcuteMappingSuggestion = true;
     const isFirstWorkFlowGenerated = true;
     const userId = useUserIdStore((state) => state.userId);
+
+    const { addMessage } = useScChattingStore();
 
     const { scChattingVisablilty, setScChattingVisablilty } = useScChattingVisabliltyStore();
 
@@ -100,7 +103,12 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
             if (response) {
                 setScChattingVisablilty(true); // 업로드 성공 시 채팅 영역 표시
             }
-            
+            if (response.mappingSuggestions) {
+                addMessage({ // 매핑 제안 메시지 추가
+                    role: 'assistant',
+                    content: `매핑 제안:\n${response.mappingSuggestions}`
+                });
+            }
             return response;
         } catch (error) {
             console.error('Error uploading sheets and mapping:', error);

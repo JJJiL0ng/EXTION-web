@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { ChatMode } from '@/_aaa_sheetChat/_hooks/aiChat/useChatMode';
+import { useScChattingStore } from '@/_aaa_schema-converter/_sc-store/scChattingStore';
 
 // TODO: ChatMode 타입 정의 필요
 
@@ -17,6 +18,9 @@ export default function ScChatInputbox({
     disabled = false,
     onSendMessage
 }: ScChatInputboxProps) {
+    // 채팅 스토어
+    const addMessage = useScChattingStore((state) => state.addMessage);
+
     // TODO: 상태관리 스토어로 이동 필요
     const [message, setMessage] = useState('');
     const [showModeModal, setShowModeModal] = useState(false);
@@ -76,6 +80,12 @@ export default function ScChatInputbox({
     // 메시지 전송 핸들러
     const handleSend = () => {
         if (!message.trim() || disabled || isSendingMessage) return;
+
+        // 유저 메시지를 채팅 스토어에 추가
+        addMessage({
+            role: 'user',
+            content: message
+        });
 
         // TODO: 실제 메시지 전송 로직 구현 필요
         console.log('Sending message:', { message });
