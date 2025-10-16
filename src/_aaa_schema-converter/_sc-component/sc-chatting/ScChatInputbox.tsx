@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
-import { ChatMode } from '@/_aaa_sheetChat/_hooks/aiChat/useChatMode';
 import { useScChattingStore } from '@/_aaa_schema-converter/_sc-store/scChattingStore';
 
 // TODO: ChatMode 타입 정의 필요
@@ -21,10 +19,8 @@ export default function ScChatInputbox({
     // 채팅 스토어
     const addMessage = useScChattingStore((state) => state.addMessage);
 
-    // TODO: 상태관리 스토어로 이동 필요
     const [message, setMessage] = useState('');
-    const [showModeModal, setShowModeModal] = useState(false);
-    const [showModelModal, setShowModelModal] = useState(false);
+
     const [isFocused, setIsFocused] = useState(false);
     const [isComposing, setIsComposing] = useState(false);
     const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -60,23 +56,6 @@ export default function ScChatInputbox({
         adjustTextareaHeight();
     }, [message, adjustTextareaHeight]);
 
-    // 모달 외부 클릭 처리
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (modeModalRef.current && !modeModalRef.current.contains(event.target as Node)) {
-                setShowModeModal(false);
-            }
-            if (modelModalRef.current && !modelModalRef.current.contains(event.target as Node)) {
-                setShowModelModal(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
     // 메시지 전송 핸들러
     const handleSend = () => {
         if (!message.trim() || disabled || isSendingMessage) return;
@@ -84,7 +63,8 @@ export default function ScChatInputbox({
         // 유저 메시지를 채팅 스토어에 추가
         addMessage({
             role: 'user',
-            content: message
+            content: message,
+            contentType: 'user-message'
         });
 
         // TODO: 실제 메시지 전송 로직 구현 필요

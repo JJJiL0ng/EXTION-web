@@ -106,6 +106,7 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
             if (response.mappingSuggestions) {
                 addMessage({ // 매핑 제안 메시지 추가
                     role: 'assistant',
+                    contentType: 'mapping-suggestion',
                     content: `매핑 제안:\n${response.mappingSuggestions}`
                 });
             }
