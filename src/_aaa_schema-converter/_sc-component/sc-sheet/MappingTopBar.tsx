@@ -3,14 +3,19 @@ import { useIsMappingReady } from '@/_aaa_schema-converter/_sc-hook/useIsMapping
 import { useSourceSheetRangeStore } from '@/_aaa_schema-converter/_sc-store/sourceSheetRangeStore';
 import { useTargetSheetRangeStore } from '@/_aaa_schema-converter/_sc-store/targetSheetRangeStore';
 
+import { useUploadSheetAndMapping } from '@/_aaa_schema-converter/_sc-hook/useUploadSheetAndMapping';
+
 interface MappingTopBarProps {
+    spreadTargetRef: any;
+    spreadSourceRef: any;
     onStartMapping?: () => void;
 }
 
-export const MappingTopBar: React.FC<MappingTopBarProps> = ({ onStartMapping }) => {
+export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, spreadTargetRef, onStartMapping }) => {
     const isMappingReady = useIsMappingReady();
     const sourceRange = useSourceSheetRangeStore((state) => state.sourceRange);
     const targetRange = useTargetSheetRangeStore((state) => state.targetRange);
+    const { uploadSheetAndMapping } = useUploadSheetAndMapping({ spreadSourceRef, spreadTargetRef });
 
     const handleStartMapping = () => {
         console.log('매핑 시작:', {
@@ -27,10 +32,9 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ onStartMapping }) 
                 colCount: targetRange[3]
             }
         });
+        uploadSheetAndMapping();
+        
 
-        if (onStartMapping) {
-            onStartMapping();
-        }
     };
 
     return (

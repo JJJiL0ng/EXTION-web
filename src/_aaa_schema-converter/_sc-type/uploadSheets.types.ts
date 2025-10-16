@@ -1,5 +1,7 @@
 
 export interface UploadSheetsReqDto {
+    userId: string; // 사용자 ID (필수)
+    
     sourceSheetData: Record<string, any>;
 
     targetSheetData: Record<string, any>;

@@ -53,7 +53,7 @@ export default function DualSpreadViewer({
 
 
     return (
-        <div className="flex flex-col h-screen w-screen fixed inset-0" style={{ overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1 w-full" style={{ overflow: 'hidden' }}>
             {/* Back Button */}
             {onBack && (
                 <div className="p-2 bg-white border-b flex-shrink-0">

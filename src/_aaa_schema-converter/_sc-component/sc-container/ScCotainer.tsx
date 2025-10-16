@@ -17,13 +17,17 @@ export default function ScContainer() {
     };
 
     return (
-        <div className="flex flex-col h-screen w-screen">
-            {/* 매핑 정보 및 시작 버튼 탭바 */}
-            <MappingTopBar onStartMapping={handleStartMapping} />
-            
-            {/* 듀얼 스프레드시트 뷰어 */}
+        <div className="flex flex-col h-screen w-screen overflow-hidden">
             <TargetSheetProvider spreadRef={spreadRefTargetSheet}>
                 <SourceSheetProvider spreadRef={spreadRefSourceSheet}>
+                    {/* 매핑 정보 및 시작 버튼 탭바 */}
+                    <MappingTopBar 
+                        spreadSourceRef={spreadRefSourceSheet} 
+                        spreadTargetRef={spreadRefTargetSheet} 
+                        onStartMapping={handleStartMapping} 
+                    />
+                    
+                    {/* 듀얼 스프레드시트 뷰어 */}
                     <DualSpreadViewer
                         spreadRefSourceSheet={spreadRefSourceSheet}
                         spreadRefTargetSheet={spreadRefTargetSheet}
