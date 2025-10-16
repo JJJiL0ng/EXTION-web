@@ -6,6 +6,7 @@ import { useSourceSheetRangeStore } from "../_sc-store/sourceSheetRangeStore";
 import { useSourceSheetNameStore } from "../_sc-store/sourceSheetNameStore";
 import { useTargetSheetNameStore } from "../_sc-store/targetSheetNameStore";
 import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
+import { useScChattingVisabliltyStore } from '../_sc-store/scChattingVisabiltyStore';
 
 export interface useUploadSheetAndMappingProps {
     spreadSourceRef: any;
@@ -22,6 +23,8 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
     const isExcuteMappingSuggestion = true;
     const isFirstWorkFlowGenerated = true;
     const userId = useUserIdStore((state) => state.userId);
+
+    const { scChattingVisablilty, setScChattingVisablilty } = useScChattingVisabliltyStore();
 
     const uploadSheetAndMapping = async (workFlowId?: string): Promise<UploadSheetsResDto | null> => {
         if (isLoading) {
@@ -92,6 +95,12 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
         try {
             const response = await uploadSheetsAndMappingAPiConnector(dto);
             console.log('Upload response:', response);
+            
+            // 응답을 받은 후에 상태 업데이트
+            if (response) {
+                setScChattingVisablilty(true); // 업로드 성공 시 채팅 영역 표시
+            }
+            
             return response;
         } catch (error) {
             console.error('Error uploading sheets and mapping:', error);
