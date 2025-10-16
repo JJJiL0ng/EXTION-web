@@ -5,10 +5,9 @@ import { ChevronDown, Check } from 'lucide-react';
 import { ChatMode } from '@/_aaa_sheetChat/_hooks/aiChat/useChatMode';
 
 // TODO: ChatMode 타입 정의 필요
-type ScChatMode = 'Agent' | 'Edit';
 
 interface ScChatInputboxProps {
-    onSendMessage?: (message: string, mode: ScChatMode) => void;
+    onSendMessage?: (message: string) => void;
     placeholder?: string;
     disabled?: boolean;
 }
@@ -20,7 +19,6 @@ export default function ScChatInputbox({
 }: ScChatInputboxProps) {
     // TODO: 상태관리 스토어로 이동 필요
     const [message, setMessage] = useState('');
-    const [mode, setMode] = useState<ScChatMode>('Agent');
     const [showModeModal, setShowModeModal] = useState(false);
     const [showModelModal, setShowModelModal] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
@@ -80,10 +78,10 @@ export default function ScChatInputbox({
         if (!message.trim() || disabled || isSendingMessage) return;
 
         // TODO: 실제 메시지 전송 로직 구현 필요
-        console.log('Sending message:', { message, mode });
+        console.log('Sending message:', { message });
 
         if (onSendMessage) {
-            onSendMessage(message, mode);
+            onSendMessage(message);
         }
 
         // 메시지 전송 후 입력창 초기화
@@ -141,59 +139,6 @@ export default function ScChatInputbox({
                 {/* 하단 영역 - 컨트롤들 */}
                 <div className="p-1.5 flex items-center justify-between relative">
                     <div className="flex items-center">
-                        <div className="flex items-center space-x-2 mr-2">
-                            {/* 모드 선택 */}
-                            <div className="relative" ref={modeModalRef}>
-                                <button
-                                    onClick={() => setShowModeModal(!showModeModal)}
-                                    className="flex items-center justify-center gap-1 rounded px-2 text-xs text-gray-700 hover:bg-gray-200 transition-colors w-20"
-                                    disabled={disabled}
-                                >
-                                    <span className="capitalize">{mode}</span>
-                                    <span className="flex items-center" style={{ height: '24px' }}>
-                                        <ChevronDown size={16} />
-                                    </span>
-                                </button>
-
-                                {/* 모드 선택 모달 */}
-                                {showModeModal && (
-                                    <div className="absolute bottom-full mb-2 left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-[100] w-56">
-                                        <button
-                                            onClick={() => {
-                                                setMode('Agent');
-                                                setShowModeModal(false);
-                                            }}
-                                            className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t text-gray-700"
-                                        >
-                                            <div className="flex items-center justify-between gap-3">
-                                                <span className="text-left">
-                                                    Agent <span className="text-xs text-gray-500">auto apply changes</span>
-                                                </span>
-                                                <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                                                    {mode === 'Agent' ? <Check size={16} /> : null}
-                                                </span>
-                                            </div>
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setMode('Edit');
-                                                setShowModeModal(false);
-                                            }}
-                                            className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-b text-gray-700"
-                                        >
-                                            <div className="flex items-center justify-between gap-3">
-                                                <span className="text-left">
-                                                    Edit <span className="text-xs text-gray-500">manual apply changes</span>
-                                                </span>
-                                                <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                                                    {mode === 'Edit' ? <Check size={16} /> : null}
-                                                </span>
-                                            </div>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
                     </div>
 
                     {/* 전송 버튼 */}
