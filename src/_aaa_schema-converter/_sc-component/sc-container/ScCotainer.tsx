@@ -4,7 +4,7 @@ import DualSpreadViewer from "../sc-sheet/DualSpreadViewer";
 import { TargetSheetProvider } from "@/_aaa_schema-converter/_sc-context/TargetSheetProvider";
 import { SourceSheetProvider } from "@/_aaa_schema-converter/_sc-context/SourceSheetProvider";
 import { MappingTopBar } from "../sc-sheet/MappingTopBar";
-import ScChatting from "./ScChatting";
+import ScChatting from "../sc-chatting/ScChatting";
 import { useScChattingVisabliltyStore } from "@/_aaa_schema-converter/_sc-store/scChattingVisabiltyStore";
 
 export default function ScContainer() {
