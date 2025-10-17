@@ -9,17 +9,14 @@ import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userId
 import { useChatInputBoxHook } from '../../_hooks/aiChat/useChatInputBoxHook';
 
 interface ChatInputBoxProps {
-  onSendMessage?: (message: string, mode: ChatMode, selectedFile?: File) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  onFileAddClick?: () => void;
+  disabled: boolean,
 }
 
 const ChatInputBox: React.FC<ChatInputBoxProps> = ({
-  placeholder = "Enter your changes...",
   disabled = false,
-  onFileAddClick
 }) => {
+  const placeholder = "Enter your changes...";
+  const onFileAddClick = () => { };
   const userId = useUserIdStore((state) => state.userId);
   const {
     // State
@@ -66,7 +63,7 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
       const textarea = textareaRef.current;
       textarea.style.height = 'auto';
       const scrollHeight = textarea.scrollHeight;
-      
+
       if (scrollHeight <= maxHeight) {
         textarea.style.height = `${Math.max(scrollHeight, minHeight)}px`;
         textarea.style.overflowY = 'hidden';
@@ -152,134 +149,134 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
         <div className="p-1.5 flex items-center justify-between ">
           <div className="flex items-center">
             {/* 모드 선택 */}
-           <div className="flex items-center space-x-2 mr-2">
-             <div className=" relative" ref={modeModalRef}>
-              <button
-                onClick={() => setShowModeModal(!showModeModal)}
-                className="flex items-center justify-center gap-1 rounded px-2 text-xs text-gray-700 hover:bg-gray-200 transition-colors w-20"
-                disabled={disabled}
-              // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
-              >
-                <span className="capitalize">{mode}</span>
-                <span className="flex items-center" style={{ height: '24px' }}>
-                  <ChevronDown size={16} /> {/* 크기 크게 조정 */}
-                </span>
-              </button>
+            <div className="flex items-center space-x-2 mr-2">
+              <div className=" relative" ref={modeModalRef}>
+                <button
+                  onClick={() => setShowModeModal(!showModeModal)}
+                  className="flex items-center justify-center gap-1 rounded px-2 text-xs text-gray-700 hover:bg-gray-200 transition-colors w-20"
+                  disabled={disabled}
+                // style={{ minHeight: '40px' }} // 버튼 높이 제한 해제
+                >
+                  <span className="capitalize">{mode}</span>
+                  <span className="flex items-center" style={{ height: '24px' }}>
+                    <ChevronDown size={16} /> {/* 크기 크게 조정 */}
+                  </span>
+                </button>
 
-              {/* 모드 선택 모달 */}
-              {showModeModal && (
-                <div className="absolute bottom-full mb-2 left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-[100] w-56">
-                  {/* agent 옵션 */}
-                  <button
-                    onClick={() => {
-                      setMode('Agent');
-                      setShowModeModal(false);
-                    }}
-                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t text-gray-700"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-left">
-                        Agent <span className="text-xs text-gray-500">auto apply changes</span>
-                      </span>
-                      {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
-                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                        {mode === 'Agent' ? <Check size={16} /> : null}
-                      </span>
-                    </div>
-                  </button>
-                  {/* edit 옵션 */}
-                  <button
-                    onClick={() => {
-                      setMode('Edit');
-                      setShowModeModal(false);
-                    }}
-                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-b text-gray-700"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-left">
-                        Edit <span className="text-xs text-gray-500">manual apply changes</span>
-                      </span>
-                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                        {mode === 'Edit' ? <Check size={16} /> : null}
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              )}
+                {/* 모드 선택 모달 */}
+                {showModeModal && (
+                  <div className="absolute bottom-full mb-2 left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-[100] w-56">
+                    {/* agent 옵션 */}
+                    <button
+                      onClick={() => {
+                        setMode('Agent');
+                        setShowModeModal(false);
+                      }}
+                      className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t text-gray-700"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-left">
+                          Agent <span className="text-xs text-gray-500">auto apply changes</span>
+                        </span>
+                        {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
+                        <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                          {mode === 'Agent' ? <Check size={16} /> : null}
+                        </span>
+                      </div>
+                    </button>
+                    {/* edit 옵션 */}
+                    <button
+                      onClick={() => {
+                        setMode('Edit');
+                        setShowModeModal(false);
+                      }}
+                      className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-b text-gray-700"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-left">
+                          Edit <span className="text-xs text-gray-500">manual apply changes</span>
+                        </span>
+                        <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                          {mode === 'Edit' ? <Check size={16} /> : null}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 모델 선택 */}
+              <div className="relative" ref={modelModalRef}>
+                <button
+                  onClick={() => setShowModelModal(!showModelModal)}
+                  className="flex items-center justify-center gap-1 rounded px-2 text-xs text-gray-700 hover:bg-gray-200 transition-colors w-36"
+                  disabled={disabled}
+                >
+                  <span className="capitalize">{model}</span>
+                  <span className="flex items-center" style={{ height: '24px' }}>
+                    <ChevronDown size={16} /> {/* 크기 크게 조정 */}
+                  </span>
+                </button>
+
+                {/* 모델 선택 모달 */}
+                {showModelModal && (
+                  <div className="absolute bottom-full mb-2 left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-[100] w-64">
+                    {/* Extion large 옵션 */}
+                    <button
+                      onClick={() => {
+                        setModel('Extion large');
+                        setShowModelModal(false);
+                      }}
+                      className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t text-gray-700"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-left">
+                          Extion Large <span className="text-xs text-gray-500">largest model</span>
+                        </span>
+                        {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
+                        <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                          {model === 'Extion large' ? <Check size={16} /> : null}
+                        </span>
+                      </div>
+                    </button>
+                    {/* Extion medium 옵션 */}
+                    <button
+                      onClick={() => {
+                        setModel('Extion medium');
+                        setShowModelModal(false);
+                      }}
+                      className="w-full px-2 py-1 text-sm hover:bg-gray-100 text-gray-700"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-left">
+                          Extion medium <span className="text-xs text-gray-500">balanced model</span>
+                        </span>
+                        <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                          {model === 'Extion medium' ? <Check size={16} /> : null}
+                        </span>
+                      </div>
+                    </button>
+                    {/* Extion small 옵션 */}
+                    <button
+                      onClick={() => {
+                        setModel('Extion small');
+                        setShowModelModal(false);
+                      }}
+                      className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-b text-gray-700"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-left">
+                          Extion small <span className="text-xs text-gray-500">fast response</span>
+                        </span>
+                        <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
+                          {model === 'Extion small' ? <Check size={16} /> : null}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-
-            {/* 모델 선택 */}
-            <div className="relative" ref={modelModalRef}>
-              <button
-                onClick={() => setShowModelModal(!showModelModal)}
-                className="flex items-center justify-center gap-1 rounded px-2 text-xs text-gray-700 hover:bg-gray-200 transition-colors w-36"
-                disabled={disabled}
-              >
-                <span className="capitalize">{model}</span>
-                <span className="flex items-center" style={{ height: '24px' }}>
-                  <ChevronDown size={16} /> {/* 크기 크게 조정 */}
-                </span>
-              </button>
-
-              {/* 모델 선택 모달 */}
-              {showModelModal && (
-                <div className="absolute bottom-full mb-2 left-0 bg-white border border-[#D9D9D9] rounded shadow-lg z-[100] w-64">
-                  {/* Extion large 옵션 */}
-                  <button
-                    onClick={() => {
-                      setModel('Extion large');
-                      setShowModelModal(false);
-                    }}
-                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-t text-gray-700"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-left">
-                        Extion Large <span className="text-xs text-gray-500">largest model</span>
-                      </span>
-                      {/* 체크 아이콘 영역 (고정 폭으로 우측 정렬 고정) */}
-                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                        {model === 'Extion large' ? <Check size={16} /> : null}
-                      </span>
-                    </div>
-                  </button>
-                  {/* Extion medium 옵션 */}
-                  <button
-                    onClick={() => {
-                      setModel('Extion medium');
-                      setShowModelModal(false);
-                    }}
-                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 text-gray-700"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-left">
-                        Extion medium <span className="text-xs text-gray-500">balanced model</span>
-                      </span>
-                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                        {model === 'Extion medium' ? <Check size={16} /> : null}
-                      </span>
-                    </div>
-                  </button>
-                  {/* Extion small 옵션 */}
-                  <button
-                    onClick={() => {
-                      setModel('Extion small');
-                      setShowModelModal(false);
-                    }}
-                    className="w-full px-2 py-1 text-sm hover:bg-gray-100 rounded-b text-gray-700"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-left">
-                        Extion small <span className="text-xs text-gray-500">fast response</span>
-                      </span>
-                      <span className="w-5 h-5 flex items-center justify-center text-[#005DE9]">
-                        {model === 'Extion small' ? <Check size={16} /> : null}
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-           </div>
 
 
           </div>

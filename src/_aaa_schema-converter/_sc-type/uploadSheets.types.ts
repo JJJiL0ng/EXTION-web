@@ -10,22 +10,13 @@ export interface UploadSheetsReqDto {
 
     targetSheetName: string; // "타겟 v1" 등
 
-
     isFirstWorkFlowGenerated: boolean; // 처음 워크플로우 생성 여부
-
 
     isExcuteMappingSuggestion?: boolean; // 매핑 제안 실행 여부 (기본값: true)
 
-
     sourceSheetRange?: number[]; // [시작행, 종료행] - 선택사항
 
-    selectedSourceSheetName?: string; // 선택된 시트 이름 - 선택사항
-
-
     targetSheetRange?: number[]; // [시작행, 종료행] - 선택사항
-
-
-    selectedTargetSheetName?: string; // 선택된 시트 이름 - 선택사항
 
     workFlowId?: string; // 기존 워크플로우 ID
 }

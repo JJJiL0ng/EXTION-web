@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from "react"
 import { useScChattingVisabliltyStore } from "@/_aaa_schema-converter/_sc-store/scChattingVisabiltyStore";
+import { useScChattingStore } from "@/_aaa_schema-converter/_sc-store/scChattingStore";
 import ScChatInputbox from "./ScChatInputbox";
 import ScChattingViewer from "./ScChattingViewer";
 
 export default function ScChatting() {
   const { scChattingVisablilty, setScChattingVisablilty } = useScChattingVisabliltyStore();
+  const hasPendingMappingSuggestion = useScChattingStore((state) => state.hasPendingMappingSuggestion);
   return (
     <div className="flex flex-col h-full w-96 bg-white border-l border-gray-200">
         {/* 헤더 */}
@@ -21,7 +23,7 @@ export default function ScChatting() {
         
         {/* 입력박스 - 하단 고정 */}
         <div className="flex-shrink-0 border-t border-gray-200">
-          <ScChatInputbox />
+          <ScChatInputbox disabled={hasPendingMappingSuggestion} />
         </div>
     </div>
   );
