@@ -61,22 +61,36 @@ export const ScMappingEngine = ({
             try {
                 const { source_row, source_col, target_row, target_col } = mapping;
 
-                // 소스 셀에서 데이터 가져오기
-                const sourceValue = sourceSheet.getValue(source_row, source_col);
-                const sourceFormula = sourceSheet.getFormula(source_row, source_col);
-                const sourceStyle = sourceSheet.getStyle(source_row, source_col);
-
-                // 타겟 셀에 데이터 설정
-                // 수식이 있으면 수식을, 없으면 값을 설정
-                if (sourceFormula) {
-                    targetSheet.setFormula(target_row, target_col, sourceFormula);
-                } else {
-                    targetSheet.setValue(target_row, target_col, sourceValue);
+                // 1. 소스 셀에서 '최종 값'을 가져옵니다. 
+                // (수식이면 계산된 값, 아니면 그냥 값)
+                let sourceValue = sourceSheet.getValue(source_row, source_col);
+                
+                // 2. null 값 방어
+                if (sourceValue === null) {
+                    sourceValue = "";
                 }
 
-                // 스타일 복사 (옵션)
+                console.log(
+                    `Mapping [${source_row}, ${source_col}] -> [${target_row}, ${target_col}]`, 
+                    "Source Value:", 
+                    sourceValue
+                );
+                
+                // 3. 타겟 셀에 그 '최종 값'을 설정합니다.
+                targetSheet.setValue(target_row, target_col, sourceValue);
+
+                // 4. 스타일 복사 (❗️ 수정된 부분 ❗️)
+                const sourceStyle = sourceSheet.getStyle(source_row, source_col);
                 if (sourceStyle) {
-                    targetSheet.setStyle(target_row, target_col, sourceStyle);
+                    // 1. 원본 스타일 객체를 '복사'하여 새 객체를 만듭니다.
+                    //    (원본을 직접 수정하지 않습니다.)
+                    const styleToApply = { ...sourceStyle };
+
+                    // 2. '복사본'의 formula 속성을 확실하게 제거합니다.
+                    styleToApply.formula = null;
+
+                    // 3. 수식이 제거된 '복사본'을 타겟에 적용합니다.
+                    targetSheet.setStyle(target_row, target_col, styleToApply);
                 }
 
                 successCount++;
