@@ -2,12 +2,14 @@
 
 import React from "react";
 import { useScChattingStore } from "@/_aaa_schema-converter/_sc-store/scChattingStore";
+import { useMappingScript } from "@/_aaa_schema-converter/_sc-hook/useMappingScript";
 
 export default function ScChattingViewer() {
   const messages = useScChattingStore((state) => state.messages);
   const setHasPendingMappingSuggestion = useScChattingStore((state) => state.setHasPendingMappingSuggestion);
   const respondedMappingSuggestionId = useScChattingStore((state) => state.respondedMappingSuggestionId);
   const setRespondedMappingSuggestionId = useScChattingStore((state) => state.setRespondedMappingSuggestionId);
+  const { createMappingScript } = useMappingScript();
 
   // 가장 마지막 mapping-suggestion 메시지 찾기
   const lastMappingSuggestion = messages
@@ -16,7 +18,7 @@ export default function ScChattingViewer() {
 
   // 수락 핸들러
   const handleAccept = (messageId: string) => {
-    // TODO: API 호출 로직 구현 필요
+    createMappingScript();
     console.log('Mapping suggestion accepted');
     setRespondedMappingSuggestionId(messageId);
     setHasPendingMappingSuggestion(false);

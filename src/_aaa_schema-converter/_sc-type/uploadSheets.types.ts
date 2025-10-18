@@ -23,8 +23,9 @@ export interface UploadSheetsReqDto {
 
 export interface UploadSheetsResDto {
     success: boolean;
-    workflowId: string;
+    workFlowId: string;
     sourceSheetVersionId: string;
     targetSheetVersionId: string;
+    workFlowCodeId?: string;
     mappingSuggestions?: string; // 매핑 제안 결과 (선택적)
 }

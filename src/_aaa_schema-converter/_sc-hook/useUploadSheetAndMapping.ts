@@ -8,6 +8,7 @@ import { useTargetSheetNameStore } from "../_sc-store/targetSheetNameStore";
 import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 import { useScChattingVisabliltyStore } from '../_sc-store/scChattingVisabiltyStore';
 import { useScChattingStore } from '../_sc-store/scChattingStore';
+import { useScWorkflowStore } from '../_sc-store/scWorkflowStore';
 
 export interface useUploadSheetAndMappingProps {
     spreadSourceRef: any;
@@ -24,6 +25,7 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
     const isExcuteMappingSuggestion = true;
     const isFirstWorkFlowGenerated = true;
     const userId = useUserIdStore((state) => state.userId);
+    const { setWorkflowCodeId, setSourceSheetVersionId, setTargetSheetVersionId } = useScWorkflowStore();
 
     const { addMessage } = useScChattingStore();
 
@@ -101,6 +103,7 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
             
             // 응답을 받은 후에 상태 업데이트
             if (response) {
+                console.log('Response object:', JSON.stringify(response, null, 2));
                 setScChattingVisablilty(true); // 업로드 성공 시 채팅 영역 표시
             }
             if (response.mappingSuggestions) {
@@ -109,6 +112,27 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
                     contentType: 'mapping-suggestion',
                     content: `매핑 제안:\n${response.mappingSuggestions}`
                 });
+            }
+
+            // 상태 저장 (필수 필드)
+            console.log('Setting workflow state - workFlowCodeId:', response.workFlowCodeId);
+            console.log('Setting workflow state - sourceSheetVersionId:', response.sourceSheetVersionId);
+            console.log('Setting workflow state - targetSheetVersionId:', response.targetSheetVersionId);
+
+            if (response.workFlowCodeId) {
+                setWorkflowCodeId(response.workFlowCodeId);
+            } else {
+                console.warn('workFlowCodeId is missing in response');
+            }
+            if (response.sourceSheetVersionId) {
+                setSourceSheetVersionId(response.sourceSheetVersionId);
+            } else {
+                console.warn('sourceSheetVersionId is missing in response');
+            }
+            if (response.targetSheetVersionId) {
+                setTargetSheetVersionId(response.targetSheetVersionId);
+            } else {
+                console.warn('targetSheetVersionId is missing in response');
             }
             return response;
         } catch (error) {
