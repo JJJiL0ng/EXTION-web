@@ -14,5 +14,5 @@ export interface editScriptReqDto {
 export interface editScriptResDto {
     success: boolean;
     workFlowCodeId: string;
-    mappingSuggestions: string;
+    mappingSuggestion: string; // 서버에서 단수형으로 반환
 }

@@ -26,11 +26,12 @@ export const sendMultiturnChat = async ({ userMessage }: SendMultiturnChatProps)
     if (response.workFlowCodeId) {
         setWorkflowCodeId(response.workFlowCodeId);
     }
-    if (response.mappingSuggestions) {
+    // mappingSuggestion이 존재하면 (빈 문자열도 포함) 메시지 추가
+    if (response.mappingSuggestion !== undefined && response.mappingSuggestion !== null) {
         addMessage({ // 매핑 제안 메시지 추가
             role: 'assistant',
             contentType: 'mapping-suggestion',
-            content: `매핑 제안:\n${response.mappingSuggestions}`
+            content: response.mappingSuggestion // 서버에서 이미 포맷된 마크다운으로 받음
         });
     }
     
