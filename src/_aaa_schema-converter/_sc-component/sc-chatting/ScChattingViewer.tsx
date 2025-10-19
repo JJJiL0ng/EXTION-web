@@ -1,6 +1,7 @@
 //ai채팅과 유저 채팅 즉 메시지들을 랜더링하는 컴포넌트
 
 import React from "react";
+import ReactMarkdown from "react-markdown";
 import { useScChattingStore } from "@/_aaa_schema-converter/_sc-store/scChattingStore";
 import { useMappingScript } from "@/_aaa_schema-converter/_sc-hook/useMappingScript";
 
@@ -9,6 +10,8 @@ export default function ScChattingViewer() {
   const setHasPendingMappingSuggestion = useScChattingStore((state) => state.setHasPendingMappingSuggestion);
   const respondedMappingSuggestionId = useScChattingStore((state) => state.respondedMappingSuggestionId);
   const setRespondedMappingSuggestionId = useScChattingStore((state) => state.setRespondedMappingSuggestionId);
+  const isCreatingScript = useScChattingStore((state) => state.isCreatingScript);
+  const setIsCreatingScript = useScChattingStore((state) => state.setIsCreatingScript);
   const { createMappingScript } = useMappingScript();
 
   // 가장 마지막 mapping-suggestion 메시지 찾기
@@ -17,11 +20,19 @@ export default function ScChattingViewer() {
     .pop();
 
   // 수락 핸들러
-  const handleAccept = (messageId: string) => {
-    createMappingScript();
-    console.log('Mapping suggestion accepted');
-    setRespondedMappingSuggestionId(messageId);
-    setHasPendingMappingSuggestion(false);
+  const handleAccept = async (messageId: string) => {
+    try {
+      setIsCreatingScript(true);
+      setRespondedMappingSuggestionId(messageId);
+      setHasPendingMappingSuggestion(false);
+      
+      await createMappingScript();
+      console.log('Mapping suggestion accepted');
+    } catch (error) {
+      console.error('Failed to create mapping script:', error);
+    } finally {
+      setIsCreatingScript(false);
+    }
   };
 
   // 거절 핸들러
@@ -55,8 +66,16 @@ export default function ScChattingViewer() {
                       : "bg-gray-100 text-gray-900"
                   }`}
                 >
-                  <div className="text-sm whitespace-pre-wrap">
-                    {message.content}
+                  <div className="text-sm">
+                    {message.role === "user" ? (
+                      <div className="whitespace-pre-wrap">{message.content}</div>
+                    ) : (
+                      <div className="prose prose-sm max-w-none prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-pre:my-2 prose-ul:my-2 prose-ol:my-2 prose-code:bg-gray-200 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-200 prose-pre:text-gray-900">
+                        <ReactMarkdown>
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                   </div>
                   <div
                     className={`text-xs mt-1 ${
@@ -70,23 +89,41 @@ export default function ScChattingViewer() {
                 </div>
               </div>
 
-              {/* 가장 마지막 mapping-suggestion에만 수락/거절 버튼 표시 */}
+              {/* 가장 마지막 mapping-suggestion에만 수락/거절 버튼 또는 상태 메시지 표시 */}
               {message.contentType === 'mapping-suggestion' &&
-               lastMappingSuggestion?.id === message.id &&
-               respondedMappingSuggestionId !== message.id && (
+               lastMappingSuggestion?.id === message.id && (
                 <div className="flex gap-2 mt-2 justify-start">
-                  <button
-                    onClick={() => handleAccept(message.id)}
-                    className="px-4 py-2 bg-[#005de9] text-white rounded-lg hover:bg-[#004bb7] active:scale-95 transition-all"
-                  >
-                    수락
-                  </button>
-                  <button
-                    onClick={() => handleReject(message.id)}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 active:scale-95 transition-all"
-                  >
-                    거절
-                  </button>
+                  {respondedMappingSuggestionId === message.id ? (
+                    // 수락/거절 후 상태 메시지
+                    isCreatingScript ? (
+                      <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
+                        <div className="w-4 h-4 border-2 border-gray-300 border-t-[#005de9] rounded-full animate-spin" />
+                        <span className="text-sm">스크립트를 작성중입니다</span>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-2 text-sm bg-gray-100 text-[#005de9] rounded-lg">
+                        ✓ 스크립트가 적용되었습니다
+                      </div>
+                    )
+                  ) : (
+                    // 수락/거절 버튼
+                    <>
+                      <button
+                        onClick={() => handleAccept(message.id)}
+                        className="px-4 py-2 bg-[#005de9] text-white rounded-lg hover:bg-[#004bb7] active:scale-95 transition-all"
+                        disabled={isCreatingScript}
+                      >
+                        수락
+                      </button>
+                      <button
+                        onClick={() => handleReject(message.id)}
+                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 active:scale-95 transition-all"
+                        disabled={isCreatingScript}
+                      >
+                        거절
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

@@ -25,7 +25,7 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
     const isExcuteMappingSuggestion = true;
     const isFirstWorkFlowGenerated = true;
     const userId = useUserIdStore((state) => state.userId);
-    const { setWorkflowCodeId, setSourceSheetVersionId, setTargetSheetVersionId } = useScWorkflowStore();
+    const { setWorkFlowId, setWorkflowCodeId, setSourceSheetVersionId, setTargetSheetVersionId } = useScWorkflowStore();
 
     const { addMessage } = useScChattingStore();
 
@@ -133,6 +133,11 @@ export const useUploadSheetAndMapping = ({spreadSourceRef, spreadTargetRef}: use
                 setTargetSheetVersionId(response.targetSheetVersionId);
             } else {
                 console.warn('targetSheetVersionId is missing in response');
+            }
+            if (response.workFlowId) {
+                setWorkFlowId(response.workFlowId);
+            } else {
+                console.warn('workFlowId is missing in response');
             }
             return response;
         } catch (error) {

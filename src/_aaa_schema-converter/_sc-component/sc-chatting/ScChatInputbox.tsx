@@ -2,8 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useScChattingStore } from '@/_aaa_schema-converter/_sc-store/scChattingStore';
-
-// TODO: ChatMode 타입 정의 필요
+import { sendMultiturnChat } from '@/_aaa_schema-converter/_sc-hook/useMultiturnChat';
 
 interface ScChatInputboxProps {
     onSendMessage?: (message: string) => void;
@@ -57,26 +56,41 @@ export default function ScChatInputbox({
     }, [message, adjustTextareaHeight]);
 
     // 메시지 전송 핸들러
-    const handleSend = () => {
+    const handleSend = async () => {
         if (!message.trim() || disabled || isSendingMessage) return;
+
+        const userMessage = message;
+        setIsSendingMessage(true);
 
         // 유저 메시지를 채팅 스토어에 추가
         addMessage({
             role: 'user',
-            content: message,
+            content: userMessage,
             contentType: 'user-message'
         });
-
-        // TODO: 실제 메시지 전송 로직 구현 필요
-        console.log('Sending message:', { message });
-
-        if (onSendMessage) {
-            onSendMessage(message);
-        }
 
         // 메시지 전송 후 입력창 초기화
         setMessage('');
         adjustTextareaHeight();
+
+        try {
+            // 멀티턴 채팅 API 호출
+            await sendMultiturnChat({ userMessage });
+
+            if (onSendMessage) {
+                onSendMessage(userMessage);
+            }
+        } catch (error) {
+            console.error('Failed to send message:', error);
+            // 에러 메시지를 채팅에 추가할 수도 있습니다
+            addMessage({
+                role: 'assistant',
+                content: '메시지 전송 중 오류가 발생했습니다.',
+                contentType: 'user-message'
+            });
+        } finally {
+            setIsSendingMessage(false);
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

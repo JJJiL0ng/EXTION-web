@@ -36,6 +36,7 @@ export const useMappingScript = () => {
 
     try {
       const response = await createMappingScriptApiConnector(data);
+
       console.log("Mapping script created:", response);
       
       // ScMappingEngine에 spread 인스턴스를 전달
