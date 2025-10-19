@@ -85,7 +85,7 @@ export default function ScChatInputbox({
             // 에러 메시지를 채팅에 추가할 수도 있습니다
             addMessage({
                 role: 'assistant',
-                content: '메시지 전송 중 오류가 발생했습니다.',
+                content: 'An error occurred while sending the message.',
                 contentType: 'user-message'
             });
         } finally {

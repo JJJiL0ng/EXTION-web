@@ -51,7 +51,7 @@ export default function ScChattingViewer() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="text-center text-gray-400 mt-8">
-            메시지가 없습니다
+            No messages yet
           </div>
         ) : (
           messages.map((message) => (
@@ -103,11 +103,11 @@ export default function ScChattingViewer() {
                       isCreatingScript ? (
                         <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
                           <div className="w-4 h-4 border-2 border-gray-300 border-t-[#005de9] rounded-full animate-spin" />
-                          <span className="text-sm">스크립트를 작성중입니다</span>
+                          <span className="text-sm">Creating script...</span>
                         </div>
                       ) : (
                         <div className="px-4 py-2 text-sm bg-gray-100 text-[#005de9] rounded-lg">
-                          ✓ 스크립트가 적용되었습니다
+                          ✓ Script has been applied
                         </div>
                       )
                     )
@@ -119,14 +119,14 @@ export default function ScChattingViewer() {
                         className="px-4 py-2 bg-[#005de9] text-white rounded-lg hover:bg-[#004bb7] active:scale-95 transition-all"
                         disabled={isCreatingScript}
                       >
-                        수락
+                        Accept
                       </button>
                       <button
                         onClick={() => handleReject(message.id)}
                         className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 active:scale-95 transition-all"
                         disabled={isCreatingScript}
                       >
-                        거절
+                        Reject
                       </button>
                     </>
                   )}

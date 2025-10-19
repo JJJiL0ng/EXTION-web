@@ -54,7 +54,7 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, s
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
-                        새 매핑하기
+                        New Mapping
                     </button>
 
                     {/* 구분선 */}
@@ -62,14 +62,14 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, s
 
                     {/* 소스 영역 정보 */}
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">소스 영역:</span>
+                        <span className="text-sm text-gray-500">Source Range:</span>
                         <div className={`px-3 py-1 rounded border transition-all ${
                             sourceRange[2] > 1 || sourceRange[3] > 1
                                 ? 'bg-[#005de9]/5 border-[#005de9]/20'
                                 : 'bg-gray-50 border-gray-200'
                         }`}>
                             <span className="text-sm font-mono text-gray-700">
-                                {sourceRange[2]}행 × {sourceRange[3]}열
+                                {sourceRange[2]} rows × {sourceRange[3]} cols
                             </span>
                         </div>
                     </div>
@@ -79,14 +79,14 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, s
 
                     {/* 타겟 영역 정보 */}
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">타겟 영역:</span>
+                        <span className="text-sm text-gray-500">Target Range:</span>
                         <div className={`px-3 py-1 rounded border transition-all ${
                             targetRange[2] > 1 || targetRange[3] > 1
                                 ? 'bg-[#005de9]/5 border-[#005de9]/20'
                                 : 'bg-gray-50 border-gray-200'
                         }`}>
                             <span className="text-sm font-mono text-gray-700">
-                                {targetRange[2]}행 × {targetRange[3]}열
+                                {targetRange[2]} rows × {targetRange[3]} cols
                             </span>
                         </div>
                     </div>
@@ -95,7 +95,7 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, s
                     {isMappingReady && (
                         <div className="flex items-center gap-2 ml-2">
                             <div className="w-2 h-2 bg-[#005de9] rounded-full animate-pulse"></div>
-                            <span className="text-xs font-medium text-[#005de9]">준비 완료</span>
+                            <span className="text-xs font-medium text-[#005de9]">Ready</span>
                         </div>
                     )}
                 </div>
@@ -119,7 +119,7 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, s
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                         )}
-                        {isLoading ? '매핑 중...' : isMappingReady ? '매핑 시작' : '파일 업로드 후 드레그 하여 영역을 선택하세요'}
+                        {isLoading ? 'Mapping...' : isMappingReady ? 'Start Mapping' : 'Upload files and drag to select ranges'}
                     </button>
                 )}
             </div>
@@ -128,7 +128,7 @@ export const MappingTopBar: React.FC<MappingTopBarProps> = ({ spreadSourceRef, s
             {!isMappingReady && (
                 <div className="px-6 pb-3 border-t border-gray-100">
                     <p className="text-xs text-gray-500 pt-2">
-                        소스와 타겟 시트에서 각각 영역을 선택해주세요 (드래그하여 1행×1열보다 큰 영역 선택)
+                        Please select ranges in both source and target sheets (drag to select an area larger than 1 row × 1 column)
                     </p>
                 </div>
             )}
