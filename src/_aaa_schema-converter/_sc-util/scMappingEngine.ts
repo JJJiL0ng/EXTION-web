@@ -76,21 +76,61 @@ export const ScMappingEngine = ({
                     sourceValue
                 );
                 
-                // 3. 타겟 셀에 그 '최종 값'을 설정합니다.
+                // 3. 타겟 셀의 기존 수식을 먼저 제거합니다.
+                targetSheet.setFormula(target_row, target_col, null);
+                
+                // 4. 타겟 셀에 그 '최종 값'을 설정합니다.
                 targetSheet.setValue(target_row, target_col, sourceValue);
 
-                // 4. 스타일 복사 (❗️ 수정된 부분 ❗️)
+                // 5. 스타일 복사 (수식 제외)
+                // setStyle 대신 개별 스타일 속성을 직접 설정
                 const sourceStyle = sourceSheet.getStyle(source_row, source_col);
                 if (sourceStyle) {
-                    // 1. 원본 스타일 객체를 '복사'하여 새 객체를 만듭니다.
-                    //    (원본을 직접 수정하지 않습니다.)
-                    const styleToApply = { ...sourceStyle };
-
-                    // 2. '복사본'의 formula 속성을 확실하게 제거합니다.
-                    styleToApply.formula = null;
-
-                    // 3. 수식이 제거된 '복사본'을 타겟에 적용합니다.
-                    targetSheet.setStyle(target_row, target_col, styleToApply);
+                    try {
+                        // 폰트
+                        if (sourceStyle.font) {
+                            targetSheet.getCell(target_row, target_col).font(sourceStyle.font);
+                        }
+                        // 전경색
+                        if (sourceStyle.foreColor) {
+                            targetSheet.getCell(target_row, target_col).foreColor(sourceStyle.foreColor);
+                        }
+                        // 배경색
+                        if (sourceStyle.backColor) {
+                            targetSheet.getCell(target_row, target_col).backColor(sourceStyle.backColor);
+                        }
+                        // 수평 정렬
+                        if (sourceStyle.hAlign !== undefined) {
+                            targetSheet.getCell(target_row, target_col).hAlign(sourceStyle.hAlign);
+                        }
+                        // 수직 정렬
+                        if (sourceStyle.vAlign !== undefined) {
+                            targetSheet.getCell(target_row, target_col).vAlign(sourceStyle.vAlign);
+                        }
+                        // 테두리
+                        if (sourceStyle.borderLeft) {
+                            targetSheet.getCell(target_row, target_col).borderLeft(sourceStyle.borderLeft);
+                        }
+                        if (sourceStyle.borderTop) {
+                            targetSheet.getCell(target_row, target_col).borderTop(sourceStyle.borderTop);
+                        }
+                        if (sourceStyle.borderRight) {
+                            targetSheet.getCell(target_row, target_col).borderRight(sourceStyle.borderRight);
+                        }
+                        if (sourceStyle.borderBottom) {
+                            targetSheet.getCell(target_row, target_col).borderBottom(sourceStyle.borderBottom);
+                        }
+                        // 포맷터
+                        if (sourceStyle.formatter) {
+                            targetSheet.getCell(target_row, target_col).formatter(sourceStyle.formatter);
+                        }
+                        // 워드랩
+                        if (sourceStyle.wordWrap !== undefined) {
+                            targetSheet.getCell(target_row, target_col).wordWrap(sourceStyle.wordWrap);
+                        }
+                    } catch (styleError) {
+                        console.warn(`Failed to copy style for cell [${target_row}, ${target_col}]:`, styleError);
+                    }
                 }
 
                 successCount++;
