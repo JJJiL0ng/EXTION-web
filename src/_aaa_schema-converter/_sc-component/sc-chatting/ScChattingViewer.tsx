@@ -64,7 +64,7 @@ export default function ScChattingViewer() {
                 <div
                   className={`${
                     message.role === "user" ? "max-w-[80%]" : "w-full"
-                  } rounded-lg px-4 py-2 ${
+                  } rounded px-4 py-2 ${
                     message.role === "user"
                       ? "bg-[#005de9] text-white"
                       : "bg-gray-100 text-gray-900"
@@ -101,12 +101,12 @@ export default function ScChattingViewer() {
                     // 수락한 경우에만 상태 메시지 표시
                     isAccepted && (
                       isCreatingScript ? (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded">
                           <div className="w-4 h-4 border-2 border-gray-300 border-t-[#005de9] rounded-full animate-spin" />
                           <span className="text-sm">Creating script...</span>
                         </div>
                       ) : (
-                        <div className="px-4 py-2 text-sm bg-gray-100 text-[#005de9] rounded-lg">
+                        <div className="px-4 py-2 text-sm bg-gray-100 text-[#005de9] rounded">
                           ✓ Script has been applied
                         </div>
                       )
@@ -116,14 +116,14 @@ export default function ScChattingViewer() {
                     <>
                       <button
                         onClick={() => handleAccept(message.id)}
-                        className="px-4 py-2 bg-[#005de9] text-white rounded-lg hover:bg-[#004bb7] active:scale-95 transition-all"
+                        className="px-4 py-2 bg-[#005de9] text-white rounded hover:bg-[#004bb7] active:scale-95 transition-all"
                         disabled={isCreatingScript}
                       >
                         Accept
                       </button>
                       <button
                         onClick={() => handleReject(message.id)}
-                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 active:scale-95 transition-all"
+                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 active:scale-95 transition-all"
                         disabled={isCreatingScript}
                       >
                         Reject
