@@ -9,11 +9,13 @@ interface ScChattingStore {
     hasPendingMappingSuggestion: boolean;
     respondedMappingSuggestionId: string | null;
     isCreatingScript: boolean;
+    isAccepted: boolean;
     addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
     clearMessages: () => void;
     setHasPendingMappingSuggestion: (pending: boolean) => void;
     setRespondedMappingSuggestionId: (id: string) => void;
     setIsCreatingScript: (isCreating: boolean) => void;
+    setIsAccepted: (accepted: boolean) => void;
 }
 
 export const useScChattingStore = create<ScChattingStore>((set) => ({
@@ -21,6 +23,7 @@ export const useScChattingStore = create<ScChattingStore>((set) => ({
     hasPendingMappingSuggestion: false,
     respondedMappingSuggestionId: null,
     isCreatingScript: false,
+    isAccepted: false,
 
     addMessage: (message) =>
         set((state) => ({
@@ -36,11 +39,13 @@ export const useScChattingStore = create<ScChattingStore>((set) => ({
             hasPendingMappingSuggestion: message.contentType === 'mapping-suggestion' ? true : state.hasPendingMappingSuggestion,
         })),
 
-    clearMessages: () => set({ messages: [], hasPendingMappingSuggestion: false, respondedMappingSuggestionId: null, isCreatingScript: false }),
+    clearMessages: () => set({ messages: [], hasPendingMappingSuggestion: false, respondedMappingSuggestionId: null, isCreatingScript: false, isAccepted: false }),
 
     setHasPendingMappingSuggestion: (pending) => set({ hasPendingMappingSuggestion: pending }),
 
     setRespondedMappingSuggestionId: (id) => set({ respondedMappingSuggestionId: id }),
 
     setIsCreatingScript: (isCreating) => set({ isCreatingScript: isCreating }),
+
+    setIsAccepted: (accepted) => set({ isAccepted: accepted }),
 }));

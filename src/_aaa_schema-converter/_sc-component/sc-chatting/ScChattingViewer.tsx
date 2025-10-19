@@ -12,6 +12,8 @@ export default function ScChattingViewer() {
   const setRespondedMappingSuggestionId = useScChattingStore((state) => state.setRespondedMappingSuggestionId);
   const isCreatingScript = useScChattingStore((state) => state.isCreatingScript);
   const setIsCreatingScript = useScChattingStore((state) => state.setIsCreatingScript);
+  const isAccepted = useScChattingStore((state) => state.isAccepted);
+  const setIsAccepted = useScChattingStore((state) => state.setIsAccepted);
   const { createMappingScript } = useMappingScript();
 
   // 가장 마지막 mapping-suggestion 메시지 찾기
@@ -23,6 +25,7 @@ export default function ScChattingViewer() {
   const handleAccept = async (messageId: string) => {
     try {
       setIsCreatingScript(true);
+      setIsAccepted(true);
       setRespondedMappingSuggestionId(messageId);
       setHasPendingMappingSuggestion(false);
       
@@ -37,6 +40,7 @@ export default function ScChattingViewer() {
 
   // 거절 핸들러
   const handleReject = (messageId: string) => {
+    setIsAccepted(false);
     setRespondedMappingSuggestionId(messageId);
     setHasPendingMappingSuggestion(false);
   };
@@ -94,16 +98,18 @@ export default function ScChattingViewer() {
                lastMappingSuggestion?.id === message.id && (
                 <div className="flex gap-2 mt-2 justify-start">
                   {respondedMappingSuggestionId === message.id ? (
-                    // 수락/거절 후 상태 메시지
-                    isCreatingScript ? (
-                      <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
-                        <div className="w-4 h-4 border-2 border-gray-300 border-t-[#005de9] rounded-full animate-spin" />
-                        <span className="text-sm">스크립트를 작성중입니다</span>
-                      </div>
-                    ) : (
-                      <div className="px-4 py-2 text-sm bg-gray-100 text-[#005de9] rounded-lg">
-                        ✓ 스크립트가 적용되었습니다
-                      </div>
+                    // 수락한 경우에만 상태 메시지 표시
+                    isAccepted && (
+                      isCreatingScript ? (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
+                          <div className="w-4 h-4 border-2 border-gray-300 border-t-[#005de9] rounded-full animate-spin" />
+                          <span className="text-sm">스크립트를 작성중입니다</span>
+                        </div>
+                      ) : (
+                        <div className="px-4 py-2 text-sm bg-gray-100 text-[#005de9] rounded-lg">
+                          ✓ 스크립트가 적용되었습니다
+                        </div>
+                      )
                     )
                   ) : (
                     // 수락/거절 버튼
