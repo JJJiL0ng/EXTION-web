@@ -2,6 +2,7 @@ import { editScriptResDto, editScriptReqDto } from "../_sc-type/scMultiturn.type
 import { useScWorkflowStore } from "../_sc-store/scWorkflowStore";
 import { editMultiturnChatScriptApiConnector } from "../_sc-apiConnector/multiturnChat.apiConnector";
 import { useScChattingStore } from "../_sc-store/scChattingStore";
+import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
 
 export interface SendMultiturnChatProps {
     userMessage: string;
@@ -12,8 +13,11 @@ export const sendMultiturnChat = async ({ userMessage }: SendMultiturnChatProps)
     // getState()를 사용하여 스토어에서 값을 가져옴
     const { workFlowId, workflowCodeId, sourceSheetVersionId, targetSheetVersionId, setWorkflowCodeId } = useScWorkflowStore.getState();
     const { addMessage } = useScChattingStore.getState();
-    
+    const userId = useUserIdStore.getState().userId;
+
     const inputData: editScriptReqDto = {
+
+        userId: userId,
         message: userMessage,
         workFlowId: workFlowId,
         workFlowCodeId: workflowCodeId,

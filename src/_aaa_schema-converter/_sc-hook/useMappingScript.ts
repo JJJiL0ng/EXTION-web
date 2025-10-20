@@ -3,6 +3,8 @@ import { createMappingScriptApiConnector } from "../_sc-apiConnector/mappingScri
 import { ScMappingEngine } from "../_sc-util/scMappingEngine";
 import { useSourceSheetContext } from "../_sc-context/SourceSheetProvider";
 import { useTargetSheetContext } from "../_sc-context/TargetSheetProvider";
+import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
+
 
 export const useMappingScript = () => {
   const { spread: sourceSpread } = useSourceSheetContext();
@@ -10,7 +12,7 @@ export const useMappingScript = () => {
 
   const createMappingScript = async () => {
     const { sourceSheetVersionId, targetSheetVersionId, workflowCodeId } = useScWorkflowStore.getState();
-
+    const userId = useUserIdStore.getState().userId;
     // 상태 값 검증
     console.log('Current workflow store state:', {
       sourceSheetVersionId,
@@ -29,6 +31,7 @@ export const useMappingScript = () => {
     }
 
     const data = {
+      userId,
       sourceSheetVersionId,
       targetSheetVersionId,
       workFlowCodeId: workflowCodeId,

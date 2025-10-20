@@ -1,4 +1,6 @@
 export interface editScriptReqDto {
+    userId: string | null;
+
     message: string;
 
     workFlowId: string;

@@ -1,4 +1,5 @@
 export interface ScMappingScriptReqDto {
+    userId: string | null; // 사용자 ID (필수)
     sourceSheetVersionId: string;
     targetSheetVersionId: string;
     workFlowCodeId: string;
