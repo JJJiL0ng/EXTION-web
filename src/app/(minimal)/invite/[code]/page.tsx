@@ -32,7 +32,7 @@ export default function InviteCodePage() {
 
         if (result && result.success) {
           console.log('✅ [Invite Page] 성공 - /trypage로 이동');
-          router.push('/trypage');
+          router.push('/sctest');
         } else {
           console.log('❌ [Invite Page] 실패 - /invite-check로 이동');
           router.push('/invite-check');
