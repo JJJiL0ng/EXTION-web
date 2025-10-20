@@ -6,18 +6,19 @@ import { useTargetSheetNameStore } from "../_sc-store/targetSheetNameStore";
 
 export interface useGetActiveSheetNameProps {
     viewerType: 'source' | 'target';
-    spread: any;
+    spreadRef: React.MutableRefObject<any>;
 }
 
-export const useGetActiveSheetName = ({ viewerType, spread }: useGetActiveSheetNameProps): string => {
+export const useGetActiveSheetName = ({ viewerType, spreadRef }: useGetActiveSheetNameProps): string => {
     const [activeSheetName, setActiveSheetName] = useState<string>('');
     const prevSpreadRef = useRef<any>(null);
-    
+
     // viewer 타입에 따라 적절한 스토어 가져오기
     const setSourceSheetName = useSourceSheetNameStore((state) => state.setSourceSheetName);
     const setTargetSheetName = useTargetSheetNameStore((state) => state.setTargetSheetName);
 
     const updateActiveSheetName = useCallback(() => {
+        const spread = spreadRef.current;
         if (!spread) {
             console.log('useGetActiveSheetName: spread is null');
             return;
@@ -38,7 +39,7 @@ export const useGetActiveSheetName = ({ viewerType, spread }: useGetActiveSheetN
 
             console.log('useGetActiveSheetName: Setting sheet name to', sheetName);
             setActiveSheetName(sheetName);
-            
+
             // viewer 타입에 따라 적절한 스토어에 업데이트
             if (viewerType === 'source') {
                 setSourceSheetName(sheetName);
@@ -48,9 +49,10 @@ export const useGetActiveSheetName = ({ viewerType, spread }: useGetActiveSheetN
         } catch (error) {
             console.error('useGetActiveSheetName: Error in updateActiveSheetName', error);
         }
-    }, [spread, viewerType, setSourceSheetName, setTargetSheetName]);
+    }, [spreadRef, viewerType, setSourceSheetName, setTargetSheetName]);
 
     useEffect(() => {
+        const spread = spreadRef.current;
         if (!spread) {
             console.log('useGetActiveSheetName: Effect - spread is null, skipping');
             return;
@@ -73,7 +75,7 @@ export const useGetActiveSheetName = ({ viewerType, spread }: useGetActiveSheetN
 
         // 시트 변경 이벤트 리스너 추가
         spread.bind(GC.Spread.Sheets.Events.ActiveSheetChanged, updateActiveSheetName);
-        
+
         // 초기 시트 이름 설정 (약간의 지연을 주어 spread가 완전히 초기화되도록 함)
         setTimeout(() => {
             updateActiveSheetName();
@@ -82,7 +84,7 @@ export const useGetActiveSheetName = ({ viewerType, spread }: useGetActiveSheetN
         // 클린업
         return () => {
             console.log('useGetActiveSheetName: Effect cleanup - Unbinding event listener');
-            if (spread) {
+            if (spread && spread.unbind) {
                 try {
                     spread.unbind(GC.Spread.Sheets.Events.ActiveSheetChanged, updateActiveSheetName);
                 } catch (error) {
@@ -90,7 +92,7 @@ export const useGetActiveSheetName = ({ viewerType, spread }: useGetActiveSheetN
                 }
             }
         };
-    }, [spread, updateActiveSheetName]);
+    }, [spreadRef, updateActiveSheetName]);
 
     return activeSheetName;
 }

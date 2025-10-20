@@ -71,11 +71,11 @@ export const ScMappingEngine = ({
                     sourceValue = "";
                 }
 
-                console.log(
-                    `Mapping [${source_row}, ${source_col}] -> [${target_row}, ${target_col}]`, 
-                    "Source Value:", 
-                    sourceValue
-                );
+                // console.log(
+                //     `Mapping [${source_row}, ${source_col}] -> [${target_row}, ${target_col}]`, 
+                //     "Source Value:", 
+                //     sourceValue
+                // );
                 
                 // 3. 타겟 셀의 기존 수식을 먼저 제거합니다.
                 targetSheet.setFormula(target_row, target_col, null);

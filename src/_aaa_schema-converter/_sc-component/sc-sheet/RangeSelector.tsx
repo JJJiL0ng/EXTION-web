@@ -2,12 +2,12 @@ import { useGetSheetRange } from "@/_aaa_schema-converter/_sc-hook/useGetSheetRa
 import { useGetActiveSheetName } from "@/_aaa_schema-converter/_sc-hook/useGetActiveSheetName";
 
 interface RangeSelectorProps {
-    spread: any;
+    spreadRef: React.MutableRefObject<any>;
     viewerType: 'source' | 'target';
 }
 
-export const RangeSelector: React.FC<RangeSelectorProps> = ({ spread, viewerType }) => {
-    const [row, col, rowCount, colCount] = useGetSheetRange({ spread, viewerType });
+export const RangeSelector: React.FC<RangeSelectorProps> = ({ spreadRef, viewerType }) => {
+    const [row, col, rowCount, colCount] = useGetSheetRange({ spreadRef, viewerType });
 
     // 열 번호를 알파벳으로 변환 (A, B, C, ... Z, AA, AB, ...)
     const getColumnLabel = (colIndex: number): string => {
@@ -28,7 +28,7 @@ export const RangeSelector: React.FC<RangeSelectorProps> = ({ spread, viewerType
         ? startCell 
         : `${startCell}:${endCell}`;
 
-    const activeSheetName = useGetActiveSheetName({ viewerType, spread });
+    const activeSheetName = useGetActiveSheetName({ viewerType, spreadRef });
 
     return (
         <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200 shadow-sm">

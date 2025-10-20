@@ -6,19 +6,20 @@ import { useTargetSheetRangeStore } from "@/_aaa_schema-converter/_sc-store/targ
 
 
 export interface RangeSelectorProps {
-    spread: any; // SpreadJS 인스턴스 타입
+    spreadRef: React.MutableRefObject<any>; // SpreadJS ref
     viewerType: 'source' | 'target';
 }
 
-export const useGetSheetRange = ({ spread, viewerType }: RangeSelectorProps): [number, number, number, number] => {
+export const useGetSheetRange = ({ spreadRef, viewerType }: RangeSelectorProps): [number, number, number, number] => {
     const [range, setRange] = useState<[number, number, number, number]>([0, 0, 1, 1]);
-    
+
     // viewer 타입에 따라 적절한 스토어 가져오기
     const setSourceRange = useSourceSheetRangeStore((state) => state.setSourceRange);
     const setTargetRange = useTargetSheetRangeStore((state) => state.setTargetRange);
 
     // useCallback을 사용하여 안정적인 함수 참조 유지
     const updateRange = useCallback(() => {
+        const spread = spreadRef.current;
         if (!spread) {
             console.log('useGetSheetRange: spread is null');
             return;
@@ -44,7 +45,7 @@ export const useGetSheetRange = ({ spread, viewerType }: RangeSelectorProps): [n
                 ];
                 // console.log('useGetSheetRange: Setting range to', rangeArray);
                 setRange(rangeArray);
-                
+
                 // viewer 타입에 따라 적절한 스토어에 업데이트
                 if (viewerType === 'source') {
                     setSourceRange(rangeArray);
@@ -55,9 +56,10 @@ export const useGetSheetRange = ({ spread, viewerType }: RangeSelectorProps): [n
         } catch (error) {
             console.error('useGetSheetRange: Error in updateRange', error);
         }
-    }, [spread, viewerType, setSourceRange, setTargetRange]);
+    }, [spreadRef, viewerType, setSourceRange, setTargetRange]);
 
     useEffect(() => {
+        const spread = spreadRef.current;
         if (!spread) {
             console.log('useGetSheetRange: Effect - spread is null, skipping');
             return;
@@ -74,8 +76,10 @@ export const useGetSheetRange = ({ spread, viewerType }: RangeSelectorProps): [n
         // 클린업
         return () => {
             // console.log('useGetSheetRange: Effect - Unbinding event listener');
-            spread.unbind(GC.Spread.Sheets.Events.SelectionChanged, updateRange);
+            if (spread && spread.unbind) {
+                spread.unbind(GC.Spread.Sheets.Events.SelectionChanged, updateRange);
+            }
         };
-    }, [spread, updateRange]);
+    }, [spreadRef, updateRange]);
     return range;
 }

@@ -3,7 +3,7 @@
 
 // Force dynamic rendering to avoid SSR issues with SpreadJS
 export const dynamic = 'force-dynamic';
-import React, { useState, useMemo, useEffect } from "react";
+import React from "react";
 import { RangeSelector } from "./RangeSelector";
 import FFileUploadButton from "./FIleUploadButton";
 import { useFileState } from "@/_aaa_schema-converter/_sc-context/FileStateProvider";
@@ -29,27 +29,6 @@ export default function DualSpreadViewer({
     spreadRefTargetSheet
 }: DualSpreadViewerProps) {
     const { sourceFile, targetFile, setSourceFile, setTargetFile } = useFileState();
-
-    // spread ref가 변경될 때 리렌더링을 트리거하기 위한 state
-    const [sourceSpread, setSourceSpread] = useState<any>(null);
-    const [targetSpread, setTargetSpread] = useState<any>(null);
-
-    // spread ref가 설정되면 state 업데이트
-    useEffect(() => {
-        const checkInterval = setInterval(() => {
-            if (spreadRefSourceSheet.current && !sourceSpread) {
-                setSourceSpread(spreadRefSourceSheet.current);
-            }
-            if (spreadRefTargetSheet.current && !targetSpread) {
-                setTargetSpread(spreadRefTargetSheet.current);
-            }
-            if (spreadRefSourceSheet.current && spreadRefTargetSheet.current) {
-                clearInterval(checkInterval);
-            }
-        }, 100);
-
-        return () => clearInterval(checkInterval);
-    }, [sourceSpread, targetSpread, spreadRefSourceSheet, spreadRefTargetSheet]);
 
 
     return (
@@ -86,7 +65,7 @@ export default function DualSpreadViewer({
                             )}
                         </div>
                     </div>
-                    {sourceFile && <RangeSelector spread={sourceSpread} viewerType="source"/>}
+                    {sourceFile && <RangeSelector spreadRef={spreadRefSourceSheet} viewerType="source"/>}
                     <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
                         <SpreadSheet spreadRef={spreadRefSourceSheet} file={sourceFile || undefined} />
                     </div>
@@ -110,7 +89,7 @@ export default function DualSpreadViewer({
                             )}
                         </div>
                     </div>
-                    {targetFile && <RangeSelector spread={targetSpread} viewerType="target"/>}
+                    {targetFile && <RangeSelector spreadRef={spreadRefTargetSheet} viewerType="target"/>}
                     <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
                         <SpreadSheet spreadRef={spreadRefTargetSheet} file={targetFile || undefined} />
                     </div>
