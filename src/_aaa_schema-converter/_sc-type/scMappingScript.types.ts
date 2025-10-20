@@ -11,15 +11,11 @@ export interface ScMappingScriptResDto {
     mappingScript: ScMappingScript; // 생성된 매핑 스크립트
 }
 
-export interface ScMappingItem {
-    source_row: number;
-    source_col: number;
-    target_row: number;
-    target_col: number;
-}
+// 매핑 아이템: [source_row, source_col, target_row, target_col] 배열 형식
+export type ScMappingItem = [number, number, number, number];
 
 export interface ScMappingScript {
-    source_sheet: string;
-    target_sheet: string;
-    mappings: ScMappingItem[];
+    s: string; // source_sheet (축약형)
+    t: string; // target_sheet (축약형)
+    m: ScMappingItem[]; // mappings (축약형)
 }

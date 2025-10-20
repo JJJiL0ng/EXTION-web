@@ -123,7 +123,6 @@ export default function FileUploadChattingContainer(_props: FileUploadChattingCo
             <ChatInputBox 
               // userId={userId}
               disabled={false} // 임시로 항상 활성화
-              onFileAddClick={handleOpenModal}
             />
           </div>
         </>

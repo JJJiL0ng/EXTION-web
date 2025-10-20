@@ -105,7 +105,6 @@ export default function ChattingContainer() {
             <ChatInputBox
               // userId={userId}
               disabled={false} // 임시로 항상 활성화
-              onFileAddClick={handleOpenModal}
             />
           </div>
         </>
