@@ -38,7 +38,7 @@ export default function InviteCheck() {
             const result = await verify(trimmed);
 
             if (result && result.success) {
-                router.push("/trypage");
+                router.push("/sctest");
             } else {
                 setMessage(`Invalid invite code. (${attempts + 1}/${MAX_ATTEMPTS})`);
                 setCode("");
@@ -124,21 +124,14 @@ export default function InviteCheck() {
 
                     {/* 에러 메시지 */}
                     {message && (
-                        <div className="p-2.5 sm:p-3 bg-red-50 border-l-3 border-red-400 rounded-md">
-                            <p className="text-red-700 text-xs sm:text-sm font-medium">
+                        <div className="p-2.5 sm:p-3 bg-red-50 border-l-3 border-red-400 rounded">
+                            <p className="text-red-800 text-xs sm:text-sm font-medium">
                                 {message}
                             </p>
                         </div>
                     )}
 
-                    {/* 진행 상황 표시 */}
-                    {attempts > 0 && attempts < MAX_ATTEMPTS && (
-                        <div className="mt-2 sm:mt-3 text-center">
-                            <p className="text-[10px] sm:text-xs text-gray-500">
-                                Attempts: {attempts} / {MAX_ATTEMPTS}
-                            </p>
-                        </div>
-                    )}
+                    {/* 진행 상황 표시: (removed duplicate small counter - only max-attempts warning shown) */}
                 </div>
 
                 {/* 하단 도움말 */}

@@ -3,13 +3,26 @@ const nextConfig = {
   // 프로덕션에서 console.log 제거
   compiler: {
       removeConsole: process.env.NODE_ENV === 'production' ? {
-          exclude: ['error', 'warn'] // error와 warn은 유지
+          exclude: ['error', 'warn']
       } : false
   },
 
   // SSR 설정 - SpreadJS 브라우저 전용 라이브러리 처리
   experimental: {
     esmExternals: false
+  },
+  
+  // Webpack 설정 추가 (Hot Reload 개선)
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // 개발 환경에서 파일 감지 개선
+      config.watchOptions = {
+        poll: 1000, // 1초마다 파일 변경 체크
+        aggregateTimeout: 300, // 변경 감지 후 300ms 대기
+        ignored: /node_modules/,
+      }
+    }
+    return config
   },
   
   // 이미지 최적화
@@ -27,7 +40,7 @@ const nextConfig = {
               port: '',
               pathname: '/**',
           },
-            {
+          {
               protocol: 'https',
               hostname: 'cdn.extion.co',
               port: '',
@@ -39,7 +52,6 @@ const nextConfig = {
               port: '',
               pathname: '/**',
           },
-          // 개발환경용 localhost 추가 (개발 시에만 적용)
           ...(process.env.NODE_ENV === 'development' ? [
               {
                   protocol: 'http',
@@ -52,11 +64,9 @@ const nextConfig = {
       formats: ['image/webp', 'image/avif'],
   },
   
-  // 압축 및 최적화
   compress: true,
   poweredByHeader: false,
   
-  // SEO를 위한 헤더 설정
   async headers() {
       return [
           {
@@ -88,22 +98,12 @@ const nextConfig = {
       ]
   },
   
-  // 리다이렉트 설정 (필요시)
   async redirects() {
-      return [
-          // 예: 구 도메인에서 새 도메인으로 리다이렉트
-          // {
-          //   source: '/old-path',
-          //   destination: '/',
-          //   permanent: true,
-          // },
-      ]
+      return []
   },
 
-  // API 프록시 설정 (CORS 문제 해결)
   async rewrites() {
       return [
-          // PostHog 프록시 설정 (Ad-blocker 우회)
           {
               source: '/api/ph/static/:path*',
               destination: 'https://us-assets.i.posthog.com/static/:path*',
@@ -116,7 +116,6 @@ const nextConfig = {
               source: '/api/chatandsheet/:path*',
               destination: 'http://localhost:8080/chatandsheet/:path*',
           },
-          // 다른 API 엔드포인트도 필요시 추가
           {
               source: '/api/backend/:path*',
               destination: 'http://localhost:8080/:path*',

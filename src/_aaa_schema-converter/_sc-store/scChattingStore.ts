@@ -1,0 +1,51 @@
+//채팅 상태관리 스토어. ScChatviewer에서 이걸 구독하여 새로새로 추가되는 메시지를 랜더링 할거임
+
+import { create } from "zustand";
+import { ChatMessage } from "../_sc-type/scChatting.types";
+
+
+interface ScChattingStore {
+    messages: ChatMessage[];
+    hasPendingMappingSuggestion: boolean;
+    respondedMappingSuggestionId: string | null;
+    isCreatingScript: boolean;
+    isAccepted: boolean;
+    addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
+    clearMessages: () => void;
+    setHasPendingMappingSuggestion: (pending: boolean) => void;
+    setRespondedMappingSuggestionId: (id: string) => void;
+    setIsCreatingScript: (isCreating: boolean) => void;
+    setIsAccepted: (accepted: boolean) => void;
+}
+
+export const useScChattingStore = create<ScChattingStore>((set) => ({
+    messages: [],
+    hasPendingMappingSuggestion: false,
+    respondedMappingSuggestionId: null,
+    isCreatingScript: false,
+    isAccepted: false,
+
+    addMessage: (message) =>
+        set((state) => ({
+            messages: [
+                ...state.messages,
+                {
+                    ...message,
+                    id: crypto.randomUUID(),
+                    timestamp: Date.now(),
+                },
+            ],
+            // mapping-suggestion 메시지가 추가되면 pending 상태로 설정
+            hasPendingMappingSuggestion: message.contentType === 'mapping-suggestion' ? true : state.hasPendingMappingSuggestion,
+        })),
+
+    clearMessages: () => set({ messages: [], hasPendingMappingSuggestion: false, respondedMappingSuggestionId: null, isCreatingScript: false, isAccepted: false }),
+
+    setHasPendingMappingSuggestion: (pending) => set({ hasPendingMappingSuggestion: pending }),
+
+    setRespondedMappingSuggestionId: (id) => set({ respondedMappingSuggestionId: id }),
+
+    setIsCreatingScript: (isCreating) => set({ isCreatingScript: isCreating }),
+
+    setIsAccepted: (accepted) => set({ isAccepted: accepted }),
+}));

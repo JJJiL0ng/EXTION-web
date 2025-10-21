@@ -10,6 +10,7 @@ const config: Config = {
     "./src/_lending/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/_admin/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/_aaa_schema-converter/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
     'text-gray-300',
