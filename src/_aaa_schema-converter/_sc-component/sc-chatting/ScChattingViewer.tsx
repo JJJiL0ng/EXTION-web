@@ -2,6 +2,7 @@
 
 import React from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useScChattingStore } from "@/_aaa_schema-converter/_sc-store/scChattingStore";
 import { useMappingScript } from "@/_aaa_schema-converter/_sc-hook/useMappingScript";
 
@@ -74,8 +75,8 @@ export default function ScChattingViewer() {
                     {message.role === "user" ? (
                       <div className="whitespace-pre-wrap">{message.content}</div>
                     ) : (
-                      <div className="prose prose-sm max-w-none prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-pre:my-2 prose-ul:my-2 prose-ol:my-2 prose-code:bg-gray-200 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-200 prose-pre:text-gray-900">
-                        <ReactMarkdown>
+                      <div className="prose prose-sm max-w-none prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-pre:my-2 prose-ul:my-2 prose-ol:my-2 prose-code:bg-gray-200 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-200 prose-pre:text-gray-900 prose-table:my-4 prose-th:p-2 prose-td:p-2">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {message.content}
                         </ReactMarkdown>
                       </div>
