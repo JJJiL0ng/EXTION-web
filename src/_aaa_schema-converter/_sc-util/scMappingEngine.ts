@@ -24,7 +24,7 @@ export const ScMappingEngine = ({
         }
 
         const { mappingScript } = ScMappingScriptResDto;
-        const { s: source_sheet, t: target_sheet, m: mappings } = mappingScript;
+        const { source_sheet, target_sheet, mappings } = mappingScript;
 
         // SpreadJS 워크북 가져오기 (context에서 직접 사용)
         const sourceWorkbook = sourceSpread;
@@ -59,8 +59,8 @@ export const ScMappingEngine = ({
         // 매핑 적용
         mappings.forEach((mapping, index) => {
             try {
-                // 배열 형식: [source_row, source_col, target_row, target_col]
-                const [source_row, source_col, target_row, target_col] = mapping;
+                // 객체 형식: { source_row, source_col, target_row, target_col }
+                const { source_row, source_col, target_row, target_col } = mapping;
 
                 // 1. 소스 셀에서 '최종 값'을 가져옵니다.
                 // (수식이면 계산된 값, 아니면 그냥 값)
