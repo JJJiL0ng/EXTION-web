@@ -31,8 +31,8 @@ export default function InviteCodePage() {
         if (!isMounted) return;
 
         if (result && result.success) {
-          console.log('✅ [Invite Page] 성공 - /trypage로 이동');
-          router.push('/sctest');
+          console.log('✅ [Invite Page] 성공 - /select-service로 이동');
+          router.push('/select-service');
         } else {
           console.log('❌ [Invite Page] 실패 - /invite-check로 이동');
           router.push('/invite-check');

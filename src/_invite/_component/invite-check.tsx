@@ -38,7 +38,7 @@ export default function InviteCheck() {
             const result = await verify(trimmed);
 
             if (result && result.success) {
-                router.push("/sctest");
+                router.push("/select-service");
             } else {
                 setMessage(`Invalid invite code. (${attempts + 1}/${MAX_ATTEMPTS})`);
                 setCode("");
