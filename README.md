@@ -13,7 +13,7 @@
 
 *Seamless user experience meets intelligent automation*
 
-[Live Demo](https://extion-beta.vercel.app/) • [Backend Repo](https://github.com/JJJiL0ng/EXTION-server)
+[Web Site](https://extion.ai/) • [Backend Repo](https://github.com/JJJiL0ng/EXTION-server)
 
 ---
 
@@ -505,7 +505,7 @@ This project is licensed under the MIT License.
 **LEE JIHONG**
 
 - GitHub: [@JJJiL0ng](https://github.com/JJJiL0ng)
-- Live Demo: [extion-beta.vercel.app](https://extion-beta.vercel.app/)
+- Web Site: [extion.ai](https://extion.ai/)
 
 ---
 
