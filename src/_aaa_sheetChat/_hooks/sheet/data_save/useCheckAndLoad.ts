@@ -5,7 +5,7 @@ import { aiChatStore } from '@/_aaa_sheetChat/_store/aiChat/aiChatStore';
 import { useSheetRender } from '@/_aaa_sheetChat/_hooks/sheet/spreadjs/useSheetRender';
 import { useSpreadsheetUploadStore } from '@/_aaa_sheetChat/_store/sheet/spreadsheetUploadStore';
 import { useQueryClient } from '@tanstack/react-query';
-import { QUERY_KEYS } from '@/_aaa_sheetChat/_config/queryConfig';
+import { getCheckAndLoadParamsFromQueryKey } from '@/_aaa_sheetChat/_config/queryKeys';
 import type { CheckAndLoadRes } from '@/_aaa_sheetChat/_types/apiConnector/check-and-load-api/chectAndLoadApi';
 import { useSpreadSheetVersionStore } from '@/_aaa_sheetChat/_store/sheet/spreadSheetVersionIdStore';
 import useFileNameStore from '@/_aaa_sheetChat/_store/sheet/fileNameStore';
@@ -38,31 +38,21 @@ export const useCheckAndLoadOnMount = (
         const queryCache = queryClient.getQueryCache();
 
         for (const query of queryCache.getAll()) {
-            const queryKey = query.queryKey;
+            const params = getCheckAndLoadParamsFromQueryKey(query.queryKey);
+
+            // 같은 spreadSheetId, chatId, userId이지만 다른 spreadSheetVersionId인 경우
             if (
-                Array.isArray(queryKey) &&
-                queryKey[0] === 'checkAndLoad' &&
-                queryKey[1] &&
-                typeof queryKey[1] === 'object' &&
-                'spreadSheetId' in queryKey[1] &&
-                'chatId' in queryKey[1] &&
-                'userId' in queryKey[1]
+                params?.spreadSheetId === spreadSheetId &&
+                params.chatId === chatId &&
+                params.userId === userId &&
+                params.spreadSheetVersionId !== spreadSheetVersionId &&
+                query.state.data
             ) {
-                const params = queryKey[1] as any;
-                // 같은 spreadSheetId, chatId, userId이지만 다른 spreadSheetVersionId인 경우
-                if (
-                    params.spreadSheetId === spreadSheetId &&
-                    params.chatId === chatId &&
-                    params.userId === userId &&
-                    params.spreadSheetVersionId !== spreadSheetVersionId &&
-                    query.state.data
-                ) {
-                    console.log('🔄 [useCheckAndLoad] 이전 버전 데이터 발견, initialData로 사용:', {
-                        previousVersionId: params.spreadSheetVersionId,
-                        currentVersionId: spreadSheetVersionId
-                    });
-                    return query.state.data as CheckAndLoadRes;
-                }
+                console.log('🔄 [useCheckAndLoad] 이전 버전 데이터 발견, initialData로 사용:', {
+                    previousVersionId: params.spreadSheetVersionId,
+                    currentVersionId: spreadSheetVersionId
+                });
+                return query.state.data as CheckAndLoadRes;
             }
         }
 
