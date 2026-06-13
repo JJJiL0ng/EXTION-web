@@ -29,6 +29,10 @@ const SpreadSheet = dynamicImport(
 export default function Home() {
     const router = useRouter();
     const userId = useUserIdStore((state) => state.userId);
+    const [sheetSession, setSheetSession] = useState({
+        spreadSheetId: '',
+        chatId: '',
+    });
 
     const { generateSpreadSheetId } = useGenerateSpreadSheetId();
     const { generateChatId } = useGenerateChatId();
@@ -56,6 +60,10 @@ export default function Home() {
         const SpreadSheetID = generateSpreadSheetId();
         const ChatID = generateChatId();
 
+        setSheetSession({
+            spreadSheetId: SpreadSheetID,
+            chatId: ChatID,
+        });
         setSpreadSheetId(SpreadSheetID);
         setChatId(ChatID);
         // 초기값을 시트가 업로드 되어 있는 상태라서 true로 설정
@@ -63,7 +71,7 @@ export default function Home() {
         setIsEmptySheet(true);
         setEditLockVersion(1);
 
-    }, [generateSpreadSheetId, generateChatId, setSpreadSheetId, setChatId, setIsEmptySheet]);
+    }, [generateSpreadSheetId, generateChatId, setSpreadSheetId, setChatId, setIsEmptySheet, setEditLockVersion]);
 
 
     const {
@@ -100,7 +108,13 @@ export default function Home() {
                             transition: isResizing ? 'none' : 'width 0.1s ease-out'
                         }}
                     >
-                        <SpreadSheet sheetWidthNum={leftWidth} spreadRef={spreadRef} />
+                        <SpreadSheet
+                            sheetWidthNum={leftWidth}
+                            spreadRef={spreadRef}
+                            spreadSheetId={sheetSession.spreadSheetId}
+                            chatId={sheetSession.chatId}
+                            userId={userId ?? ''}
+                        />
                     </div>
 
                     <Resizer

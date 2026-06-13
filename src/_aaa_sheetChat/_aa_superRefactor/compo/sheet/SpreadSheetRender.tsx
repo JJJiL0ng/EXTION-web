@@ -1,11 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useMemo, useState } from "react";
-import { SpreadSheets, Worksheet, Column } from "@mescius/spread-sheets-react";
+import { SpreadSheets } from "@mescius/spread-sheets-react";
 import { useCheckAndLoadOnMount } from "@/_aaa_sheetChat/_hooks/sheet/data_save/useCheckAndLoad";
-import useUserIdStore from "@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore";
-import useSpreadsheetIdStore from "@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore";
-import useChatStore from "@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore";
 import { useSpreadSheetVersionStore } from '@/_aaa_sheetChat/_store/sheet/spreadSheetVersionIdStore';
 
 import * as GC from "@mescius/spread-sheets";
@@ -16,13 +13,18 @@ configureSpreadRuntime();
 interface SpreadSheetProps {
     sheetWidthNum: number; // refresh 트리거용으로 유지
     spreadRef: React.MutableRefObject<any>; // Context가 폴링하는 ref
+    spreadSheetId: string;
+    chatId: string;
+    userId: string;
 }
 
-export default function SpreadSheet({ sheetWidthNum, spreadRef }: SpreadSheetProps) {
-    const { spreadSheetId } = useSpreadsheetIdStore();
-    const { chatId } = useChatStore();
-
-
+export default function SpreadSheet({
+    sheetWidthNum,
+    spreadRef,
+    spreadSheetId,
+    chatId,
+    userId,
+}: SpreadSheetProps) {
     // FormulaBar 상태 관리
     const [cellAddress, setCellAddress] = useState('A1');
     const [cellValue, setCellValue] = useState('');
@@ -38,7 +40,6 @@ export default function SpreadSheet({ sheetWidthNum, spreadRef }: SpreadSheetPro
         return chatId || '';
     }, [chatId]);
 
-    const userId = useUserIdStore((state) => state.userId);
     const stableUserId = useMemo(() => {
         console.log(`🔧 [FileUploadSheetRender] User ID 안정화: ${userId}`);
         return userId || '';
@@ -47,7 +48,7 @@ export default function SpreadSheet({ sheetWidthNum, spreadRef }: SpreadSheetPro
     const stableSpreadsheetVersionId = useSpreadSheetVersionStore((state) => state.spreadSheetVersionId);
     const stableActivity = 'normal';
 
-    const { exists, loading, error } = useCheckAndLoadOnMount(
+    useCheckAndLoadOnMount(
         stableSpreadsheetId,
         stableChatId,
         stableUserId,

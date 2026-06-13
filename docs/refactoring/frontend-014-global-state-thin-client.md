@@ -70,6 +70,8 @@ props 또는 화면 단위 상태로 내릴 후보:
 - `src/app/(minimal)/sheetchat-old/[SpreadSheetId]/[ChatId]/page.tsx`의 삭제된 `ChatVisibilityContext` 주석과 `immer.enableMapSet()` side effect 제거
 - `src/_aaa_sheetChat/_hooks/sheet/file_upload_export/useFileUploadIntegration.ts`의 삭제된 context 주석 제거
 - `src/_aaa_sheetChat/_components/sheet/MainSpreadSheet.tsx`의 삭제된 context 주석 제거
+- `src/_aaa_sheetChat/_aa_superRefactor/compo/sheet/SpreadSheetRender.tsx`가 `spreadSheetId/chatId/userId`를 store에서 직접 읽지 않고 route props로 받도록 변경
+- `src/app/(minimal)/sheetchat/[SpreadSheetId]/[ChatId]/page.tsx`와 `src/app/(minimal)/trypage/page.tsx`에서 `SpreadSheetRender`에 id props 전달
 
 Before/After:
 
@@ -77,10 +79,11 @@ Before/After:
 - sheet-chat context 파일: 3개 -> 2개
 - `zustand/middleware/immer` import: 1곳 -> 0곳
 - `enableMapSet()` 호출: 2곳 -> 0곳
+- `SpreadSheetRender`의 id/user 전역 store 구독: 3개 -> 0개
 
 이번 PR에서 일부러 하지 않은 것:
 
-- `spreadSheetIdStore`, `fileNameStore`, `spreadSheetNamesStore`, `chatVisibilityStore`, `aiChatStore`의 실제 props 전환은 후속 PR로 분리한다.
+- `spreadSheetIdStore`, `fileNameStore`, `spreadSheetNamesStore`, `chatVisibilityStore`, `aiChatStore`의 전체 props 전환은 후속 PR로 분리한다.
 - schema-converter store reducer 전환은 `/sctest` 회귀 범위가 커서 별도 PR로 분리한다.
 
 ### schema-converter Zustand/Context
