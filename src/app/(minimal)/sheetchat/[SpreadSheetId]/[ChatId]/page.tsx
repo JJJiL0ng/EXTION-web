@@ -26,6 +26,8 @@ const SpreadSheet = dynamic(
 export default function Home() {
     const params = useParams();
     const router = useRouter();
+    const spreadSheetId = typeof params?.SpreadSheetId === 'string' ? params.SpreadSheetId : '';
+    const chatId = typeof params?.ChatId === 'string' ? params.ChatId : '';
     const userId = useUserIdStore((state) => state.userId);
     const { setSpreadSheetId } = useSpreadsheetIdStore();
     const { setChatId } = useChatStore();
@@ -66,17 +68,17 @@ export default function Home() {
     }, [setChatVisability]);
 
     useEffect(() => {
-        if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
-            setSpreadSheetId(params.SpreadSheetId);
+        if (spreadSheetId) {
+            setSpreadSheetId(spreadSheetId);
         }
 
-        if (params?.ChatId && typeof params.ChatId === 'string') {
-            setChatId(params.ChatId);
+        if (chatId) {
+            setChatId(chatId);
         }
         setIsEmptySheet(false);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [params]);
+    }, [spreadSheetId, chatId]);
 
     // 파일명이 변경될 때마다 페이지 제목(탭 제목) 동적 업데이트
     useEffect(() => {
@@ -113,7 +115,13 @@ export default function Home() {
                             transition: isResizing ? 'none' : 'width 0.3s ease-out'
                         }}
                     >
-                        <SpreadSheet sheetWidthNum={chatVisability ? leftWidth : 100} spreadRef={spreadRef} />
+                        <SpreadSheet
+                            sheetWidthNum={chatVisability ? leftWidth : 100}
+                            spreadRef={spreadRef}
+                            spreadSheetId={spreadSheetId}
+                            chatId={chatId}
+                            userId={userId ?? ''}
+                        />
                     </div>
 
                     {chatVisability && (
