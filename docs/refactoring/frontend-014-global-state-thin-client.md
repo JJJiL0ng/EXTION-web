@@ -202,6 +202,7 @@ const [state, dispatch] = useReducer(mappingReducer, initialMappingState);
 
 실행한 명령:
 
+- `source "$HOME/.nvm/nvm.sh"`
 - `npm run test`
 - `npm run lint`
 - `npm run build`
@@ -211,14 +212,16 @@ const [state, dispatch] = useReducer(mappingReducer, initialMappingState);
 
 검증 결과:
 
-- `npm run test`: 실패, `zsh:1: command not found: npm`
-- `npm run lint`: 실패, `zsh:1: command not found: npm`
-- `npm run build`: 실패, `zsh:1: command not found: npm`
-- `which node npm npx pnpm yarn bun corepack`: 모두 unavailable
+- `pwd`: `/Users/jihong/Documents/EXTION/EXTION-web`
+- `node --version`: `v22.20.0`
+- `npm --version`: `10.9.3`
+- `npm run test`: 성공, 7 files / 27 tests passed
+- `npm run lint`: 성공, 기존 warning 8개 유지
+- `npm run build`: 성공, 기존 lint warning과 `metadataBase` warning 유지
 - 삭제 대상 참조 검색: 삭제된 store/context는 코드에서 참조되지 않음. Step 14 문서에 남긴 감사 기록만 검색됨.
 - `SpreadSheetRender` store 구독 검색: `SpreadSheetRender.tsx`에서 `useSpreadsheetIdStore`, `useChatStore`, `useUserIdStore` 참조 없음.
 
 검증 미실행:
 
-- `/sheetchat/[SpreadSheetId]/[ChatId]` 수동 확인: 로컬 package manager가 없어 dev server를 실행하지 못함.
-- `/sctest` 수동 확인: 이번 PR은 schema-converter 런타임 코드를 변경하지 않았고, dev server 실행 환경도 없음.
+- `/sheetchat/[SpreadSheetId]/[ChatId]` 수동 브라우저 확인: build/test/lint로 대체. dev server 기반 수동 확인은 별도 QA 단계에서 진행한다.
+- `/sctest` 수동 확인: 이번 PR은 schema-converter 런타임 코드를 변경하지 않았고, build/test/lint로 대체한다.
