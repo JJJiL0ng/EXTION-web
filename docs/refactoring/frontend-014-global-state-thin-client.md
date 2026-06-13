@@ -4,7 +4,7 @@
 
 - 프론트에서 현재 전역 상태처럼 쓰이는 Zustand store와 Context provider를 전수 확인한다.
 - thin client 기준으로 전역 유지가 필요한 상태와 props/화면 단위 상태로 내릴 수 있는 상태를 분리한다.
-- 이번 단계는 문서화만 한다. 런타임 코드는 변경하지 않는다.
+- 전환의 첫 단계로 실제 참조가 없는 전역 상태 파일을 제거해 상태 관리 표면을 줄인다.
 
 ## 판단 기준
 
@@ -54,6 +54,34 @@ props 또는 화면 단위 상태로 내릴 후보:
 | --- | --- | --- |
 | `_contexts/SpreadsheetContext.tsx` | SpreadJS instance, ready flag | 앱 전역은 아니고 route-scoped context다. 다만 100ms polling으로 ref를 감시하므로 thin client 관점에서는 `workbookInitialized`에서 set하는 방식으로 변경한다. |
 | `_contexts/ChatVisibilityContext.tsx` | 전체 주석 처리된 legacy context | 제거 후보. 실제 사용되지 않는다. |
+
+## 이번 PR의 실제 정리
+
+전역 상태 축소의 첫 PR로, 런타임에서 참조되지 않는 상태 관리 파일과 stale 문서를 제거했다.
+
+삭제:
+
+- `src/_aaa_sheetChat/_store/sheet/spreadjsCommandStore.ts`
+- `src/_aaa_sheetChat/_contexts/ChatVisibilityContext.tsx`
+- `src/_aaa_sheetChat/_components/chat/message/ROLLBACK_SYSTEM.md`
+
+정리:
+
+- `src/app/(minimal)/sheetchat-old/[SpreadSheetId]/[ChatId]/page.tsx`의 삭제된 `ChatVisibilityContext` 주석과 `immer.enableMapSet()` side effect 제거
+- `src/_aaa_sheetChat/_hooks/sheet/file_upload_export/useFileUploadIntegration.ts`의 삭제된 context 주석 제거
+- `src/_aaa_sheetChat/_components/sheet/MainSpreadSheet.tsx`의 삭제된 context 주석 제거
+
+Before/After:
+
+- Zustand store 파일: 20개 -> 19개
+- sheet-chat context 파일: 3개 -> 2개
+- `zustand/middleware/immer` import: 1곳 -> 0곳
+- `enableMapSet()` 호출: 2곳 -> 0곳
+
+이번 PR에서 일부러 하지 않은 것:
+
+- `spreadSheetIdStore`, `fileNameStore`, `spreadSheetNamesStore`, `chatVisibilityStore`, `aiChatStore`의 실제 props 전환은 후속 PR로 분리한다.
+- schema-converter store reducer 전환은 `/sctest` 회귀 범위가 커서 별도 PR로 분리한다.
 
 ### schema-converter Zustand/Context
 
@@ -167,7 +195,7 @@ const [state, dispatch] = useReducer(mappingReducer, initialMappingState);
 
 ## 검증
 
-이번 단계는 문서화만 수행했다. 다음 구현 단계마다 최소 검증 범위:
+이번 단계는 미사용 전역 상태 파일 제거와 문서화를 수행했다. 최소 검증 범위:
 
 - `npm run test`
 - `npm run lint`
