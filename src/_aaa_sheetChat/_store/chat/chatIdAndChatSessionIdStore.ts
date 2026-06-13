@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-interface ChatState {
+export const CHAT_STORAGE_KEY = 'chat-storage';
+
+export interface ChatState {
   chatId: string | null;
   chatSessionId: string | null;
   setChatId: (newChatId: string) => void;
@@ -21,7 +23,12 @@ const useChatStore = create<ChatState>()(
       resetChatSessionId: () => set({ chatSessionId: null }),
     }),
     {
-      name: 'chat-storage',
+      name: CHAT_STORAGE_KEY,
+      version: 1,
+      partialize: (state) => ({
+        chatId: state.chatId,
+        chatSessionId: state.chatSessionId,
+      }),
       // SessionStorage 사용 - 각 탭마다 독립적인 상태 유지
       storage: createJSONStorage(() => sessionStorage),
     }
