@@ -1,6 +1,4 @@
 "use client";
-import '@mescius/spread-sheets-resources-ko';
-import '@mescius/spread-sheets-io';
 import React, { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle } from "react";
 import { useParams } from 'next/navigation';
 // Hooks
