@@ -6,26 +6,22 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { SpreadSheetToolbar } from "@/_aaa_sheetChat/_components/sheet/SpreadSheetToolbar";
-import ChattingContainer from "@/_aaa_sheetChat/_aa_superRefactor/compo/chat/ChattingContainer";
-import { Resizer } from "@/_aaa_sheetChat/_aa_superRefactor/compo/resize/Resizer";
-import { useResizer } from "@/_aaa_sheetChat/_aa_superRefactor/hookkk/resize/useResizer";
-import { SpreadsheetProvider } from "@/_aaa_sheetChat/_contexts/SpreadsheetContext";
-
-import useSpreadsheetIdStore from "@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore";
-import useChatStore from "@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore";
-
-import { useGenerateSpreadSheetId } from "@/_aaa_sheetChat/_hooks/sheet/common/useGenerateSpreadSheetId";
-import { useGenerateChatId } from "@/_aaa_sheetChat/_hooks/aiChat/useGenerateChatId";
-import { useIsEmptySheetStore } from "@/_aaa_sheetChat/_aa_superRefactor/store/sheet/isEmptySheetStore";
-import { useSpreadSheetVersionStore } from "@/_aaa_sheetChat/_store/sheet/spreadSheetVersionIdStore";
-import useUserIdStore from "@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore";
+import { SpreadsheetProvider } from "@/features/sheet-chat/context";
+import { useGenerateChatId, useGenerateSpreadSheetId, useResizer } from "@/features/sheet-chat/hooks";
+import {
+    useChatStore,
+    useIsEmptySheetStore,
+    useSpreadSheetVersionStore,
+    useSpreadsheetIdStore,
+    useUserIdStore,
+} from "@/features/sheet-chat/state";
+import { ChattingContainer, Resizer, SpreadSheetToolbar } from "@/features/sheet-chat/ui";
 
 import dynamicImport from "next/dynamic";
 
 const SpreadSheet = dynamicImport(
     () => {
-        return import("../../../_aaa_sheetChat/_aa_superRefactor/compo/sheet/SpreadSheetRender");
+        return import("@/features/sheet-chat/spreadsheetRender");
     },
     { ssr: false }
 );

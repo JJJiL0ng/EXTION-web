@@ -2,24 +2,23 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import { SpreadSheetToolbar } from "@/_aaa_sheetChat/_components/sheet/SpreadSheetToolbar";
-import ChattingContainer from "@/_aaa_sheetChat/_aa_superRefactor/compo/chat/ChattingContainer";
-import { Resizer } from "@/_aaa_sheetChat/_aa_superRefactor/compo/resize/Resizer";
-import { useResizer } from "@/_aaa_sheetChat/_aa_superRefactor/hookkk/resize/useResizer";
-import { SpreadsheetProvider } from "@/_aaa_sheetChat/_contexts/SpreadsheetContext";
-
-import useSpreadsheetIdStore from "@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore";
-import useChatStore from "@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore";
-import { useIsEmptySheetStore } from "@/_aaa_sheetChat/_aa_superRefactor/store/sheet/isEmptySheetStore";
-import { useChatVisibilityState } from "@/_aaa_sheetChat/_aa_superRefactor/store/chat/chatVisibilityStore";
-import useFileNameStore from "@/_aaa_sheetChat/_store/sheet/fileNameStore";
-import useUserIdStore from "@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore";
+import { SpreadsheetProvider } from "@/features/sheet-chat/context";
+import { useResizer } from "@/features/sheet-chat/hooks";
+import {
+    useChatStore,
+    useChatVisibilityState,
+    useFileNameStore,
+    useIsEmptySheetStore,
+    useSpreadsheetIdStore,
+    useUserIdStore,
+} from "@/features/sheet-chat/state";
+import { ChattingContainer, Resizer, SpreadSheetToolbar } from "@/features/sheet-chat/ui";
 
 import dynamic from "next/dynamic";
 
 const SpreadSheet = dynamic(
     () => {
-        return import("../../../../../_aaa_sheetChat/_aa_superRefactor/compo/sheet/SpreadSheetRender");
+        return import("@/features/sheet-chat/spreadsheetRender");
     },
     { ssr: false }
 );
