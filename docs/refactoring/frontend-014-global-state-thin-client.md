@@ -198,10 +198,27 @@ const [state, dispatch] = useReducer(mappingReducer, initialMappingState);
 
 ## 검증
 
-이번 단계는 미사용 전역 상태 파일 제거와 문서화를 수행했다. 최소 검증 범위:
+이번 단계는 미사용 전역 상태 파일 제거, `SpreadSheetRender` id props 전환, 문서화를 수행했다.
+
+실행한 명령:
 
 - `npm run test`
 - `npm run lint`
 - `npm run build`
-- `/sheetchat/[SpreadSheetId]/[ChatId]`: load, rename, chat send, rollback, chat hide/show
-- `/sctest`: source/target upload, range 선택, mapping upload, multiturn chat, script apply
+- `which node npm npx pnpm yarn bun corepack || true`
+- `rg -n "useSpreadjsCommandStore|spreadjsCommandStore|SpreadjsCommandStore|ChatVisibilityContext|ChatVisibilityProvider|useChatVisibility\\(|enableMapSet|zustand/middleware/immer" src docs package.json`
+- `rg -n "useSpreadsheetIdStore|useChatStore|useUserIdStore" src/_aaa_sheetChat/_aa_superRefactor/compo/sheet/SpreadSheetRender.tsx 'src/app/(minimal)/sheetchat/[SpreadSheetId]/[ChatId]/page.tsx' 'src/app/(minimal)/trypage/page.tsx'`
+
+검증 결과:
+
+- `npm run test`: 실패, `zsh:1: command not found: npm`
+- `npm run lint`: 실패, `zsh:1: command not found: npm`
+- `npm run build`: 실패, `zsh:1: command not found: npm`
+- `which node npm npx pnpm yarn bun corepack`: 모두 unavailable
+- 삭제 대상 참조 검색: 삭제된 store/context는 코드에서 참조되지 않음. Step 14 문서에 남긴 감사 기록만 검색됨.
+- `SpreadSheetRender` store 구독 검색: `SpreadSheetRender.tsx`에서 `useSpreadsheetIdStore`, `useChatStore`, `useUserIdStore` 참조 없음.
+
+검증 미실행:
+
+- `/sheetchat/[SpreadSheetId]/[ChatId]` 수동 확인: 로컬 package manager가 없어 dev server를 실행하지 못함.
+- `/sctest` 수동 확인: 이번 PR은 schema-converter 런타임 코드를 변경하지 않았고, dev server 실행 환경도 없음.
