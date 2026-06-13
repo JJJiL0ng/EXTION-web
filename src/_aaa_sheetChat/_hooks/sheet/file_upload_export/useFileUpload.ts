@@ -1,5 +1,11 @@
 import { useState, useCallback } from 'react';
 import * as GC from "@mescius/spread-sheets";
+import {
+  DEFAULT_ALLOWED_UPLOAD_EXTENSIONS,
+  DEFAULT_MAX_UPLOAD_FILE_SIZE,
+  validateUploadFile,
+} from '@/_aaa_sheetChat/_utils/sheet/fileUploadValidation';
+
 interface FileUploadState {
   isUploading: boolean;
   isProcessing: boolean;
@@ -11,7 +17,7 @@ interface FileUploadState {
 
 interface UseFileUploadOptions {
   maxFileSize?: number; // 최대 파일 크기 (기본: 50MB)
-  allowedExtensions?: string[]; // 허용된 파일 확장자
+  allowedExtensions?: readonly string[]; // 허용된 파일 확장자
   onUploadSuccess?: (fileName: string, fileData: any) => void;
   onUploadError?: (error: Error, fileName: string) => void;
 }
@@ -21,8 +27,8 @@ export const useFileUpload = (
   options: UseFileUploadOptions = {}
 ) => {
   const {
-    maxFileSize = 50 * 1024 * 1024, // 50MB
-    allowedExtensions = ['xlsx', 'xls', 'csv', 'sjs', 'json'],
+    maxFileSize = DEFAULT_MAX_UPLOAD_FILE_SIZE,
+    allowedExtensions = DEFAULT_ALLOWED_UPLOAD_EXTENSIONS,
     onUploadSuccess,
     onUploadError
   } = options;
@@ -37,43 +43,10 @@ export const useFileUpload = (
   });
 
   // 파일 검증
-  const validateFile = useCallback((file: File): { isValid: boolean; error?: string } => {
-    // 파일 크기 검증
-    if (file.size > maxFileSize) {
-      return {
-        isValid: false,
-        error: `파일 크기가 너무 큽니다. 최대 ${Math.round(maxFileSize / (1024 * 1024))}MB까지 지원됩니다.`
-      };
-    }
-
-    // 파일 확장자 검증
-    const fileExtension = file.name.toLowerCase().split('.').pop();
-    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
-      return {
-        isValid: false,
-        error: `지원되지 않는 파일 형식입니다. 지원 형식: ${allowedExtensions.join(', ')}`
-      };
-    }
-
-    // MIME 타입 검증
-    const allowedMimeTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-      'text/csv',
-      'application/sjs',
-      'application/json'
-    ];
-
-    if (!allowedMimeTypes.includes(file.type) && file.type !== '') {
-      // 빈 MIME 타입은 허용 (일부 브라우저에서 발생)
-      return {
-        isValid: false,
-        error: '파일 타입을 확인할 수 없습니다.'
-      };
-    }
-
-    return { isValid: true };
-  }, [maxFileSize, allowedExtensions]);
+  const validateFile = useCallback(
+    (file: File) => validateUploadFile(file, { maxFileSize, allowedExtensions }),
+    [maxFileSize, allowedExtensions]
+  );
 
   // 진행률 업데이트
   const updateProgress = useCallback((progress: number) => {
