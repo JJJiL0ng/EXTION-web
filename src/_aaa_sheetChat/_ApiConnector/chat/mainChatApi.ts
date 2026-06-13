@@ -1,7 +1,7 @@
 // mainChatApi.ts - React용 메인 채팅 API 클라이언트
 // SSE 스트리밍을 통한 실시간 타이핑 효과 구현
 
-import { parse } from "path";
+import { parseSSEBuffer, type ParsedSSEEvent } from './sseParser';
 
 // ==================== 타입 정의 ====================
 
@@ -313,7 +313,7 @@ export class MainChatApi {
         buffer += decoder.decode(value, { stream: true });
         
         // SSE 이벤트 파싱
-        const events = this.parseSSEBuffer(buffer);
+        const events = parseSSEBuffer(buffer);
         buffer = events.remainingBuffer;
 
         // 각 이벤트 처리
@@ -327,72 +327,10 @@ export class MainChatApi {
   }
 
   /**
-   * SSE 버퍼 파싱
-   */
-  private parseSSEBuffer(buffer: string): { events: any[], remainingBuffer: string } {
-    const events = [];
-    const lines = buffer.split('\n');
-    let i = 0;
-    let remainingBuffer = '';
-
-    console.log('🔍 [MainChatApi] SSE Buffer parsing:', {
-      bufferLength: buffer.length,
-      linesCount: lines.length,
-      firstFewLines: lines.slice(0, 5).map((line, idx) => `${idx}: "${line}"`)
-    });
-
-    while (i < lines.length) {
-      if (lines[i].startsWith('event:') && i + 1 < lines.length && lines[i + 1].startsWith('data:')) {
-        const eventType = lines[i].substring(6).trim();
-        const eventData = lines[i + 1].substring(5).trim();
-        
-        console.log('📨 [MainChatApi] SSE Event parsed:', {
-          eventType,
-          eventDataPreview: eventData.substring(0, 200) + (eventData.length > 200 ? '...' : ''),
-          lineIndex: i
-        });
-        
-        try {
-          const parsedData = JSON.parse(eventData);
-          events.push({ type: eventType, data: parsedData });
-          console.log('✅ [MainChatApi] SSE Event successfully parsed:', {
-            type: eventType,
-            dataKeys: Object.keys(parsedData),
-            hasReasoning: 'reasoning' in parsedData
-          });
-          i += 3; // event, data, empty line
-        } catch (error) {
-          console.warn('❌ [MainChatApi] Failed to parse SSE event data:', {
-            eventType,
-            eventData: eventData.substring(0, 500),
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-          i++;
-        }
-      } else if (i === lines.length - 1 && !lines[i].includes('\n')) {
-        // 마지막 불완전한 라인
-        remainingBuffer = lines[i];
-        console.log('📝 [MainChatApi] Remaining buffer:', remainingBuffer.substring(0, 100));
-        break;
-      } else {
-        i++;
-      }
-    }
-
-    console.log('📋 [MainChatApi] SSE Parsing result:', {
-      eventsCount: events.length,
-      eventTypes: events.map(e => e.type),
-      remainingBufferLength: remainingBuffer.length
-    });
-
-    return { events, remainingBuffer };
-  }
-
-  /**
    * SSE 이벤트 핸들러
    */
   private async handleSSEEvent(
-    event: { type: string, data: any },
+    event: ParsedSSEEvent<any>,
     handlers: ChatEventHandlers
   ): Promise<void> {
     const { type, data } = event;
