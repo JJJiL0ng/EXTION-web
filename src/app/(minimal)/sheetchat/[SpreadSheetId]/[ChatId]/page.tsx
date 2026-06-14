@@ -2,24 +2,23 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import { SpreadSheetToolbar } from "@/_aaa_sheetChat/_components/sheet/SpreadSheetToolbar";
-import ChattingContainer from "@/_aaa_sheetChat/_aa_superRefactor/compo/chat/ChattingContainer";
-import { Resizer } from "@/_aaa_sheetChat/_aa_superRefactor/compo/resize/Resizer";
-import { useResizer } from "@/_aaa_sheetChat/_aa_superRefactor/hookkk/resize/useResizer";
-import { SpreadsheetProvider } from "@/_aaa_sheetChat/_contexts/SpreadsheetContext";
-
-import useSpreadsheetIdStore from "@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore";
-import useChatStore from "@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore";
-import { useIsEmptySheetStore } from "@/_aaa_sheetChat/_aa_superRefactor/store/sheet/isEmptySheetStore";
-import { useChatVisibilityState } from "@/_aaa_sheetChat/_aa_superRefactor/store/chat/chatVisibilityStore";
-import useFileNameStore from "@/_aaa_sheetChat/_store/sheet/fileNameStore";
-import useUserIdStore from "@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore";
+import { SpreadsheetProvider } from "@/features/sheet-chat/context";
+import { useResizer } from "@/features/sheet-chat/hooks";
+import {
+    useChatStore,
+    useChatVisibilityState,
+    useFileNameStore,
+    useIsEmptySheetStore,
+    useSpreadsheetIdStore,
+    useUserIdStore,
+} from "@/features/sheet-chat/state";
+import { ChattingContainer, Resizer, SpreadSheetToolbar } from "@/features/sheet-chat/ui";
 
 import dynamic from "next/dynamic";
 
 const SpreadSheet = dynamic(
     () => {
-        return import("../../../../../_aaa_sheetChat/_aa_superRefactor/compo/sheet/SpreadSheetRender");
+        return import("@/features/sheet-chat/spreadsheetRender");
     },
     { ssr: false }
 );
@@ -27,6 +26,8 @@ const SpreadSheet = dynamic(
 export default function Home() {
     const params = useParams();
     const router = useRouter();
+    const spreadSheetId = typeof params?.SpreadSheetId === 'string' ? params.SpreadSheetId : '';
+    const chatId = typeof params?.ChatId === 'string' ? params.ChatId : '';
     const userId = useUserIdStore((state) => state.userId);
     const { setSpreadSheetId } = useSpreadsheetIdStore();
     const { setChatId } = useChatStore();
@@ -67,17 +68,17 @@ export default function Home() {
     }, [setChatVisability]);
 
     useEffect(() => {
-        if (params?.SpreadSheetId && typeof params.SpreadSheetId === 'string') {
-            setSpreadSheetId(params.SpreadSheetId);
+        if (spreadSheetId) {
+            setSpreadSheetId(spreadSheetId);
         }
 
-        if (params?.ChatId && typeof params.ChatId === 'string') {
-            setChatId(params.ChatId);
+        if (chatId) {
+            setChatId(chatId);
         }
         setIsEmptySheet(false);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [params]);
+    }, [spreadSheetId, chatId]);
 
     // 파일명이 변경될 때마다 페이지 제목(탭 제목) 동적 업데이트
     useEffect(() => {
@@ -114,7 +115,13 @@ export default function Home() {
                             transition: isResizing ? 'none' : 'width 0.3s ease-out'
                         }}
                     >
-                        <SpreadSheet sheetWidthNum={chatVisability ? leftWidth : 100} spreadRef={spreadRef} />
+                        <SpreadSheet
+                            sheetWidthNum={chatVisability ? leftWidth : 100}
+                            spreadRef={spreadRef}
+                            spreadSheetId={spreadSheetId}
+                            chatId={chatId}
+                            userId={userId ?? ''}
+                        />
                     </div>
 
                     {chatVisability && (

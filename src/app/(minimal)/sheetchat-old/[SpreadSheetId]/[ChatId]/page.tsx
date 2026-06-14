@@ -3,17 +3,11 @@
 import FileUploadContainer from "@/_aaa_sheetChat/_components/chat/FileUploadChattingContainer";
 import dynamic from "next/dynamic";
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
-// import { ChatVisibilityProvider, useChatVisibility } from "@/_contexts/ChatVisibilityContext";
 import { SpreadsheetProvider } from "@/_aaa_sheetChat/_contexts/SpreadsheetContext";
 import { useParams } from "next/navigation";
 import useSpreadsheetIdStore from "@/_aaa_sheetChat/_store/sheet/spreadSheetIdStore";
 import useChatStore from "@/_aaa_sheetChat/_store/chat/chatIdAndChatSessionIdStore";
 import { useChattingComponentZindexStore } from "@/_aaa_sheetChat/_store/handleZindex/chattingComponentZindexStore";
-import { enableMapSet } from 'immer';
-
-
-// Immer MapSet 플러그인 활성화
-enableMapSet();
 
 const MainSpreadSheet = dynamic(
   () => {
@@ -95,7 +89,6 @@ export default function Home() {
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   return (
-    // <ChatVisibilityProvider initialVisible={false}>
     <SpreadsheetProvider spreadRef={spreadRef}>
       <HomeContent
         leftWidth={leftWidth}
@@ -106,7 +99,6 @@ export default function Home() {
         spreadRef={spreadRef}
       />
     </SpreadsheetProvider>
-    // </ChatVisibilityProvider>
   );
 }
 
@@ -127,7 +119,6 @@ function HomeContent({
   handleMouseDown,
   spreadRef
 }: HomeContentProps) {
-  // const { isChatVisible } = useChatVisibility();
   const { isVisible } = useChattingComponentZindexStore();
 
 

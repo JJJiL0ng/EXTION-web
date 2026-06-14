@@ -1,3 +1,9 @@
+import bundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // 프로덕션에서 console.log 제거
@@ -124,4 +130,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

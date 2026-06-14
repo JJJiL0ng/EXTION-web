@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { QUERY_KEYS } from '@/_aaa_sheetChat/_config/queryConfig'
+import { checkAndLoadQueryKeys, getCheckAndLoadParamsFromQueryKey } from '@/_aaa_sheetChat/_config/queryKeys'
 import type { CheckAndLoadReq, CheckAndLoadRes } from '@/_aaa_sheetChat/_types/apiConnector/check-and-load-api/chectAndLoadApi'
 
 export const useCacheInvalidation = () => {
@@ -11,9 +12,9 @@ export const useCacheInvalidation = () => {
     console.log('🗑️ [Cache Invalidation] 스프레드시트 캐시 무효화:', spreadSheetId)
     
     queryClient.invalidateQueries({
-      queryKey: ['checkAndLoad'],
+      queryKey: checkAndLoadQueryKeys.all,
       predicate: (query) => {
-        const params = query.queryKey[1] as CheckAndLoadReq
+        const params = getCheckAndLoadParamsFromQueryKey(query.queryKey)
         return params?.spreadSheetId === spreadSheetId
       }
     })
@@ -24,9 +25,9 @@ export const useCacheInvalidation = () => {
     console.log('🗑️ [Cache Invalidation] 채팅 캐시 무효화:', chatId)
     
     queryClient.invalidateQueries({
-      queryKey: ['checkAndLoad'],
+      queryKey: checkAndLoadQueryKeys.all,
       predicate: (query) => {
-        const params = query.queryKey[1] as CheckAndLoadReq
+        const params = getCheckAndLoadParamsFromQueryKey(query.queryKey)
         return params?.chatId === chatId
       }
     })
@@ -37,9 +38,9 @@ export const useCacheInvalidation = () => {
     console.log('🗑️ [Cache Invalidation] 사용자 캐시 무효화:', userId)
     
     queryClient.invalidateQueries({
-      queryKey: ['checkAndLoad'],
+      queryKey: checkAndLoadQueryKeys.all,
       predicate: (query) => {
-        const params = query.queryKey[1] as CheckAndLoadReq
+        const params = getCheckAndLoadParamsFromQueryKey(query.queryKey)
         return params?.userId === userId
       }
     })

@@ -4,9 +4,12 @@ import { useFileUpload } from './useFileUpload';
 import { useSheetCreate } from '../data_save/useSheetCreate';
 import { useSpreadsheetUploadStore } from '../../../_store/sheet/spreadsheetUploadStore';
 import useFileNameStore from '@/_aaa_sheetChat/_store/sheet/fileNameStore';
-// import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useUIState } from '../common/useUIState';
 import useUserIdStore from '@/_aaa_sheetChat/_aa_superRefactor/store/user/userIdStore';
+import {
+  DEFAULT_ALLOWED_UPLOAD_EXTENSIONS,
+  DEFAULT_MAX_UPLOAD_FILE_SIZE,
+} from '@/_aaa_sheetChat/_utils/sheet/fileUploadValidation';
 
 /**
  * 파일 업로드 통합 훅의 설정 인터페이스
@@ -48,7 +51,6 @@ export const useFileUploadIntegration = ({
   const chatId = params.ChatId as string;
 
   // 상태 관리 훅들
-  // const { showChat } = useChatVisibility(); // 채팅 가시성 제어
   const { uiState, actions: uiActions } = useUIState(); // 통합 UI 상태
   const { setIsFileUploaded } = useSpreadsheetUploadStore(); // 파일 업로드 상태
 
@@ -165,8 +167,8 @@ export const useFileUploadIntegration = ({
     uploadFiles,
     resetUploadState
   } = useFileUpload(spreadRef.current, {
-    maxFileSize: 50 * 1024 * 1024, // 50MB 제한
-    allowedExtensions: ['xlsx', 'xls', 'csv', 'json'], // 허용 확장자
+    maxFileSize: DEFAULT_MAX_UPLOAD_FILE_SIZE,
+    allowedExtensions: DEFAULT_ALLOWED_UPLOAD_EXTENSIONS,
     onUploadSuccess: handleUploadSuccess, // 성공 시 통합 핸들러 실행
     onUploadError: (error: Error, fileName: string) => {
       console.error(`❌ [FileUploadIntegration] 파일 업로드 실패: ${fileName}`, error);
