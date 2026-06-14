@@ -1,121 +1,564 @@
-# EXTION Web
+<div align="center">
 
-AI 기반 스프레드시트 작업을 위한 EXTION의 Next.js 프론트엔드입니다. 사용자는 브라우저에서 스프레드시트를 업로드/편집하고, AI 채팅을 통해 데이터 변환 명령을 생성하거나, 두 시트 간 schema mapping script를 만들 수 있습니다.
+# Frontend Refactoring Sprint Note
 
-## 주요 화면과 기능
+주말과 여유 시간을 활용해 진행한 EXTION 프론트엔드 집중 리팩토링 기록입니다. 아래의 기존 `main` README는 서비스/포트폴리오 소개 문서로 유지하고, 이 섹션에는 `refactor` 브랜치에서 정리한 구조 개선 내용을 추가로 남깁니다.
 
-- 랜딩, 초대 코드, 관리자 초대 코드 생성 화면
-- SpreadJS 기반 스프레드시트 업로드, 렌더링, 저장, 파일명 변경, 내보내기
-- AI 채팅 기반 sheet edit command 생성과 적용
-- WebSocket 기반 AI job 진행 상태 수신
-- 이전 채팅/시트 버전 rollback
-- source/target spreadsheet를 비교해 mapping script 생성
-- mapping 결과를 multiturn chat으로 수정
-- PostHog/GA 기반 analytics hook
+</div>
 
-## 집중 리팩토링 스프린트
+## 리팩토링 요약
 
-이 저장소의 `refactor` 브랜치는 개인 주말/여유 시간에 진행한 집중 리팩토링 스프린트 결과입니다. 목표는 화면을 새로 만드는 것이 아니라, 이미 동작하던 프론트엔드의 API 호출, 상태 관리, SpreadJS runtime, legacy route를 단계적으로 정리해서 이후 기능 개발이 가능한 구조로 만드는 것이었습니다.
+- 작업 브랜치: `refactor-frontend-001-*` ~ `refactor-frontend-014-*`
+- 병합 흐름: `refactor` -> `dev` -> `main`
+- 상세 기록: [docs/refactoring](docs/refactoring)
+- 목표: 기존 화면 동작을 유지하면서 API 호출, 상태 관리, SpreadJS runtime, legacy route를 단계적으로 정리
 
-작업은 `refactor-frontend-001-*`부터 `refactor-frontend-014-*`까지 단계별 브랜치로 나눴고, 각 단계의 판단과 검증 결과는 [docs/refactoring](docs/refactoring)에 남겼습니다.
+| 영역 | 정리 내용 |
+| --- | --- |
+| 기준선 | route, 파일 수, 테스트 부재, 환경 문제 기록 |
+| 테스트 | Vitest, Testing Library, jsdom 기반 회귀 테스트 추가 |
+| 번들 | opt-in bundle analyzer와 route bundle baseline 추가 |
+| API | shared API client, typed error, base URL helper 도입 |
+| Query | TanStack Query key factory와 invalidation helper 정리 |
+| Streaming | SSE parser를 테스트 가능한 순수 함수로 분리 |
+| 상태 관리 | auth/session/chat/sheet state 책임과 persist 범위 점검 |
+| SpreadJS | client-only runtime boundary와 테스트 mock 정리 |
+| 업로드 | file upload validation을 순수 함수로 분리 |
+| feature boundary | sheet-chat 공개 export boundary 추가 |
+| legacy cleanup | 개발용 route와 미사용 전역 상태 파일 제거 |
+| thin client | Zustand/Context 인벤토리와 props/local reducer 전환 계획 정리 |
 
-| Step | 주제 | 핵심 결과 |
-| --- | --- | --- |
-| 1 | baseline | 파일 수, route, 테스트 부재, 환경 문제 기록 |
-| 2 | test setup | Vitest, Testing Library, jsdom 기반 테스트 추가 |
-| 3 | bundle analyzer | opt-in bundle analyzer와 route bundle baseline 추가 |
-| 4 | shared API client | `jsonRequest`, typed API error, base URL helper 도입 |
-| 5 | query keys | TanStack Query key factory와 cache invalidation 정리 |
-| 6 | chat SSE split | streaming parser를 테스트 가능한 순수 함수로 분리 |
-| 7 | auth/session store | user/session store 책임과 persist 범위 정리 |
-| 8 | chat state | 채팅 session state 테스트와 경계 정리 |
-| 9 | sheet state | spreadsheet version/edit lock state 테스트 추가 |
-| 10 | SpreadJS runtime | client-only runtime/mock 경계 정리 |
-| 11 | upload validation | 파일 업로드 validation을 순수 함수로 분리 |
-| 12 | feature boundary | sheet-chat feature export boundary 추가 |
-| 13 | legacy routes | 개발용 legacy route와 미사용 route 정리 |
-| 14 | global state audit | 전역 Zustand/Context 인벤토리와 thin client 전환 계획 정리 |
+## 리팩토링 검증 결과
 
-## 현재 구조
-
-```text
-src/app                         Next.js App Router routes
-src/_aaa_sheetChat              sheet chat feature 구현과 legacy 경계
-src/_aaa_schema-converter       schema mapping 화면과 hooks
-src/features/sheet-chat         sheet-chat 공개 feature boundary
-src/shared/api                  공통 API client와 typed error
-src/shared/config               client env helper
-src/shared/spreadjs             SpreadJS runtime boundary
-src/test                        Vitest setup과 heavy runtime mocks
-docs/refactoring                프론트 리팩토링 기록
-```
-
-`_aaa_*` prefix가 남아 있는 영역은 기존 기능을 보존하면서 점진적으로 `features`, `shared` 경계로 옮기는 중입니다. README와 refactoring docs는 현재 상태와 다음 정리 방향을 같이 보여주기 위해 남겨둔 문서입니다.
-
-## 기술 스택
-
-- Next.js 14, React 18, TypeScript
-- SpreadJS / ExcelIO, xlsx, PapaParse
-- Socket.IO client
-- TanStack Query
-- Zustand
-- Styled Components, Tailwind utilities
-- Vitest, Testing Library, jsdom
-- PostHog, Google Analytics
-
-## 실행
-
-```bash
-npm install
-npm run dev
-```
-
-브라우저에서 `http://localhost:3000`을 열면 됩니다. 백엔드는 기본적으로 `http://localhost:8080`을 바라봅니다.
-
-## 주요 환경 변수
-
-```text
-NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_GA_ID=G-...
-NEXT_PUBLIC_POSTHOG_KEY=...
-ADMIN_USERNAME=...
-ADMIN_PASSWORD=...
-```
-
-`NEXT_PUBLIC_API_URL`을 지정하지 않으면 `src/shared/config/clientEnv.ts`의 기본값인 `http://localhost:8080`을 사용합니다.
-
-## 검증
-
-`refactor` 브랜치 최종 리팩토링 문서 기준:
-
-```bash
-npm run test
-npm run lint
-npm run build
-```
+`refactor` 기준 최종 확인:
 
 - `npm run test`: 성공, 7 files / 27 tests
 - `npm run lint`: 성공, 기존 warning 8개 유지
 - `npm run build`: 성공, 기존 lint warning과 `metadataBase` warning 유지
 
-## 분석 명령
+---
 
-```bash
-npm run analyze
+<div align="center">
+
+# Extion AI - Frontend Web
+
+<img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" />
+<img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" />
+<img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" />
+<img src="https://img.shields.io/badge/React_Query-FF4154?style=for-the-badge&logo=react-query&logoColor=white" />
+<img src="https://img.shields.io/badge/Zustand-000000?style=for-the-badge&logo=react&logoColor=white" />
+<img src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" />
+
+### Modern AI-Powered Excel Automation Platform
+
+*Seamless user experience meets intelligent automation*
+
+[Web Site](https://extion.ai/) • [Backend Repo](https://github.com/JJJiL0ng/EXTION-server)
+
+---
+
+**SSG/SSR Optimized** • **Responsive Design** • **Agent-Centric UX**
+
+</div>
+
+---
+
+## Overview
+
+**Extion AI Frontend**는 AI 기반 엑셀 자동화 서비스의 사용자 인터페이스를 담당하는 Next.js 애플리케이션입니다. SSG/SSR을 적극 활용한 성능 최적화와 Agent-First UX 설계로 직관적이고 빠른 사용자 경험을 제공합니다.
+
+### Key Features
+
+- **Performance Optimized Landing**: SSG 기반 초고속 랜딩 페이지
+- **Secure Authentication**: JWT 기반 인증 시스템
+- **Interactive Dashboard**: 실시간 작업 현황 모니터링
+- **Drag & Drop Upload**: 직관적인 파일 업로드 인터페이스
+- **Agent-Centric UX**: AI 에이전트 작업 흐름에 최적화된 인터랙션
+- **Real-time Updates**: TanStack Query를 활용한 실시간 데이터 동기화
+- **Fully Responsive**: 모든 디바이스에서 완벽한 경험
+
+---
+
+## Architecture
+
+```
+┌──────────────────────────────────────────┐
+│         Next.js App Router               │
+│  (SSG/SSR/ISR Hybrid Rendering)          │
+└────────────┬─────────────────────────────┘
+             │
+    ┌────────┴────────┐
+    │                 │
+┌───▼────┐     ┌─────▼──────┐
+│  SSG   │     │  SSR/ISR   │
+│Landing │     │Auth/Dashboard│
+└───┬────┘     └─────┬──────┘
+    │                │
+    └────────┬───────┘
+             │
+    ┌────────▼────────┐
+    │  Client State   │
+    │  (Zustand)      │
+    └────────┬────────┘
+             │
+    ┌────────▼────────┐
+    │  Server State   │
+    │ (TanStack Query)│
+    └────────┬────────┘
+             │
+    ┌────────▼────────┐
+    │   Backend API   │
+    │  (NestJS)       │
+    └─────────────────┘
 ```
 
-`ANALYZE=true next build`로 bundle analyzer를 opt-in 실행합니다. 일반 `npm run build` 동작은 유지합니다.
+---
 
-## 포트폴리오에서 볼 지점
+## Tech Stack
 
-- starter README 상태에서 실제 프로젝트 구조와 리팩토링 맥락을 문서화했습니다.
-- 테스트가 없던 프론트에 Vitest 기반 회귀 테스트를 추가하고, API/SSE/query key처럼 깨지기 쉬운 로직을 순수 함수와 공통 helper로 분리했습니다.
-- 무거운 SpreadJS runtime은 mock/runtime boundary를 만들고, sheet-chat은 feature boundary를 통해 import 표면을 줄였습니다.
-- 전역 상태는 모두 제거하지 않고, 유지할 상태와 props/local reducer로 내릴 상태를 기준과 함께 문서화했습니다.
+### Core Framework
+- **Next.js 14**: App Router with SSG/SSR/ISR
+- **React 18**: Latest React features
+- **TypeScript**: Type-safe development
 
-## 남은 작업
+### Styling & UI
+- **Tailwind CSS**: Utility-first CSS framework
+- **CSS Modules**: Component-scoped styling
+- **Responsive Design**: Mobile-first approach
 
-- `aiChatStore`, `spreadSheetVersionStore`, schema-converter stores의 route-scoped reducer 전환
-- `_aaa_*` legacy prefix를 feature/shared 구조로 점진 이동
-- 개발용 debug log 정리
-- backend error response shape와 frontend error handling의 최종 계약 확인
+### State Management
+- **TanStack Query (React Query)**: Server state management
+  - Caching & synchronization
+  - Optimistic updates
+  - Infinite queries
+- **Zustand**: Lightweight global state management
+  - User authentication state
+  - UI state (modals, notifications)
+  - File upload progress
+
+### Performance & Optimization
+- **Next.js Image**: Automatic image optimization
+- **Code Splitting**: Route-based lazy loading
+- **Bundle Analyzer**: Build size optimization
+- **Web Vitals**: Performance monitoring
+
+### Development Tools
+- **ESLint**: Code quality
+- **Prettier**: Code formatting
+- **TypeScript**: Static type checking
+
+---
+
+## Project Structure
+
+```
+EXTION-web/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── (landing)/         # 랜딩 페이지 (SSG)
+│   │   ├── (auth)/            # 인증 페이지 (SSR)
+│   │   │   ├── login/
+│   │   │   └── signup/
+│   │   ├── dashboard/         # 대시보드 (SSR)
+│   │   ├── excel/             # 엑셀 처리 페이지
+│   │   │   ├── upload/
+│   │   │   └── process/
+│   │   └── layout.tsx         # Root layout
+│   ├── components/
+│   │   ├── common/            # 공통 컴포넌트
+│   │   ├── excel/             # 엑셀 관련 컴포넌트
+│   │   ├── dashboard/         # 대시보드 컴포넌트
+│   │   └── ui/                # UI 기본 컴포넌트
+│   ├── hooks/                 # Custom React Hooks
+│   │   ├── useAuth.ts
+│   │   ├── useExcelUpload.ts
+│   │   └── useAIAgent.ts
+│   ├── lib/
+│   │   ├── api/               # API client
+│   │   ├── utils/             # Utility functions
+│   │   └── constants/         # 상수 정의
+│   ├── store/                 # Zustand stores
+│   │   ├── authStore.ts
+│   │   └── uiStore.ts
+│   ├── styles/                # Global styles
+│   └── types/                 # TypeScript types
+├── public/                    # Static assets
+│   ├── images/
+│   └── icons/
+└── scripts/                   # Build & deploy scripts
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+```bash
+node >= 18.0.0
+npm >= 9.0.0
+```
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/JJJiL0ng/EXTION-web.git
+cd EXTION-web
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your configuration
+```
+
+### Environment Variables
+
+```env
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_API_TIMEOUT=30000
+
+# Authentication
+NEXT_PUBLIC_JWT_SECRET=your-jwt-secret
+
+# Feature Flags
+NEXT_PUBLIC_ENABLE_ANALYTICS=true
+NEXT_PUBLIC_ENABLE_ERROR_REPORTING=false
+
+# Vercel (Production)
+NEXT_PUBLIC_VERCEL_URL=https://extion-beta.vercel.app
+```
+
+### Development
+
+```bash
+# Development server with hot-reload
+npm run dev
+
+# Open http://localhost:3000
+```
+
+### Build & Deploy
+
+```bash
+# Production build
+npm run build
+
+# Start production server
+npm run start
+
+# Analyze bundle size
+npm run analyze
+
+# Deploy to Vercel (automatic via Git push)
+git push origin main
+```
+
+### Code Quality
+
+```bash
+# Lint code
+npm run lint
+
+# Format code
+npm run format
+
+# Type check
+npm run type-check
+```
+
+---
+
+## Key Features Implementation
+
+### 1. **SSG/SSR Hybrid Rendering**
+
+```typescript
+// Landing Page (SSG)
+export default async function LandingPage() {
+  return <LandingContent />;
+}
+
+export async function generateStaticParams() {
+  // Static generation at build time
+}
+
+// Dashboard (SSR)
+export default async function Dashboard() {
+  const data = await fetchDashboardData();
+  return <DashboardContent data={data} />;
+}
+```
+
+### 2. **Agent-Centric UX**
+
+AI 에이전트의 작업 흐름에 최적화된 인터페이스:
+- 단계별 프로그레스 표시
+- 실시간 작업 상태 업데이트
+- AI 처리 결과 시각화
+- 직관적인 에러 핸들링
+
+### 3. **State Management Pattern**
+
+```typescript
+// Server State (TanStack Query)
+const { data, isLoading } = useQuery({
+  queryKey: ['excel', fileId],
+  queryFn: () => fetchExcelData(fileId),
+  staleTime: 5000,
+});
+
+// Client State (Zustand)
+const useAuthStore = create((set) => ({
+  user: null,
+  login: (user) => set({ user }),
+  logout: () => set({ user: null }),
+}));
+```
+
+### 4. **Optimized File Upload**
+
+```typescript
+// Chunked upload with progress tracking
+const useFileUpload = () => {
+  const [progress, setProgress] = useState(0);
+
+  const upload = async (file: File) => {
+    const chunks = createChunks(file);
+    for (const chunk of chunks) {
+      await uploadChunk(chunk);
+      setProgress((prev) => prev + (100 / chunks.length));
+    }
+  };
+
+  return { upload, progress };
+};
+```
+
+---
+
+## Performance Optimization
+
+### Landing Page Metrics
+- **First Contentful Paint**: < 1.0s
+- **Largest Contentful Paint**: < 2.0s
+- **Time to Interactive**: < 2.5s
+- **Cumulative Layout Shift**: < 0.1
+
+### Optimization Techniques
+- SSG for landing page (near-instant load)
+- Image optimization with Next.js Image
+- Code splitting by route
+- Prefetching critical resources
+- Lazy loading non-critical components
+- Debounced search & input handlers
+- React.memo for expensive components
+- Virtual scrolling for large lists
+
+---
+
+## Design System
+
+### Color Palette
+```css
+/* Primary Colors */
+--primary: #3B82F6;
+--primary-dark: #2563EB;
+
+/* Semantic Colors */
+--success: #10B981;
+--warning: #F59E0B;
+--error: #EF4444;
+
+/* Neutral Colors */
+--gray-50: #F9FAFB;
+--gray-900: #111827;
+```
+
+### Typography
+- **Headings**: Pretendard Variable (Korean-optimized)
+- **Body**: Inter (Latin), Pretendard (Korean)
+- **Code**: JetBrains Mono
+
+### Responsive Breakpoints
+```typescript
+const breakpoints = {
+  sm: '640px',   // Mobile
+  md: '768px',   // Tablet
+  lg: '1024px',  // Desktop
+  xl: '1280px',  // Large Desktop
+  '2xl': '1536px' // Extra Large
+};
+```
+
+---
+
+## Authentication Flow
+
+```mermaid
+sequenceDiagram
+    User->>+Frontend: 로그인 요청
+    Frontend->>+Backend: POST /auth/login
+    Backend-->>-Frontend: JWT Token
+    Frontend->>Frontend: Store in Zustand
+    Frontend->>Frontend: Set HTTP Header
+    Frontend-->>-User: 대시보드 리다이렉트
+```
+
+---
+
+## User Journey
+
+### 1. Landing → Sign Up
+```
+Landing Page (SSG)
+  ↓ (CTA Click)
+Sign Up Page (SSR)
+  ↓ (Form Submit)
+Email Verification
+  ↓ (Verify)
+Dashboard
+```
+
+### 2. Excel Processing Flow
+```
+Dashboard
+  ↓ (Upload Click)
+File Upload Modal
+  ↓ (Drag & Drop)
+Processing Page
+  ↓ (AI Agent Work)
+Result Preview
+  ↓ (Download)
+Success ✓
+```
+
+---
+
+## Deployment
+
+### Vercel Configuration
+
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["icn1"]
+}
+```
+
+### Automatic Deployment
+- **Main Branch**: Production (extion-beta.vercel.app)
+- **Feature Branches**: Preview deployments
+- **Pull Requests**: Automatic preview links
+
+---
+
+## Analytics & Monitoring
+
+- **Vercel Analytics**: Core Web Vitals tracking
+- **Error Tracking**: Sentry integration (if enabled)
+- **User Behavior**: Custom event tracking
+- **Performance Monitoring**: Real User Monitoring (RUM)
+
+---
+
+## Testing Strategy
+
+```bash
+# Unit tests (Future)
+npm run test
+
+# E2E tests (Future)
+npm run test:e2e
+
+# Component tests (Future)
+npm run test:components
+```
+
+---
+
+## Key Technical Achievements
+
+### 1. **Ultra-Fast Landing Page**
+SSG를 활용한 초고속 랜딩 페이지 구현으로 사용자 첫 인상 최적화
+- Build-time 정적 생성으로 서버 부하 제로
+- CDN 캐싱으로 글로벌 빠른 로딩
+- Critical CSS 인라인화
+
+### 2. **Agent-First UX Design**
+AI 에이전트 워크플로우에 최적화된 사용자 경험 설계
+- 단계별 명확한 피드백
+- 실시간 처리 상태 시각화
+- 인터럽트 가능한 작업 흐름
+
+### 3. **Seamless State Management**
+TanStack Query + Zustand 조합으로 효율적인 상태 관리
+- 서버 상태와 클라이언트 상태 명확한 분리
+- Optimistic updates로 즉각적인 UI 반응
+- 자동 백그라운드 재검증
+
+### 4. **Production-Grade Performance**
+Next.js 14의 최신 기능을 활용한 성능 최적화
+- App Router로 향상된 라우팅 성능
+- Server Components로 번들 크기 감소
+- Streaming SSR로 점진적 페이지 렌더링
+
+### 5. **Developer Experience**
+TypeScript와 ESLint를 통한 높은 코드 품질 유지
+- 엄격한 타입 체킹으로 런타임 에러 최소화
+- 일관된 코드 스타일
+- 자동화된 빌드 프로세스
+
+---
+
+## Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+- Mobile browsers (iOS Safari, Chrome Mobile)
+
+---
+
+## Contributing
+
+This is a portfolio project and is not actively maintained. However, feedback and suggestions are welcome!
+
+---
+
+## License
+
+This project is licensed under the MIT License.
+
+---
+
+## Developer
+
+**LEE JIHONG**
+
+- GitHub: [@JJJiL0ng](https://github.com/JJJiL0ng)
+- Web Site: [extion.ai](https://extion.ai/)
+
+---
+
+## Project Status
+
+> **Note**: This service was operational from June 2025 to October 2025 and is currently discontinued due to operational reasons. This repository is maintained for portfolio purposes.
+
+---
+
+<div align="center">
+
+**Built with Next.js, TypeScript, and Modern Web Technologies**
+
+If you found this project interesting, please consider giving it a star!
+
+</div>
