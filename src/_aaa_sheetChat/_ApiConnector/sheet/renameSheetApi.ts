@@ -1,26 +1,13 @@
 import { RenameSheetReq, RenameSheetRes } from "@/_aaa_sheetChat/_types/apiConnector/rename/renameSheet";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import { postJson } from "@/shared/api/httpClient";
 
 export const renameSheetApiConnector = async (params: RenameSheetReq): Promise<RenameSheetRes> => {
 
-    const response = await fetch(`${BASE_URL}/v2/table-data-json-save/rename-fileName`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
+    const responseData = await postJson<RenameSheetRes, RenameSheetReq>('/v2/table-data-json-save/rename-fileName', params, {
+        errorMessage: 'Failed to rename spreadsheet',
     });
-
-    if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        throw new Error(`Failed to create spreadsheet: ${response.status} ${errorText}`);
-    }
-    
-    const responseData = await response.json();
-    console.log('✅ [CreateSpreadSheetAPI] 응답 데이터:', {
+    console.log('✅ [RenameSheetAPI] 응답 데이터:', {
         response: responseData
     });
     return responseData;
 };
-

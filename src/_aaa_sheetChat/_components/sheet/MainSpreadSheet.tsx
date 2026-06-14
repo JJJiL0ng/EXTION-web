@@ -1,12 +1,9 @@
 "use client";
-import '@mescius/spread-sheets-resources-ko';
-import '@mescius/spread-sheets-io';
 import React, { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle } from "react";
 import { useParams } from 'next/navigation';
 // Hooks
 import { useFileUploadIntegration } from '../../_hooks/sheet/file_upload_export/useFileUploadIntegration';
 import { useFileExport } from '../../_hooks/sheet/file_upload_export/useFileExport';
-// import { useChatVisibility } from '@/_contexts/ChatVisibilityContext';
 import { useUIState } from '../../_hooks/sheet/common/useUIState';
 import { useSpreadJSInit } from '../../_hooks/sheet/spreadjs/useSpreadJSInit';
 import { useSheetCreate } from '../../_hooks/sheet/data_save/useSheetCreate';
@@ -42,9 +39,6 @@ export default function MainSpreadSheet({ spreadRef }: MainSpreadSheetProps) {
     const params = useParams();
     const spreadSheetId = params.SpreadSheetId as string;
     const chatId = params.ChatId as string;
-
-    // 채팅 가시성 제어
-    // const { isChatVisible, showChat } = useChatVisibility();
 
     // 통합된 UI 상태 관리
     const { uiState, actions: uiActions } = useUIState();
