@@ -1,7 +1,5 @@
 <div align="center">
 
-</div>
-
 # Extion AI - Frontend Web
 
 <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" />
