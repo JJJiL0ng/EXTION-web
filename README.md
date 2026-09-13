@@ -1,9 +1,5 @@
 <div align="center">
 
-# Frontend Refactoring Sprint Note
-
-주말과 여유 시간을 활용해 진행한 EXTION 프론트엔드 집중 리팩토링 기록입니다. 아래의 기존 `main` README는 서비스/포트폴리오 소개 문서로 유지하고, 이 섹션에는 `refactor` 브랜치에서 정리한 구조 개선 내용을 추가로 남깁니다.
-
 </div>
 
 # Extion AI - Frontend Web
