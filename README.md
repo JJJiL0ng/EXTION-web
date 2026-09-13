@@ -6,40 +6,6 @@
 
 </div>
 
-## 리팩토링 요약
-
-- 작업 브랜치: `refactor-frontend-001-*` ~ `refactor-frontend-014-*`
-- 병합 흐름: `refactor` -> `dev` -> `main`
-- 상세 기록: [docs/refactoring](docs/refactoring)
-- 목표: 기존 화면 동작을 유지하면서 API 호출, 상태 관리, SpreadJS runtime, legacy route를 단계적으로 정리
-
-| 영역 | 정리 내용 |
-| --- | --- |
-| 기준선 | route, 파일 수, 테스트 부재, 환경 문제 기록 |
-| 테스트 | Vitest, Testing Library, jsdom 기반 회귀 테스트 추가 |
-| 번들 | opt-in bundle analyzer와 route bundle baseline 추가 |
-| API | shared API client, typed error, base URL helper 도입 |
-| Query | TanStack Query key factory와 invalidation helper 정리 |
-| Streaming | SSE parser를 테스트 가능한 순수 함수로 분리 |
-| 상태 관리 | auth/session/chat/sheet state 책임과 persist 범위 점검 |
-| SpreadJS | client-only runtime boundary와 테스트 mock 정리 |
-| 업로드 | file upload validation을 순수 함수로 분리 |
-| feature boundary | sheet-chat 공개 export boundary 추가 |
-| legacy cleanup | 개발용 route와 미사용 전역 상태 파일 제거 |
-| thin client | Zustand/Context 인벤토리와 props/local reducer 전환 계획 정리 |
-
-## 리팩토링 검증 결과
-
-`refactor` 기준 최종 확인:
-
-- `npm run test`: 성공, 7 files / 27 tests
-- `npm run lint`: 성공, 기존 warning 8개 유지
-- `npm run build`: 성공, 기존 lint warning과 `metadataBase` warning 유지
-
----
-
-<div align="center">
-
 # Extion AI - Frontend Web
 
 <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" />
